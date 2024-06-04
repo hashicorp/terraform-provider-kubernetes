@@ -15,17 +15,17 @@ jobs:
           script: |
                 console.log("triggered by: " + context.eventName)
 
-                 if (context.eventName == "issues"){
-                     try{
-                         await github.rest.issues.addAssignees({
-                             context.repo.owner,
-                             context.repo.repo,
-                             context.issue.number,
-                         })
-                     } catch(error){
-                         core.setFailed("error assigning assignee:" + error)
-                     }
-                 }
+                 //if (context.eventName == "issues"){
+                 //    try{
+                 //        await github.rest.issues.addAssignees({
+                 //            context.repo.owner,
+                 //            context.repo.repo,
+                 //            context.issue.number,
+                 //        })
+                 //    } catch(error){
+                 //        core.setFailed("error assigning assignee:" + error)
+                 //    }
+                 //}
                  //if (context.eventName == "pull_request"){
                  //    try{
                  //        await github.rest.pulls.requestReviewers({

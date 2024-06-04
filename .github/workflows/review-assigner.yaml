@@ -13,7 +13,7 @@ jobs:
       - uses: actions/github-script@e69ef5462fd455e02edcaf4dd7708eda96b9eda0 # v7.0.0
         with:
           script: |
-                console.log("triggered by: " + context.workflow)
+                console.log("triggered by: " + context.repo.owner)
 
                 # if (context.workflow == "issues"){
                 #     try{

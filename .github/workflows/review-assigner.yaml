@@ -14,6 +14,7 @@ jobs:
         with:
           script: |
                 // insert pagerduty logic here
+                console.log("triggered by: " + context.workflow)
 
                 if (context.workflow == "issues"){
                     try{
@@ -21,7 +22,7 @@ jobs:
                             context.repo.owner,
                             context.repo.repo,
                             context.issue.number, // number is based on the workflow_trigger (issue/pull_request number)
-                        });
+                        })
                     } catch(error){
                         core.setFailed("error assigning assignee:" + error)
                     }
@@ -32,7 +33,7 @@ jobs:
                             context.repo.owner,
                             context.repo.repo,
                             context.issue.number,
-                        });
+                        })
                     } catch(error){
                         core.setFailed("error assigning reviewer:" + error)
                     }

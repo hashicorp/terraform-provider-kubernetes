@@ -20,7 +20,7 @@ jobs:
                          await github.rest.issues.addAssignees({
                              owner: context.repo.owner,
                              repo: context.repo.repo,
-                             assignees: ["BBBmau"] // this will be replaced with pagerduty resp
+                             assignees: ["BBBmau"], // this will be replaced with pagerduty resp
                              issue_number: context.issue.number, // issue.number is used for both issues and PRs
                          })
                      } catch(error){

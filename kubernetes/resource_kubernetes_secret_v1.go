@@ -13,7 +13,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,13 +86,6 @@ func resourceKubernetesSecretV1() *schema.Resource {
 				Optional:    true,
 				Default:     true,
 				Description: "Terraform will wait for the service account token to be created.",
-			},
-			"field_manager": {
-				Type:         schema.TypeString,
-				Description:  "Set the name of the field manager for the specified labels",
-				Optional:     true,
-				Default:      defaultFieldManagerName,
-				ValidateFunc: validation.StringIsNotWhiteSpace,
 			},
 		},
 		Timeouts: &schema.ResourceTimeout{

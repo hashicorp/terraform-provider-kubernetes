@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,6 +62,13 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 				Description: "Flag to force updates to the Kubernetes Secret.",
 				Optional:    true,
 				Default:     false,
+			},
+			"field_manager": {
+				Type:         schema.TypeString,
+				Description:  "Set the name of the field manager for the specified labels",
+				Optional:     true,
+				Default:      defaultFieldManagerName,
+				ValidateFunc: validation.StringIsNotWhiteSpace,
 			},
 		},
 	}

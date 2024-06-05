@@ -24,7 +24,7 @@ jobs:
                              issue_number: context.issue.number, // issue.number is used for both issues and PRs
                          })
                      } catch(error){
-                         core.setFailed("error assigning assignee:" + error)
+                         core.setFailed("error assigning reviewer:" + error)
                      }
                  }
                  if (context.eventName == "pull_request"){

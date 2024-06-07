@@ -253,7 +253,7 @@ func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
 }
 
 func createInitContainerEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -315,7 +315,7 @@ func createInitContainerEnv(t *testing.T, name, namespace string) error {
 }
 
 func createEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func createEnv(t *testing.T, name, namespace string) error {
 }
 
 func createCronJobEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -424,7 +424,7 @@ func createCronJobEnv(t *testing.T, name, namespace string) error {
 }
 
 func createCronJobInitContainerEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}

@@ -57,6 +57,12 @@ func resourceKubernetesCertificateSigningRequestV1() *schema.Resource {
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"expiration_seconds": {
+							Type:        schema.TypeInt,
+							Description: apiDocSpec["expirationSeconds"],
+							Optional:    true,
+							ForceNew:    true,
+						},
 						"request": {
 							Type:        schema.TypeString,
 							Description: apiDocSpec["request"],

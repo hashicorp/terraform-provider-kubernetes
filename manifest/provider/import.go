@@ -25,6 +25,15 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	// Presumably the Kubernetes API machinery already has a standard for expressing such a group. We should look there first.
 	resp := &tfprotov5.ImportResourceStateResponse{}
 
+	cp := req.ClientCapabilities
+	if cp != nil && cp.DeferralAllowed && s.clientConfigUnknown {
+		// if client support it, request deferral when client configuration not fully known
+		resp.Deferred = &tfprotov5.Deferred{
+			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
+		}
+		return resp, nil
+	}
+
 	execDiag := s.canExecute()
 	if len(execDiag) > 0 {
 		resp.Diagnostics = append(resp.Diagnostics, execDiag...)

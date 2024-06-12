@@ -59,10 +59,40 @@ If you want to learn more about developing a Terraform provider, please refer to
 ## Making Changes
 
 <!-- TODO:
-- We need to mention here linters that we have and how to run them
-- Break down changes into categories, such as adding, updating, removing(???) or fixing resource, data source, provider block, attribute, documentation or making a small change
-- We might want to mention here some best practices that are specfic to the Kubernete provider, such as reuse constatns from the Kuberentes packages as a default value in an attribute or within a validation function
+- ✅We need to mention here linters that we have and how to run them
+- ✅Break down changes into categories, such as adding, updating, removing(???) or fixing resource, data source, provider block, attribute, documentation or making a small change
+- ✅We might want to mention here some best practices that are specfic to the Kubernete provider, such as reuse constatns from the Kuberentes packages as a default value in an attribute or within a validation function
 -->
+
+### Adding a New Resource
+
+This quick guide covers best practices for adding a new Resource. 
+
+1. Ensure all dependncies are installed.
+1. Add an SDK Client. 
+1. Add Resource Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). A best and recommended practice is reuse constants from the Kuberentes packages as a default value in an attribute or within a validation function. 
+1. Scaffold an empty/new resource.
+1. Add Acceptance Tests(s) for the resource.
+1. Run Acceptance Tests(s) for this resource. 
+1. Add Documentation for this resource by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}).
+1. Execute `make docs-lint` and `make tests-lint` commands 
+1. Create a Pull Request for your changes. 
+
+### Adding a New Data Source
+
+1. Ensure all dependncies are installed.
+1. Add an SDK Client. 
+1. Add Data Source Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs).
+A best and recommended practice is reuse constants from the Kuberentes packages as a default value in an attribute or within a validation function. 
+1. Scaffold an empty/new resource.
+1. Add Acceptance Tests(s) for the data source.
+1. Run Acceptance Tests(s) for this data source. 
+1. Add Documentation for this data source by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}).    
+1. Execute `make docs-lint` and `make tests-lint` commands 
+1. Create a Pull Request for your changes. 
+
+### Adding/Editing Documentation
+All Documentation is edited in the `.md.tmpl` file. Please note that the `tfplugindocs generate` command should be executed to ensure it is updated and reflected in the `.md` files. 
 
 ## Testing
 
@@ -96,6 +126,17 @@ $ make testacc TESTARGS="-run ^TestAcc" # acceptance tests
 <!-- TODO:
 - We need to explain here when a change log is necessary to add
 -->
+
+A PR that is merged may or may not be added to the changelog. Not every change should be in the changelog since they don't affect users directly. Some instances of PRs that could be excluded are:
+
+- unit and acceptance tests fixes
+- minor documentation changes
+
+However, PRs of the following categories should be added to the appropriate section:
+
+* `FEATURES` 
+* `ENHANCEMENTS`
+* `MAJOR BUG FIXES`
 
 Please refer to our [ChangeLog Guide](../CHANGELOG_GUIDE.md).
 

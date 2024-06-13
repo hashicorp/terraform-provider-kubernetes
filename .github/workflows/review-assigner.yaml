@@ -30,7 +30,7 @@ jobs:
                   ]);                  
 
                 const pd = api({token: PAGERDUTY_TOKEN});
-                const reviewer = ""
+                let reviewer = ""
                 console.log("triggered by: " + context.eventName)
                 pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')
                   .then(({data}) => {

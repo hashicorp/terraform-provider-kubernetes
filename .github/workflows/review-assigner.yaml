@@ -6,11 +6,8 @@ on:
     issues:
         types: [opened]
 
-permissions:
-    pull-requests: 'write'
-
 jobs:
-  assign-reviewer:
+  create-branch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v3
@@ -20,26 +17,13 @@ jobs:
           PAGERDUTY_TOKEN: ${{ secrets.PAGERDUTY_TOKEN }}
         with:
           script: |
-                //# const { PAGERDUTY_TOKEN } = process.env
-                //# const { api } = require('@pagerduty/pdjs');
-
-                //# const reviewerList = new Map([
-                //#     ["Sheneska Williams", "sheneska"],
-                //#     ["Mauricio Alvarez Leon", "BBBmau"],
-                //#     ["Alex Somesan", "alexsomesan"],
-                //#     ["Alex Pilon", "appilon"],
-                //#     ["John Houston", "jrhouston"],
-                //#     ["Aleksandr Rybolovlev", "arybolovlev"],
-                //#   ]);                  
-
-                //# const pd = api({token: PAGERDUTY_TOKEN});
-                //# const reviewer = ""
-                //# console.log("triggered by: " + context.eventName)
-                //# pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')
-                //#   .then(({data}) => {
-                //#     reviewer = data.oncalls[0].user.summary
-                //#     console.log("Assigning issue to " + data.oncalls[0].user.summary);
-                //#   }).catch(console.error)
+                const { PAGERDUTY_TOKEN } = process.env
+                const { api } = require('@pagerduty/pdjs');
+                const pd = api({token: PAGERDUTY_TOKEN});
+                pd.get('/schedules/id/users')
+                  .then((response) => {
+                    console.log("Assigning to " + response.users);
+                  }).catch(console.error)
                 console.log("triggered by: " + context.eventName)
                  if (context.eventName == "issues"){
                      try{

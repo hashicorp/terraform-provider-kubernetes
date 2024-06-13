@@ -1,3 +1,9 @@
+## 2.31.0 (June 13, 2024)
+
+ENHANCEMENTS:
+
+* Add support for Terraform's experimental deferred actions [[GH-2510](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2510)]
+
 ## 2.30.0 (May 8, 2024)
 
 BUG FIXES:

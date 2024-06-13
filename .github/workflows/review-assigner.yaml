@@ -45,10 +45,22 @@ jobs:
                          await github.rest.issues.addAssignees({
                              owner: context.repo.owner,
                              repo: context.repo.repo,
-                             assignees: reviewerList.get(reviewer), // this will be replaced with pagerduty resp
+                             assignees: "BBBmau", // this will be replaced with pagerduty resp
                              issue_number: context.issue.number, // issue.number is used for both issues and PRs
                          })
                      } catch(error){
                          core.setFailed("error assigning assignee:" + error)
                      }
                  }
+                 //#  if (context.eventName == "pull_request"){
+                    //#      try{
+                    //#          await github.rest.pulls.requestReviewers({
+                    //#              owner: context.repo.owner,
+                    //#              repo: context.repo.repo,
+                    //#              reviewers: ["sheneska"], // this will be replaced with pagerduty resp
+                    //#              pull_number: context.issue.number, // for some reason we get PR+1 from context
+                    //#          })
+                    //#      } catch(error){
+                    //#          core.setFailed("error assigning reviewer:" + error)
+                    //#      }
+                    //#  }

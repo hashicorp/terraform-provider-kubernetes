@@ -6,11 +6,8 @@ on:
     issues:
         types: [opened]
 
-permissions:
-    pull-requests: 'write'
-
 jobs:
-  assign-reviewer:
+  create-branch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v3
@@ -23,9 +20,9 @@ jobs:
                 const { PAGERDUTY_TOKEN } = process.env
                 const { api } = require('@pagerduty/pdjs');
                 const pd = api({token: PAGERDUTY_TOKEN});
-                pd.get('/schedules/PG3X8HK/users')
-                  .then(({response}) => {
-                    console.log(response);
+                pd.get('/schedules/id/users')
+                  .then((response) => {
+                    console.log("Assigning to " + response.users);
                   }).catch(console.error)
                 console.log("triggered by: " + context.eventName)
                  if (context.eventName == "issues"){

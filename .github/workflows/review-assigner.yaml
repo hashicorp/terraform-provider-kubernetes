@@ -35,14 +35,14 @@ jobs:
                 pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')
                   .then(({data}) => {
                     reviewer = data.oncalls[0].user.summary
-                    console.log("Assigning issue to " + data.oncalls[0].user.summary);
+                    console.log("Assigning issue to " + reviewerList.get(reviewer));
                   }).catch(console.error)
                  if (context.eventName == "issues"){
                      try{
                          await github.rest.issues.addAssignees({
                              owner: context.repo.owner,
                              repo: context.repo.repo,
-                             assignees: reviewerList.get(reviewer), // this will be replaced with pagerduty resp
+                             assignees: "sheneska", // this will be replaced with pagerduty resp
                              issue_number: context.issue.number, // issue.number is used for both issues and PRs
                          })
                      } catch(error){

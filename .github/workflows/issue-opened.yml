@@ -14,3 +14,42 @@ jobs:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-issue-triage.yml
         enable-versioned-regex: 0
+  oncall_review_assigner:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-node@v4
+    - run: npm install @pagerduty/pdjs
+    - uses: actions/github-script@e69ef5462fd455e02edcaf4dd7708eda96b9eda0 # v7.0.0
+      env:
+        PAGERDUTY_TOKEN: ${{ secrets.PAGERDUTY_TOKEN }}
+      with:
+        script: |
+              const { PAGERDUTY_TOKEN } = process.env
+              const { api } = require('@pagerduty/pdjs');
+              const pd = api({token: PAGERDUTY_TOKEN});
+              let reviewer = ""
+              const reviewerList = new Map([
+                  ["Sheneska Williams", "sheneska"],
+                  ["Mauricio Alvarez Leon", "BBBmau"],
+                  ["Alex Somesan", "alexsomesan"],
+                  ["Alex Pilon", "appilon"],
+                  ["John Houston", "jrhouston"],
+                  ["Aleksandr Rybolovlev", "arybolovlev"],
+                ]);
+
+              pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')
+                .then(({data}) => {
+                  reviewer = reviewerList.get(data.oncalls[0].user.summary)
+                  console.log("Assigning issue to " + reviewer);
+                }).catch(console.error)
+
+              try{
+                await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    assignees: reviewer,
+                    issue_number: context.issue.number,
+                })
+              } catch(error){
+                  core.setFailed("error assigning reviewer: " + error)
+              }

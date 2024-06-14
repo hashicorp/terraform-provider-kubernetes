@@ -1,5 +1,5 @@
 ---
-layout: "kubernetes"
+subcategory: ""
 page_title: "Kubernetes: Getting Started with Kubernetes provider"
 description: |-
   This guide focuses on configuring authentication to your existing Kubernetes

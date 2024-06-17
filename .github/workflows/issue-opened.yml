@@ -27,7 +27,6 @@ jobs:
               const { PAGERDUTY_TOKEN } = process.env
               const { api } = require('@pagerduty/pdjs');
               const pd = api({token: PAGERDUTY_TOKEN});
-              let reviewer = ""
               const reviewerList = new Map([
                   ["Sheneska Williams", "sheneska"],
                   ["Mauricio Alvarez Leon", "BBBmau"],
@@ -37,19 +36,20 @@ jobs:
                   ["Aleksandr Rybolovlev", "arybolovlev"],
                 ]);
 
-              pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')
-                .then(({data}) => {
-                  reviewer = reviewerList.get(data.oncalls[0].user.summary)
-                  console.log("Assigning issue to " + reviewer);
-                }).catch(console.error)
+              let resp = await pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')
+              if (resp.status != 200){
+                core.setFailed("PagerDuty Error: " + resp.statusText)
+              }
+              const reviewer = resp.data.oncalls[0].user.summary
+              cosnt reviewerGH = reviewerList.get(reviewer)
+              console.log("Assigning issue to " + reviewerGH);
 
-              try{
-                await github.rest.issues.addAssignees({
+              resp = await github.rest.issues.addAssignees({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    assignees: "sheneska",
+                    assignees: reviewer,
                     issue_number: context.issue.number,
-                })
-              } catch(error){
-                  core.setFailed("error assigning reviewer: " + error)
+              })
+              if (resp.status != 200){
+                core.setFailed("error assigning reviewer: " + resp.statusText)
               }

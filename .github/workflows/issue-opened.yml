@@ -41,7 +41,7 @@ jobs:
                 core.setFailed("PagerDuty Error: " + resp.statusText)
               }
               const reviewer = resp.data.oncalls[0].user.summary
-              cosnt reviewerGH = reviewerList.get(reviewer)
+              const reviewerGH = reviewerList.get(reviewer)
               console.log("Assigning issue to " + reviewerGH);
 
               resp = await github.rest.issues.addAssignees({

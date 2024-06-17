@@ -47,7 +47,7 @@ jobs:
               resp = await github.rest.issues.addAssignees({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
-                    assignees: reviewer,
+                    assignees: reviewerGH,
                     issue_number: context.issue.number,
               })
               if (resp.status != 200){

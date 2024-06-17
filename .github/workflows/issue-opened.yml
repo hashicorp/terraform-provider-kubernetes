@@ -50,6 +50,6 @@ jobs:
                     assignees: reviewerGH,
                     issue_number: context.issue.number,
               })
-              if (resp.status != 200){
+              if (resp.status != 201){
                 core.setFailed("error assigning reviewer: user doesn't have the appropriate permissions to be assigned an issue.")
               }

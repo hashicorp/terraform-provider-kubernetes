@@ -16,6 +16,7 @@ import (
 
 func dataSourceKubernetesNamespaceV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "This data source provides a mechanism to query attributes of any specific namespace within a Kubernetes cluster. In Kubernetes, namespaces provide a scope for names and are intended as a way to divide cluster resources between multiple users.",
 		ReadContext: dataSourceKubernetesNamespaceV1Read,
 
 		Schema: map[string]*schema.Schema{

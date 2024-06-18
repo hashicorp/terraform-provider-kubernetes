@@ -5,13 +5,11 @@ description: |-
   This data source is a generic way to query for a list of resources from the Kubernetes API and filter them. 
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
-
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
-
-# kubernetes_resources
+# {{ .Name }}
 
 This data source is a generic way to query for a list of Kubernetes resources and filter them using a label or field selector.
+
+{{ .SchemaMarkdown }} 
 
 ### Example: Get a list of namespaces excluding "kube-system" using `field_selector`
 
@@ -21,13 +19,3 @@ This data source is a generic way to query for a list of Kubernetes resources an
 
 {{tffile "examples/data-sources/resources/example_2.tf"}}
 
-## Argument Reference
-
-The following arguments are supported:
-
-* `api_version` - (Required) The API version for the requested resource.
-* `kind` - (Required) The kind for the requested resource.
-* `label_selector` - (Optional) A selector to restrict the list of returned objects by their labels.
-* `field_selector` - (Optional) A selector to restrict the list of returned objects by their fields.
-* `namespace` - (Optional) The namespace of the requested resource.
-* `object` - (Optional) The response returned from the API server.

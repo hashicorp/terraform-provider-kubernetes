@@ -114,7 +114,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 				return tftypes.String, nil
 			}
 		}
-		return tftypes.DynamicPseudoType, nil
+		return tftypes.DynamicPseudoType, nil // this is where DynamicType is set for when an attribute is tagged as 'x-kubernetes-preserve-unknown-fields'
 
 	case "array":
 		switch {

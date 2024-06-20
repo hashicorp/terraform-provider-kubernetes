@@ -83,6 +83,10 @@ func expandStatefulSetSpec(s []interface{}) (*v1.StatefulSetSpec, error) {
 			obj.VolumeClaimTemplates = append(obj.VolumeClaimTemplates, *p)
 		}
 	}
+
+	if v, ok := in["min_ready_seconds"].(int); ok {
+		obj.MinReadySeconds = int32(v)
+	}
 	return obj, nil
 }
 func expandStatefulSetSpecUpdateStrategy(s []interface{}) (*v1.StatefulSetUpdateStrategy, error) {
@@ -181,6 +185,7 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData, met
 		att["persistent_volume_claim_retention_policy"] = flattenStatefulSetSpecPersistentVolumeClaimRetentionPolicy(*spec.PersistentVolumeClaimRetentionPolicy)
 	}
 
+	att["min_ready_seconds"] = spec.MinReadySeconds
 	return []interface{}{att}, nil
 }
 
@@ -287,6 +292,17 @@ func patchStatefulSetSpec(d *schema.ResourceData) (PatchOperations, error) {
 			ops = append(ops, &ReplaceOperation{
 				Path:  "/spec/persistentVolumeClaimRetentionPolicy/whenScaled",
 				Value: ws,
+			})
+		}
+	}
+
+	if d.HasChange("spec.0.min_ready_seconds") {
+		log.Printf("[TRACE] StatefulSet.Spec.MinReadySeconds has changes")
+		if v, ok := d.Get("spec.0.min_ready_seconds").(int); ok {
+			vv := int32(v)
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/minReadySeconds",
+				Value: vv,
 			})
 		}
 	}

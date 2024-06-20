@@ -15,6 +15,7 @@ import (
 
 func dataSourceKubernetesSecretV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "The resource provides mechanisms to inject containers with sensitive information, such as passwords, while keeping containers agnostic of Kubernetes. Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs. The resource will by default create a secret which is available to any pod in the specified (or default) namespace.",
 		ReadContext: dataSourceKubernetesSecretV1Read,
 
 		Schema: map[string]*schema.Schema{

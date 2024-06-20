@@ -15,6 +15,7 @@ import (
 
 func dataSourceKubernetesStorageClassV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform.Read more at https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/",
 		ReadContext: dataSourceKubernetesStorageClassV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("storage class", false),

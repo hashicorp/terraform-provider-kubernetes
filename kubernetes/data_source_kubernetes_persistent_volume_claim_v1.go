@@ -15,6 +15,7 @@ import (
 
 func dataSourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "A PersistentVolumeClaim (PVC) is a request for storage by a user. This data source retrieves information about the specified PVC.",
 		ReadContext: dataSourceKubernetesPersistentVolumeClaimV1Read,
 
 		Schema: map[string]*schema.Schema{

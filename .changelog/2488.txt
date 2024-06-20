@@ -1,0 +1,3 @@
+```release-note:enhancement
+`resource/kubernetes_persistent_volume_v1`: support `ReadWriteOncePod` access mode for PVs
+```

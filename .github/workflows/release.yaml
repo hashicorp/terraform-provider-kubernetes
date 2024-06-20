@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Generate Release Notes
-        run: sed -n -e "1{/# /d;}" -e "2{/^$/d;}" -e "/# $(git describe --abbrev=0 --exclude="$(git describe --abbrev=0 --match='v*.*.*' --tags)" --match='v*.*.*' --tags | tr -d v)/q;p" CHANGELOG.md > release-notes.txt
+        run: sed -n -e "1{/# /d;}" -e "2{/^$/d;}" -e "/# $(git tag --list 'v*' --sort=-version:refname | head -n 2 | tail -n 1 | tr -d v)/q;p" CHANGELOG.md > release-notes.txt
       - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: release-notes

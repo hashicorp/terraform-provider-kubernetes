@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 // Flatteners
@@ -65,6 +66,9 @@ func flattenNetworkPolicyV1Ports(in []networkingv1.NetworkPolicyPort) []interfac
 		m := make(map[string]interface{})
 		if port.Port != nil {
 			m["port"] = port.Port.String()
+		}
+		if port.EndPort != nil && *port.EndPort != 0 {
+			m["end_port"] = int(*port.EndPort)
 		}
 		if port.Protocol != nil {
 			m["protocol"] = string(*port.Protocol)
@@ -197,6 +201,9 @@ func expandNetworkPolicyV1Ports(l []interface{}) *[]networkingv1.NetworkPolicyPo
 		if v, ok := in["port"].(string); ok && len(v) > 0 {
 			val := intstr.Parse(v)
 			policyPorts[i].Port = &val
+		}
+		if v, ok := in["end_port"].(int); ok && v != 0 {
+			policyPorts[i].EndPort = ptr.To(int32(v))
 		}
 		if in["protocol"] != nil && in["protocol"] != "" {
 			v := corev1.Protocol(in["protocol"].(string))

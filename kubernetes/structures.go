@@ -134,15 +134,15 @@ func flattenMetadataFields(meta metav1.ObjectMeta) []interface{} {
 	return []interface{}{m}
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}) []interface{} {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMeta interface{}) []interface{} {
 	metadataAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
 	metadataLabels := d.Get("metadata.0.labels").(map[string]interface{})
 
-	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
+	ignoreAnnotations := providerMeta.(providerMetadata).IgnoreAnnotations
 	removeInternalKeys(meta.Annotations, metadataAnnotations)
 	removeKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
 
-	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
+	ignoreLabels := providerMeta.(providerMetadata).IgnoreLabels
 	removeInternalKeys(meta.Labels, metadataLabels)
 	removeKeys(meta.Labels, metadataLabels, ignoreLabels)
 

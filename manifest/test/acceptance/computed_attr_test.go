@@ -44,7 +44,7 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 		step1.Close()
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "secrets", namespace, name)
 		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "services", namespace, name)
-		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "deployments", namespace, name)
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "apps/v1", "deployments", namespace, name)
 		k8shelper.AssertResourceDoesNotExist(t, "admissionregistration.k8s.io", "mutatingwebhookconfigurations", name)
 	}()
 
@@ -54,7 +54,6 @@ func TestKubernetesManifest_ComputedFields(t *testing.T) {
 	step1.Apply(ctx)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "secrets", namespace, name)
 	k8shelper.AssertNamespacedResourceExists(t, "v1", "services", namespace, name)
-	k8shelper.AssertNamespacedResourceExists(t, "apps/v1", "deployments", namespace, name)
 	k8shelper.AssertResourceExists(t, "admissionregistration.k8s.io/v1", "mutatingwebhookconfigurations", name)
 
 	// wait for API to finish installing the webhook

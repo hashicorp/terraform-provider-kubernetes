@@ -16,6 +16,7 @@ on:
 
 jobs:
   acceptance_tests:
+    if: ${{ github.repository_owner == 'hashicorp' }}
     runs-on: custom-linux-medium
     steps:
       - name: Checkout repository

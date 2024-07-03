@@ -2368,5 +2368,5 @@ resource "kubernetes_cron_job" "demo" {
 ## Import 
 
 ```
-$ terraform import kubernetes_corn_job_v1/example default/example
+$ terraform import kubernetes_cron_job_v1/example default/example
 ```

@@ -33,7 +33,7 @@ jobs:
                   ["Alex Somesan", "alexsomesan"],
                   ["Alex Pilon", "appilon"],
                   ["John Houston", "jrhouston"],
-                  ["Aleksandr Rybolovlev", "arybolovlev"],
+                  ["Sacha Rybolovlev", "arybolovlev"],
                 ]);
 
               let resp = await pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')

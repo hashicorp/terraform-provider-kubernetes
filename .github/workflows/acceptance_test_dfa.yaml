@@ -28,6 +28,6 @@ jobs:
       - name: Run Tests
         env:
           TF_ACC: 1
-          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION_EXP }}
+          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.9.0-alpha20240516' }}
         run: |
           go test -v -run '^TestAccKubernetesDeferredActions' ./kubernetes/test-dfa

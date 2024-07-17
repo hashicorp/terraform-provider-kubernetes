@@ -1,0 +1,36 @@
+name: "Tf Plugin Docs"
+
+on:
+    pull_request:
+      paths:
+        - 'docs/**'       
+
+    push:
+      branches:
+        - main
+
+
+  
+jobs:
+    check-docs:
+      runs-on: ubuntu-latest
+  
+      steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+  
+      - name: Run docs tool
+        run: tfplugindocs generate  
+  
+      - name: Check for changes
+        run: |
+          git diff --exit-code
+        if: success()
+  
+      - name: Fail if changes are found
+        run: |
+          echo "Documentation is not up to date. Please update documentation & run the command."
+          exit 1
+        if: failure()
+
+

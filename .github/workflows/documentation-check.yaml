@@ -25,7 +25,7 @@ jobs:
   
       - name: Build and install tfplugindocs command
         run: |
-          cd tfplugindocs
+          cd cmd/tfplugindocs
           go install
 
       - name: Run docs tool

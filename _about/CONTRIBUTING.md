@@ -6,14 +6,6 @@ If you want to learn more about developing a Terraform provider, please refer to
 
 ## Configuring Environment
 
-<!-- TODO:
-- Add cluster name to the config
-- Once we move on with more automation, we need to update this section too
-- We might want to add an example of how to provision a KinD cluster with Terraform
-- We might want to add a few words on how to use kubectl command to validate the cluster
-- We might want to mention here or in a different place that some tests we can only run on a specific managed cluster, such as AKS, GKE, or AWS and how to do that
--->
-
 1. Install Golang
 
     [Install](https://go.dev/doc/install) the version of Golang as indicated in the [go.mod](../go.mod) file.
@@ -58,12 +50,6 @@ If you want to learn more about developing a Terraform provider, please refer to
 
 ## Making Changes
 
-<!-- TODO:
-- ✅We need to mention here linters that we have and how to run them
-- ✅Break down changes into categories, such as adding, updating, removing(???) or fixing resource, data source, provider block, attribute, documentation or making a small change
-- ✅We might want to mention here some best practices that are specfic to the Kubernete provider, such as reuse constatns from the Kuberentes packages as a default value in an attribute or within a validation function
--->
-
 ### Adding a New Resource
 
 This quick guide covers best practices for adding a new Resource. 
@@ -104,12 +90,6 @@ Before running any tests, make sure that the `KUBE_CONFIG_PATH` environment vari
 $ export KUBE_CONFIG_PATH=$HOME/.kube/config
 ```
 
-<!-- TODO:
-- We need to explain here that the provider has unit and acceptance tests and when they need to be added or updated
-- We need to explain here how to run a specific test or group of tests
-- We need to explain here how to build a provider binary and run it
--->
-
 The following commands demonstrate how to run unit and acceptance tests respectively.
 
 ```console
@@ -122,10 +102,6 @@ $ make testacc TESTARGS="-run ^TestAcc" # acceptance tests
 1. Run tests with new changes
 
 ## Updating changelog
-
-<!-- TODO:
-- We need to explain here when a change log is necessary to add
--->
 
 A PR that is merged may or may not be added to the changelog. Not every change should be in the changelog since they don't affect users directly. Some instances of PRs that could be excluded are:
 
@@ -142,12 +118,5 @@ Please refer to our [ChangeLog Guide](../CHANGELOG_GUIDE.md).
 
 ## Creating & Submiting a PR
 
-<!--
-- We need to explain here what do we expect to see in a PR, the same should be reflected in a PR template
--->
-
 Please refer to this [guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
 
-## Debug Guide
-
-<!-- TODO THIS SECTION -->

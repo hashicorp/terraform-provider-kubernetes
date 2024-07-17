@@ -8,9 +8,7 @@ on:
     push:
       branches:
         - main
-
-
-  
+ 
 jobs:
     check-docs:
       runs-on: ubuntu-latest
@@ -19,7 +17,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
   
-      - name: Run docs tool
+      - name: Checkout tfplugindocs repo
+        uses: actions/checkout@v3
+        with:
+          repository: hashicorp/terraform-plugin-docs
+          path: tfplugindocs
+  
+      - name: Build and install tfplugindocs
+        run: |
+          cd tfplugindocs
+          go install
+
+      - name: Run docs command
         run: tfplugindocs generate  
   
       - name: Check for changes

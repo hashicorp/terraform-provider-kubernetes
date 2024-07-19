@@ -14,15 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
     - name: Set up Go
-      uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
       with:
         go-version-file: 'go.mod'
     # Secrets are not available on pull requests.
     - name: Login to Docker Hub
       if: github.ref == 'refs/heads/main'
-      uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+      uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
       with:
         username: ${{ secrets.RO_DOCKERHUB_USER }}
         password: ${{ secrets.RO_DOCKERHUB_TOKEN }}
@@ -36,5 +36,5 @@ jobs:
         make vet
     - name: Run linters
       run: |
-        make website-lint
+        make docs-lint
         make tests-lint

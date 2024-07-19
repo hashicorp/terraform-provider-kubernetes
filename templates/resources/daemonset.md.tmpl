@@ -1,0 +1,24 @@
+---
+subcategory: "apps/v1"
+page_title: "Kubernetes: kubernetes_daemonset"
+description: |-
+  A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are added to the cluster, Pods are added to them. As nodes are removed from the cluster, those Pods are garbage collected. Deleting a DaemonSet will clean up the Pods it created.
+---
+
+# {{ .Name }} 
+
+A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are added to the cluster, Pods are added to them. As nodes are removed from the cluster, those Pods are garbage collected. Deleting a DaemonSet will clean up the Pods it created.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/daemonset/example_1.tf"}}
+
+## Import
+
+DaemonSet can be imported using the namespace and name, e.g.
+
+```
+$ terraform import kubernetes_daemonset.example default/terraform-example
+```

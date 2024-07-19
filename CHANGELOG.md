@@ -1,3 +1,35 @@
+## 2.30.0 (May 8, 2024)
+
+BUG FIXES:
+
+* `data_source/kubernetes_resources`: fix an issue where the provider exit with an error when the data source `kubernetes_resources` receives multiple Kubernetes objects containing tuples with different numbers of elements. [[GH-2372](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2372)]
+* `kubernetes_manifest`: fix issue preventing KUBE_PROXY_URL environment variable from being used in client configuration (#1733) [[GH-2485](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2485)]
+* `resource/kubernetes_node_taint`: Fix the error check for nonexistant nodes so that terraform does not fail if there is a taint in the state file for a node that has been deleted. [[GH-2402](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2402)]
+
+DOCS:
+
+* Migrate legacy structure to new tfplugindocs template structure [[GH-2470](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2470)]
+
+## 2.29.0 (April 11, 2024)
+
+BUG FIXES:
+
+* data-sources: revert a recently introduced deviation on datasources where querying a non-existent resource would cause an error (#2434). [[GH-2464](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2464)]
+
+## 2.28.1 (April 9, 2024)
+
+HOTFIX:
+
+* `manifest_decode()`: fix handling of manifests containing null values [[GH-2461](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2461)]
+
+## 2.28.0 (April 8, 2024)
+
+ENHANCEMENTS:
+
+**NOTE: Using [Provider Defined Functions](https://developer.hashicorp.com/terraform/plugin/framework/functions/concepts) requires Terraform version 1.8.0.**
+
+* Add provider defined functions: `manifest_encode`, `manifest_decode`, `manifest_decode_multi` [[GH-2428](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2428)]
+
 ## 2.27.0 (Mar, 6 2024)
 
 ENHANCEMENTS:

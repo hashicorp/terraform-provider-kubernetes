@@ -10,11 +10,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesNamespaceV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "This data source provides a mechanism to query attributes of any specific namespace within a Kubernetes cluster. In Kubernetes, namespaces provide a scope for names and are intended as a way to divide cluster resources between multiple users.",
 		ReadContext: dataSourceKubernetesNamespaceV1Read,
 
 		Schema: map[string]*schema.Schema{
@@ -51,6 +53,9 @@ func dataSourceKubernetesNamespaceV1Read(ctx context.Context, d *schema.Resource
 
 	namespace, err := conn.CoreV1().Namespaces().Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

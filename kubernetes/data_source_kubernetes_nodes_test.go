@@ -50,6 +50,23 @@ func TestAccKubernetesDataSourceNodes_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceNodes_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_nodes.test"
+	checkFuncs := resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttr(dataSourceName, "nodes.#", "0"),
+	)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceNodes_nonexistent(),
+				Check:  checkFuncs,
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourceNodes_basic() string {
 	return `data "kubernetes_nodes" "test" {}
 `
@@ -60,6 +77,17 @@ func testAccKubernetesDataSourceNodes_labels() string {
   metadata {
     labels = {
       "kubernetes.io/os" = "linux"
+    }
+  }
+}
+`
+}
+
+func testAccKubernetesDataSourceNodes_nonexistent() string {
+	return `data "kubernetes_nodes" "test" {
+  metadata {
+    labels = {
+      "ceci-n.est-pas" = "une-node"
     }
   }
 }

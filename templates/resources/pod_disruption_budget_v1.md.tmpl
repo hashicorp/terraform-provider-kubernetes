@@ -1,0 +1,18 @@
+---
+subcategory: "policy/v1"
+page_title: "Kubernetes: kubernetes_pod_disruption_budget_v1"
+description: |-
+    A Pod Disruption Budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions. For example, a quorum-based application would like to ensure that the number of replicas running is never brought below the number needed for a quorum. A web front end might want to ensure that the number of replicas serving load never falls below a certain percentage of the total.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/pod_disruption_budget_v1/example_1.tf"}}
+
+

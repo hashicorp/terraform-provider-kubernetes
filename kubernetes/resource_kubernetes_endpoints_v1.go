@@ -18,6 +18,7 @@ import (
 
 func resourceKubernetesEndpointsV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
 		CreateContext: resourceKubernetesEndpointsV1Create,
 		ReadContext:   resourceKubernetesEndpointsV1Read,
 		UpdateContext: resourceKubernetesEndpointsV1Update,

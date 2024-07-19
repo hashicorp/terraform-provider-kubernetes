@@ -9,11 +9,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesEndpointsV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
 		ReadContext: dataSourceKubernetesEndpointsV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoints", true),
@@ -45,6 +47,9 @@ func dataSourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Reading endpoints %s", metadata.Name)
 	ep, err := conn.CoreV1().Endpoints(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.Errorf("Failed to read endpoint because: %s", err)
 	}

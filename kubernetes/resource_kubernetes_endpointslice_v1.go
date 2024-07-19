@@ -19,6 +19,7 @@ import (
 
 func resourceKubernetesEndpointSliceV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "An EndpointSlice contains references to a set of network endpoints.",
 		CreateContext: resourceKubernetesEndpointSliceV1Create,
 		ReadContext:   resourceKubernetesEndpointSliceV1Read,
 		UpdateContext: resourceKubernetesEndpointSliceV1Update,

@@ -9,11 +9,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesServiceAccountV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "A service account provides an identity for processes that run in a Pod. This data source reads the service account and makes specific attributes available to Terraform. Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)",
 		ReadContext: dataSourceKubernetesServiceAccountV1Read,
 
 		Schema: map[string]*schema.Schema{
@@ -69,7 +71,11 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
-		return diag.Errorf("Unable to fetch service account from Kubernetes: %s", err)
+		if apierrors.IsNotFound(err) {
+			d.SetId(buildId(sa.ObjectMeta))
+			return nil
+		}
+		return diag.Errorf(`Unable to fetch service account "%s/%s" from Kubernetes: %s`, metadata.Namespace, metadata.Name, err)
 	}
 
 	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)
@@ -84,6 +90,9 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	log.Printf("[INFO] Reading service account %s", metadata.Name)
 	svcAcc, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		diagMsg = append(diagMsg, diag.FromErr(err)...)
 		return diagMsg

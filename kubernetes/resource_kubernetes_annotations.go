@@ -26,6 +26,7 @@ import (
 
 func resourceKubernetesAnnotations() *schema.Resource {
 	return &schema.Resource{
+		Description:   "This resource allows Terraform to manage the annotations for a resource that already exists. This resource uses [field management](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management) and [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to manage only the annotations that are defined in the Terraform configuration. Existing annotations not specified in the configuration will be ignored. If an annotation specified in the config and is already managed by another client it will cause a conflict which can be overridden by setting `force` to true.",
 		CreateContext: resourceKubernetesAnnotationsCreate,
 		ReadContext:   resourceKubernetesAnnotationsRead,
 		UpdateContext: resourceKubernetesAnnotationsUpdate,

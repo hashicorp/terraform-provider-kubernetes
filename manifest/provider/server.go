@@ -28,16 +28,16 @@ type RawProviderServer struct {
 	// Since the provider is essentially a gRPC server, the execution flow is dictated by the order of the client (Terraform) request calls.
 	// Thus it needs a way to persist state between the gRPC calls. These attributes store values that need to be persisted between gRPC calls,
 	// such as instances of the Kubernetes clients, configuration options needed at runtime.
-	logger          hclog.Logger
-	clientConfig    *rest.Config
-	dynamicClient   dynamic.Interface
-	discoveryClient discovery.DiscoveryInterface
-	restMapper      meta.RESTMapper
-	restClient      rest.Interface
-	OAPIFoundry     openapi.Foundry
+	logger              hclog.Logger
+	clientConfig        *rest.Config
+	clientConfigUnknown bool
+	dynamicClient       dynamic.Interface
+	discoveryClient     discovery.DiscoveryInterface
+	restMapper          meta.RESTMapper
+	restClient          rest.Interface
+	OAPIFoundry         openapi.Foundry
 
-	providerEnabled bool
-	hostTFVersion   string
+	hostTFVersion string
 }
 
 func dump(v interface{}) hclog.Format {
@@ -86,4 +86,25 @@ func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov5.Sto
 	s.logger.Trace("[StopProvider][Request]\n%s\n", dump(*req))
 
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+}
+
+// CallFunction function
+func (s *RawProviderServer) CallFunction(ctx context.Context, req *tfprotov5.CallFunctionRequest) (*tfprotov5.CallFunctionResponse, error) {
+	s.logger.Trace("[CallFunction][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.CallFunctionResponse{}
+	return resp, nil
+}
+
+// GetFunctions function
+func (s *RawProviderServer) GetFunctions(ctx context.Context, req *tfprotov5.GetFunctionsRequest) (*tfprotov5.GetFunctionsResponse, error) {
+	s.logger.Trace("[GetFunctions][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.GetFunctionsResponse{}
+	return resp, nil
+}
+
+// MoveResourceState function
+func (s *RawProviderServer) MoveResourceState(ctx context.Context, req *tfprotov5.MoveResourceStateRequest) (*tfprotov5.MoveResourceStateResponse, error) {
+	s.logger.Trace("[MoveResourceState][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.MoveResourceStateResponse{}
+	return resp, nil
 }

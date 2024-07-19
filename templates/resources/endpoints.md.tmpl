@@ -1,0 +1,24 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_endpoints"
+description: |-
+  An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.
+---
+
+# {{ .Name }} 
+
+An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/endpoints/example_1.tf"}}
+
+## Import
+
+An Endpoints resource can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_endpoints.example default/terraform-name
+```

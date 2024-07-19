@@ -1,0 +1,25 @@
+---
+subcategory: "batch/v1"
+page_title: "Kubernetes: kubernetes_job_v1"
+description: |-
+    A Job creates one or more Pods and ensures that a specified number of them successfully terminate. You can also use a Job to run multiple Pods in parallel.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage - No waiting
+
+{{tffile "examples/resources/job_v1/example_1.tf"}}
+
+## Example Usage - waiting for job successful completion
+
+{{tffile "examples/resources/job_v1/example_2.tf"}}
+
+Note:
+
+- Kubernetes provider will treat update operations that change the Job spec resulting in the job re-run as "# forces replacement". In such cases, the `create` timeout value is used for both Create and Update operations.
+- `wait_for_completion` is not applicable during Delete operations; thus, there is no "delete" timeout value for Delete operation.

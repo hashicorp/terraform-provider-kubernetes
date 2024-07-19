@@ -18,6 +18,7 @@ import (
 
 func resourceKubernetesHorizontalPodAutoscalerV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.",
 		CreateContext: resourceKubernetesHorizontalPodAutoscalerV1Create,
 		ReadContext:   resourceKubernetesHorizontalPodAutoscalerV1Read,
 		UpdateContext: resourceKubernetesHorizontalPodAutoscalerV1Update,

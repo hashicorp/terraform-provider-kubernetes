@@ -83,6 +83,26 @@ func TestAccKubernetesDataSourceServiceV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceServiceV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_service_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-service-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDataSourceServiceV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourceServiceV1_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
@@ -117,4 +137,13 @@ func testAccKubernetesDataSourceServiceV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceServiceV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

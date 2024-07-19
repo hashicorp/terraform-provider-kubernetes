@@ -57,7 +57,6 @@ Optional:
 - Equivalent: match a request if modifies a resource listed in rules, even via another API group or version. For example, if deployments can be modified via apps/v1, apps/v1beta1, and extensions/v1beta1, and "rules" only included `apiGroups:["apps"], apiVersions:["v1"], resources: ["deployments"]`, a request to apps/v1beta1 or extensions/v1beta1 would be converted to apps/v1 and sent to the webhook.
 
 Defaults to "Equivalent"
-
 - `namespace_selector` (Block List, Max: 1) NamespaceSelector decides whether to run the webhook on an object based on whether the namespace for that object matches the selector. If the object itself is a namespace, the matching is performed on object.metadata.labels. If the object is another cluster scoped resource, it never skips the webhook.
 
 For example, to run the webhook on any objects whose namespace is not associated with "runlevel" of "0" or "1";  you will set the selector as follows: "namespaceSelector": {
@@ -89,7 +88,6 @@ If instead you want to only run the webhook on any objects whose namespace is as
 See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels for more examples of label selectors.
 
 Default to the empty LabelSelector, which matches everything. (see [below for nested schema](#nestedblock--webhook--namespace_selector))
-
 - `object_selector` (Block List, Max: 1) ObjectSelector decides whether to run the webhook based on if the object has matching labels. objectSelector is evaluated against both the oldObject and newObject that would be sent to the webhook, and is considered to match if either object matches the selector. A null object (oldObject in the case of create, or newObject in the case of delete) or an object that cannot have labels (like a DeploymentRollback or a PodProxyOptions object) is not considered to match. Use the object selector only if the webhook is opt-in, because end users may skip the admission webhook by setting the labels. Default to the empty LabelSelector, which matches everything. (see [below for nested schema](#nestedblock--webhook--object_selector))
 - `rule` (Block List) Rules describes what operations on what resources/subresources the webhook cares about. The webhook cares about an operation if it matches _any_ Rule. However, in order to prevent ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks from putting the cluster in a state which cannot be recovered from without completely disabling the plugin, ValidatingAdmissionWebhooks and MutatingAdmissionWebhooks are never called on admission requests for ValidatingWebhookConfiguration and MutatingWebhookConfiguration objects. (see [below for nested schema](#nestedblock--webhook--rule))
 - `side_effects` (String) SideEffects states whether this webhook has side effects. Acceptable values are: None, NoneOnDryRun (webhooks created via v1beta1 may also specify Some or Unknown). Webhooks with side effects MUST implement a reconciliation system, since a request may be rejected by a future step in the admission chain and the side effects therefore need to be undone. Requests with the dryRun attribute will be auto-rejected if they match a webhook with sideEffects == Unknown or Some.
@@ -104,7 +102,6 @@ Optional:
 - `service` (Block List, Max: 1) `service` is a reference to the service for this webhook. Either `service` or `url` must be specified.
 
 If the webhook is running within the cluster, then you should use `service`. (see [below for nested schema](#nestedblock--webhook--client_config--service))
-
 - `url` (String) `url` gives the location of the webhook, in standard URL form (`scheme://host:port/path`). Exactly one of `url` or `service` must be specified.
 
 The `host` should not refer to a service running in the cluster; use the `service` field instead. The host might be resolved via external DNS in some apiservers (e.g., `kube-apiserver` cannot resolve in-cluster DNS as that would be a layering violation). `host` may also be an IP address.
@@ -225,7 +222,7 @@ resource "kubernetes_validating_webhook_configuration" "example" {
 
 The provider supports clusters running either `v1` or `v1beta1` of the Admission Registration API.
 
-## Import
+##Import
 
 Validating Webhook Configuration can be imported using the name, e.g.
 

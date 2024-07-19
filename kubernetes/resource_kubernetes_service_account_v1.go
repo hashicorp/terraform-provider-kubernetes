@@ -421,7 +421,7 @@ func resourceKubernetesServiceAccountV1ImportState(ctx context.Context, d *schem
 
 	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
+		return nil, fmt.Errorf(`Unable to fetch service account "%s/%s" from Kubernetes: %s`, namespace, name, err)
 	}
 
 	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)

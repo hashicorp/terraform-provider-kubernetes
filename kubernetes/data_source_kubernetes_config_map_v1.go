@@ -15,6 +15,7 @@ import (
 
 func dataSourceKubernetesConfigMapV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "Config Maps are key-value pairs containing configuration data. The Config Map data source provides a mechanism for extracting these key-value pairs.",
 		ReadContext: dataSourceKubernetesConfigMapV1Read,
 
 		Schema: map[string]*schema.Schema{

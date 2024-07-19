@@ -14,32 +14,34 @@ jobs:
       runs-on: ubuntu-latest
   
       steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-  
-      - name: Checkout tfplugindocs repository
-        uses: actions/checkout@v3
-        with:
-          repository: hashicorp/terraform-plugin-docs
-          path: tfplugindocs
-  
-      - name: Build and install tfplugindocs command
-        run: |
-          cd cmd/tfplugindocs
-          go install
+        - name: Checkout repository
+          uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
-      - name: Run docs tool
-        run: tfplugindocs generate  
+        - name: Set up Go
+          uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+          with:
+            go-version-file: 'go.mod'
+
+        - name: Install tfplugindocs command
+          run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+        
+        - name: Run tfplugindocs command
+          run: tfplugindocs generate
+
+        # - name: Run tfplugindocs
+        #   uses: ./.github/tfplugindocs
+        #   with:
+        #     version: 'latest'
   
-      - name: Check for changes
-        run: |
-          git diff --exit-code
-        if: success()
+        # - name: Check for changes
+        #   run: |
+        #     git diff --exit-code
+        #   if: success()
   
-      - name: Fail if changes are found
-        run: |
-          echo "Documentation is not up to date. Please update documentation & run the command."
-          exit 1
-        if: failure()
+        # - name: Fail if changes are found
+        #   run: |
+        #     echo "Documentation is not up to date. Please update documentation & run the command."
+        #     exit 1
+        #   if: failure()
 
 

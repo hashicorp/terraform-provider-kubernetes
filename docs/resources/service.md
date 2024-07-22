@@ -132,6 +132,7 @@ Read-Only:
 
 - `hostname` (String)
 - `ip` (String)
+- `ipMode` (String)
 
 
 

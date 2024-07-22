@@ -1,4 +1,4 @@
-name: "Tf Plugin Docs"
+name: "Documentation Updates"
 
 on:
     pull_request:
@@ -34,10 +34,9 @@ jobs:
         - name: Check for changes
           run: |
             git diff --exit-code
-          if: success()
   
-        - name: Fail if changes are found
+        - name: Undocumented changes 
           run: |
-            echo "Documentation is not up to date. Please update documentation & run the command."
+            echo "Documentation is not up to date. Please refer to the `Making Changes` in the Contribution Guide on how to properly update documentation."
             exit 1
           if: failure()

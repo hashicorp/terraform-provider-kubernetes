@@ -281,7 +281,8 @@ func TestAccKubernetesPersistentVolumeV1_googleCloud_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.storage", "42Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.2", "ReadWriteOncePod"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.1", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadOnlyMany"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.gce_persistent_disk.#", "1"),
@@ -1114,7 +1115,7 @@ func testAccKubernetesPersistentVolumeV1Config_googleCloud_modified(name, diskNa
       storage = "42Mi"
     }
 
-    access_modes = ["ReadWriteOnce", "ReadOnlyMany"]
+    access_modes = ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteOncePod"]
 
     persistent_volume_source {
       gce_persistent_disk {

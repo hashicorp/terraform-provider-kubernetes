@@ -98,7 +98,6 @@ Optional:
 - `namespace_selector` (Block List, Max: 1) namespaceSelector selects namespaces using cluster-scoped labels. This field follows standard label selector semantics; if present but empty, it selects all namespaces.
 
 If podSelector is also set, then the NetworkPolicyPeer as a whole selects the pods matching podSelector in the namespaces selected by namespaceSelector. Otherwise it selects all pods in the namespaces selected by namespaceSelector. (see [below for nested schema](#nestedblock--spec--egress--to--namespace_selector))
-
 - `pod_selector` (Block List, Max: 1) podSelector is a label selector which selects pods. This field follows standard label selector semantics; if present but empty, it selects all pods.
 
 If namespaceSelector is also set, then the NetworkPolicyPeer as a whole selects the pods matching podSelector in the Namespaces selected by NamespaceSelector. Otherwise it selects the pods matching podSelector in the policy's own namespace. (see [below for nested schema](#nestedblock--spec--egress--to--pod_selector))
@@ -169,7 +168,6 @@ Optional:
 - `namespace_selector` (Block List, Max: 1) namespaceSelector selects namespaces using cluster-scoped labels. This field follows standard label selector semantics; if present but empty, it selects all namespaces.
 
 If podSelector is also set, then the NetworkPolicyPeer as a whole selects the pods matching podSelector in the namespaces selected by namespaceSelector. Otherwise it selects all pods in the namespaces selected by namespaceSelector. (see [below for nested schema](#nestedblock--spec--ingress--from--namespace_selector))
-
 - `pod_selector` (Block List, Max: 1) podSelector is a label selector which selects pods. This field follows standard label selector semantics; if present but empty, it selects all pods.
 
 If namespaceSelector is also set, then the NetworkPolicyPeer as a whole selects the pods matching podSelector in the Namespaces selected by NamespaceSelector. Otherwise it selects the pods matching podSelector in the policy's own namespace. (see [below for nested schema](#nestedblock--spec--ingress--from--pod_selector))
@@ -229,6 +227,7 @@ Optional:
 
 - `port` (String) port represents the port on the given protocol. This can either be a numerical or named port on a pod. If this field is not provided, this matches all port names and numbers. If present, only traffic on the specified protocol AND port will be matched.
 - `protocol` (String) protocol represents the protocol (TCP, UDP, or SCTP) which traffic must match. If not specified, this field defaults to TCP.
+- `end_port` - (Optional) The end_port indicates that the range of ports from port to endPort if set, inclusive, should be allowed by the policy. Cannot be defined if port is undefined or if port is defined as a named (string) port.
 
 
 

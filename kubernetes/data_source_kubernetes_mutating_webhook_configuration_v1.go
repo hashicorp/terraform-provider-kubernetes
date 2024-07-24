@@ -19,6 +19,7 @@ func dataSourceKubernetesMutatingWebhookConfigurationV1() *schema.Resource {
 	apiDoc := admissionregistrationv1.MutatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.MutatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
+		Description: "A Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks). This data source allows you to pull data about a given mutating webhook configuration based on its name.",
 		ReadContext: dataSourceKubernetesMutatingWebhookConfigurationV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("mutating webhook configuration", false),

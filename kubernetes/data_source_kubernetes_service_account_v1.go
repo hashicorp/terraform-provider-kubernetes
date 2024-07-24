@@ -15,6 +15,7 @@ import (
 
 func dataSourceKubernetesServiceAccountV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "A service account provides an identity for processes that run in a Pod. This data source reads the service account and makes specific attributes available to Terraform. Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)",
 		ReadContext: dataSourceKubernetesServiceAccountV1Read,
 
 		Schema: map[string]*schema.Schema{
@@ -74,7 +75,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 			d.SetId(buildId(sa.ObjectMeta))
 			return nil
 		}
-		return diag.Errorf("Unable to fetch service account from Kubernetes: %s", err)
+		return diag.Errorf(`Unable to fetch service account "%s/%s" from Kubernetes: %s`, metadata.Namespace, metadata.Name, err)
 	}
 
 	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)

@@ -269,7 +269,7 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 							Sensitive:       false,
 							Description:     "Enable the `kubernetes_manifest` resource.",
 							DescriptionKind: 0,
-							Deprecated:      false,
+							Deprecated:      true,
 						},
 					},
 				},

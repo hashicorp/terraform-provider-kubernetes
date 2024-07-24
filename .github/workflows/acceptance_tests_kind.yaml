@@ -26,13 +26,14 @@ on:
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kindVersion || vars.KIND_VERSION }}
-  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || vars.KIND_VERSION || '0.23.0' }}
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS || '8' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION || '1.9.2' }}
 
 jobs:
   acceptance_tests_kind:
-    runs-on: [custom, linux, medium]
+    if: ${{ github.repository_owner == 'hashicorp' }}
+    runs-on: custom-linux-medium
     steps:
       - name: Checkout repository
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4

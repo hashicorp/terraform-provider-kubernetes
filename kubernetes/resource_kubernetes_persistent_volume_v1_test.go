@@ -281,8 +281,7 @@ func TestAccKubernetesPersistentVolumeV1_googleCloud_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.storage", "42Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "3"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.2", "ReadWriteOncePod"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.1", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadOnlyMany"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.gce_persistent_disk.#", "1"),
@@ -735,6 +734,31 @@ func TestAccKubernetesPersistentVolumeV1_hostPath_mountOptions(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolumeV1_accessMode_ReadWriteOncePod(t *testing.T) {
+	var conf api.PersistentVolume
+	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := fmt.Sprintf("tf-acc-test-%s", randString)
+	resourceName := "kubernetes_persistent_volume_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeV1Config_accessMode_ReadWriteOncePod(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteOncePod"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPersistentVolumeV1_csi_basic(t *testing.T) {
 	var conf api.PersistentVolume
 	name := acctest.RandomWithPrefix("tf-acc-test")
@@ -1115,7 +1139,7 @@ func testAccKubernetesPersistentVolumeV1Config_googleCloud_modified(name, diskNa
       storage = "42Mi"
     }
 
-    access_modes = ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteOncePod"]
+    access_modes = ["ReadWriteOnce", "ReadOnlyMany"]
 
     persistent_volume_source {
       gce_persistent_disk {
@@ -1870,6 +1894,26 @@ func testAccKubernetesPersistentVolumeV1Config_hostPath_mountOptions(name string
       storage = "1Gi"
     }
     access_modes  = ["ReadWriteMany"]
+    mount_options = ["foo"]
+    persistent_volume_source {
+      host_path {
+        path = "/mnt/local-volume"
+      }
+    }
+  }
+}`, name)
+}
+
+func testAccKubernetesPersistentVolumeV1Config_accessMode_ReadWriteOncePod(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    capacity = {
+      storage = "1Gi"
+    }
+    access_modes  = ["ReadWriteOncePod"]
     mount_options = ["foo"]
     persistent_volume_source {
       host_path {

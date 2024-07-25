@@ -19,7 +19,7 @@ func dataSourceKubernetesPodV1() *schema.Resource {
 	// being mutated on the server side as Kubernetes automatically adds a mount
 	// for the service account token
 	return &schema.Resource{
-		Description: "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.Read more at [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod/)",
+		Description: "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod/.",
 		ReadContext: dataSourceKubernetesPodV1Read,
 
 		Schema: map[string]*schema.Schema{

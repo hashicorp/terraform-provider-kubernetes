@@ -24,7 +24,7 @@ import (
 
 func resourceKubernetesServiceAccountV1() *schema.Resource {
 	return &schema.Resource{
-		Description:   "A service account provides an identity for processes that run in a Pod. Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)",
+		Description:   "A service account provides an identity for processes that run in a Pod. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/.",
 		CreateContext: resourceKubernetesServiceAccountV1Create,
 		ReadContext:   resourceKubernetesServiceAccountV1Read,
 		UpdateContext: resourceKubernetesServiceAccountV1Update,

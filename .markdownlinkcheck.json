@@ -18,15 +18,15 @@
         },
         {
             "pattern": "^/docs/providers/kubernetes/",
-            "replacement": "file:///github/workspace/website/docs/"
+            "replacement": "file:///github/workspace/docs/"
         },
         {
             "pattern": "^(getting-started).html.markdown(#.*)?$",
-            "replacement": "file:///github/workspace/website/docs/guides/$1.html.md$2"
+            "replacement": "file:///github/workspace/docs/guides/$1.html.md$2"
         },
         {
-            "pattern": "^file:///github/workspace/website/docs/guides/(.*)\\.markdown(#.*)?$",
-            "replacement": "file:///github/workspace/website/docs/guides/$1.md$2"
+            "pattern": "^file:///github/workspace/docs/guides/(.*)\\.markdown(#.*)?$",
+            "replacement": "file:///github/workspace/docs/guides/$1.md$2"
         }
     ]
 }

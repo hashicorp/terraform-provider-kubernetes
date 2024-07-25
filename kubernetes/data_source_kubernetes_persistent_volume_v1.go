@@ -15,6 +15,7 @@ import (
 
 func dataSourceKubernetesPersistentVolumeV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "A PersistentVolume (PV) is a piece of networked storage in the cluster provisioned by an administrator. It is a resource in the cluster just like a node is a cluster resource. Persistent Volumes have a lifecycle independent of any individual pod that uses the PV. This data source retrieves information about the specified PV.",
 		ReadContext: dataSourceKubernetesPersistentVolumeV1Read,
 
 		Schema: map[string]*schema.Schema{
@@ -35,6 +36,7 @@ func dataSourceKubernetesPersistentVolumeV1() *schema.Resource {
 									"ReadWriteOnce",
 									"ReadOnlyMany",
 									"ReadWriteMany",
+									"ReadWriteOncePod",
 								}, false),
 							},
 							Set: schema.HashString,

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,6 +19,7 @@ func dataSourceKubernetesPodV1() *schema.Resource {
 	// being mutated on the server side as Kubernetes automatically adds a mount
 	// for the service account token
 	return &schema.Resource{
+		Description: "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.Read more at [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod/)",
 		ReadContext: dataSourceKubernetesPodV1Read,
 
 		Schema: map[string]*schema.Schema{
@@ -55,6 +57,9 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 	log.Printf("[INFO] Reading pod %s", metadata.Name)
 	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

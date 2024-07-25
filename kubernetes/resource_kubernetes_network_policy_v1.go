@@ -25,6 +25,7 @@ var (
 	networkPolicyV1EgressRulePortsDoc       = networking.NetworkPolicyEgressRule{}.SwaggerDoc()["ports"]
 	networkPolicyV1EgressRuleToDoc          = networking.NetworkPolicyEgressRule{}.SwaggerDoc()["to"]
 	networkPolicyV1PortPortDoc              = networking.NetworkPolicyPort{}.SwaggerDoc()["port"]
+	networkPolicyV1PortEndPortDoc           = networking.NetworkPolicyPort{}.SwaggerDoc()["endPort"]
 	networkPolicyV1PortProtocolDoc          = networking.NetworkPolicyPort{}.SwaggerDoc()["protocol"]
 	networkPolicyV1PeerIpBlockDoc           = networking.NetworkPolicyPeer{}.SwaggerDoc()["ipBlock"]
 	ipBlockCidrDoc                          = networking.IPBlock{}.SwaggerDoc()["cidr"]
@@ -37,6 +38,7 @@ var (
 
 func resourceKubernetesNetworkPolicyV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints. NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods. Read more about network policies at https://kubernetes.io/docs/concepts/services-networking/network-policies/",
 		CreateContext: resourceKubernetesNetworkPolicyV1Create,
 		ReadContext:   resourceKubernetesNetworkPolicyV1Read,
 		UpdateContext: resourceKubernetesNetworkPolicyV1Update,
@@ -69,6 +71,11 @@ func resourceKubernetesNetworkPolicyV1() *schema.Resource {
 												"port": {
 													Type:        schema.TypeString,
 													Description: networkPolicyV1PortPortDoc,
+													Optional:    true,
+												},
+												"end_port": {
+													Type:        schema.TypeInt,
+													Description: networkPolicyV1PortEndPortDoc,
 													Optional:    true,
 												},
 												"protocol": {
@@ -146,6 +153,11 @@ func resourceKubernetesNetworkPolicyV1() *schema.Resource {
 												"port": {
 													Type:        schema.TypeString,
 													Description: networkPolicyV1PortPortDoc,
+													Optional:    true,
+												},
+												"end_port": {
+													Type:        schema.TypeInt,
+													Description: networkPolicyV1PortEndPortDoc,
 													Optional:    true,
 												},
 												"protocol": {

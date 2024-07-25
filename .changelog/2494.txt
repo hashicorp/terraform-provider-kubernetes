@@ -1,0 +1,3 @@
+```release-note:improvement
+`resource/resource_kubernetes_network_policy_v1`: add support for `end_port`
+```

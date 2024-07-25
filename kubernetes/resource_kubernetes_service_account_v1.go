@@ -24,6 +24,7 @@ import (
 
 func resourceKubernetesServiceAccountV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A service account provides an identity for processes that run in a Pod. Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)",
 		CreateContext: resourceKubernetesServiceAccountV1Create,
 		ReadContext:   resourceKubernetesServiceAccountV1Read,
 		UpdateContext: resourceKubernetesServiceAccountV1Update,
@@ -420,7 +421,7 @@ func resourceKubernetesServiceAccountV1ImportState(ctx context.Context, d *schem
 
 	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to fetch service account from Kubernetes: %s", err)
+		return nil, fmt.Errorf(`Unable to fetch service account "%s/%s" from Kubernetes: %s`, namespace, name, err)
 	}
 
 	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)

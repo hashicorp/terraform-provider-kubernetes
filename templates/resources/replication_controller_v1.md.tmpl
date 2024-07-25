@@ -1,0 +1,28 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_replication_controller_v1"
+description: |-
+  A Replication Controller ensures that a specified number of pod “replicas” are running at any one time. In other words, a Replication Controller makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Replication Controller will start more.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+~> **WARNING:** In many cases it is recommended to create a Deployment instead of a Replication Controller.
+
+## Example Usage
+
+{{tffile "examples/resources/replication_controller_v1/example_1.tf"}}
+
+## Import
+
+Replication Controller can be imported using the namespace and name, e.g.
+
+```
+$ terraform import kubernetes_replication_controller_v1.example default/terraform-example
+```
+
+~> **NOTE:** Imported `kubernetes_replication_controller_v1` resource will only have their fields from the `spec.template.spec` block in the state. Deprecated fields at the `spec.template` level are not updated during import. Configurations using the deprecated fields should be updated to only use the new fields under `spec.template.spec`.

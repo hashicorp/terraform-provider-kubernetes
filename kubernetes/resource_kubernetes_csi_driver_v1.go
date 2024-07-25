@@ -23,6 +23,7 @@ import (
 
 func resourceKubernetesCSIDriverV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "The [Container Storage Interface](https://kubernetes-csi.github.io/docs/introduction.html) (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container Orchestration Systems (COs) like Kubernetes.",
 		CreateContext: resourceKubernetesCSIDriverV1Create,
 		ReadContext:   resourceKubernetesCSIDriverV1Read,
 		UpdateContext: resourceKubernetesCSIDriverV1Update,

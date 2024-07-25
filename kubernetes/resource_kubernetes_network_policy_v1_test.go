@@ -109,6 +109,41 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 				),
 			},
 			{
+				Config: testAccKubernetesNetworkPolicyV1Config_endPorts(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNetworkPolicyV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "8126"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.end_port", "9000"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.0.match_labels.name", "default"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.port", "10000"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.protocol", "TCP"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.end_port", "65535"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
+				),
+			},
+			{
 				Config: testAccKubernetesNetworkPolicyV1Config_specModified_allow_all_namespaces(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNetworkPolicyV1Exists(resourceName, &conf),
@@ -476,6 +511,50 @@ func testAccKubernetesNetworkPolicyV1Config_specModified(name string) string {
       }
     }
 
+    policy_types = ["Ingress"]
+  }
+}
+`, name)
+}
+
+func testAccKubernetesNetworkPolicyV1Config_endPorts(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_network_policy_v1" "test" {
+  metadata {
+    name      = "%s"
+    namespace = "default"
+  }
+
+  spec {
+    pod_selector {
+      match_expressions {
+        key      = "name"
+        operator = "In"
+        values   = ["webfront", "api"]
+      }
+    }
+
+    ingress {
+      ports {
+        port     = "8126"
+        protocol = "TCP"
+        end_port = "9000"
+      }
+
+      from {
+        namespace_selector {
+          match_labels = {
+            name = "default"
+          }
+        }
+      }
+    }
+    egress {
+      ports {
+        port     = "10000"
+        protocol = "TCP"
+        end_port = "65535"
+      }
+    }
     policy_types = ["Ingress"]
   }
 }

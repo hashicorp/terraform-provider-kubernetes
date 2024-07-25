@@ -12,12 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 func dataSourceKubernetesNodes() *schema.Resource {
 	return &schema.Resource{
+		Description: "This data source provides a mechanism for listing the names of nodes in a kubernetes cluster.By default, all nodes in the cluster are returned, but queries by node label are also supported. It can be used to check for the existence of a specific node or to lookup a node to apply a taint with the `kubernetes_node_taint` resource.",
 		ReadContext: dataSourceKubernetesNodesRead,
 		Schema: map[string]*schema.Schema{
 			"metadata": {
@@ -89,6 +91,9 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	log.Printf("[INFO] Listing nodes")
 	nodesRaw, err := conn.CoreV1().Nodes().List(ctx, listOptions)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	nodes := make([]interface{}, len(nodesRaw.Items))

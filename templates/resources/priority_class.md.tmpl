@@ -1,0 +1,24 @@
+---
+subcategory: "scheduling/v1"
+page_title: "Kubernetes: kubernetes_priority_class"
+description: |-
+  A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.
+---
+
+# {{ .Name }}
+
+A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/priority_class/example_1.tf"}}
+
+## Import
+
+Priority Class can be imported using its name, e.g.
+
+```
+$ terraform import kubernetes_priority_class.example terraform-example
+```

@@ -1,3 +1,15 @@
+## 2.30.0 (May 8, 2024)
+
+BUG FIXES:
+
+* `data_source/kubernetes_resources`: fix an issue where the provider exit with an error when the data source `kubernetes_resources` receives multiple Kubernetes objects containing tuples with different numbers of elements. [[GH-2372](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2372)]
+* `kubernetes_manifest`: fix issue preventing KUBE_PROXY_URL environment variable from being used in client configuration (#1733) [[GH-2485](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2485)]
+* `resource/kubernetes_node_taint`: Fix the error check for nonexistant nodes so that terraform does not fail if there is a taint in the state file for a node that has been deleted. [[GH-2402](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2402)]
+
+DOCS:
+
+* Migrate legacy structure to new tfplugindocs template structure [[GH-2470](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2470)]
+
 ## 2.29.0 (April 11, 2024)
 
 BUG FIXES:

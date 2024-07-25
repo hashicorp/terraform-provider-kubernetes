@@ -1,0 +1,25 @@
+---
+subcategory: "networking/v1"
+page_title: "Kubernetes: kubernetes_network_policy"
+description: |-
+  Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints.
+  NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods.
+---
+
+# {{ .Name }}
+
+Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints. NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods. Read more about network policies at https://kubernetes.io/docs/concepts/services-networking/network-policies/
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/network_policy/example_1.tf"}}
+
+## Import
+
+Network policies can be imported using their identifier consisting of `<namespace-name>/<network-policy-name>`, e.g.:
+
+```
+$ terraform import kubernetes_network_policy.example default/terraform-example-network-policy
+```

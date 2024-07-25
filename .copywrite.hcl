@@ -11,5 +11,6 @@ project {
     ".markdownlint.yml",
     ".release/**",
     "vendor/**",
+    "examples/**"
   ]
 }

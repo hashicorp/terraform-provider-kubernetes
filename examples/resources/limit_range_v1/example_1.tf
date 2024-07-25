@@ -1,0 +1,27 @@
+resource "kubernetes_limit_range_v1" "example" {
+  metadata {
+    name = "terraform-example"
+  }
+  spec {
+    limit {
+      type = "Pod"
+      max = {
+        cpu    = "200m"
+        memory = "1024Mi"
+      }
+    }
+    limit {
+      type = "PersistentVolumeClaim"
+      min = {
+        storage = "24M"
+      }
+    }
+    limit {
+      type = "Container"
+      default = {
+        cpu    = "50m"
+        memory = "24Mi"
+      }
+    }
+  }
+}

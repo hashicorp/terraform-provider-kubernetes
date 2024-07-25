@@ -1,0 +1,18 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_service_v1"
+description: |-
+  A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service. This data source allows you to pull data about such service.
+
+## Example Usage
+
+{{tffile "examples/data-sources/service_v1/example_1.tf"}}

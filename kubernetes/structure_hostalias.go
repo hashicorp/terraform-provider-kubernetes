@@ -3,9 +3,9 @@
 
 package kubernetes
 
-import "k8s.io/api/core/v1"
+import corev1 "k8s.io/api/core/v1"
 
-func flattenHostaliases(in []v1.HostAlias) []interface{} {
+func flattenHostaliases(in []corev1.HostAlias) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, v := range in {
 		ha := make(map[string]interface{})
@@ -17,12 +17,12 @@ func flattenHostaliases(in []v1.HostAlias) []interface{} {
 	}
 	return att
 }
-func expandHostaliases(hostalias []interface{}) ([]v1.HostAlias, error) {
+func expandHostaliases(hostalias []interface{}) []corev1.HostAlias {
 	if len(hostalias) == 0 {
-		return []v1.HostAlias{}, nil
+		return []corev1.HostAlias{}
 	}
 
-	hs := make([]v1.HostAlias, len(hostalias))
+	hs := make([]corev1.HostAlias, len(hostalias))
 	for i, ha := range hostalias {
 		hoas := ha.(map[string]interface{})
 
@@ -34,5 +34,5 @@ func expandHostaliases(hostalias []interface{}) ([]v1.HostAlias, error) {
 			hs[i].Hostnames = expandStringSlice(hostnames)
 		}
 	}
-	return hs, nil
+	return hs
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 func flattenDaemonSetSpec(in appsv1.DaemonSetSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
@@ -64,7 +65,7 @@ func expandDaemonSetSpec(daemonset []interface{}) (appsv1.DaemonSetSpec, error) 
 	in := daemonset[0].(map[string]interface{})
 
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
-	obj.RevisionHistoryLimit = ptrToInt32(int32(in["revision_history_limit"].(int)))
+	obj.RevisionHistoryLimit = ptr.To(int32(in["revision_history_limit"].(int)))
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
 		obj.Selector = expandLabelSelector(v)

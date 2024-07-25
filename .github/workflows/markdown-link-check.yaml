@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - 'website/docs/**'
+      - 'docs/**'
   workflow_dispatch:
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Run Markdown links checker
         uses: gaurav-nelson/github-action-markdown-link-check@d53a906aa6b22b8979d33bc86170567e619495ec # 1.0.15
@@ -24,7 +24,7 @@ jobs:
           base-branch: main
           config-file: '.github/workflows/markdown.links.config.json'
           file-extension: '.markdown'
-          folder-path: 'website/docs'
+          folder-path: 'docs'
           use-verbose-mode: yes
           use-quiet-mode: yes
           max-depth: 2

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -23,6 +23,7 @@ import (
 
 func resourceKubernetesJobV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A Job creates one or more Pods and ensures that a specified number of them successfully terminate. As pods successfully complete, the Job tracks the successful completions. When a specified number of successful completions is reached, the task (ie, Job) is complete. Deleting a Job will clean up the Pods it created. A simple case is to create one Job object in order to reliably run one Pod to completion. The Job object will start a new Pod if the first Pod fails or is deleted (for example due to a node hardware failure or a node reboot. You can also use a Job to run multiple Pods in parallel. ",
 		CreateContext: resourceKubernetesJobV1Create,
 		ReadContext:   resourceKubernetesJobV1Read,
 		UpdateContext: resourceKubernetesJobV1Update,
@@ -100,7 +101,7 @@ func resourceKubernetesJobV1Create(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 	if d.Get("wait_for_completion").(bool) {
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			retryUntilJobV1IsFinished(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)
@@ -175,10 +176,7 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		specOps, err := patchJobV1Spec("/spec", "spec.0.", d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		specOps := patchJobV1Spec("/spec", "spec.0.", d)
 		ops = append(ops, specOps...)
 	}
 
@@ -198,7 +196,7 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	d.SetId(buildId(out.ObjectMeta))
 
 	if d.Get("wait_for_completion").(bool) {
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 			retryUntilJobV1IsFinished(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)
@@ -227,17 +225,17 @@ func resourceKubernetesJobV1Delete(ctx context.Context, d *schema.ResourceData, 
 		return diag.Errorf("Failed to delete Job! API error: %s", err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("Job %s still exists", name)
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)
@@ -272,14 +270,14 @@ func resourceKubernetesJobV1Exists(ctx context.Context, d *schema.ResourceData, 
 }
 
 // retryUntilJobV1IsFinished checks if a given job has finished its execution in either a Complete or Failed state
-func retryUntilJobV1IsFinished(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
-	return func() *resource.RetryError {
+func retryUntilJobV1IsFinished(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
+	return func() *retry.RetryError {
 		job, err := conn.BatchV1().Jobs(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		for _, c := range job.Status.Conditions {
@@ -289,11 +287,11 @@ func retryUntilJobV1IsFinished(ctx context.Context, conn *kubernetes.Clientset, 
 				case batchv1.JobComplete:
 					return nil
 				case batchv1.JobFailed:
-					return resource.NonRetryableError(fmt.Errorf("job: %s/%s is in failed state", ns, name))
+					return retry.NonRetryableError(fmt.Errorf("job: %s/%s is in failed state", ns, name))
 				}
 			}
 		}
 
-		return resource.RetryableError(fmt.Errorf("job: %s/%s is not in complete state", ns, name))
+		return retry.RetryableError(fmt.Errorf("job: %s/%s is not in complete state", ns, name))
 	}
 }

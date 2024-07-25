@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 func TestAccKubernetesServiceV1_basic(t *testing.T) {
@@ -504,14 +505,14 @@ func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "NodePort"),
 					testAccCheckServiceV1Ports(&conf, []corev1.ServicePort{
 						{
-							AppProtocol: ptrToString("ssh"),
+							AppProtocol: ptr.To("ssh"),
 							Name:        "first",
 							Port:        int32(10222),
 							Protocol:    corev1.ProtocolTCP,
 							TargetPort:  intstr.FromInt(22),
 						},
 						{
-							AppProtocol: ptrToString("terraform.io/kubernetes"),
+							AppProtocol: ptr.To("terraform.io/kubernetes"),
 							Name:        "second",
 							Port:        int32(10333),
 							Protocol:    corev1.ProtocolTCP,

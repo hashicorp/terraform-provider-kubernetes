@@ -1,0 +1,3 @@
+```release-note:note
+Bump Kubernetes dependencies from x.27.8 to x.28.6.
+```

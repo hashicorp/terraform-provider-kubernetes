@@ -1,0 +1,3 @@
+```release-note:enhancement
+`kubernetes/schema_stateful_set_spec.go`: Add `spec.persistentVolumeClaimRetentionPolicy` in `kubernetes_stateful_set`
+```

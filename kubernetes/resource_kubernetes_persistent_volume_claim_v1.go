@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +31,7 @@ func resourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 		Default:     true,
 	}
 	return &schema.Resource{
+		Description:   "This resource allows the user to request for and claim to a persistent volume.",
 		CreateContext: resourceKubernetesPersistentVolumeClaimV1Create,
 		ReadContext:   resourceKubernetesPersistentVolumeClaimV1Read,
 		UpdateContext: resourceKubernetesPersistentVolumeClaimV1Update,
@@ -113,7 +114,7 @@ func resourceKubernetesPersistentVolumeClaimV1Create(ctx context.Context, d *sch
 	name := out.ObjectMeta.Name
 
 	if d.Get("wait_until_bound").(bool) {
-		stateConf := &resource.StateChangeConf{
+		stateConf := &retry.StateChangeConf{
 			Target:  []string{"Bound"},
 			Pending: []string{"Pending"},
 			Timeout: d.Timeout(schema.TimeoutCreate),
@@ -253,18 +254,18 @@ func resourceKubernetesPersistentVolumeClaimV1Delete(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		out, err := conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		log.Printf("[DEBUG] Current state of persistent volume claim finalizers: %#v", out.Finalizers)
 		e := fmt.Errorf("Persistent volume claim %s still exists with finalizers: %v", name, out.Finalizers)
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

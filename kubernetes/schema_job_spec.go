@@ -91,6 +91,72 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
 		},
+		"pod_failure_policy": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			MaxItems:    1,
+			Description: "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"rule": {
+						Type:        schema.TypeList,
+						Description: "A label query over volumes to consider for binding.",
+						Required:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"action": {
+									Type:     schema.TypeString,
+									Optional: true,
+								},
+								"on_exit_codes": {
+									Type:     schema.TypeList,
+									Optional: true,
+									MaxItems: 1,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"container_name": {
+												Type:     schema.TypeString,
+												Optional: true,
+											},
+											"operator": {
+												Type:     schema.TypeString,
+												Optional: true,
+											},
+											"values": {
+												Type:     schema.TypeList,
+												Required: true,
+												MinItems: 1,
+												MaxItems: 255,
+												Elem: &schema.Schema{Type: schema.TypeInt,
+													ValidateFunc: validation.IntNotInSlice([]int{0})},
+											},
+										},
+									},
+								},
+								"on_pod_condition": {
+									Type:     schema.TypeList,
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"status": {
+												Type:     schema.TypeString,
+												Optional: true,
+												Default:  "True",
+											},
+											"type": {
+												Type:     schema.TypeString,
+												Optional: true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		// This field is immutable in Jobs.
 		"selector": {
 			Type:        schema.TypeList,

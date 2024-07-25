@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,6 +22,7 @@ import (
 
 func resourceKubernetesReplicationControllerV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A Replication Controller ensures that a specified number of pod “replicas” are running at any one time. In other words, a Replication Controller makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Replication Controller will start more.",
 		CreateContext: resourceKubernetesReplicationControllerV1Create,
 		ReadContext:   resourceKubernetesReplicationControllerV1Read,
 		UpdateContext: resourceKubernetesReplicationControllerV1Update,
@@ -139,7 +140,7 @@ func resourceKubernetesReplicationControllerV1Create(ctx context.Context, d *sch
 	log.Printf("[DEBUG] Waiting for replication controller %s to schedule %d replicas",
 		d.Id(), *out.Spec.Replicas)
 	// 10 mins should be sufficient for scheduling ~10k replicas
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 		waitForDesiredReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
 	if err != nil {
 		return diag.FromErr(err)
@@ -233,7 +234,7 @@ func resourceKubernetesReplicationControllerV1Update(ctx context.Context, d *sch
 	}
 	log.Printf("[INFO] Submitted updated replication controller: %#v", out)
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 		waitForDesiredReplicasFunc(ctx, conn, namespace, name))
 	if err != nil {
 		return diag.FromErr(err)
@@ -271,7 +272,7 @@ func resourceKubernetesReplicationControllerV1Delete(ctx context.Context, d *sch
 	}
 
 	// Wait until all replicas are gone
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete),
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete),
 		waitForDesiredReplicasFunc(ctx, conn, namespace, name))
 	if err != nil {
 		return diag.FromErr(err)
@@ -286,17 +287,17 @@ func resourceKubernetesReplicationControllerV1Delete(ctx context.Context, d *sch
 	}
 
 	// Wait for Delete to finish. Necessary for ForceNew operations.
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.CoreV1().ReplicationControllers(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("Replication Controller (%s) still exists", d.Id())
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)
@@ -329,11 +330,11 @@ func resourceKubernetesReplicationControllerV1Exists(ctx context.Context, d *sch
 	return true, err
 }
 
-func waitForDesiredReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
-	return func() *resource.RetryError {
+func waitForDesiredReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
+	return func() *retry.RetryError {
 		rc, err := conn.CoreV1().ReplicationControllers(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		desiredReplicas := *rc.Spec.Replicas
@@ -344,7 +345,7 @@ func waitForDesiredReplicasFunc(ctx context.Context, conn *kubernetes.Clientset,
 			return nil
 		}
 
-		return resource.RetryableError(fmt.Errorf("Waiting for %d replicas of %q to be scheduled (%d)",
+		return retry.RetryableError(fmt.Errorf("Waiting for %d replicas of %q to be scheduled (%d)",
 			desiredReplicas, rc.GetName(), rc.Status.FullyLabeledReplicas))
 	}
 }

@@ -56,6 +56,25 @@ func TestAccKubernetesDataSourcePersistentVolumeClaimV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourcePersistentVolumeClaimV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_persistent_volume_claim_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-pvc-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{ // The first apply creates the resource. The second apply reads the resource using the data source.
+				Config: testAccKubernetesDataSourcePersistentVolumeClaimV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "0"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourcePersistentVolumeClaimV1_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_persistent_volume_claim_v1" "test" {
   metadata {
@@ -97,4 +116,13 @@ func testAccKubernetesDataSourcePersistentVolumeClaimV1_read() string {
   }
 }
 `
+}
+
+func testAccKubernetesDataSourcePersistentVolumeClaimV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_persistent_volume_claim_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

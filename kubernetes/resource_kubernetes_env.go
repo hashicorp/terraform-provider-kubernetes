@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,6 +27,7 @@ import (
 
 func resourceKubernetesEnv() *schema.Resource {
 	return &schema.Resource{
+		Description:   "This resource provides a way to manage environment variables in resources that were created outside of Terraform. This resource provides functionality similar to the `kubectl set env` command.",
 		CreateContext: resourceKubernetesEnvCreate,
 		ReadContext:   resourceKubernetesEnvRead,
 		UpdateContext: resourceKubernetesEnvUpdate,
@@ -512,7 +514,7 @@ func resourceKubernetesEnvUpdate(ctx context.Context, d *schema.ResourceData, m 
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
-			Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        ptr.To(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

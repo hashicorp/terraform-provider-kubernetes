@@ -128,7 +128,7 @@ func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
 func loggingTransport(rt http.RoundTripper) http.RoundTripper {
 	return &loggingRountTripper{
 		ot: rt,
-		lt: logging.NewTransport("Kubernetes API", rt),
+		lt: logging.NewSubsystemLoggingHTTPTransport("Kubernetes API", rt),
 	}
 }
 

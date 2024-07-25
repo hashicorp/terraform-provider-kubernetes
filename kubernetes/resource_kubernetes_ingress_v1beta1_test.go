@@ -119,6 +119,39 @@ func TestAccKubernetesIngressV1Beta1_TLS(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngressV1Beta1_emptyTLS(t *testing.T) {
+	var conf api.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_ingress.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Beta1Config_TLS(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Beta1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.hosts.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.tls.0.secret_name", ""),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesIngressV1Beta1_InternalKey(t *testing.T) {
 	var conf api.Ingress
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -194,7 +227,6 @@ func TestAccKubernetesIngressV1Beta1_WaitForLoadBalancerGoogleCloud(t *testing.T
 
 func testAccCheckKubernetesIngressV1Beta1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -304,6 +336,22 @@ func testAccKubernetesIngressV1Beta1Config_TLS(name string) string {
     tls {
       hosts       = ["host1"]
       secret_name = "super-sekret"
+    }
+  }
+}`, name)
+}
+
+func testAccKubernetesIngressV1Beta1Config_emptyTLS(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    backend {
+      service_name = "app1"
+      service_port = 443
+    }
+    tls {
     }
   }
 }`, name)

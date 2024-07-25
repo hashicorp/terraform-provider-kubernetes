@@ -1,0 +1,32 @@
+---
+subcategory: ""
+page_title: "manifest_encode function"
+description: |-
+  Decode a Kubernetes YAML manifest containing multiple resources
+---
+
+{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+
+For example, the {{ .FunctionArgumentsMarkdown }} template can be used to replace manual argument documentation if descriptions of function arguments are added in the provider source code. */ -}}
+
+# function: manifest_encode
+
+Given an object representation of a Kubernetes manifest, will encode and return a YAML string for that resource.
+
+## Example Usage
+
+{{tffile "examples/functions/manifest_encode/example_1.tf"}}
+
+## Signature
+
+```text
+manifest_encode(manifest object) string
+```
+
+## Arguments
+
+1. `manifest` (String) The object representation of a Kubernetes manifest
+
+## Return Type
+
+The `string` returned from `manifest_encode` will contain the YAML encoded Kubernetes manifest.

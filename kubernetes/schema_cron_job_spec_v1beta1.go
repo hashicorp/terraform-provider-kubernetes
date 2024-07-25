@@ -30,7 +30,7 @@ func cronJobSpecFieldsV1Beta1() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"metadata": metadataSchema("jobTemplateSpec", true),
+					"metadata": namespacedMetadataSchemaIsTemplate("jobTemplateSpec", true, true),
 					"spec": {
 						Type:        schema.TypeList,
 						Description: "Specification of the desired behavior of the job",
@@ -46,7 +46,7 @@ func cronJobSpecFieldsV1Beta1() map[string]*schema.Schema {
 		"schedule": {
 			Type:         schema.TypeString,
 			Required:     true,
-			ValidateFunc: validateCronExpression(),
+			ValidateFunc: validateCronExpression,
 			Description:  "Cron format string, e.g. 0 * * * * or @hourly, as schedule time of its jobs to be created and executed.",
 		},
 		"starting_deadline_seconds": {

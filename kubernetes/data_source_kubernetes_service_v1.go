@@ -11,11 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesServiceV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service. This data source allows you to pull data about such service.",
 		ReadContext: dataSourceKubernetesServiceV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service", false),
@@ -257,6 +259,9 @@ func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Reading service %s", metadata.Name)
 	svc, err := conn.CoreV1().Services(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

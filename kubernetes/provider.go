@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/utils/ptr"
 
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -189,6 +190,7 @@ func Provider() *schema.Provider {
 								return true, nil
 							},
 							Description: "Enable the `kubernetes_manifest` resource.",
+							Deprecated:  "The kubernetes_manifest resource is now permanently enabled and no longer considered an experiment. This flag has no effect and will be removed in the near future.",
 						},
 					},
 				},
@@ -339,7 +341,7 @@ func Provider() *schema.Provider {
 			// admission control
 			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfigurationV1Beta1(),
 			"kubernetes_validating_webhook_configuration_v1": resourceKubernetesValidatingWebhookConfigurationV1(),
-			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfigurationV1(),
+			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfiguration(),
 			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
 
 			// storage
@@ -360,8 +362,13 @@ func Provider() *schema.Provider {
 		},
 	}
 
-	p.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-		return providerConfigure(ctx, d, p.TerraformVersion)
+	p.ConfigureProvider = func(ctx context.Context, req schema.ConfigureProviderRequest, res *schema.ConfigureProviderResponse) {
+		if req.DeferralAllowed && !req.ResourceData.GetRawConfig().IsWhollyKnown() {
+			res.Deferred = &schema.Deferred{
+				Reason: schema.DeferredReasonProviderConfigUnknown,
+			}
+		}
+		res.Meta, res.Diagnostics = providerConfigure(ctx, req.ResourceData, p.TerraformVersion)
 	}
 
 	return p
@@ -374,7 +381,7 @@ type KubeClientsets interface {
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
 }
 
-type kubeClientsets struct {
+type providerMetadata struct {
 	// TODO: this struct has become overloaded we should
 	// rename this or break it into smaller structs
 	config              *restclient.Config
@@ -387,7 +394,7 @@ type kubeClientsets struct {
 	IgnoreLabels      []string
 }
 
-func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
+func (k providerMetadata) MainClientset() (*kubernetes.Clientset, error) {
 	if k.mainClientset != nil {
 		return k.mainClientset, nil
 	}
@@ -402,7 +409,7 @@ func (k kubeClientsets) MainClientset() (*kubernetes.Clientset, error) {
 	return k.mainClientset, nil
 }
 
-func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
+func (k providerMetadata) AggregatorClientset() (*aggregator.Clientset, error) {
 	if k.aggregatorClientset != nil {
 		return k.aggregatorClientset, nil
 	}
@@ -416,7 +423,7 @@ func (k kubeClientsets) AggregatorClientset() (*aggregator.Clientset, error) {
 	return k.aggregatorClientset, nil
 }
 
-func (k kubeClientsets) DynamicClient() (dynamic.Interface, error) {
+func (k providerMetadata) DynamicClient() (dynamic.Interface, error) {
 	if k.dynamicClient != nil {
 		return k.dynamicClient, nil
 	}
@@ -431,7 +438,7 @@ func (k kubeClientsets) DynamicClient() (dynamic.Interface, error) {
 	return k.dynamicClient, nil
 }
 
-func (k kubeClientsets) DiscoveryClient() (discovery.DiscoveryInterface, error) {
+func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error) {
 	if k.discoveryClient != nil {
 		return k.discoveryClient, nil
 	}
@@ -448,9 +455,9 @@ func (k kubeClientsets) DiscoveryClient() (discovery.DiscoveryInterface, error) 
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization
-	cfg, err := initializeConfiguration(d)
-	if err != nil {
-		return nil, diag.FromErr(err)
+	cfg, diags := initializeConfiguration(d)
+	if diags.HasError() {
+		return nil, diags
 	}
 	if cfg == nil {
 		// This is a TEMPORARY measure to work around https://github.com/hashicorp/terraform/issues/24055
@@ -465,7 +472,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	if logging.IsDebugOrHigher() {
 		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
 		cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
-			return logging.NewTransport("Kubernetes", rt)
+			return logging.NewSubsystemLoggingHTTPTransport("Kubernetes", rt)
 		}
 	}
 
@@ -479,7 +486,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		ignoreLabels = expandStringSlice(v)
 	}
 
-	m := kubeClientsets{
+	m := providerMetadata{
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
@@ -489,7 +496,8 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	return m, diag.Diagnostics{}
 }
 
-func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
+func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {
+	diags := make(diag.Diagnostics, 0)
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
@@ -512,7 +520,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		for _, p := range configPaths {
 			path, err := homedir.Expand(p)
 			if err != nil {
-				return nil, err
+				return nil, append(diags, diag.FromErr(err)...)
 			}
 
 			log.Printf("[DEBUG] Using kubeconfig: %s", path)
@@ -571,12 +579,17 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		// see https://github.com/kubernetes/client-go/blob/v12.0.0/rest/url_utils.go#L85-L87
 		hasCA := len(overrides.ClusterInfo.CertificateAuthorityData) != 0
 		hasCert := len(overrides.AuthInfo.ClientCertificateData) != 0
-		defaultTLS := hasCA || hasCert || overrides.ClusterInfo.InsecureSkipTLSVerify
+		defaultTLS := (hasCA || hasCert) && !overrides.ClusterInfo.InsecureSkipTLSVerify
 		host, _, err := restclient.DefaultServerURL(v.(string), "", apimachineryschema.GroupVersion{}, defaultTLS)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to parse host: %s", err)
+			nd := diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       fmt.Sprintf("Failed to parse value for host: %s", v.(string)),
+				Detail:        err.Error(),
+				AttributePath: cty.Path{}.IndexString("host"),
+			}
+			return nil, append(diags, nd)
 		}
-
 		overrides.ClusterInfo.Server = host.String()
 	}
 	if v, ok := d.GetOk("username"); ok {
@@ -603,7 +616,12 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv.(string)})
 			}
 		} else {
-			return nil, fmt.Errorf("Failed to parse exec")
+			nd := diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       "Failed to parse 'exec' provider configuration",
+				AttributePath: cty.Path{}.IndexString("exec"),
+			}
+			return nil, append(diags, nd)
 		}
 		overrides.AuthInfo.Exec = exec
 	}
@@ -615,11 +633,16 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
-		return nil, nil
+		nd := diag.Diagnostic{
+			Severity: diag.Warning,
+			Summary:  "Provider was supplied an invalid configuration. Further operations likely to fail.",
+			Detail:   err.Error(),
+		}
+		log.Printf("[WARN] Provider was supplied an invalid configuration. Further operations likely to fail: %v", err)
+		return nil, append(diags, nd)
 	}
 
-	return cfg, nil
+	return cfg, diags
 }
 
 var useadmissionregistrationv1beta1 *bool
@@ -641,7 +664,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	err = discovery.ServerSupportsVersion(d, v1)
 	if err == nil {
 		log.Printf("[INFO] Using %s/v1", group)
-		useadmissionregistrationv1beta1 = ptrToBool(false)
+		useadmissionregistrationv1beta1 = ptr.To(false)
 		return false, nil
 	}
 
@@ -656,7 +679,7 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 	}
 
 	log.Printf("[INFO] Using %s/v1beta1", group)
-	useadmissionregistrationv1beta1 = ptrToBool(true)
+	useadmissionregistrationv1beta1 = ptr.To(true)
 	return true, nil
 }
 

@@ -16,5 +16,6 @@ func resourceKubernetesReplicationControllerV0() *schema.Resource {
 }
 
 func resourceKubernetesReplicationControllerUpgradeV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
-	return upgradeTemplatePodSpecWithResourcesFieldV0(ctx, rawState, meta)
+	// Return a nil error here to satisfy StateUpgradeFunc signature
+	return upgradeTemplatePodSpecWithResourcesFieldV0(ctx, rawState, meta), nil
 }

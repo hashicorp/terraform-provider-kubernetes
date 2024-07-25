@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	v1 "k8s.io/api/core/v1"
@@ -22,6 +22,7 @@ import (
 
 func resourceKubernetesStorageClassV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform. Read more [here] (https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/)",
 		CreateContext: resourceKubernetesStorageClassV1Create,
 		ReadContext:   resourceKubernetesStorageClassV1Read,
 		UpdateContext: resourceKubernetesStorageClassV1Update,
@@ -244,17 +245,17 @@ func resourceKubernetesStorageClassV1Delete(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.StorageV1().StorageClasses().Get(ctx, d.Id(), metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("storage class (%s) still exists", d.Id())
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

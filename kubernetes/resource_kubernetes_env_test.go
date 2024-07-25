@@ -15,7 +15,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utils "k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
@@ -253,7 +253,7 @@ func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
 }
 
 func createInitContainerEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -315,7 +315,7 @@ func createInitContainerEnv(t *testing.T, name, namespace string) error {
 }
 
 func createEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func createEnv(t *testing.T, name, namespace string) error {
 }
 
 func createCronJobEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -424,18 +424,18 @@ func createCronJobEnv(t *testing.T, name, namespace string) error {
 }
 
 func createCronJobInitContainerEnv(t *testing.T, name, namespace string) error {
-	conn, err := testAccProvider.Meta().(kubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(providerMetadata).MainClientset()
 	if err != nil {
 		return err
 	}
 	ctx := context.Background()
 
-	var failJobLimit *int32 = utils.Int32(2)
-	var startingDeadlineSeconds *int64 = utils.Int64(2)
-	var successfulJobsLimit *int32 = utils.Int32(2)
-	var boLimit *int32 = utils.Int32(2)
-	var ttl *int32 = utils.Int32(2)
-	var cronjob batchv1.CronJob = batchv1.CronJob{
+	failJobLimit := ptr.To(int32(2))
+	startingDeadlineSeconds := ptr.To(int64(2))
+	successfulJobsLimit := ptr.To(int32(2))
+	boLimit := ptr.To(int32(2))
+	ttl := ptr.To(int32(2))
+	cronjob := batchv1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,

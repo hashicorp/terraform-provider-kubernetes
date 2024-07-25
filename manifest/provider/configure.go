@@ -49,6 +49,13 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		})
 		return response, nil
 	}
+
+	clcp := req.ClientCapabilities
+	if !cfgVal.IsFullyKnown() && clcp != nil && clcp.DeferralAllowed {
+		// need to deferr actions
+		s.clientConfigUnknown = true
+	}
+
 	err = cfgVal.As(&providerConfig)
 	if err != nil {
 		// invalid configuration schema - this shouldn't happen, bail out now
@@ -57,66 +64,6 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			Summary:  "Provider configuration: failed to extract 'config_path' value",
 			Detail:   err.Error(),
 		})
-		return response, nil
-	}
-
-	providerEnabled := true
-	if !providerConfig["experiments"].IsNull() && providerConfig["experiments"].IsKnown() {
-		var experimentsBlock []tftypes.Value
-		err = providerConfig["experiments"].As(&experimentsBlock)
-		if err != nil {
-			// invalid configuration schema - this shouldn't happen, bail out now
-			response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Provider configuration: failed to extract 'experiments' value",
-				Detail:   err.Error(),
-			})
-			return response, nil
-		}
-		if len(experimentsBlock) > 0 {
-			var experimentsObj map[string]tftypes.Value
-			err := experimentsBlock[0].As(&experimentsObj)
-			if err != nil {
-				// invalid configuration schema - this shouldn't happen, bail out now
-				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
-					Summary:  "Provider configuration: failed to extract 'experiments' value",
-					Detail:   err.Error(),
-				})
-				return response, nil
-			}
-			if !experimentsObj["manifest_resource"].IsNull() && experimentsObj["manifest_resource"].IsKnown() {
-				err = experimentsObj["manifest_resource"].As(&providerEnabled)
-				if err != nil {
-					// invalid attribute type - this shouldn't happen, bail out for now
-					response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
-						Summary:  "Provider configuration: failed to extract 'manifest_resource' value",
-						Detail:   err.Error(),
-					})
-					return response, nil
-				}
-			}
-		}
-	}
-	if v := os.Getenv("TF_X_KUBERNETES_MANIFEST_RESOURCE"); v != "" {
-		providerEnabled, err = strconv.ParseBool(v)
-		if err != nil {
-			if err != nil {
-				// invalid attribute type - this shouldn't happen, bail out for now
-				response.Diagnostics = append(response.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
-					Summary:  "Provider configuration: failed to parse boolean from `TF_X_KUBERNETES_MANIFEST_RESOURCE` env var",
-					Detail:   err.Error(),
-				})
-				return response, nil
-			}
-		}
-	}
-	s.providerEnabled = providerEnabled
-
-	if !providerEnabled {
-		// Configure should be a noop when not enabled in the provider block
 		return response, nil
 	}
 
@@ -205,7 +152,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 	if !providerConfig["client_certificate"].IsNull() && providerConfig["client_certificate"].IsKnown() {
 		err = providerConfig["client_certificate"].As(&clientCertificate)
 		if err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
+			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_certificate' type cannot be asserted: " + err.Error(),
@@ -341,7 +288,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		}
 		hostURL, _, err := rest.DefaultServerURL(host, "", apimachineryschema.GroupVersion{}, defaultTLS)
 		if err != nil {
-			diags = append(diags, &tfprotov5.Diagnostic{
+			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityInvalid,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "Invalid value for 'host': " + err.Error(),
@@ -523,7 +470,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		}
 		overrides.ClusterDefaults.ProxyURL = proxyURL
 	}
-	if proxyUrl, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyUrl != "" {
+	if proxyURL, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyURL != "" {
 		overrides.ClusterDefaults.ProxyURL = proxyURL
 	}
 
@@ -673,13 +620,6 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 }
 
 func (s *RawProviderServer) canExecute() (resp []*tfprotov5.Diagnostic) {
-	if !s.providerEnabled {
-		resp = append(resp, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Experimental feature not enabled.",
-			Detail:   "The `kubernetes_manifest` resource is an experimental feature and must be explicitly enabled in the provider configuration block.",
-		})
-	}
 	if semver.IsValid(s.hostTFVersion) && semver.Compare(s.hostTFVersion, minTFVersion) < 0 {
 		resp = append(resp, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

@@ -216,8 +216,7 @@ func testAccCheckKubernetesMutatingWebhookConfigurationExists(n string) resource
 }
 
 func testAccKubernetesMutatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration" "test" {
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
   metadata {
     name = %q
   }
@@ -254,8 +253,7 @@ resource "kubernetes_mutating_webhook_configuration" "test" {
 }
 
 func testAccKubernetesMutatingWebhookConfigurationConfig_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration" "test" {
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
   metadata {
     name = %q
   }
@@ -306,8 +304,7 @@ resource "kubernetes_mutating_webhook_configuration" "test" {
 }
 
 func testAccKubernetesMutatingWebhookConfigurationConfig_without_rules(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration" "test" {
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration" "test" {
   metadata {
     name = %q
   }

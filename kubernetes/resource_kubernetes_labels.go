@@ -21,10 +21,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesLabels() *schema.Resource {
 	return &schema.Resource{
+		Description:   "This resource allows Terraform to manage the labels for a resource that already exists. This resource uses [field management](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management) and [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to manage only the labels that are defined in the Terraform configuration. Existing labels not specified in the configuration will be ignored. If a label specified in the config and is already managed by another client it will cause a conflict which can be overridden by setting `force` to true.",
 		CreateContext: resourceKubernetesLabelsCreate,
 		ReadContext:   resourceKubernetesLabelsRead,
 		UpdateContext: resourceKubernetesLabelsUpdate,
@@ -277,7 +279,7 @@ func resourceKubernetesLabelsUpdate(ctx context.Context, d *schema.ResourceData,
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
-			Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        ptr.To(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

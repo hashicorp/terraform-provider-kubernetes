@@ -1440,7 +1440,6 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionGreaterThanOrEqual(t, "1.17.0")
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -1450,9 +1449,44 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "spec.0.topology_spread_constraint.0.match_label_keys.*", "pod-template-hash"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.max_skew", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.node_affinity_policy", "Ignore"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.node_taints_policy", "Honor"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.topology_key", "topology.kubernetes.io/zone"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.when_unsatisfiable", "ScheduleAnyway"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPodV1_topologySpreadConstraintMinDomains(t *testing.T) {
+	var conf1 api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.topology_spread_constraint.0.min_domains", "1"),
 				),
 			},
 			{
@@ -1949,8 +1983,7 @@ func testAccKubernetesPodV1ConfigWithSecurityContextRunAsGroup(podName, imageNam
 }
 
 func testAccKubernetesPodV1ConfigWithSecurityContextSeccompProfile(podName, imageName, seccompProfileType string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -1982,8 +2015,7 @@ resource "kubernetes_pod_v1" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithSecurityContextSeccompProfileLocalhost(podName, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_pod_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     labels = {
       app = "pod_label"
@@ -3221,12 +3253,39 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
       name  = "containername"
     }
     topology_spread_constraint {
-      max_skew           = 1
-      topology_key       = "topology.kubernetes.io/zone"
-      when_unsatisfiable = "ScheduleAnyway"
+      match_label_keys     = ["pod-template-hash"]
+      max_skew             = 1
+      node_affinity_policy = "Ignore"
+      node_taints_policy   = "Honor"
+      topology_key         = "topology.kubernetes.io/zone"
+      when_unsatisfiable   = "ScheduleAnyway"
       label_selector {
         match_labels = {
           "app.kubernetes.io/instance" = "terraform-example"
+        }
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    topology_spread_constraint {
+      min_domains  = 1
+      topology_key = "kubernetes.io/hostname"
+      label_selector {
+        match_labels = {
+          "test" = "test"
         }
       }
     }

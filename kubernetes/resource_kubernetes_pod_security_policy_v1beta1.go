@@ -67,6 +67,7 @@ var (
 func resourceKubernetesPodSecurityPolicyV1Beta1() *schema.Resource {
 	return &schema.Resource{
 		DeprecationMessage: `"PodSecurityPolicy" was deprecated in Kubernetes v1.21.0; Starting from version 1.21.0 Kubernetes has deprecated PodSecurityPolicy and has been removed entirely in v1.25.0`,
+		Description:        "A Pod Security Policy is a cluster-level resource that controls security sensitive aspects of the pod specification. The PodSecurityPolicy objects define a set of conditions that a pod must run with in order to be accepted into the system, as well as defaults for the related fields.",
 		CreateContext:      resourceKubernetesPodSecurityPolicyV1Beta1Create,
 		ReadContext:        resourceKubernetesPodSecurityPolicyV1Beta1Read,
 		UpdateContext:      resourceKubernetesPodSecurityPolicyV1Beta1Update,
@@ -448,10 +449,7 @@ func resourceKubernetesPodSecurityPolicyV1Beta1Update(ctx context.Context, d *sc
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
-		diffOps, err := patchPodSecurityPolicySpec("spec.0.", "/spec", d)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		diffOps := patchPodSecurityPolicySpec("spec.0.", "/spec", d)
 		ops = append(ops, *diffOps...)
 	}
 	data, err := ops.MarshalJSON()

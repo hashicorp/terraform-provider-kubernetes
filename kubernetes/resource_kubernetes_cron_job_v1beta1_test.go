@@ -126,6 +126,50 @@ func TestAccKubernetesCronJobV1Beta1_extra(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesCronJobV1Beta1_minimalWithTemplateNamespace(t *testing.T) {
+	var conf1, conf2 batchv1beta1.CronJob
+
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_cron_job.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.25.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesCronJobV1Beta1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesCronJobV1Beta1ConfigMinimal(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesCronJobV1Beta1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.metadata.0.namespace", ""),
+				),
+			},
+			{
+				Config: testAccKubernetesCronJobV1Beta1ConfigMinimalWithJobTemplateNamespace(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesCronJobV1Beta1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.job_template.0.metadata.0.namespace"),
+					testAccCheckKubernetesCronJobV1Beta1ForceNew(&conf1, &conf2, true),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesCronJobV1Beta1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -321,4 +365,64 @@ func testAccCheckKubernetesCronJobV1Beta1ForceNew(old, new *batchv1beta1.CronJob
 		}
 		return nil
 	}
+}
+
+func testAccKubernetesCronJobV1Beta1ConfigMinimal(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    schedule = "*/1 * * * *"
+    job_template {
+      metadata {}
+      spec {
+        template {
+          metadata {}
+          spec {
+            container {
+              name    = "test"
+              image   = "%s"
+              command = ["sleep", "5"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesCronJobV1Beta1ConfigMinimalWithJobTemplateNamespace(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_cron_job" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    schedule = "*/1 * * * *"
+
+    job_template {
+      metadata {
+        // The namespace field is just a stub and does not influence where the Pod will be created.
+        // The Pod will be created within the same Namespace as the Cron Job resource.
+        namespace = "fake" // Doesn't have to exist.
+      }
+      spec {
+        template {
+          metadata {}
+          spec {
+            container {
+              name    = "test"
+              image   = "%s"
+              command = ["sleep", "5"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
 }

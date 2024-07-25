@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	corev1 "k8s.io/api/core/v1"
 	storageapi "k8s.io/api/storage/v1"
@@ -579,15 +580,15 @@ func testAccCheckKubernetesPersistentVolumeClaimV1Destroy(s *terraform.State) er
 		}
 
 		var resp *corev1.PersistentVolumeClaim
-		err = resource.RetryContext(ctx, 3*time.Minute, func() *resource.RetryError {
+		err = retry.RetryContext(ctx, 3*time.Minute, func() *retry.RetryError {
 			resp, err = conn.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, metav1.GetOptions{})
 			if errors.IsNotFound(err) {
 				return nil
 			}
 			if err == nil && resp != nil {
-				return resource.RetryableError(err)
+				return retry.RetryableError(err)
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		})
 
 		if err != nil {

@@ -44,8 +44,7 @@ func TestAccKubernetesIgnoreKubernetesMetadata_basic(t *testing.T) {
 }
 
 func testAccKubernetesIgnoreKubernetesMetadataProviderConfig(namespaceName string, ignoreKubernetesMetadata string) string {
-	return fmt.Sprintf(`
-provider "kubernetes" {
+	return fmt.Sprintf(`provider "kubernetes" {
   ignore_annotations = [
     "%s",
   ]

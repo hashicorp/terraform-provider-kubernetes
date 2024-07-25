@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
@@ -24,6 +24,7 @@ import (
 
 func resourceKubernetesDaemonSetV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are added to the cluster, Pods are added to them. As nodes are removed from the cluster, those Pods are garbage collected. Deleting a DaemonSet will clean up the Pods it created.",
 		CreateContext: resourceKubernetesDaemonSetV1Create,
 		ReadContext:   resourceKubernetesDaemonSetV1Read,
 		UpdateContext: resourceKubernetesDaemonSetV1Update,
@@ -162,7 +163,7 @@ func resourceKubernetesDaemonSetV1Create(ctx context.Context, d *schema.Resource
 	}
 
 	if d.Get("wait_for_rollout").(bool) {
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			waitForDaemonSetReplicasFunc(ctx, conn, metadata.Namespace, metadata.Name))
 		if err != nil {
 			return diag.FromErr(err)
@@ -213,7 +214,7 @@ func resourceKubernetesDaemonSetV1Update(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Submitted updated daemonset: %#v", out)
 
 	if d.Get("wait_for_rollout").(bool) {
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 			waitForDaemonSetReplicasFunc(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)
@@ -320,11 +321,11 @@ func resourceKubernetesDaemonSetV1Exists(ctx context.Context, d *schema.Resource
 	return true, err
 }
 
-func waitForDaemonSetReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
-	return func() *resource.RetryError {
+func waitForDaemonSetReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
+	return func() *retry.RetryError {
 		daemonSet, err := conn.AppsV1().DaemonSets(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		desiredReplicas := daemonSet.Status.DesiredNumberScheduled
@@ -335,7 +336,7 @@ func waitForDaemonSetReplicasFunc(ctx context.Context, conn *kubernetes.Clientse
 			return nil
 		}
 
-		return resource.RetryableError(fmt.Errorf("Waiting for %d replicas of %q to be scheduled (%d)",
+		return retry.RetryableError(fmt.Errorf("Waiting for %d replicas of %q to be scheduled (%d)",
 			desiredReplicas, daemonSet.GetName(), daemonSet.Status.CurrentNumberScheduled))
 	}
 }

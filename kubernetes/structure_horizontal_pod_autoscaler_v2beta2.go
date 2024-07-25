@@ -10,6 +10,7 @@ import (
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
 
 func expandHorizontalPodAutoscalerV2Beta2Spec(in []interface{}) (*autoscalingv2beta2.HorizontalPodAutoscalerSpec, error) {
@@ -25,7 +26,7 @@ func expandHorizontalPodAutoscalerV2Beta2Spec(in []interface{}) (*autoscalingv2b
 	}
 
 	if v, ok := m["min_replicas"].(int); ok && v > 0 {
-		spec.MinReplicas = ptrToInt32(int32(v))
+		spec.MinReplicas = ptr.To(int32(v))
 	}
 
 	if v, ok := m["scale_target_ref"]; ok {
@@ -68,7 +69,7 @@ func expandV2Beta2MetricTarget(m map[string]interface{}) autoscalingv2beta2.Metr
 		}
 	case autoscalingv2beta2.UtilizationMetricType:
 		if v, ok := m["average_utilization"].(int); ok && v > 0 {
-			target.AverageUtilization = ptrToInt32(int32(v))
+			target.AverageUtilization = ptr.To(int32(v))
 		}
 	case autoscalingv2beta2.ValueMetricType:
 		if v, ok := m["value"].(string); ok && v != "0" && v != "" {
@@ -235,7 +236,7 @@ func expandV2Beta2ScalingRules(in []interface{}) *autoscalingv2beta2.HPAScalingR
 	}
 
 	if v, ok := r["stabilization_window_seconds"].(int); ok {
-		spec.StabilizationWindowSeconds = ptrToInt32(int32(v))
+		spec.StabilizationWindowSeconds = ptr.To(int32(v))
 	}
 
 	return spec

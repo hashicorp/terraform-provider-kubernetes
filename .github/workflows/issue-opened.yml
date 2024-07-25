@@ -8,9 +8,48 @@ jobs:
   issue_triage:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-    - uses: github/issue-labeler@e24a3eb6b2e28c8904d086302a2b760647f5f45c # v3.1
+    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+    - uses: github/issue-labeler@c1b0f9f52a63158c4adc09425e858e87b32e9685 # v3.4
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-issue-triage.yml
         enable-versioned-regex: 0
+  oncall_review_assigner:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-node@v4
+    - run: npm install @pagerduty/pdjs
+    - uses: actions/github-script@e69ef5462fd455e02edcaf4dd7708eda96b9eda0 # v7.0.0
+      env:
+        PAGERDUTY_TOKEN: ${{ secrets.PAGERDUTY_TOKEN }}
+      with:
+        script: |
+              const { PAGERDUTY_TOKEN } = process.env
+              const { api } = require('@pagerduty/pdjs');
+              const pd = api({token: PAGERDUTY_TOKEN});
+              const reviewerList = new Map([
+                  ["Sheneska Williams", "sheneska"],
+                  ["Mauricio Alvarez Leon", "BBBmau"],
+                  ["Alex Somesan", "alexsomesan"],
+                  ["Alex Pilon", "appilon"],
+                  ["John Houston", "jrhouston"],
+                  ["Sacha Rybolovlev", "arybolovlev"],
+                ]);
+
+              let resp = await pd.get('oncalls?escalation_policy_ids%5B%5D=PH8IF3M')
+              if (resp.status != 200){
+                core.setFailed("PagerDuty Error: " + resp.statusText)
+              }
+              const reviewer = resp.data.oncalls[0].user.summary
+              const reviewerGH = reviewerList.get(reviewer)
+              console.log("Assigning issue to " + reviewerGH);
+
+              resp = await github.rest.issues.addAssignees({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    assignees: reviewerGH,
+                    issue_number: context.issue.number,
+              })
+              if (resp.status != 201){
+                core.setFailed("error assigning reviewer: user doesn't have the appropriate permissions to be assigned an issue.")
+              }

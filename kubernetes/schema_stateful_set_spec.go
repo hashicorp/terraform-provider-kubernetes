@@ -104,6 +104,36 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 				Schema: persistentVolumeClaimFields(),
 			},
 		},
+		"persistent_volume_claim_retention_policy": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Computed:    true,
+			Description: "The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"when_deleted": {
+						Type:        schema.TypeString,
+						Description: "This field controls what happens when a Statefulset is deleted. Default is Retain.",
+						Optional:    true,
+						Default:     "Retain",
+						ValidateFunc: validation.StringInSlice([]string{
+							"Retain",
+							"Delete",
+						}, false),
+					},
+					"when_scaled": {
+						Type:        schema.TypeString,
+						Description: "This field controls what happens when a Statefulset is scaled. Default is Retain.",
+						Optional:    true,
+						Default:     "Retain",
+						ValidateFunc: validation.StringInSlice([]string{
+							"Retain",
+							"Delete",
+						}, false),
+					},
+				},
+			},
+		},
 	}
 	return s
 }

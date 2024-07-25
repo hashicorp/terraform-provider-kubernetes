@@ -134,21 +134,22 @@ func flattenMetadataFields(meta metav1.ObjectMeta) []interface{} {
 	return []interface{}{m}
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}) []interface{} {
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMeta interface{}) []interface{} {
+	metadataAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
+	metadataLabels := d.Get("metadata.0.labels").(map[string]interface{})
 
-	ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
-	removeInternalKeys(meta.Annotations, metadata.Annotations)
-	removeKeys(meta.Annotations, metadata.Annotations, ignoreAnnotations)
+	ignoreAnnotations := providerMeta.(providerMetadata).IgnoreAnnotations
+	removeInternalKeys(meta.Annotations, metadataAnnotations)
+	removeKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
 
-	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
-	removeInternalKeys(meta.Labels, metadata.Labels)
-	removeKeys(meta.Labels, metadata.Labels, ignoreLabels)
+	ignoreLabels := providerMeta.(providerMetadata).IgnoreLabels
+	removeInternalKeys(meta.Labels, metadataLabels)
+	removeKeys(meta.Labels, metadataLabels, ignoreLabels)
 
 	return flattenMetadataFields(meta)
 }
 
-func removeInternalKeys(m map[string]string, d map[string]string) {
+func removeInternalKeys(m map[string]string, d map[string]interface{}) {
 	for k := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
@@ -158,7 +159,7 @@ func removeInternalKeys(m map[string]string, d map[string]string) {
 
 // removeKeys removes given Kubernetes metadata(annotations and labels) keys.
 // In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
-func removeKeys(m map[string]string, d map[string]string, ignoreKubernetesMetadataKeys []string) {
+func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) {
 	for k := range m {
 		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
@@ -166,7 +167,7 @@ func removeKeys(m map[string]string, d map[string]string, ignoreKubernetesMetada
 	}
 }
 
-func isKeyInMap(key string, d map[string]string) bool {
+func isKeyInMap(key string, d map[string]interface{}) bool {
 	_, ok := d[key]
 	return ok
 }
@@ -225,26 +226,6 @@ func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 		result[k] = string(v)
 	}
 	return result
-}
-
-func ptrToString(s string) *string {
-	return &s
-}
-
-func ptrToBool(b bool) *bool {
-	return &b
-}
-
-func ptrToInt32(i int32) *int32 {
-	return &i
-}
-
-func ptrToInt64(i int64) *int64 {
-	return &i
-}
-
-func pointerOf[A any](a A) *A {
-	return &a
 }
 
 func sliceOfString(slice []interface{}) []string {

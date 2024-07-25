@@ -9,11 +9,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesConfigMapV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "Config Maps are key-value pairs containing configuration data. The Config Map data source provides a mechanism for extracting these key-value pairs.",
 		ReadContext: dataSourceKubernetesConfigMapV1Read,
 
 		Schema: map[string]*schema.Schema{
@@ -54,6 +56,9 @@ func dataSourceKubernetesConfigMapV1Read(ctx context.Context, d *schema.Resource
 	log.Printf("[INFO] Reading config map %s", metadata.Name)
 	cfgMap, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		log.Printf("[DEBUG] Received error: %#v", err)
 		return diag.FromErr(err)
 	}

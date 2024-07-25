@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +22,7 @@ import (
 
 func resourceKubernetesPodV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context. Read more at [Kubernetes reference](https://kubernetes.io/docs/concepts/workloads/pods/pod/)",
 		CreateContext: resourceKubernetesPodV1Create,
 		ReadContext:   resourceKubernetesPodV1Read,
 		UpdateContext: resourceKubernetesPodV1Update,
@@ -103,7 +104,7 @@ func resourceKubernetesPodV1Create(ctx context.Context, d *schema.ResourceData, 
 
 	d.SetId(buildId(out.ObjectMeta))
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Target:  expandPodTargetState(d.Get("target_state").([]interface{})),
 		Pending: []string{string(corev1.PodPending)},
 		Timeout: d.Timeout(schema.TimeoutCreate),
@@ -233,18 +234,18 @@ func resourceKubernetesPodV1Delete(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		out, err := conn.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		log.Printf("[DEBUG] Current state of pod: %#v", out.Status.Phase)
 		e := fmt.Errorf("Pod %s still exists (%s)", name, out.Status.Phase)
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

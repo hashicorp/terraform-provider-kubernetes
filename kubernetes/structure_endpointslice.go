@@ -9,6 +9,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
@@ -26,16 +27,16 @@ func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
 			r.Conditions = expandEndpointSliceConditions(v)
 		}
 		if v, ok := endpointConfig["hostname"].(string); ok && v != "" {
-			r.Hostname = ptrToString(v)
+			r.Hostname = ptr.To(v)
 		}
 		if v, ok := endpointConfig["node_name"].(string); ok && v != "" {
-			r.NodeName = ptrToString(v)
+			r.NodeName = ptr.To(v)
 		}
 		if v, ok := endpointConfig["target_ref"].([]interface{}); ok && len(v) != 0 {
 			r.TargetRef = expandObjectReference(v)
 		}
 		if v, ok := endpointConfig["zone"].(string); ok && v != "" {
-			r.Zone = ptrToString(v)
+			r.Zone = ptr.To(v)
 		}
 
 		endpoints[i] = r
@@ -78,20 +79,20 @@ func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
 		if v, ok := portCfg["name"].(string); ok {
-			r.Name = ptrToString(v)
+			r.Name = ptr.To(v)
 		}
 		if v, ok := portCfg["port"].(string); ok {
 			if v == "" {
 				continue
 			}
 			v, _ := strconv.ParseInt(v, 10, 32)
-			r.Port = ptrToInt32(int32(v))
+			r.Port = ptr.To(int32(v))
 		}
 		if v, ok := portCfg["protocol"].(v1.Protocol); ok {
 			r.Protocol = &v
 		}
 		if v, ok := portCfg["app_protocol"].(string); ok {
-			r.AppProtocol = ptrToString(v)
+			r.AppProtocol = ptr.To(v)
 		}
 		ports[i] = r
 	}
@@ -107,13 +108,13 @@ func expandEndpointSliceConditions(in []interface{}) api.EndpointConditions {
 	cond := in[0].(map[string]interface{})
 
 	if v, ok := cond["ready"].(bool); ok {
-		obj.Ready = ptrToBool(v)
+		obj.Ready = ptr.To(v)
 	}
 	if v, ok := cond["serving"].(bool); ok {
-		obj.Serving = ptrToBool(v)
+		obj.Serving = ptr.To(v)
 	}
 	if v, ok := cond["terminating"].(bool); ok {
-		obj.Terminating = ptrToBool(v)
+		obj.Terminating = ptr.To(v)
 	}
 
 	return obj

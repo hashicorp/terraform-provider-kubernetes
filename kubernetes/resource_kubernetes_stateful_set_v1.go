@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -25,6 +25,7 @@ import (
 
 func resourceKubernetesStatefulSetV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "Manages the deployment and scaling of a set of Pods , and provides guarantees about the ordering and uniqueness of these Pods. Like a Deployment , a StatefulSet manages Pods that are based on an identical container spec. Unlike a Deployment, a StatefulSet maintains a sticky identity for each of their Pods. These pods are created from the same spec, but are not interchangeable: each has a persistent identifier that it maintains across any rescheduling. A StatefulSet operates under the same pattern as any other Controller. You define your desired state in a StatefulSet object, and the StatefulSet controller makes any necessary updates to get there from the current state.",
 		CreateContext: resourceKubernetesStatefulSetV1Create,
 		ReadContext:   resourceKubernetesStatefulSetV1Read,
 		UpdateContext: resourceKubernetesStatefulSetV1Update,
@@ -105,7 +106,7 @@ func resourceKubernetesStatefulSetV1Create(ctx context.Context, d *schema.Resour
 		log.Printf("[INFO] Waiting for StatefulSet %s to rollout", id)
 		namespace := out.ObjectMeta.Namespace
 		name := out.ObjectMeta.Name
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
 			retryUntilStatefulSetRolloutComplete(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)
@@ -218,7 +219,7 @@ func resourceKubernetesStatefulSetV1Update(ctx context.Context, d *schema.Resour
 
 	if d.Get("wait_for_rollout").(bool) {
 		log.Printf("[INFO] Waiting for StatefulSet %s to rollout", d.Id())
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
 			retryUntilStatefulSetRolloutComplete(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)
@@ -247,20 +248,20 @@ func resourceKubernetesStatefulSetV1Delete(ctx context.Context, d *schema.Resour
 		}
 		return diag.FromErr(err)
 	}
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		out, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			switch {
 			case errors.IsNotFound(err):
 				return nil
 			default:
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 		}
 
 		log.Printf("[DEBUG] Current state of StatefulSet: %#v", out.Status.Conditions)
 		e := fmt.Errorf("StatefulSet %s still exists %#v", name, out.Status.Conditions)
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)
@@ -272,15 +273,15 @@ func resourceKubernetesStatefulSetV1Delete(ctx context.Context, d *schema.Resour
 }
 
 // retryUntilStatefulSetRolloutComplete checks if a given job finished its execution and is either in 'Complete' or 'Failed' state.
-func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *kubernetes.Clientset, ns, name string) resource.RetryFunc {
-	return func() *resource.RetryError {
+func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
+	return func() *retry.RetryError {
 		res, err := conn.AppsV1().StatefulSets(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		if res.Status.ReadyReplicas != *res.Spec.Replicas {
-			return resource.RetryableError(fmt.Errorf("StatefulSet %s/%s is not finished rolling out", ns, name))
+			return retry.RetryableError(fmt.Errorf("StatefulSet %s/%s is not finished rolling out", ns, name))
 		}
 
 		// NOTE: This is what kubectl uses to determine if a rollout is done.
@@ -290,12 +291,12 @@ func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *kubernetes.
 		gk := gvk.GroupKind()
 		statusViewer, err := polymorphichelpers.StatusViewerFor(gk)
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(res)
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		// NOTE: For some reason, the Kind and apiVersion get lost when converting to unstructured.
@@ -307,13 +308,13 @@ func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *kubernetes.
 		// for StatefulSet so it is set to 0 here
 		_, done, err := statusViewer.Status(&u, 0)
 		if err != nil {
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		if done {
 			return nil
 		}
 
-		return resource.RetryableError(fmt.Errorf("StatefulSet %s/%s is not finished rolling out", ns, name))
+		return retry.RetryableError(fmt.Errorf("StatefulSet %s/%s is not finished rolling out", ns, name))
 	}
 }

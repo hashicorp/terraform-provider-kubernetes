@@ -11,10 +11,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	api "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +22,7 @@ import (
 
 func resourceKubernetesServiceV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.",
 		CreateContext: resourceKubernetesServiceV1Create,
 		ReadContext:   resourceKubernetesServiceV1Read,
 		UpdateContext: resourceKubernetesServiceV1Update,
@@ -202,11 +202,11 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "The IP protocol for this port. Supports `TCP` and `UDP`. Default is `TCP`.",
 									Optional:    true,
-									Default:     string(api.ProtocolTCP),
+									Default:     string(corev1.ProtocolTCP),
 									ValidateFunc: validation.StringInSlice([]string{
-										string(api.ProtocolTCP),
-										string(api.ProtocolUDP),
-										string(api.ProtocolSCTP),
+										string(corev1.ProtocolTCP),
+										string(corev1.ProtocolUDP),
+										string(corev1.ProtocolSCTP),
 									}, false),
 								},
 								"target_port": {
@@ -354,11 +354,11 @@ func resourceKubernetesServiceV1Create(ctx context.Context, d *schema.ResourceDa
 	if out.Spec.Type == corev1.ServiceTypeLoadBalancer && d.Get("wait_for_load_balancer").(bool) {
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
 
-		err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 			svc, err := conn.CoreV1().Services(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
 			if err != nil {
 				log.Printf("[DEBUG] Received error: %#v", err)
-				return resource.NonRetryableError(err)
+				return retry.NonRetryableError(err)
 			}
 
 			lbIngress := svc.Status.LoadBalancer.Ingress
@@ -368,7 +368,7 @@ func resourceKubernetesServiceV1Create(ctx context.Context, d *schema.ResourceDa
 				return nil
 			}
 
-			return resource.RetryableError(fmt.Errorf(
+			return retry.RetryableError(fmt.Errorf(
 				"Waiting for service %q to assign IP/hostname for a load balancer", d.Id()))
 		})
 		if err != nil {
@@ -450,10 +450,7 @@ func resourceKubernetesServiceV1Update(ctx context.Context, d *schema.ResourceDa
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		diffOps, err := patchServiceSpec("spec.0.", "/spec/", d, serverVersion)
-		if err != nil {
-			return diag.FromErr(err)
-		}
+		diffOps := patchServiceSpec("spec.0.", "/spec/", d, serverVersion)
 		ops = append(ops, diffOps...)
 	}
 	data, err := ops.MarshalJSON()
@@ -491,17 +488,17 @@ func resourceKubernetesServiceV1Delete(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("Service (%s) still exists", d.Id())
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

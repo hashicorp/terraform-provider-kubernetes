@@ -97,6 +97,18 @@ Custom signerNames can also be specified. The signer defines:
 
 Optional:
 
+- `expiration_seconds` (Integer) expirationSeconds is the requested duration of validity of the issued certificate.
+
+The certificate signer may issue a certificate with a different validity duration so a client must check the delta between the notBefore and and notAfter fields in the issued certificate to determine the actual duration. The v1.22+ in-tree implementations of the well-known Kubernetes signers will honor this field as long as the requested duration is not greater than the maximum duration they will honor per the --cluster-signing-duration CLI flag to the Kubernetes controller manager.
+
+Certificate signers may not honor this field for various reasons:
+
+1. Old signer that is unaware of the field (such as the in-tree implementations prior to v1.22)
+2. Signer whose configured maximum is shorter than the requested duration
+3. Signer whose configured minimum is longer than the requested duration
+
+The minimum valid value for expirationSeconds is 600, i.e. 10 minutes.
+
 - `usages` (Set of String) usages specifies a set of key usages requested in the issued certificate.
 
 Requests for TLS client certificates typically request: "digital signature", "key encipherment", "client auth".

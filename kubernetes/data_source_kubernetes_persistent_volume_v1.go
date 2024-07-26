@@ -36,6 +36,7 @@ func dataSourceKubernetesPersistentVolumeV1() *schema.Resource {
 									"ReadWriteOnce",
 									"ReadOnlyMany",
 									"ReadWriteMany",
+									"ReadWriteOncePod",
 								}, false),
 							},
 							Set: schema.HashString,

@@ -52,6 +52,10 @@ func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 	if in.SELinuxOptions != nil {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
 	}
+	if in.WindowsOptions != nil {
+		att["windows_options"] = flattenWindowsOptions(*in.WindowsOptions)
+	}
+
 	return []interface{}{att}
 
 }
@@ -622,6 +626,9 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
+	}
+	if v, ok := in["windows_options"].([]interface{}); ok && len(v) > 0 {
+		obj.WindowsOptions = expandWindowsOptions(v)
 	}
 
 	return &obj, nil

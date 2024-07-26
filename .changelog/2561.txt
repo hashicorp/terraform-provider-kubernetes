@@ -1,3 +1,4 @@
 ```release-note:note
 Bump Kubernetes dependencies from x.28.6 to x.30.3.
+Bump Go version from x.22.0 to x.22.5.
 ```

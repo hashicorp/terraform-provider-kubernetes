@@ -13,7 +13,7 @@ import (
 
 func (r *Service) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `namespace`,
+		MarkdownDescription: `Service is an abstraction which defines a logical set of pods and a policy by which to access them`,
 		Blocks: map[string]schema.Block{
 			"timeouts": timeouts.BlockAll(ctx),
 		},

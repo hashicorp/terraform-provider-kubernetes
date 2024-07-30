@@ -10,8 +10,8 @@ resource "kubernetes_role_binding_v1_gen" {
 
   openapi {
     filename    = "./codegen/data/kubernetes-v1.28.3/api/openapi-spec/v3/apis__rbac.authorization.k8s.io__v1_openapi.json"
-    create_path = "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings"
-    read_path   = "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/{name}"
+    create_path = "/apis/rbac.authorization.k8s.io/v1/namespaces/{namespace}/rolebindings"
+    read_path   = "/apis/rbac.authorization.k8s.io/v1/namespaces/{namespace}/rolebindings/{name}"
   }
   
   generate {

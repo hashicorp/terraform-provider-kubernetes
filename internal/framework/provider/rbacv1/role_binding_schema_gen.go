@@ -75,7 +75,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 				},
 			},
 			"role_ref": schema.SingleNestedAttribute{
-				MarkdownDescription: `RoleRef can only reference a ClusterRole in the global namespace. If the RoleRef cannot be resolved, the Authorizer must return an error. This field is immutable.`,
+				MarkdownDescription: `RoleRef can reference a Role in the current namespace or a ClusterRole in the global namespace. If the RoleRef cannot be resolved, the Authorizer must return an error. This field is immutable.`,
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"api_group": schema.StringAttribute{

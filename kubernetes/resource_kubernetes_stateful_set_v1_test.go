@@ -49,7 +49,10 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.27.0")
+		},
 		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
 			"metadata.0.resource_version",
@@ -127,7 +130,10 @@ func TestAccKubernetesStatefulSetV1_basic_idempotency(t *testing.T) {
 	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.27.0")
+		},
 		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
 			"metadata.0.resource_version",
@@ -162,7 +168,10 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.27.0")
+		},
 		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
 			"metadata.0.resource_version",

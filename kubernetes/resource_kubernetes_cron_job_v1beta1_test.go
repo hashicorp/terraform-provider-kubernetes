@@ -355,7 +355,7 @@ func testAccKubernetesCronJobV1Beta1Config_extraModified(name, imageName string)
 func testAccCheckKubernetesCronJobV1Beta1ForceNew(old, new *batchv1beta1.CronJob, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
+			if old.ObjectMeta.UID == new.ObjectMeta.UID {
 				return fmt.Errorf("Expecting forced replacement")
 			}
 		} else {

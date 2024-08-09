@@ -119,7 +119,7 @@ Read-Only:
 - `service` (List of Object) (see [below for nested schema](#nestedobjatt--spec--rule--http--path--backend--service))
 
 <a id="nestedobjatt--spec--rule--http--path--backend--resource"></a>
-### Nested Schema for `spec.rule.http.path.backend.resource`
+### Nested Schema for `spec.rule.http.path.backend.service`
 
 Read-Only:
 

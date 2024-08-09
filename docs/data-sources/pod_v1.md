@@ -94,23 +94,23 @@ Read-Only:
 - `required_during_scheduling_ignored_during_execution` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution))
 
 <a id="nestedobjatt--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution`
+### Nested Schema for `spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution`
 
 Read-Only:
 
-- `preference` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference))
+- `preference` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--preference))
 - `weight` (Number)
 
-<a id="nestedobjatt--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference"></a>
-### Nested Schema for `spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference`
+<a id="nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--preference"></a>
+### Nested Schema for `spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.preference`
 
 Read-Only:
 
-- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_expressions))
-- `match_fields` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_fields))
+- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--preference--match_expressions))
+- `match_fields` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--preference--match_fields))
 
-<a id="nestedobjatt--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_expressions"></a>
-### Nested Schema for `spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions`
+<a id="nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--preference--match_expressions"></a>
+### Nested Schema for `spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.preference.match_fields`
 
 Read-Only:
 
@@ -119,8 +119,8 @@ Read-Only:
 - `values` (Set of String)
 
 
-<a id="nestedobjatt--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_fields"></a>
-### Nested Schema for `spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields`
+<a id="nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--preference--match_fields"></a>
+### Nested Schema for `spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.preference.match_fields`
 
 Read-Only:
 
@@ -147,7 +147,7 @@ Read-Only:
 - `match_fields` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_fields))
 
 <a id="nestedobjatt--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_expressions"></a>
-### Nested Schema for `spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term.match_expressions`
+### Nested Schema for `spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term.match_fields`
 
 Read-Only:
 
@@ -178,32 +178,32 @@ Read-Only:
 - `required_during_scheduling_ignored_during_execution` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution))
 
 <a id="nestedobjatt--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution`
+### Nested Schema for `spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution`
 
 Read-Only:
 
-- `pod_affinity_term` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
+- `pod_affinity_term` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term))
 - `weight` (Number)
 
-<a id="nestedobjatt--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
-### Nested Schema for `spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
+<a id="nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
+### Nested Schema for `spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.pod_affinity_term`
 
 Read-Only:
 
-- `label_selector` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `label_selector` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
 - `namespaces` (Set of String)
 - `topology_key` (String)
 
-<a id="nestedobjatt--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
+### Nested Schema for `spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.pod_affinity_term.topology_key`
 
 Read-Only:
 
-- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions))
+- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--topology_key--match_expressions))
 - `match_labels` (Map of String)
 
-<a id="nestedobjatt--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions"></a>
-### Nested Schema for `spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions`
+<a id="nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--topology_key--match_expressions"></a>
+### Nested Schema for `spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.pod_affinity_term.topology_key.match_labels`
 
 Read-Only:
 
@@ -233,7 +233,7 @@ Read-Only:
 - `match_labels` (Map of String)
 
 <a id="nestedobjatt--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector--match_expressions"></a>
-### Nested Schema for `spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions`
+### Nested Schema for `spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_labels`
 
 Read-Only:
 
@@ -254,32 +254,32 @@ Read-Only:
 - `required_during_scheduling_ignored_during_execution` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution))
 
 <a id="nestedobjatt--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution`
+### Nested Schema for `spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution`
 
 Read-Only:
 
-- `pod_affinity_term` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
+- `pod_affinity_term` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term))
 - `weight` (Number)
 
-<a id="nestedobjatt--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
-### Nested Schema for `spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
+<a id="nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
+### Nested Schema for `spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.pod_affinity_term`
 
 Read-Only:
 
-- `label_selector` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `label_selector` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
 - `namespaces` (Set of String)
 - `topology_key` (String)
 
-<a id="nestedobjatt--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
+### Nested Schema for `spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.pod_affinity_term.topology_key`
 
 Read-Only:
 
-- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions))
+- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--topology_key--match_expressions))
 - `match_labels` (Map of String)
 
-<a id="nestedobjatt--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions"></a>
-### Nested Schema for `spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions`
+<a id="nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term--topology_key--match_expressions"></a>
+### Nested Schema for `spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.pod_affinity_term.topology_key.match_labels`
 
 Read-Only:
 
@@ -309,7 +309,7 @@ Read-Only:
 - `match_labels` (Map of String)
 
 <a id="nestedobjatt--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector--match_expressions"></a>
-### Nested Schema for `spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions`
+### Nested Schema for `spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_labels`
 
 Read-Only:
 
@@ -419,7 +419,7 @@ Read-Only:
 - `secret_ref` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--env_from--secret_ref))
 
 <a id="nestedobjatt--spec--container--env_from--config_map_ref"></a>
-### Nested Schema for `spec.container.env_from.config_map_ref`
+### Nested Schema for `spec.container.env_from.secret_ref`
 
 Read-Only:
 
@@ -446,35 +446,35 @@ Read-Only:
 - `pre_stop` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--pre_stop))
 
 <a id="nestedobjatt--spec--container--lifecycle--post_start"></a>
-### Nested Schema for `spec.container.lifecycle.post_start`
+### Nested Schema for `spec.container.lifecycle.pre_stop`
 
 Read-Only:
 
-- `exec` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--post_start--exec))
-- `http_get` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--post_start--http_get))
-- `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--post_start--tcp_socket))
+- `exec` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--pre_stop--exec))
+- `http_get` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--pre_stop--http_get))
+- `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--pre_stop--tcp_socket))
 
-<a id="nestedobjatt--spec--container--lifecycle--post_start--exec"></a>
-### Nested Schema for `spec.container.lifecycle.post_start.exec`
+<a id="nestedobjatt--spec--container--lifecycle--pre_stop--exec"></a>
+### Nested Schema for `spec.container.lifecycle.pre_stop.exec`
 
 Read-Only:
 
 - `command` (List of String)
 
 
-<a id="nestedobjatt--spec--container--lifecycle--post_start--http_get"></a>
-### Nested Schema for `spec.container.lifecycle.post_start.http_get`
+<a id="nestedobjatt--spec--container--lifecycle--pre_stop--http_get"></a>
+### Nested Schema for `spec.container.lifecycle.pre_stop.http_get`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--post_start--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--pre_stop--http_get--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--container--lifecycle--post_start--http_get--http_header"></a>
-### Nested Schema for `spec.container.lifecycle.post_start.http_get.http_header`
+<a id="nestedobjatt--spec--container--lifecycle--pre_stop--http_get--http_header"></a>
+### Nested Schema for `spec.container.lifecycle.pre_stop.http_get.scheme`
 
 Read-Only:
 
@@ -483,8 +483,8 @@ Read-Only:
 
 
 
-<a id="nestedobjatt--spec--container--lifecycle--post_start--tcp_socket"></a>
-### Nested Schema for `spec.container.lifecycle.post_start.tcp_socket`
+<a id="nestedobjatt--spec--container--lifecycle--pre_stop--tcp_socket"></a>
+### Nested Schema for `spec.container.lifecycle.pre_stop.tcp_socket`
 
 Read-Only:
 
@@ -521,7 +521,7 @@ Read-Only:
 - `scheme` (String)
 
 <a id="nestedobjatt--spec--container--lifecycle--pre_stop--http_get--http_header"></a>
-### Nested Schema for `spec.container.lifecycle.pre_stop.http_get.http_header`
+### Nested Schema for `spec.container.lifecycle.pre_stop.http_get.scheme`
 
 Read-Only:
 
@@ -556,7 +556,7 @@ Read-Only:
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--container--liveness_probe--exec"></a>
-### Nested Schema for `spec.container.liveness_probe.exec`
+### Nested Schema for `spec.container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -564,7 +564,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--liveness_probe--grpc"></a>
-### Nested Schema for `spec.container.liveness_probe.grpc`
+### Nested Schema for `spec.container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -573,18 +573,18 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--liveness_probe--http_get"></a>
-### Nested Schema for `spec.container.liveness_probe.http_get`
+### Nested Schema for `spec.container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--liveness_probe--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--liveness_probe--timeout_seconds--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--container--liveness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.container.liveness_probe.http_get.http_header`
+<a id="nestedobjatt--spec--container--liveness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.container.liveness_probe.timeout_seconds.http_header`
 
 Read-Only:
 
@@ -594,7 +594,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--liveness_probe--tcp_socket"></a>
-### Nested Schema for `spec.container.liveness_probe.tcp_socket`
+### Nested Schema for `spec.container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -630,7 +630,7 @@ Read-Only:
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--container--readiness_probe--exec"></a>
-### Nested Schema for `spec.container.readiness_probe.exec`
+### Nested Schema for `spec.container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -638,7 +638,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--readiness_probe--grpc"></a>
-### Nested Schema for `spec.container.readiness_probe.grpc`
+### Nested Schema for `spec.container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -647,18 +647,18 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--readiness_probe--http_get"></a>
-### Nested Schema for `spec.container.readiness_probe.http_get`
+### Nested Schema for `spec.container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--readiness_probe--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--readiness_probe--timeout_seconds--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--container--readiness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.container.readiness_probe.http_get.http_header`
+<a id="nestedobjatt--spec--container--readiness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.container.readiness_probe.timeout_seconds.http_header`
 
 Read-Only:
 
@@ -668,7 +668,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--readiness_probe--tcp_socket"></a>
-### Nested Schema for `spec.container.readiness_probe.tcp_socket`
+### Nested Schema for `spec.container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -701,7 +701,7 @@ Read-Only:
 - `seccomp_profile` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--security_context--seccomp_profile))
 
 <a id="nestedobjatt--spec--container--security_context--capabilities"></a>
-### Nested Schema for `spec.container.security_context.capabilities`
+### Nested Schema for `spec.container.security_context.seccomp_profile`
 
 Read-Only:
 
@@ -710,7 +710,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--security_context--se_linux_options"></a>
-### Nested Schema for `spec.container.security_context.se_linux_options`
+### Nested Schema for `spec.container.security_context.seccomp_profile`
 
 Read-Only:
 
@@ -746,7 +746,7 @@ Read-Only:
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--container--startup_probe--exec"></a>
-### Nested Schema for `spec.container.startup_probe.exec`
+### Nested Schema for `spec.container.startup_probe.timeout_seconds`
 
 Read-Only:
 
@@ -754,7 +754,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--startup_probe--grpc"></a>
-### Nested Schema for `spec.container.startup_probe.grpc`
+### Nested Schema for `spec.container.startup_probe.timeout_seconds`
 
 Read-Only:
 
@@ -763,18 +763,18 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--startup_probe--http_get"></a>
-### Nested Schema for `spec.container.startup_probe.http_get`
+### Nested Schema for `spec.container.startup_probe.timeout_seconds`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--startup_probe--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--startup_probe--timeout_seconds--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--container--startup_probe--http_get--http_header"></a>
-### Nested Schema for `spec.container.startup_probe.http_get.http_header`
+<a id="nestedobjatt--spec--container--startup_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.container.startup_probe.timeout_seconds.http_header`
 
 Read-Only:
 
@@ -784,7 +784,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--container--startup_probe--tcp_socket"></a>
-### Nested Schema for `spec.container.startup_probe.tcp_socket`
+### Nested Schema for `spec.container.startup_probe.timeout_seconds`
 
 Read-Only:
 
@@ -938,7 +938,7 @@ Read-Only:
 - `secret_ref` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--env_from--secret_ref))
 
 <a id="nestedobjatt--spec--init_container--env_from--config_map_ref"></a>
-### Nested Schema for `spec.init_container.env_from.config_map_ref`
+### Nested Schema for `spec.init_container.env_from.secret_ref`
 
 Read-Only:
 
@@ -965,35 +965,35 @@ Read-Only:
 - `pre_stop` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--pre_stop))
 
 <a id="nestedobjatt--spec--init_container--lifecycle--post_start"></a>
-### Nested Schema for `spec.init_container.lifecycle.post_start`
+### Nested Schema for `spec.init_container.lifecycle.pre_stop`
 
 Read-Only:
 
-- `exec` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--post_start--exec))
-- `http_get` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--post_start--http_get))
-- `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--post_start--tcp_socket))
+- `exec` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--pre_stop--exec))
+- `http_get` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--pre_stop--http_get))
+- `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--pre_stop--tcp_socket))
 
-<a id="nestedobjatt--spec--init_container--lifecycle--post_start--exec"></a>
-### Nested Schema for `spec.init_container.lifecycle.post_start.exec`
+<a id="nestedobjatt--spec--init_container--lifecycle--pre_stop--exec"></a>
+### Nested Schema for `spec.init_container.lifecycle.pre_stop.exec`
 
 Read-Only:
 
 - `command` (List of String)
 
 
-<a id="nestedobjatt--spec--init_container--lifecycle--post_start--http_get"></a>
-### Nested Schema for `spec.init_container.lifecycle.post_start.http_get`
+<a id="nestedobjatt--spec--init_container--lifecycle--pre_stop--http_get"></a>
+### Nested Schema for `spec.init_container.lifecycle.pre_stop.http_get`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--post_start--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--pre_stop--http_get--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--init_container--lifecycle--post_start--http_get--http_header"></a>
-### Nested Schema for `spec.init_container.lifecycle.post_start.http_get.http_header`
+<a id="nestedobjatt--spec--init_container--lifecycle--pre_stop--http_get--http_header"></a>
+### Nested Schema for `spec.init_container.lifecycle.pre_stop.http_get.scheme`
 
 Read-Only:
 
@@ -1002,8 +1002,8 @@ Read-Only:
 
 
 
-<a id="nestedobjatt--spec--init_container--lifecycle--post_start--tcp_socket"></a>
-### Nested Schema for `spec.init_container.lifecycle.post_start.tcp_socket`
+<a id="nestedobjatt--spec--init_container--lifecycle--pre_stop--tcp_socket"></a>
+### Nested Schema for `spec.init_container.lifecycle.pre_stop.tcp_socket`
 
 Read-Only:
 
@@ -1040,7 +1040,7 @@ Read-Only:
 - `scheme` (String)
 
 <a id="nestedobjatt--spec--init_container--lifecycle--pre_stop--http_get--http_header"></a>
-### Nested Schema for `spec.init_container.lifecycle.pre_stop.http_get.http_header`
+### Nested Schema for `spec.init_container.lifecycle.pre_stop.http_get.scheme`
 
 Read-Only:
 
@@ -1075,7 +1075,7 @@ Read-Only:
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--init_container--liveness_probe--exec"></a>
-### Nested Schema for `spec.init_container.liveness_probe.exec`
+### Nested Schema for `spec.init_container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1083,7 +1083,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--liveness_probe--grpc"></a>
-### Nested Schema for `spec.init_container.liveness_probe.grpc`
+### Nested Schema for `spec.init_container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1092,18 +1092,18 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--liveness_probe--http_get"></a>
-### Nested Schema for `spec.init_container.liveness_probe.http_get`
+### Nested Schema for `spec.init_container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--liveness_probe--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--liveness_probe--timeout_seconds--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--init_container--liveness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.init_container.liveness_probe.http_get.http_header`
+<a id="nestedobjatt--spec--init_container--liveness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.init_container.liveness_probe.timeout_seconds.http_header`
 
 Read-Only:
 
@@ -1113,7 +1113,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--liveness_probe--tcp_socket"></a>
-### Nested Schema for `spec.init_container.liveness_probe.tcp_socket`
+### Nested Schema for `spec.init_container.liveness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1149,7 +1149,7 @@ Read-Only:
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--init_container--readiness_probe--exec"></a>
-### Nested Schema for `spec.init_container.readiness_probe.exec`
+### Nested Schema for `spec.init_container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1157,7 +1157,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--readiness_probe--grpc"></a>
-### Nested Schema for `spec.init_container.readiness_probe.grpc`
+### Nested Schema for `spec.init_container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1166,18 +1166,18 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--readiness_probe--http_get"></a>
-### Nested Schema for `spec.init_container.readiness_probe.http_get`
+### Nested Schema for `spec.init_container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--readiness_probe--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--readiness_probe--timeout_seconds--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--init_container--readiness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.init_container.readiness_probe.http_get.http_header`
+<a id="nestedobjatt--spec--init_container--readiness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.init_container.readiness_probe.timeout_seconds.http_header`
 
 Read-Only:
 
@@ -1187,7 +1187,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--readiness_probe--tcp_socket"></a>
-### Nested Schema for `spec.init_container.readiness_probe.tcp_socket`
+### Nested Schema for `spec.init_container.readiness_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1220,7 +1220,7 @@ Read-Only:
 - `seccomp_profile` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--security_context--seccomp_profile))
 
 <a id="nestedobjatt--spec--init_container--security_context--capabilities"></a>
-### Nested Schema for `spec.init_container.security_context.capabilities`
+### Nested Schema for `spec.init_container.security_context.seccomp_profile`
 
 Read-Only:
 
@@ -1229,7 +1229,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--security_context--se_linux_options"></a>
-### Nested Schema for `spec.init_container.security_context.se_linux_options`
+### Nested Schema for `spec.init_container.security_context.seccomp_profile`
 
 Read-Only:
 
@@ -1265,7 +1265,7 @@ Read-Only:
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--init_container--startup_probe--exec"></a>
-### Nested Schema for `spec.init_container.startup_probe.exec`
+### Nested Schema for `spec.init_container.startup_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1273,7 +1273,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--startup_probe--grpc"></a>
-### Nested Schema for `spec.init_container.startup_probe.grpc`
+### Nested Schema for `spec.init_container.startup_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1282,18 +1282,18 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--startup_probe--http_get"></a>
-### Nested Schema for `spec.init_container.startup_probe.http_get`
+### Nested Schema for `spec.init_container.startup_probe.timeout_seconds`
 
 Read-Only:
 
 - `host` (String)
-- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--startup_probe--http_get--http_header))
+- `http_header` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--startup_probe--timeout_seconds--http_header))
 - `path` (String)
 - `port` (String)
 - `scheme` (String)
 
-<a id="nestedobjatt--spec--init_container--startup_probe--http_get--http_header"></a>
-### Nested Schema for `spec.init_container.startup_probe.http_get.http_header`
+<a id="nestedobjatt--spec--init_container--startup_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.init_container.startup_probe.timeout_seconds.http_header`
 
 Read-Only:
 
@@ -1303,7 +1303,7 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--init_container--startup_probe--tcp_socket"></a>
-### Nested Schema for `spec.init_container.startup_probe.tcp_socket`
+### Nested Schema for `spec.init_container.startup_probe.timeout_seconds`
 
 Read-Only:
 
@@ -1432,7 +1432,7 @@ Read-Only:
 - `match_labels` (Map of String)
 
 <a id="nestedobjatt--spec--topology_spread_constraint--label_selector--match_expressions"></a>
-### Nested Schema for `spec.topology_spread_constraint.label_selector.match_expressions`
+### Nested Schema for `spec.topology_spread_constraint.label_selector.match_labels`
 
 Read-Only:
 
@@ -1525,7 +1525,7 @@ Read-Only:
 - `user` (String)
 
 <a id="nestedobjatt--spec--volume--ceph_fs--secret_ref"></a>
-### Nested Schema for `spec.volume.ceph_fs.secret_ref`
+### Nested Schema for `spec.volume.ceph_fs.user`
 
 Read-Only:
 
@@ -1555,7 +1555,7 @@ Read-Only:
 - `optional` (Boolean)
 
 <a id="nestedobjatt--spec--volume--config_map--items"></a>
-### Nested Schema for `spec.volume.config_map.items`
+### Nested Schema for `spec.volume.config_map.optional`
 
 Read-Only:
 
@@ -1577,7 +1577,7 @@ Read-Only:
 - `volume_attributes` (Map of String)
 
 <a id="nestedobjatt--spec--volume--csi--node_publish_secret_ref"></a>
-### Nested Schema for `spec.volume.csi.node_publish_secret_ref`
+### Nested Schema for `spec.volume.csi.volume_attributes`
 
 Read-Only:
 
@@ -1622,12 +1622,6 @@ Read-Only:
 - `resource` (String)
 
 
-
-* `type` - Indicates which kind of seccomp profile will be applied. Valid options are:
-* `Localhost` - a profile defined in a file on the node should be used.
-* `RuntimeDefault` - the container runtime default profile should be used.
-* `Unconfined` - (Default) no profile should be applied.
-* `localhost_profile` - Indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work. Must be a descending path, relative to the kubelet's configured seccomp profile location. Must only be set if `type` is `Localhost`.
 
 
 <a id="nestedobjatt--spec--volume--empty_dir"></a>
@@ -1676,7 +1670,7 @@ Read-Only:
 - `volume_name` (String)
 
 <a id="nestedobjatt--spec--volume--ephemeral--volume_claim_template--spec--resources"></a>
-### Nested Schema for `spec.volume.ephemeral.volume_claim_template.spec.resources`
+### Nested Schema for `spec.volume.ephemeral.volume_claim_template.spec.volume_name`
 
 Read-Only:
 
@@ -1685,15 +1679,15 @@ Read-Only:
 
 
 <a id="nestedobjatt--spec--volume--ephemeral--volume_claim_template--spec--selector"></a>
-### Nested Schema for `spec.volume.ephemeral.volume_claim_template.spec.selector`
+### Nested Schema for `spec.volume.ephemeral.volume_claim_template.spec.volume_name`
 
 Read-Only:
 
-- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--volume--ephemeral--volume_claim_template--spec--selector--match_expressions))
+- `match_expressions` (List of Object) (see [below for nested schema](#nestedobjatt--spec--volume--ephemeral--volume_claim_template--spec--volume_name--match_expressions))
 - `match_labels` (Map of String)
 
-<a id="nestedobjatt--spec--volume--ephemeral--volume_claim_template--spec--selector--match_expressions"></a>
-### Nested Schema for `spec.volume.ephemeral.volume_claim_template.spec.selector.match_expressions`
+<a id="nestedobjatt--spec--volume--ephemeral--volume_claim_template--spec--volume_name--match_expressions"></a>
+### Nested Schema for `spec.volume.ephemeral.volume_claim_template.spec.volume_name.match_labels`
 
 Read-Only:
 
@@ -1864,7 +1858,7 @@ Read-Only:
 - `optional` (Boolean)
 
 <a id="nestedobjatt--spec--volume--projected--sources--config_map--items"></a>
-### Nested Schema for `spec.volume.projected.sources.config_map.items`
+### Nested Schema for `spec.volume.projected.sources.config_map.optional`
 
 Read-Only:
 
@@ -1892,7 +1886,7 @@ Read-Only:
 - `resource_field_ref` (List of Object) (see [below for nested schema](#nestedobjatt--spec--volume--projected--sources--downward_api--items--resource_field_ref))
 
 <a id="nestedobjatt--spec--volume--projected--sources--downward_api--items--field_ref"></a>
-### Nested Schema for `spec.volume.projected.sources.downward_api.items.field_ref`
+### Nested Schema for `spec.volume.projected.sources.downward_api.items.resource_field_ref`
 
 Read-Only:
 
@@ -1922,7 +1916,7 @@ Read-Only:
 - `optional` (Boolean)
 
 <a id="nestedobjatt--spec--volume--projected--sources--secret--items"></a>
-### Nested Schema for `spec.volume.projected.sources.secret.items`
+### Nested Schema for `spec.volume.projected.sources.secret.optional`
 
 Read-Only:
 
@@ -1991,7 +1985,7 @@ Read-Only:
 - `secret_name` (String)
 
 <a id="nestedobjatt--spec--volume--secret--items"></a>
-### Nested Schema for `spec.volume.secret.items`
+### Nested Schema for `spec.volume.secret.secret_name`
 
 Read-Only:
 

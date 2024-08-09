@@ -88,7 +88,7 @@ Optional:
 - `stabilization_window_seconds` (Number) Number of seconds for which past recommendations should be considered while scaling up or scaling down. This value must be greater than or equal to zero and less than or equal to 3600 (one hour). If not set, use the default values: - For scale up: 0 (i.e. no stabilization is done). - For scale down: 300 (i.e. the stabilization window is 300 seconds long).
 
 <a id="nestedblock--spec--behavior--scale_down--policy"></a>
-### Nested Schema for `spec.behavior.scale_down.policy`
+### Nested Schema for `spec.behavior.scale_down.stabilization_window_seconds`
 
 Required:
 
@@ -111,7 +111,7 @@ Optional:
 - `stabilization_window_seconds` (Number) Number of seconds for which past recommendations should be considered while scaling up or scaling down. This value must be greater than or equal to zero and less than or equal to 3600 (one hour). If not set, use the default values: - For scale up: 0 (i.e. no stabilization is done). - For scale down: 300 (i.e. the stabilization window is 300 seconds long).
 
 <a id="nestedblock--spec--behavior--scale_up--policy"></a>
-### Nested Schema for `spec.behavior.scale_up.policy`
+### Nested Schema for `spec.behavior.scale_up.stabilization_window_seconds`
 
 Required:
 
@@ -176,7 +176,7 @@ Optional:
 - `target` (Block List, Max: 1) target specifies the target value for the given metric (see [below for nested schema](#nestedblock--spec--metric--external--target))
 
 <a id="nestedblock--spec--metric--external--metric"></a>
-### Nested Schema for `spec.metric.external.metric`
+### Nested Schema for `spec.metric.external.target`
 
 Required:
 
@@ -184,18 +184,18 @@ Required:
 
 Optional:
 
-- `selector` (Block List) selector is the string-encoded form of a standard kubernetes label selector for the given metric When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping. When unset, just the metricName will be used to gather metrics. (see [below for nested schema](#nestedblock--spec--metric--external--metric--selector))
+- `selector` (Block List) selector is the string-encoded form of a standard kubernetes label selector for the given metric When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping. When unset, just the metricName will be used to gather metrics. (see [below for nested schema](#nestedblock--spec--metric--external--target--selector))
 
-<a id="nestedblock--spec--metric--external--metric--selector"></a>
-### Nested Schema for `spec.metric.external.metric.selector`
+<a id="nestedblock--spec--metric--external--target--selector"></a>
+### Nested Schema for `spec.metric.external.target.selector`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--metric--external--metric--selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--metric--external--target--selector--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--metric--external--metric--selector--match_expressions"></a>
-### Nested Schema for `spec.metric.external.metric.selector.match_expressions`
+<a id="nestedblock--spec--metric--external--target--selector--match_expressions"></a>
+### Nested Schema for `spec.metric.external.target.selector.match_labels`
 
 Optional:
 
@@ -234,7 +234,7 @@ Optional:
 - `target` (Block List, Max: 1) target specifies the target value for the given metric (see [below for nested schema](#nestedblock--spec--metric--object--target))
 
 <a id="nestedblock--spec--metric--object--described_object"></a>
-### Nested Schema for `spec.metric.object.described_object`
+### Nested Schema for `spec.metric.object.target`
 
 Required:
 
@@ -244,7 +244,7 @@ Required:
 
 
 <a id="nestedblock--spec--metric--object--metric"></a>
-### Nested Schema for `spec.metric.object.metric`
+### Nested Schema for `spec.metric.object.target`
 
 Required:
 
@@ -252,18 +252,18 @@ Required:
 
 Optional:
 
-- `selector` (Block List) selector is the string-encoded form of a standard kubernetes label selector for the given metric When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping. When unset, just the metricName will be used to gather metrics. (see [below for nested schema](#nestedblock--spec--metric--object--metric--selector))
+- `selector` (Block List) selector is the string-encoded form of a standard kubernetes label selector for the given metric When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping. When unset, just the metricName will be used to gather metrics. (see [below for nested schema](#nestedblock--spec--metric--object--target--selector))
 
-<a id="nestedblock--spec--metric--object--metric--selector"></a>
-### Nested Schema for `spec.metric.object.metric.selector`
+<a id="nestedblock--spec--metric--object--target--selector"></a>
+### Nested Schema for `spec.metric.object.target.selector`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--metric--object--metric--selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--metric--object--target--selector--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--metric--object--metric--selector--match_expressions"></a>
-### Nested Schema for `spec.metric.object.metric.selector.match_expressions`
+<a id="nestedblock--spec--metric--object--target--selector--match_expressions"></a>
+### Nested Schema for `spec.metric.object.target.selector.match_labels`
 
 Optional:
 
@@ -301,7 +301,7 @@ Optional:
 - `target` (Block List, Max: 1) target specifies the target value for the given metric (see [below for nested schema](#nestedblock--spec--metric--pods--target))
 
 <a id="nestedblock--spec--metric--pods--metric"></a>
-### Nested Schema for `spec.metric.pods.metric`
+### Nested Schema for `spec.metric.pods.target`
 
 Required:
 
@@ -309,18 +309,18 @@ Required:
 
 Optional:
 
-- `selector` (Block List) selector is the string-encoded form of a standard kubernetes label selector for the given metric When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping. When unset, just the metricName will be used to gather metrics. (see [below for nested schema](#nestedblock--spec--metric--pods--metric--selector))
+- `selector` (Block List) selector is the string-encoded form of a standard kubernetes label selector for the given metric When set, it is passed as an additional parameter to the metrics server for more specific metrics scoping. When unset, just the metricName will be used to gather metrics. (see [below for nested schema](#nestedblock--spec--metric--pods--target--selector))
 
-<a id="nestedblock--spec--metric--pods--metric--selector"></a>
-### Nested Schema for `spec.metric.pods.metric.selector`
+<a id="nestedblock--spec--metric--pods--target--selector"></a>
+### Nested Schema for `spec.metric.pods.target.selector`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--metric--pods--metric--selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--metric--pods--target--selector--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--metric--pods--metric--selector--match_expressions"></a>
-### Nested Schema for `spec.metric.pods.metric.selector.match_expressions`
+<a id="nestedblock--spec--metric--pods--target--selector--match_expressions"></a>
+### Nested Schema for `spec.metric.pods.target.selector.match_labels`
 
 Optional:
 

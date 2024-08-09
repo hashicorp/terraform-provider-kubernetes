@@ -119,40 +119,40 @@ Optional:
 - `volume` (Block List) List of volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes (see [below for nested schema](#nestedblock--spec--template--spec--volume))
 
 <a id="nestedblock--spec--template--spec--affinity"></a>
-### Nested Schema for `spec.template.spec.affinity`
+### Nested Schema for `spec.template.spec.volume`
 
 Optional:
 
-- `node_affinity` (Block List, Max: 1) Node affinity scheduling rules for the pod. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity))
-- `pod_affinity` (Block List, Max: 1) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity))
-- `pod_anti_affinity` (Block List, Max: 1) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity))
+- `node_affinity` (Block List, Max: 1) Node affinity scheduling rules for the pod. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity))
+- `pod_affinity` (Block List, Max: 1) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity))
+- `pod_anti_affinity` (Block List, Max: 1) Inter-pod topological affinity. rules that specify that certain pods should be placed in the same topological domain (e.g. same node, same rack, same zone, same power domain, etc.) (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity))
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity`
+<a id="nestedblock--spec--template--spec--volume--node_affinity"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity`
 
 Optional:
 
-- `preferred_during_scheduling_ignored_during_execution` (Block List) The scheduler will prefer to schedule pods to nodes that satisfy the affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, RequiredDuringScheduling affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding 'weight' to the sum if the node matches the corresponding MatchExpressions; the node(s) with the highest sum are the most preferred. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution))
-- `required_during_scheduling_ignored_during_execution` (Block List, Max: 1) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a node label update), the system may or may not try to eventually evict the pod from its node. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution))
+- `preferred_during_scheduling_ignored_during_execution` (Block List) The scheduler will prefer to schedule pods to nodes that satisfy the affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, RequiredDuringScheduling affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding 'weight' to the sum if the node matches the corresponding MatchExpressions; the node(s) with the highest sum are the most preferred. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--preferred_during_scheduling_ignored_during_execution))
+- `required_during_scheduling_ignored_during_execution` (Block List, Max: 1) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a node label update), the system may or may not try to eventually evict the pod from its node. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution))
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--preferred_during_scheduling_ignored_during_execution"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution`
 
 Required:
 
-- `preference` (Block List, Min: 1, Max: 1) A node selector term, associated with the corresponding weight. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference))
+- `preference` (Block List, Min: 1, Max: 1) A node selector term, associated with the corresponding weight. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--preference))
 - `weight` (Number) weight is in the range 1-100
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--preference"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution.weight`
 
 Optional:
 
-- `match_expressions` (Block List) List of node selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_expressions))
-- `match_fields` (Block List) A list of node selector requirements by node's fields. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_fields))
+- `match_expressions` (Block List) List of node selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--weight--match_expressions))
+- `match_fields` (Block List) A list of node selector requirements by node's fields. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--weight--match_fields))
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_expressions"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--weight--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution.weight.match_fields`
 
 Optional:
 
@@ -161,8 +161,8 @@ Optional:
 - `values` (Set of String) Values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
 
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--preferred_during_scheduling_ignored_during_execution--preference--match_fields"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.preferred_during_scheduling_ignored_during_execution.preference.match_fields`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--weight--match_fields"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution.weight.match_fields`
 
 Required:
 
@@ -176,23 +176,23 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution`
 
 Optional:
 
-- `node_selector_term` (Block List) List of node selector terms. The terms are ORed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term))
+- `node_selector_term` (Block List) List of node selector terms. The terms are ORed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term))
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term`
 
 Optional:
 
-- `match_expressions` (Block List) List of node selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_expressions))
-- `match_fields` (Block List) A list of node selector requirements by node's fields. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_fields))
+- `match_expressions` (Block List) List of node selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_expressions))
+- `match_fields` (Block List) A list of node selector requirements by node's fields. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_fields))
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_expressions"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term.match_fields`
 
 Optional:
 
@@ -201,8 +201,8 @@ Optional:
 - `values` (Set of String) Values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. If the operator is Gt or Lt, the values array must have a single element, which will be interpreted as an integer. This array is replaced during a strategic merge patch.
 
 
-<a id="nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_fields"></a>
-### Nested Schema for `spec.template.spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term.match_fields`
+<a id="nestedblock--spec--template--spec--volume--node_affinity--required_during_scheduling_ignored_during_execution--node_selector_term--match_fields"></a>
+### Nested Schema for `spec.template.spec.volume.node_affinity.required_during_scheduling_ignored_during_execution.node_selector_term.match_fields`
 
 Required:
 
@@ -217,24 +217,24 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity`
 
 Optional:
 
-- `preferred_during_scheduling_ignored_during_execution` (Block List) The scheduler will prefer to schedule pods to nodes that satisfy the anti-affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, RequiredDuringScheduling anti-affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding 'weight' to the sum if the node matches the corresponding MatchExpressions; the node(s) with the highest sum are the most preferred. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution))
-- `required_during_scheduling_ignored_during_execution` (Block List) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node. When there are multiple elements, the lists of nodes corresponding to each PodAffinityTerm are intersected, i.e. all terms must be satisfied. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution))
+- `preferred_during_scheduling_ignored_during_execution` (Block List) The scheduler will prefer to schedule pods to nodes that satisfy the anti-affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, RequiredDuringScheduling anti-affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding 'weight' to the sum if the node matches the corresponding MatchExpressions; the node(s) with the highest sum are the most preferred. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity--preferred_during_scheduling_ignored_during_execution))
+- `required_during_scheduling_ignored_during_execution` (Block List) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node. When there are multiple elements, the lists of nodes corresponding to each PodAffinityTerm are intersected, i.e. all terms must be satisfied. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution))
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity--preferred_during_scheduling_ignored_during_execution"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity.required_during_scheduling_ignored_during_execution`
 
 Required:
 
-- `pod_affinity_term` (Block List, Min: 1, Max: 1) A pod affinity term, associated with the corresponding weight (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
+- `pod_affinity_term` (Block List, Min: 1, Max: 1) A pod affinity term, associated with the corresponding weight (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term))
 - `weight` (Number) weight associated with matching the corresponding podAffinityTerm, in the range 1-100
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity.required_during_scheduling_ignored_during_execution.weight`
 
 Required:
 
@@ -242,19 +242,19 @@ Required:
 
 Optional:
 
-- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--weight--label_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--weight--label_selector"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity.required_during_scheduling_ignored_during_execution.weight.namespaces`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--weight--namespaces--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--weight--namespaces--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity.required_during_scheduling_ignored_during_execution.weight.namespaces.match_expressions`
 
 Optional:
 
@@ -266,8 +266,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity.required_during_scheduling_ignored_during_execution`
 
 Required:
 
@@ -275,19 +275,19 @@ Required:
 
 Optional:
 
-- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity.required_during_scheduling_ignored_during_execution.namespaces`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--namespaces--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector--match_expressions"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--pod_affinity--required_during_scheduling_ignored_during_execution--namespaces--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.pod_affinity.required_during_scheduling_ignored_during_execution.namespaces.match_labels`
 
 Optional:
 
@@ -299,24 +299,24 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity`
 
 Optional:
 
-- `preferred_during_scheduling_ignored_during_execution` (Block List) The scheduler will prefer to schedule pods to nodes that satisfy the anti-affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, RequiredDuringScheduling anti-affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding 'weight' to the sum if the node matches the corresponding MatchExpressions; the node(s) with the highest sum are the most preferred. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution))
-- `required_during_scheduling_ignored_during_execution` (Block List) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node. When there are multiple elements, the lists of nodes corresponding to each PodAffinityTerm are intersected, i.e. all terms must be satisfied. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution))
+- `preferred_during_scheduling_ignored_during_execution` (Block List) The scheduler will prefer to schedule pods to nodes that satisfy the anti-affinity expressions specified by this field, but it may choose a node that violates one or more of the expressions. The node that is most preferred is the one with the greatest sum of weights, i.e. for each node that meets all of the scheduling requirements (resource request, RequiredDuringScheduling anti-affinity expressions, etc.), compute a sum by iterating through the elements of this field and adding 'weight' to the sum if the node matches the corresponding MatchExpressions; the node(s) with the highest sum are the most preferred. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution))
+- `required_during_scheduling_ignored_during_execution` (Block List) If the affinity requirements specified by this field are not met at scheduling time, the pod will not be scheduled onto the node. If the affinity requirements specified by this field cease to be met at some point during pod execution (e.g. due to a pod label update), the system may or may not try to eventually evict the pod from its node. When there are multiple elements, the lists of nodes corresponding to each PodAffinityTerm are intersected, i.e. all terms must be satisfied. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution))
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity.required_during_scheduling_ignored_during_execution`
 
 Required:
 
-- `pod_affinity_term` (Block List, Min: 1, Max: 1) A pod affinity term, associated with the corresponding weight (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term))
+- `pod_affinity_term` (Block List, Min: 1, Max: 1) A pod affinity term, associated with the corresponding weight (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term))
 - `weight` (Number) weight associated with matching the corresponding podAffinityTerm, in the range 1-100
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--pod_affinity_term"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity.required_during_scheduling_ignored_during_execution.weight`
 
 Required:
 
@@ -324,19 +324,19 @@ Required:
 
 Optional:
 
-- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--weight--label_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--weight--label_selector"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity.required_during_scheduling_ignored_during_execution.weight.namespaces`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--weight--namespaces--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector--match_expressions"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--weight--namespaces--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity.required_during_scheduling_ignored_during_execution.weight.namespaces.match_expressions`
 
 Optional:
 
@@ -348,8 +348,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity.required_during_scheduling_ignored_during_execution`
 
 Required:
 
@@ -357,19 +357,19 @@ Required:
 
 Optional:
 
-- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespaces`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--namespaces--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector--match_expressions"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--pod_anti_affinity--required_during_scheduling_ignored_during_execution--namespaces--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.pod_anti_affinity.required_during_scheduling_ignored_during_execution.namespaces.match_labels`
 
 Optional:
 
@@ -383,7 +383,7 @@ Optional:
 
 
 <a id="nestedblock--spec--template--spec--container"></a>
-### Nested Schema for `spec.template.spec.container`
+### Nested Schema for `spec.template.spec.volume`
 
 Required:
 
@@ -393,27 +393,27 @@ Optional:
 
 - `args` (List of String) Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
 - `command` (List of String) Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
-- `env` (Block List) List of environment variables to set in the container. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--env))
-- `env_from` (Block List) List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--env_from))
+- `env` (Block List) List of environment variables to set in the container. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env))
+- `env_from` (Block List) List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env_from))
 - `image` (String) Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images/
 - `image_pull_policy` (String) Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images/#updating-images
-- `lifecycle` (Block List, Max: 1) Actions that the management system should take in response to container lifecycle events (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle))
-- `liveness_probe` (Block List, Max: 1) Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe))
-- `port` (Block List) List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--port))
-- `readiness_probe` (Block List, Max: 1) Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--container--readiness_probe))
-- `resources` (Block List, Max: 1) Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--template--spec--container--resources))
-- `security_context` (Block List, Max: 1) Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context))
-- `startup_probe` (Block List, Max: 1) StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe))
+- `lifecycle` (Block List, Max: 1) Actions that the management system should take in response to container lifecycle events (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle))
+- `liveness_probe` (Block List, Max: 1) Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe))
+- `port` (Block List) List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--port))
+- `readiness_probe` (Block List, Max: 1) Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe))
+- `resources` (Block List, Max: 1) Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--template--spec--volume--resources))
+- `security_context` (Block List, Max: 1) Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context))
+- `startup_probe` (Block List, Max: 1) StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe))
 - `stdin` (Boolean) Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF.
 - `stdin_once` (Boolean) Whether the container runtime should close the stdin channel after it has been opened by a single attach. When stdin is true the stdin stream will remain open across multiple attach sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until the first client attaches to stdin, and then remains open and accepts data until the client disconnects, at which time stdin is closed and remains closed until the container is restarted. If this flag is false, a container processes that reads from stdin will never receive an EOF.
 - `termination_message_path` (String) Optional: Path at which the file to which the container's termination message will be written is mounted into the container's filesystem. Message written is intended to be brief final status, such as an assertion failure message. Defaults to /dev/termination-log. Cannot be updated.
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
-- `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--volume_mount))
+- `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_mount))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
-<a id="nestedblock--spec--template--spec--container--env"></a>
-### Nested Schema for `spec.template.spec.container.env`
+<a id="nestedblock--spec--template--spec--volume--env"></a>
+### Nested Schema for `spec.template.spec.volume.env`
 
 Required:
 
@@ -422,20 +422,20 @@ Required:
 Optional:
 
 - `value` (String) Variable references $(VAR_NAME) are expanded using the previous defined environment variables in the container and any service environment variables. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Defaults to "".
-- `value_from` (Block List, Max: 1) Source for the environment variable's value (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from))
+- `value_from` (Block List, Max: 1) Source for the environment variable's value (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from))
 
-<a id="nestedblock--spec--template--spec--container--env--value_from"></a>
-### Nested Schema for `spec.template.spec.container.env.value_from`
+<a id="nestedblock--spec--template--spec--volume--env--value_from"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from`
 
 Optional:
 
-- `config_map_key_ref` (Block List, Max: 1) Selects a key of a ConfigMap. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--config_map_key_ref))
-- `field_ref` (Block List, Max: 1) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--field_ref))
-- `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--resource_field_ref))
-- `secret_key_ref` (Block List, Max: 1) Selects a key of a secret in the pod's namespace. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--secret_key_ref))
+- `config_map_key_ref` (Block List, Max: 1) Selects a key of a ConfigMap. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--config_map_key_ref))
+- `field_ref` (Block List, Max: 1) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--field_ref))
+- `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--resource_field_ref))
+- `secret_key_ref` (Block List, Max: 1) Selects a key of a secret in the pod's namespace. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--secret_key_ref))
 
-<a id="nestedblock--spec--template--spec--container--env--value_from--config_map_key_ref"></a>
-### Nested Schema for `spec.template.spec.container.env.value_from.config_map_key_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--config_map_key_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Optional:
 
@@ -444,8 +444,8 @@ Optional:
 - `optional` (Boolean) Specify whether the ConfigMap or its key must be defined.
 
 
-<a id="nestedblock--spec--template--spec--container--env--value_from--field_ref"></a>
-### Nested Schema for `spec.template.spec.container.env.value_from.field_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--field_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Optional:
 
@@ -453,8 +453,8 @@ Optional:
 - `field_path` (String) Path of the field to select in the specified API version
 
 
-<a id="nestedblock--spec--template--spec--container--env--value_from--resource_field_ref"></a>
-### Nested Schema for `spec.template.spec.container.env.value_from.resource_field_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--resource_field_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Required:
 
@@ -466,8 +466,8 @@ Optional:
 - `divisor` (String)
 
 
-<a id="nestedblock--spec--template--spec--container--env--value_from--secret_key_ref"></a>
-### Nested Schema for `spec.template.spec.container.env.value_from.secret_key_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--secret_key_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Optional:
 
@@ -478,17 +478,17 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--env_from"></a>
-### Nested Schema for `spec.template.spec.container.env_from`
+<a id="nestedblock--spec--template--spec--volume--env_from"></a>
+### Nested Schema for `spec.template.spec.volume.env_from`
 
 Optional:
 
-- `config_map_ref` (Block List, Max: 1) The ConfigMap to select from (see [below for nested schema](#nestedblock--spec--template--spec--container--env_from--config_map_ref))
+- `config_map_ref` (Block List, Max: 1) The ConfigMap to select from (see [below for nested schema](#nestedblock--spec--template--spec--volume--env_from--config_map_ref))
 - `prefix` (String) An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.
-- `secret_ref` (Block List, Max: 1) The Secret to select from (see [below for nested schema](#nestedblock--spec--template--spec--container--env_from--secret_ref))
+- `secret_ref` (Block List, Max: 1) The Secret to select from (see [below for nested schema](#nestedblock--spec--template--spec--volume--env_from--secret_ref))
 
-<a id="nestedblock--spec--template--spec--container--env_from--config_map_ref"></a>
-### Nested Schema for `spec.template.spec.container.env_from.config_map_ref`
+<a id="nestedblock--spec--template--spec--volume--env_from--config_map_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env_from.secret_ref`
 
 Required:
 
@@ -499,8 +499,8 @@ Optional:
 - `optional` (Boolean) Specify whether the ConfigMap must be defined
 
 
-<a id="nestedblock--spec--template--spec--container--env_from--secret_ref"></a>
-### Nested Schema for `spec.template.spec.container.env_from.secret_ref`
+<a id="nestedblock--spec--template--spec--volume--env_from--secret_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env_from.secret_ref`
 
 Required:
 
@@ -512,44 +512,44 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--lifecycle"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle`
+<a id="nestedblock--spec--template--spec--volume--lifecycle"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle`
 
 Optional:
 
-- `post_start` (Block List) post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start))
-- `pre_stop` (Block List) pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop))
+- `post_start` (Block List) post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--post_start))
+- `pre_stop` (Block List) pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop))
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--post_start"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.post_start`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--post_start"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start--exec))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start--http_get))
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start--tcp_socket))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket))
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--post_start--exec"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.post_start.exec`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--post_start--http_get"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.post_start.http_get`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--post_start--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.post_start.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket.scheme`
 
 Optional:
 
@@ -558,8 +558,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--post_start--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.post_start.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Required:
 
@@ -567,36 +567,36 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop--exec))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop--http_get))
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop--tcp_socket))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket))
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop--exec"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop.exec`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop--http_get"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop.http_get`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket.scheme`
 
 Optional:
 
@@ -605,8 +605,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Required:
 
@@ -615,31 +615,31 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--container--liveness_probe"></a>
-### Nested Schema for `spec.template.spec.container.liveness_probe`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe--exec))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--exec))
 - `failure_threshold` (Number) Minimum consecutive failures for the probe to be considered failed after having succeeded.
-- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe--grpc))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe--http_get))
+- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--grpc))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--http_get))
 - `initial_delay_seconds` (Number) Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe--tcp_socket))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
-<a id="nestedblock--spec--template--spec--container--liveness_probe--exec"></a>
-### Nested Schema for `spec.template.spec.container.liveness_probe.exec`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--exec"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--container--liveness_probe--grpc"></a>
-### Nested Schema for `spec.template.spec.container.liveness_probe.grpc`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--grpc"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Required:
 
@@ -650,19 +650,19 @@ Optional:
 - `service` (String) Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
 
 
-<a id="nestedblock--spec--template--spec--container--liveness_probe--http_get"></a>
-### Nested Schema for `spec.template.spec.container.liveness_probe.http_get`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--timeout_seconds--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--container--liveness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.container.liveness_probe.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds.scheme`
 
 Optional:
 
@@ -671,8 +671,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--liveness_probe--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.container.liveness_probe.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Required:
 
@@ -680,8 +680,8 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--container--port"></a>
-### Nested Schema for `spec.template.spec.container.port`
+<a id="nestedblock--spec--template--spec--volume--port"></a>
+### Nested Schema for `spec.template.spec.volume.port`
 
 Required:
 
@@ -695,31 +695,31 @@ Optional:
 - `protocol` (String) Protocol for port. Must be UDP or TCP. Defaults to "TCP".
 
 
-<a id="nestedblock--spec--template--spec--container--readiness_probe"></a>
-### Nested Schema for `spec.template.spec.container.readiness_probe`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--container--readiness_probe--exec))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--exec))
 - `failure_threshold` (Number) Minimum consecutive failures for the probe to be considered failed after having succeeded.
-- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--container--readiness_probe--grpc))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--container--readiness_probe--http_get))
+- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--grpc))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--http_get))
 - `initial_delay_seconds` (Number) Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--readiness_probe--tcp_socket))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
-<a id="nestedblock--spec--template--spec--container--readiness_probe--exec"></a>
-### Nested Schema for `spec.template.spec.container.readiness_probe.exec`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--exec"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--container--readiness_probe--grpc"></a>
-### Nested Schema for `spec.template.spec.container.readiness_probe.grpc`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--grpc"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Required:
 
@@ -730,19 +730,19 @@ Optional:
 - `service` (String) Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
 
 
-<a id="nestedblock--spec--template--spec--container--readiness_probe--http_get"></a>
-### Nested Schema for `spec.template.spec.container.readiness_probe.http_get`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--container--readiness_probe--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--timeout_seconds--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--container--readiness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.container.readiness_probe.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds.scheme`
 
 Optional:
 
@@ -751,8 +751,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--readiness_probe--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.container.readiness_probe.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Required:
 
@@ -760,8 +760,8 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--container--resources"></a>
-### Nested Schema for `spec.template.spec.container.resources`
+<a id="nestedblock--spec--template--spec--volume--resources"></a>
+### Nested Schema for `spec.template.spec.volume.resources`
 
 Optional:
 
@@ -769,23 +769,23 @@ Optional:
 - `requests` (Map of String) Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
 
 
-<a id="nestedblock--spec--template--spec--container--security_context"></a>
-### Nested Schema for `spec.template.spec.container.security_context`
+<a id="nestedblock--spec--template--spec--volume--security_context"></a>
+### Nested Schema for `spec.template.spec.volume.security_context`
 
 Optional:
 
 - `allow_privilege_escalation` (Boolean) AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN
-- `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context--capabilities))
+- `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context--capabilities))
 - `privileged` (Boolean) Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.
 - `read_only_root_filesystem` (Boolean) Whether this container has a read-only root filesystem. Default is false.
 - `run_as_group` (String) The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_non_root` (Boolean) Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_user` (String) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
-- `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context--se_linux_options))
-- `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context--seccomp_profile))
+- `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context--se_linux_options))
+- `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context--seccomp_profile))
 
-<a id="nestedblock--spec--template--spec--container--security_context--capabilities"></a>
-### Nested Schema for `spec.template.spec.container.security_context.capabilities`
+<a id="nestedblock--spec--template--spec--volume--security_context--capabilities"></a>
+### Nested Schema for `spec.template.spec.volume.security_context.seccomp_profile`
 
 Optional:
 
@@ -793,8 +793,8 @@ Optional:
 - `drop` (List of String) Removed capabilities
 
 
-<a id="nestedblock--spec--template--spec--container--security_context--se_linux_options"></a>
-### Nested Schema for `spec.template.spec.container.security_context.se_linux_options`
+<a id="nestedblock--spec--template--spec--volume--security_context--se_linux_options"></a>
+### Nested Schema for `spec.template.spec.volume.security_context.seccomp_profile`
 
 Optional:
 
@@ -804,8 +804,8 @@ Optional:
 - `user` (String) User is a SELinux user label that applies to the container.
 
 
-<a id="nestedblock--spec--template--spec--container--security_context--seccomp_profile"></a>
-### Nested Schema for `spec.template.spec.container.security_context.seccomp_profile`
+<a id="nestedblock--spec--template--spec--volume--security_context--seccomp_profile"></a>
+### Nested Schema for `spec.template.spec.volume.security_context.seccomp_profile`
 
 Optional:
 
@@ -814,31 +814,31 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--startup_probe"></a>
-### Nested Schema for `spec.template.spec.container.startup_probe`
+<a id="nestedblock--spec--template--spec--volume--startup_probe"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe--exec))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--exec))
 - `failure_threshold` (Number) Minimum consecutive failures for the probe to be considered failed after having succeeded.
-- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe--grpc))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe--http_get))
+- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--grpc))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--http_get))
 - `initial_delay_seconds` (Number) Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe--tcp_socket))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
-<a id="nestedblock--spec--template--spec--container--startup_probe--exec"></a>
-### Nested Schema for `spec.template.spec.container.startup_probe.exec`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--exec"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--container--startup_probe--grpc"></a>
-### Nested Schema for `spec.template.spec.container.startup_probe.grpc`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--grpc"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Required:
 
@@ -849,19 +849,19 @@ Optional:
 - `service` (String) Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
 
 
-<a id="nestedblock--spec--template--spec--container--startup_probe--http_get"></a>
-### Nested Schema for `spec.template.spec.container.startup_probe.http_get`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--timeout_seconds--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--container--startup_probe--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.container.startup_probe.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds.scheme`
 
 Optional:
 
@@ -870,8 +870,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--container--startup_probe--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.container.startup_probe.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Required:
 
@@ -879,8 +879,8 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--container--volume_mount"></a>
-### Nested Schema for `spec.template.spec.container.volume_mount`
+<a id="nestedblock--spec--template--spec--volume--volume_mount"></a>
+### Nested Schema for `spec.template.spec.volume.volume_mount`
 
 Required:
 
@@ -896,16 +896,16 @@ Optional:
 
 
 <a id="nestedblock--spec--template--spec--dns_config"></a>
-### Nested Schema for `spec.template.spec.dns_config`
+### Nested Schema for `spec.template.spec.volume`
 
 Optional:
 
 - `nameservers` (List of String) A list of DNS name server IP addresses. This will be appended to the base nameservers generated from DNSPolicy. Duplicated nameservers will be removed.
-- `option` (Block List) A list of DNS resolver options. This will be merged with the base options generated from DNSPolicy. Duplicated entries will be removed. Resolution options given in Options will override those that appear in the base DNSPolicy. (see [below for nested schema](#nestedblock--spec--template--spec--dns_config--option))
+- `option` (Block List) A list of DNS resolver options. This will be merged with the base options generated from DNSPolicy. Duplicated entries will be removed. Resolution options given in Options will override those that appear in the base DNSPolicy. (see [below for nested schema](#nestedblock--spec--template--spec--volume--option))
 - `searches` (List of String) A list of DNS search domains for host-name lookup. This will be appended to the base search paths generated from DNSPolicy. Duplicated search paths will be removed.
 
-<a id="nestedblock--spec--template--spec--dns_config--option"></a>
-### Nested Schema for `spec.template.spec.dns_config.option`
+<a id="nestedblock--spec--template--spec--volume--option"></a>
+### Nested Schema for `spec.template.spec.volume.option`
 
 Required:
 
@@ -918,7 +918,7 @@ Optional:
 
 
 <a id="nestedblock--spec--template--spec--host_aliases"></a>
-### Nested Schema for `spec.template.spec.host_aliases`
+### Nested Schema for `spec.template.spec.volume`
 
 Required:
 
@@ -927,7 +927,7 @@ Required:
 
 
 <a id="nestedblock--spec--template--spec--image_pull_secrets"></a>
-### Nested Schema for `spec.template.spec.image_pull_secrets`
+### Nested Schema for `spec.template.spec.volume`
 
 Required:
 
@@ -935,7 +935,7 @@ Required:
 
 
 <a id="nestedblock--spec--template--spec--init_container"></a>
-### Nested Schema for `spec.template.spec.init_container`
+### Nested Schema for `spec.template.spec.volume`
 
 Required:
 
@@ -945,27 +945,27 @@ Optional:
 
 - `args` (List of String) Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
 - `command` (List of String) Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell
-- `env` (Block List) List of environment variables to set in the container. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env))
-- `env_from` (Block List) List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env_from))
+- `env` (Block List) List of environment variables to set in the container. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env))
+- `env_from` (Block List) List of sources to populate environment variables in the container. The keys defined within a source must be a C_IDENTIFIER. All invalid keys will be reported as an event when the container is starting. When a key exists in multiple sources, the value associated with the last source will take precedence. Values defined by an Env with a duplicate key will take precedence. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env_from))
 - `image` (String) Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images/
 - `image_pull_policy` (String) Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images/#updating-images
-- `lifecycle` (Block List, Max: 1) Actions that the management system should take in response to container lifecycle events (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle))
-- `liveness_probe` (Block List, Max: 1) Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe))
-- `port` (Block List) List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--port))
-- `readiness_probe` (Block List, Max: 1) Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--init_container--readiness_probe))
-- `resources` (Block List, Max: 1) Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--template--spec--init_container--resources))
-- `security_context` (Block List, Max: 1) Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context))
-- `startup_probe` (Block List, Max: 1) StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe))
+- `lifecycle` (Block List, Max: 1) Actions that the management system should take in response to container lifecycle events (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle))
+- `liveness_probe` (Block List, Max: 1) Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe))
+- `port` (Block List) List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--port))
+- `readiness_probe` (Block List, Max: 1) Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe))
+- `resources` (Block List, Max: 1) Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--template--spec--volume--resources))
+- `security_context` (Block List, Max: 1) Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context))
+- `startup_probe` (Block List, Max: 1) StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe))
 - `stdin` (Boolean) Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF.
 - `stdin_once` (Boolean) Whether the container runtime should close the stdin channel after it has been opened by a single attach. When stdin is true the stdin stream will remain open across multiple attach sessions. If stdinOnce is set to true, stdin is opened on container start, is empty until the first client attaches to stdin, and then remains open and accepts data until the client disconnects, at which time stdin is closed and remains closed until the container is restarted. If this flag is false, a container processes that reads from stdin will never receive an EOF.
 - `termination_message_path` (String) Optional: Path at which the file to which the container's termination message will be written is mounted into the container's filesystem. Message written is intended to be brief final status, such as an assertion failure message. Defaults to /dev/termination-log. Cannot be updated.
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
-- `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--volume_mount))
+- `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--volume--volume_mount))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
-<a id="nestedblock--spec--template--spec--init_container--env"></a>
-### Nested Schema for `spec.template.spec.init_container.env`
+<a id="nestedblock--spec--template--spec--volume--env"></a>
+### Nested Schema for `spec.template.spec.volume.env`
 
 Required:
 
@@ -974,20 +974,20 @@ Required:
 Optional:
 
 - `value` (String) Variable references $(VAR_NAME) are expanded using the previous defined environment variables in the container and any service environment variables. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Defaults to "".
-- `value_from` (Block List, Max: 1) Source for the environment variable's value (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from))
+- `value_from` (Block List, Max: 1) Source for the environment variable's value (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from))
 
-<a id="nestedblock--spec--template--spec--init_container--env--value_from"></a>
-### Nested Schema for `spec.template.spec.init_container.env.value_from`
+<a id="nestedblock--spec--template--spec--volume--env--value_from"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from`
 
 Optional:
 
-- `config_map_key_ref` (Block List, Max: 1) Selects a key of a ConfigMap. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--config_map_key_ref))
-- `field_ref` (Block List, Max: 1) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--field_ref))
-- `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--resource_field_ref))
-- `secret_key_ref` (Block List, Max: 1) Selects a key of a secret in the pod's namespace. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--secret_key_ref))
+- `config_map_key_ref` (Block List, Max: 1) Selects a key of a ConfigMap. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--config_map_key_ref))
+- `field_ref` (Block List, Max: 1) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--field_ref))
+- `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--resource_field_ref))
+- `secret_key_ref` (Block List, Max: 1) Selects a key of a secret in the pod's namespace. (see [below for nested schema](#nestedblock--spec--template--spec--volume--env--value_from--secret_key_ref))
 
-<a id="nestedblock--spec--template--spec--init_container--env--value_from--config_map_key_ref"></a>
-### Nested Schema for `spec.template.spec.init_container.env.value_from.config_map_key_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--config_map_key_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Optional:
 
@@ -996,8 +996,8 @@ Optional:
 - `optional` (Boolean) Specify whether the ConfigMap or its key must be defined.
 
 
-<a id="nestedblock--spec--template--spec--init_container--env--value_from--field_ref"></a>
-### Nested Schema for `spec.template.spec.init_container.env.value_from.field_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--field_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Optional:
 
@@ -1005,8 +1005,8 @@ Optional:
 - `field_path` (String) Path of the field to select in the specified API version
 
 
-<a id="nestedblock--spec--template--spec--init_container--env--value_from--resource_field_ref"></a>
-### Nested Schema for `spec.template.spec.init_container.env.value_from.resource_field_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--resource_field_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Required:
 
@@ -1018,8 +1018,8 @@ Optional:
 - `divisor` (String)
 
 
-<a id="nestedblock--spec--template--spec--init_container--env--value_from--secret_key_ref"></a>
-### Nested Schema for `spec.template.spec.init_container.env.value_from.secret_key_ref`
+<a id="nestedblock--spec--template--spec--volume--env--value_from--secret_key_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env.value_from.secret_key_ref`
 
 Optional:
 
@@ -1030,17 +1030,17 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--env_from"></a>
-### Nested Schema for `spec.template.spec.init_container.env_from`
+<a id="nestedblock--spec--template--spec--volume--env_from"></a>
+### Nested Schema for `spec.template.spec.volume.env_from`
 
 Optional:
 
-- `config_map_ref` (Block List, Max: 1) The ConfigMap to select from (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env_from--config_map_ref))
+- `config_map_ref` (Block List, Max: 1) The ConfigMap to select from (see [below for nested schema](#nestedblock--spec--template--spec--volume--env_from--config_map_ref))
 - `prefix` (String) An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.
-- `secret_ref` (Block List, Max: 1) The Secret to select from (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env_from--secret_ref))
+- `secret_ref` (Block List, Max: 1) The Secret to select from (see [below for nested schema](#nestedblock--spec--template--spec--volume--env_from--secret_ref))
 
-<a id="nestedblock--spec--template--spec--init_container--env_from--config_map_ref"></a>
-### Nested Schema for `spec.template.spec.init_container.env_from.config_map_ref`
+<a id="nestedblock--spec--template--spec--volume--env_from--config_map_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env_from.secret_ref`
 
 Required:
 
@@ -1051,8 +1051,8 @@ Optional:
 - `optional` (Boolean) Specify whether the ConfigMap must be defined
 
 
-<a id="nestedblock--spec--template--spec--init_container--env_from--secret_ref"></a>
-### Nested Schema for `spec.template.spec.init_container.env_from.secret_ref`
+<a id="nestedblock--spec--template--spec--volume--env_from--secret_ref"></a>
+### Nested Schema for `spec.template.spec.volume.env_from.secret_ref`
 
 Required:
 
@@ -1064,44 +1064,44 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle`
+<a id="nestedblock--spec--template--spec--volume--lifecycle"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle`
 
 Optional:
 
-- `post_start` (Block List) post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start))
-- `pre_stop` (Block List) pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop))
+- `post_start` (Block List) post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--post_start))
+- `pre_stop` (Block List) pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop))
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--post_start"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start--exec))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start--http_get))
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start--tcp_socket))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket))
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start--exec"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start.exec`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start--http_get"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start.http_get`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket.scheme`
 
 Optional:
 
@@ -1110,8 +1110,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Required:
 
@@ -1119,36 +1119,36 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--exec))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--http_get))
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--tcp_socket))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket))
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--exec"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop.exec`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--exec"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--http_get"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop.http_get`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket.scheme`
 
 Optional:
 
@@ -1157,8 +1157,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--lifecycle--pre_stop--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.lifecycle.pre_stop.tcp_socket`
 
 Required:
 
@@ -1167,31 +1167,31 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--liveness_probe"></a>
-### Nested Schema for `spec.template.spec.init_container.liveness_probe`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe--exec))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--exec))
 - `failure_threshold` (Number) Minimum consecutive failures for the probe to be considered failed after having succeeded.
-- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe--grpc))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe--http_get))
+- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--grpc))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--http_get))
 - `initial_delay_seconds` (Number) Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe--tcp_socket))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
-<a id="nestedblock--spec--template--spec--init_container--liveness_probe--exec"></a>
-### Nested Schema for `spec.template.spec.init_container.liveness_probe.exec`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--exec"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--init_container--liveness_probe--grpc"></a>
-### Nested Schema for `spec.template.spec.init_container.liveness_probe.grpc`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--grpc"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Required:
 
@@ -1202,19 +1202,19 @@ Optional:
 - `service` (String) Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
 
 
-<a id="nestedblock--spec--template--spec--init_container--liveness_probe--http_get"></a>
-### Nested Schema for `spec.template.spec.init_container.liveness_probe.http_get`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--liveness_probe--timeout_seconds--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--init_container--liveness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.init_container.liveness_probe.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds.scheme`
 
 Optional:
 
@@ -1223,8 +1223,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--liveness_probe--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.init_container.liveness_probe.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--liveness_probe--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.liveness_probe.timeout_seconds`
 
 Required:
 
@@ -1232,8 +1232,8 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--port"></a>
-### Nested Schema for `spec.template.spec.init_container.port`
+<a id="nestedblock--spec--template--spec--volume--port"></a>
+### Nested Schema for `spec.template.spec.volume.port`
 
 Required:
 
@@ -1247,31 +1247,31 @@ Optional:
 - `protocol` (String) Protocol for port. Must be UDP or TCP. Defaults to "TCP".
 
 
-<a id="nestedblock--spec--template--spec--init_container--readiness_probe"></a>
-### Nested Schema for `spec.template.spec.init_container.readiness_probe`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--readiness_probe--exec))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--exec))
 - `failure_threshold` (Number) Minimum consecutive failures for the probe to be considered failed after having succeeded.
-- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--readiness_probe--grpc))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--readiness_probe--http_get))
+- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--grpc))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--http_get))
 - `initial_delay_seconds` (Number) Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--readiness_probe--tcp_socket))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
-<a id="nestedblock--spec--template--spec--init_container--readiness_probe--exec"></a>
-### Nested Schema for `spec.template.spec.init_container.readiness_probe.exec`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--exec"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--init_container--readiness_probe--grpc"></a>
-### Nested Schema for `spec.template.spec.init_container.readiness_probe.grpc`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--grpc"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Required:
 
@@ -1282,19 +1282,19 @@ Optional:
 - `service` (String) Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
 
 
-<a id="nestedblock--spec--template--spec--init_container--readiness_probe--http_get"></a>
-### Nested Schema for `spec.template.spec.init_container.readiness_probe.http_get`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--readiness_probe--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--readiness_probe--timeout_seconds--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--init_container--readiness_probe--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.init_container.readiness_probe.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds.scheme`
 
 Optional:
 
@@ -1303,8 +1303,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--readiness_probe--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.init_container.readiness_probe.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--readiness_probe--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.readiness_probe.timeout_seconds`
 
 Required:
 
@@ -1312,8 +1312,8 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--resources"></a>
-### Nested Schema for `spec.template.spec.init_container.resources`
+<a id="nestedblock--spec--template--spec--volume--resources"></a>
+### Nested Schema for `spec.template.spec.volume.resources`
 
 Optional:
 
@@ -1321,23 +1321,23 @@ Optional:
 - `requests` (Map of String) Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
 
 
-<a id="nestedblock--spec--template--spec--init_container--security_context"></a>
-### Nested Schema for `spec.template.spec.init_container.security_context`
+<a id="nestedblock--spec--template--spec--volume--security_context"></a>
+### Nested Schema for `spec.template.spec.volume.security_context`
 
 Optional:
 
 - `allow_privilege_escalation` (Boolean) AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN
-- `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context--capabilities))
+- `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context--capabilities))
 - `privileged` (Boolean) Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.
 - `read_only_root_filesystem` (Boolean) Whether this container has a read-only root filesystem. Default is false.
 - `run_as_group` (String) The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_non_root` (Boolean) Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_user` (String) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
-- `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context--se_linux_options))
-- `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context--seccomp_profile))
+- `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context--se_linux_options))
+- `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. (see [below for nested schema](#nestedblock--spec--template--spec--volume--security_context--seccomp_profile))
 
-<a id="nestedblock--spec--template--spec--init_container--security_context--capabilities"></a>
-### Nested Schema for `spec.template.spec.init_container.security_context.capabilities`
+<a id="nestedblock--spec--template--spec--volume--security_context--capabilities"></a>
+### Nested Schema for `spec.template.spec.volume.security_context.seccomp_profile`
 
 Optional:
 
@@ -1345,8 +1345,8 @@ Optional:
 - `drop` (List of String) Removed capabilities
 
 
-<a id="nestedblock--spec--template--spec--init_container--security_context--se_linux_options"></a>
-### Nested Schema for `spec.template.spec.init_container.security_context.se_linux_options`
+<a id="nestedblock--spec--template--spec--volume--security_context--se_linux_options"></a>
+### Nested Schema for `spec.template.spec.volume.security_context.seccomp_profile`
 
 Optional:
 
@@ -1356,8 +1356,8 @@ Optional:
 - `user` (String) User is a SELinux user label that applies to the container.
 
 
-<a id="nestedblock--spec--template--spec--init_container--security_context--seccomp_profile"></a>
-### Nested Schema for `spec.template.spec.init_container.security_context.seccomp_profile`
+<a id="nestedblock--spec--template--spec--volume--security_context--seccomp_profile"></a>
+### Nested Schema for `spec.template.spec.volume.security_context.seccomp_profile`
 
 Optional:
 
@@ -1366,31 +1366,31 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--startup_probe"></a>
-### Nested Schema for `spec.template.spec.init_container.startup_probe`
+<a id="nestedblock--spec--template--spec--volume--startup_probe"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe`
 
 Optional:
 
-- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe--exec))
+- `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--exec))
 - `failure_threshold` (Number) Minimum consecutive failures for the probe to be considered failed after having succeeded.
-- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe--grpc))
-- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe--http_get))
+- `grpc` (Block List) GRPC specifies an action involving a GRPC port. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--grpc))
+- `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--http_get))
 - `initial_delay_seconds` (Number) Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
-- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe--tcp_socket))
+- `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
-<a id="nestedblock--spec--template--spec--init_container--startup_probe--exec"></a>
-### Nested Schema for `spec.template.spec.init_container.startup_probe.exec`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--exec"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Optional:
 
 - `command` (List of String) Command is the command line to execute inside the container, the working directory for the command is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
 
 
-<a id="nestedblock--spec--template--spec--init_container--startup_probe--grpc"></a>
-### Nested Schema for `spec.template.spec.init_container.startup_probe.grpc`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--grpc"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Required:
 
@@ -1401,19 +1401,19 @@ Optional:
 - `service` (String) Name of the service to place in the gRPC HealthCheckRequest (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is not specified, the default behavior is defined by gRPC.
 
 
-<a id="nestedblock--spec--template--spec--init_container--startup_probe--http_get"></a>
-### Nested Schema for `spec.template.spec.init_container.startup_probe.http_get`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--http_get"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Optional:
 
 - `host` (String) Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
-- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe--http_get--http_header))
+- `http_header` (Block List) Scheme to use for connecting to the host. (see [below for nested schema](#nestedblock--spec--template--spec--volume--startup_probe--timeout_seconds--http_header))
 - `path` (String) Path to access on the HTTP server.
 - `port` (String) Name or number of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 - `scheme` (String) Scheme to use for connecting to the host.
 
-<a id="nestedblock--spec--template--spec--init_container--startup_probe--http_get--http_header"></a>
-### Nested Schema for `spec.template.spec.init_container.startup_probe.http_get.http_header`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--timeout_seconds--http_header"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds.scheme`
 
 Optional:
 
@@ -1422,8 +1422,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--startup_probe--tcp_socket"></a>
-### Nested Schema for `spec.template.spec.init_container.startup_probe.tcp_socket`
+<a id="nestedblock--spec--template--spec--volume--startup_probe--tcp_socket"></a>
+### Nested Schema for `spec.template.spec.volume.startup_probe.timeout_seconds`
 
 Required:
 
@@ -1431,8 +1431,8 @@ Required:
 
 
 
-<a id="nestedblock--spec--template--spec--init_container--volume_mount"></a>
-### Nested Schema for `spec.template.spec.init_container.volume_mount`
+<a id="nestedblock--spec--template--spec--volume--volume_mount"></a>
+### Nested Schema for `spec.template.spec.volume.volume_mount`
 
 Required:
 
@@ -1448,7 +1448,7 @@ Optional:
 
 
 <a id="nestedblock--spec--template--spec--os"></a>
-### Nested Schema for `spec.template.spec.os`
+### Nested Schema for `spec.template.spec.volume`
 
 Required:
 
@@ -1456,7 +1456,7 @@ Required:
 
 
 <a id="nestedblock--spec--template--spec--readiness_gate"></a>
-### Nested Schema for `spec.template.spec.readiness_gate`
+### Nested Schema for `spec.template.spec.volume`
 
 Required:
 
@@ -1464,7 +1464,7 @@ Required:
 
 
 <a id="nestedblock--spec--template--spec--security_context"></a>
-### Nested Schema for `spec.template.spec.security_context`
+### Nested Schema for `spec.template.spec.volume`
 
 Optional:
 
@@ -1473,14 +1473,14 @@ Optional:
 - `run_as_group` (String) The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.
 - `run_as_non_root` (Boolean) Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_user` (String) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.
-- `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--se_linux_options))
-- `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--seccomp_profile))
+- `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container. (see [below for nested schema](#nestedblock--spec--template--spec--volume--se_linux_options))
+- `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. (see [below for nested schema](#nestedblock--spec--template--spec--volume--seccomp_profile))
 - `supplemental_groups` (Set of Number) A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.
-- `sysctl` (Block List) holds a list of namespaced sysctls used for the pod. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--sysctl))
-- `windows_options` (Block List, Max: 1) The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--windows_options))
+- `sysctl` (Block List) holds a list of namespaced sysctls used for the pod. (see [below for nested schema](#nestedblock--spec--template--spec--volume--sysctl))
+- `windows_options` (Block List, Max: 1) The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux. (see [below for nested schema](#nestedblock--spec--template--spec--volume--windows_options))
 
-<a id="nestedblock--spec--template--spec--security_context--se_linux_options"></a>
-### Nested Schema for `spec.template.spec.security_context.se_linux_options`
+<a id="nestedblock--spec--template--spec--volume--se_linux_options"></a>
+### Nested Schema for `spec.template.spec.volume.se_linux_options`
 
 Optional:
 
@@ -1490,8 +1490,8 @@ Optional:
 - `user` (String) User is a SELinux user label that applies to the container.
 
 
-<a id="nestedblock--spec--template--spec--security_context--seccomp_profile"></a>
-### Nested Schema for `spec.template.spec.security_context.seccomp_profile`
+<a id="nestedblock--spec--template--spec--volume--seccomp_profile"></a>
+### Nested Schema for `spec.template.spec.volume.seccomp_profile`
 
 Optional:
 
@@ -1499,8 +1499,8 @@ Optional:
 - `type` (String) Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.
 
 
-<a id="nestedblock--spec--template--spec--security_context--sysctl"></a>
-### Nested Schema for `spec.template.spec.security_context.sysctl`
+<a id="nestedblock--spec--template--spec--volume--sysctl"></a>
+### Nested Schema for `spec.template.spec.volume.sysctl`
 
 Required:
 
@@ -1508,8 +1508,8 @@ Required:
 - `value` (String) Value of a property to set.
 
 
-<a id="nestedblock--spec--template--spec--security_context--windows_options"></a>
-### Nested Schema for `spec.template.spec.security_context.windows_options`
+<a id="nestedblock--spec--template--spec--volume--windows_options"></a>
+### Nested Schema for `spec.template.spec.volume.windows_options`
 
 Optional:
 
@@ -1521,7 +1521,7 @@ Optional:
 
 
 <a id="nestedblock--spec--template--spec--toleration"></a>
-### Nested Schema for `spec.template.spec.toleration`
+### Nested Schema for `spec.template.spec.volume`
 
 Optional:
 
@@ -1533,11 +1533,11 @@ Optional:
 
 
 <a id="nestedblock--spec--template--spec--topology_spread_constraint"></a>
-### Nested Schema for `spec.template.spec.topology_spread_constraint`
+### Nested Schema for `spec.template.spec.volume`
 
 Optional:
 
-- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--topology_spread_constraint--label_selector))
+- `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--volume--label_selector))
 - `match_label_keys` (Set of String) is a set of pod label keys to select the pods over which spreading will be calculated.
 - `max_skew` (Number) describes the degree to which pods may be unevenly distributed.
 - `min_domains` (Number) indicates a minimum number of eligible domains.
@@ -1546,16 +1546,16 @@ Optional:
 - `topology_key` (String) the key of node labels. Nodes that have a label with this key and identical values are considered to be in the same topology.
 - `when_unsatisfiable` (String) indicates how to deal with a pod if it doesn't satisfy the spread constraint.
 
-<a id="nestedblock--spec--template--spec--topology_spread_constraint--label_selector"></a>
-### Nested Schema for `spec.template.spec.topology_spread_constraint.label_selector`
+<a id="nestedblock--spec--template--spec--volume--label_selector"></a>
+### Nested Schema for `spec.template.spec.volume.label_selector`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--topology_spread_constraint--label_selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--label_selector--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--template--spec--topology_spread_constraint--label_selector--match_expressions"></a>
-### Nested Schema for `spec.template.spec.topology_spread_constraint.label_selector.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--label_selector--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.label_selector.match_labels`
 
 Optional:
 
@@ -1660,7 +1660,7 @@ Optional:
 - `user` (String) User is the rados user name, default is admin. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
 
 <a id="nestedblock--spec--template--spec--volume--ceph_fs--secret_ref"></a>
-### Nested Schema for `spec.template.spec.volume.ceph_fs.secret_ref`
+### Nested Schema for `spec.template.spec.volume.ceph_fs.user`
 
 Optional:
 
@@ -1693,7 +1693,7 @@ Optional:
 - `optional` (Boolean) Optional: Specify whether the ConfigMap or its keys must be defined.
 
 <a id="nestedblock--spec--template--spec--volume--config_map--items"></a>
-### Nested Schema for `spec.template.spec.volume.config_map.items`
+### Nested Schema for `spec.template.spec.volume.config_map.optional`
 
 Optional:
 
@@ -1718,7 +1718,7 @@ Optional:
 - `volume_attributes` (Map of String) Attributes of the volume to publish.
 
 <a id="nestedblock--spec--template--spec--volume--csi--node_publish_secret_ref"></a>
-### Nested Schema for `spec.template.spec.volume.csi.node_publish_secret_ref`
+### Nested Schema for `spec.template.spec.volume.csi.volume_attributes`
 
 Optional:
 
@@ -1748,7 +1748,7 @@ Optional:
 - `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported. (see [below for nested schema](#nestedblock--spec--template--spec--volume--downward_api--items--resource_field_ref))
 
 <a id="nestedblock--spec--template--spec--volume--downward_api--items--field_ref"></a>
-### Nested Schema for `spec.template.spec.volume.downward_api.items.field_ref`
+### Nested Schema for `spec.template.spec.volume.downward_api.items.resource_field_ref`
 
 Optional:
 
@@ -1799,22 +1799,22 @@ Optional:
 - `metadata` (Block List, Max: 1) May contain labels and annotations that will be copied into the PVC when creating it. No other fields are allowed and will be rejected during validation. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata))
 
 <a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec"></a>
-### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.spec`
+### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.metadata`
 
 Required:
 
 - `access_modes` (Set of String) A set of the desired access modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes
-- `resources` (Block List, Min: 1, Max: 1) A list of the minimum resources the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--resources))
+- `resources` (Block List, Min: 1, Max: 1) A list of the minimum resources the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata--resources))
 
 Optional:
 
-- `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--selector))
+- `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata--selector))
 - `storage_class_name` (String) Name of the storage class requested by the claim
 - `volume_mode` (String) Defines what type of volume is required by the claim.
 - `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
 
-<a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--resources"></a>
-### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.spec.resources`
+<a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata--resources"></a>
+### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.metadata.volume_name`
 
 Optional:
 
@@ -1822,16 +1822,16 @@ Optional:
 - `requests` (Map of String) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 
 
-<a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--selector"></a>
-### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.spec.selector`
+<a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata--selector"></a>
+### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.metadata.volume_name`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--selector--match_expressions))
+- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata--volume_name--match_expressions))
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
 
-<a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--selector--match_expressions"></a>
-### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.spec.selector.match_expressions`
+<a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata--volume_name--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.metadata.volume_name.match_expressions`
 
 Optional:
 
@@ -2016,26 +2016,26 @@ Optional:
 - `default_mode` (String) Optional: mode bits to use on created files by default. Must be a value between 0 and 0777. Defaults to 0644. Directories within the path are not affected by this setting. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.
 
 <a id="nestedblock--spec--template--spec--volume--projected--sources"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources`
+### Nested Schema for `spec.template.spec.volume.projected.default_mode`
 
 Optional:
 
-- `config_map` (Block List) ConfigMap represents a configMap that should populate this volume (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--config_map))
-- `downward_api` (Block List, Max: 1) DownwardAPI represents downward API about the pod that should populate this volume (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--downward_api))
-- `secret` (Block List) Secret represents a secret that should populate this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--secret))
-- `service_account_token` (Block List, Max: 1) A projected service account token volume (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--service_account_token))
+- `config_map` (Block List) ConfigMap represents a configMap that should populate this volume (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--config_map))
+- `downward_api` (Block List, Max: 1) DownwardAPI represents downward API about the pod that should populate this volume (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--downward_api))
+- `secret` (Block List) Secret represents a secret that should populate this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--secret))
+- `service_account_token` (Block List, Max: 1) A projected service account token volume (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token))
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--config_map"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.config_map`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--config_map"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token`
 
 Optional:
 
-- `items` (Block List) If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error. Paths must be relative and may not contain the '..' path or start with '..'. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--config_map--items))
+- `items` (Block List) If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the ConfigMap, the volume setup will error. Paths must be relative and may not contain the '..' path or start with '..'. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items))
 - `name` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 - `optional` (Boolean) Optional: Specify whether the ConfigMap or it's keys must be defined.
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--config_map--items"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.config_map.items`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token.optional`
 
 Optional:
 
@@ -2045,15 +2045,15 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--downward_api"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.downward_api`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--downward_api"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token`
 
 Optional:
 
-- `items` (Block List) Represents a volume containing downward API info. Downward API volumes support ownership management and SELinux relabeling. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--downward_api--items))
+- `items` (Block List) Represents a volume containing downward API info. Downward API volumes support ownership management and SELinux relabeling. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items))
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--downward_api--items"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.downward_api.items`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token.items`
 
 Required:
 
@@ -2061,12 +2061,12 @@ Required:
 
 Optional:
 
-- `field_ref` (Block List, Max: 1) Selects a field of the pod: only annotations, labels, name and namespace are supported. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--downward_api--items--field_ref))
+- `field_ref` (Block List, Max: 1) Selects a field of the pod: only annotations, labels, name and namespace are supported. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items--field_ref))
 - `mode` (String) Mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.
-- `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--downward_api--items--resource_field_ref))
+- `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items--resource_field_ref))
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--downward_api--items--field_ref"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.downward_api.items.field_ref`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items--field_ref"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token.items.field_ref`
 
 Optional:
 
@@ -2074,8 +2074,8 @@ Optional:
 - `field_path` (String) Path of the field to select in the specified API version
 
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--downward_api--items--resource_field_ref"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.downward_api.items.resource_field_ref`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items--resource_field_ref"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token.items.resource_field_ref`
 
 Required:
 
@@ -2089,17 +2089,17 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--secret"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.secret`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--secret"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token`
 
 Optional:
 
-- `items` (Block List) If unspecified, each key-value pair in the Data field of the referenced Secret will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the Secret, the volume setup will error unless it is marked optional. Paths must be relative and may not contain the '..' path or start with '..'. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--secret--items))
+- `items` (Block List) If unspecified, each key-value pair in the Data field of the referenced Secret will be projected into the volume as a file whose name is the key and content is the value. If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present. If a key is specified which is not present in the Secret, the volume setup will error unless it is marked optional. Paths must be relative and may not contain the '..' path or start with '..'. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items))
 - `name` (String) Name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets
 - `optional` (Boolean) Optional: Specify whether the Secret or it's keys must be defined.
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--secret--items"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.secret.items`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token--items"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token.optional`
 
 Optional:
 
@@ -2109,8 +2109,8 @@ Optional:
 
 
 
-<a id="nestedblock--spec--template--spec--volume--projected--sources--service_account_token"></a>
-### Nested Schema for `spec.template.spec.volume.projected.sources.service_account_token`
+<a id="nestedblock--spec--template--spec--volume--projected--default_mode--service_account_token"></a>
+### Nested Schema for `spec.template.spec.volume.projected.default_mode.service_account_token`
 
 Required:
 
@@ -2177,7 +2177,7 @@ Optional:
 - `secret_name` (String) Name of the secret in the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets
 
 <a id="nestedblock--spec--template--spec--volume--secret--items"></a>
-### Nested Schema for `spec.template.spec.volume.secret.items`
+### Nested Schema for `spec.template.spec.volume.secret.secret_name`
 
 Optional:
 

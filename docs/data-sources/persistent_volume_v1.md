@@ -143,7 +143,7 @@ Optional:
 - `user` (String) User is the rados user name, default is admin. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
 
 <a id="nestedblock--spec--persistent_volume_source--ceph_fs--secret_ref"></a>
-### Nested Schema for `spec.persistent_volume_source.ceph_fs.secret_ref`
+### Nested Schema for `spec.persistent_volume_source.ceph_fs.user`
 
 Optional:
 
@@ -184,7 +184,7 @@ Optional:
 - `volume_attributes` (Map of String) Attributes of the volume to publish.
 
 <a id="nestedblock--spec--persistent_volume_source--csi--controller_expand_secret_ref"></a>
-### Nested Schema for `spec.persistent_volume_source.csi.controller_expand_secret_ref`
+### Nested Schema for `spec.persistent_volume_source.csi.volume_attributes`
 
 Optional:
 
@@ -193,7 +193,7 @@ Optional:
 
 
 <a id="nestedblock--spec--persistent_volume_source--csi--controller_publish_secret_ref"></a>
-### Nested Schema for `spec.persistent_volume_source.csi.controller_publish_secret_ref`
+### Nested Schema for `spec.persistent_volume_source.csi.volume_attributes`
 
 Optional:
 
@@ -202,7 +202,7 @@ Optional:
 
 
 <a id="nestedblock--spec--persistent_volume_source--csi--node_publish_secret_ref"></a>
-### Nested Schema for `spec.persistent_volume_source.csi.node_publish_secret_ref`
+### Nested Schema for `spec.persistent_volume_source.csi.volume_attributes`
 
 Optional:
 
@@ -211,7 +211,7 @@ Optional:
 
 
 <a id="nestedblock--spec--persistent_volume_source--csi--node_stage_secret_ref"></a>
-### Nested Schema for `spec.persistent_volume_source.csi.node_stage_secret_ref`
+### Nested Schema for `spec.persistent_volume_source.csi.volume_attributes`
 
 Optional:
 

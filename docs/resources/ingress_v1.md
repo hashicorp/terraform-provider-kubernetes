@@ -142,7 +142,7 @@ Optional:
 - `service` (Block List, Max: 1) (see [below for nested schema](#nestedblock--spec--rule--http--path--backend--service))
 
 <a id="nestedblock--spec--rule--http--path--backend--resource"></a>
-### Nested Schema for `spec.rule.http.path.backend.resource`
+### Nested Schema for `spec.rule.http.path.backend.service`
 
 Required:
 

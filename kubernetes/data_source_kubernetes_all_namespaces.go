@@ -7,8 +7,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +17,7 @@ import (
 
 func dataSourceKubernetesAllNamespaces() *schema.Resource {
 	return &schema.Resource{
+		Description: "This data source provides a mechanism for listing the names of all available namespaces in a Kubernetes cluster. It can be used to check for existence of a specific namespaces or to apply another resource to all or a subset of existing namespaces in a cluster.In Kubernetes, namespaces provide a scope for names and are intended as a way to divide cluster resources between multiple users.",
 		ReadContext: dataSourceKubernetesAllNamespacesRead,
 		Schema: map[string]*schema.Schema{
 			"namespaces": {

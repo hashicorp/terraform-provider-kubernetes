@@ -5,30 +5,13 @@ description: |-
   This is a generic data source for Kubernetes API resources
 ---
 
-{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
-
-For example, the {{ .SchemaMarkdown }} template can be used to replace manual schema documentation if descriptions of schema attributes are added in the provider source code. */ -}}
-
-# kubernetes_resource
+# {{ .Name }}
 
 This data source is a generic way to retrieve resources from the Kubernetes API.
+
+{{ .SchemaMarkdown }}
 
 ### Example: Get data from a ConfigMap
 
 {{tffile "examples/data-sources/resource/example_1.tf"}}
 
-## Argument Reference
-
-The following arguments are supported:
-
-* `api_version` - (Required) The API version for the requested resource.
-* `kind` - (Required) The kind for the requested resource.
-* `metadata` - (Required) The metadata for the requested resource.
-* `object` - (Optional) The response returned from the API server.
-
-### `metadata`
-
-#### Arguments
-
-* `name` - (Required) The name of the requested resource.
-* `namespace` - (Optional) The namespace of the requested resource.

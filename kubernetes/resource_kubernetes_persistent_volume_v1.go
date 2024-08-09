@@ -95,6 +95,7 @@ func resourceKubernetesPersistentVolumeV1() *schema.Resource {
 									"ReadWriteOnce",
 									"ReadOnlyMany",
 									"ReadWriteMany",
+									"ReadWriteOncePod",
 								}, false),
 							},
 							Set: schema.HashString,
@@ -241,7 +242,15 @@ func resourceKubernetesPersistentVolumeV1Create(ctx context.Context, d *schema.R
 			}
 
 			statusPhase := fmt.Sprintf("%v", out.Status.Phase)
-			log.Printf("[DEBUG] Persistent volume %s status received: %#v", out.Name, statusPhase)
+			statusMessage := fmt.Sprintf("%v", out.Status.Message)
+			if statusMessage == "" {
+				log.Printf("[DEBUG] Persistent volume %s status received: %#v", out.Name, statusPhase)
+			} else {
+				log.Printf("[DEBUG] Persistent volume %s status received: %#v, message received: %#v", out.Name, statusPhase, statusMessage)
+			}
+			if out.Status.LastPhaseTransitionTime != nil {
+				log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
+			}
 			return out, statusPhase, nil
 		},
 	}
@@ -278,6 +287,9 @@ func resourceKubernetesPersistentVolumeV1Read(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received persistent volume: %#v", volume)
+	if volume.Status.LastPhaseTransitionTime != nil {
+		log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", volume.Status.LastPhaseTransitionTime)
+	}
 	err = d.Set("metadata", flattenMetadata(volume.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
@@ -344,8 +356,15 @@ func resourceKubernetesPersistentVolumeV1Delete(ctx context.Context, d *schema.R
 			}
 			return retry.NonRetryableError(err)
 		}
-
-		log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
+		statusMessage := fmt.Sprintf("%v", out.Status.Message)
+		if statusMessage == "" {
+			log.Printf("[DEBUG] Current state of persistent volume: %#v", out.Status.Phase)
+		} else {
+			log.Printf("[DEBUG] Current state of persistent volume: %#v, message received: %#v", out.Status.Phase, out.Status.Message)
+		}
+		if out.Status.LastPhaseTransitionTime != nil {
+			log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
+		}
 		e := fmt.Errorf("Persistent volume %s still exists (%s)", name, out.Status.Phase)
 		return retry.RetryableError(e)
 	})
@@ -367,12 +386,15 @@ func resourceKubernetesPersistentVolumeV1Exists(ctx context.Context, d *schema.R
 
 	name := d.Id()
 	log.Printf("[INFO] Checking persistent volume %s", name)
-	_, err = conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
+	out, err := conn.CoreV1().PersistentVolumes().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return false, nil
 		}
 		log.Printf("[DEBUG] Received error: %#v", err)
+	}
+	if out.Status.LastPhaseTransitionTime != nil {
+		log.Printf("[DEBUG] Persistent volume last phrase transition time: %v", out.Status.LastPhaseTransitionTime)
 	}
 	return true, err
 }

@@ -14,6 +14,7 @@ import (
 func dataSourceKubernetesServerVersion() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceKubernetesServerVersionRead,
+		Description: "This data source reads the versioning information of the server and makes specific attributes available to Terraform. Read more at [version info reference](https://pkg.go.dev/k8s.io/apimachinery/pkg/version#Info)",
 		Schema: map[string]*schema.Schema{
 			"version": {
 				Type:        schema.TypeString,

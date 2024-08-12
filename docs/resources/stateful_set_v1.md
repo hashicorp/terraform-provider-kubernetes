@@ -61,7 +61,7 @@ Optional:
 - `revision_history_limit` (Number) The maximum number of revisions that will be maintained in the StatefulSet's revision history. The default value is 10.
 - `update_strategy` (Block List) The strategy that the StatefulSet controller will use to perform updates. (see [below for nested schema](#nestedblock--spec--update_strategy))
 - `volume_claim_template` (Block List) A list of claims that pods are allowed to reference. Every claim in this list must have at least one matching (by name) volumeMount in one container in the template. (see [below for nested schema](#nestedblock--spec--volume_claim_template))
-- `min_ready_seconds` - (Optional) - This is an optional field that specifies the minimum number of seconds for which a newly created Pod should be running and ready without any of its containers crashing, for it to be considered available. This field defaults to 0 (the Pod will be considered available as soon as it is ready).
+- `min_ready_seconds` - (Optional) - Minimum number of seconds for which a newly created pod should be ready without any of its container crashing for it to be considered available. Defaults to 0. (pod will be considered available as soon as it is ready)
 
 <a id="nestedblock--spec--selector"></a>
 ### Nested Schema for `spec.selector`

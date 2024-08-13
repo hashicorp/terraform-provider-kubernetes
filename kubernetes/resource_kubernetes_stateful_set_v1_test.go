@@ -79,6 +79,7 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.min_ready_seconds", "10"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.revision_history_limit", "11"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.service_name", "ss-test-service"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_deleted", "Delete"),
@@ -229,6 +230,22 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "0"),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name, imageName, 10),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.min_ready_seconds", "10"),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name, imageName, 0),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.min_ready_seconds", "0"),
 				),
 			},
 			{
@@ -531,6 +548,7 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
   }
 
   spec {
+    min_ready_seconds      = 10
     pod_management_policy  = "OrderedReady"
     replicas               = 1
     revision_history_limit = 11
@@ -863,6 +881,92 @@ func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, replica
   }
 }
 `, name, replicas, imageName)
+}
+
+func testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name string, imageName string, minReadySeconds int) string {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    min_ready_seconds      = %d
+    pod_management_policy  = "OrderedReady"
+    replicas               = 1
+    revision_history_limit = 11
+
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+
+    service_name = "ss-test-service"
+
+    template {
+      metadata {
+        labels = {
+          app = "ss-test"
+        }
+      }
+
+      spec {
+        container {
+          name  = "ss-test"
+          image = %q
+          args  = ["pause"]
+
+          port {
+            container_port = "80"
+            name           = "web"
+          }
+
+          volume_mount {
+            name       = "ss-test"
+            mount_path = "/work-dir"
+          }
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+
+    update_strategy {
+      type = "RollingUpdate"
+
+      rolling_update {
+        partition = 1
+      }
+    }
+
+    volume_claim_template {
+      metadata {
+        name = "ss-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
+}
+`, name, minReadySeconds, imageName)
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name, imageName string) string {

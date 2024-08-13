@@ -165,7 +165,7 @@ resource "kubernetes_secret_v1" "test" {
   }
   type = "kubernetes.io/service-account-token"
   depends_on = [
-    kubernetes_service_account.test
+    kubernetes_service_account_v1.test
   ]
 }
 `, name, name, name)

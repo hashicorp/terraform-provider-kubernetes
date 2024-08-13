@@ -741,7 +741,10 @@ func TestAccKubernetesPersistentVolumeV1_accessMode_ReadWriteOncePod(t *testing.
 	resourceName := "kubernetes_persistent_volume_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.27.0")
+		},
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,

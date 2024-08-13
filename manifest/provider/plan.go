@@ -134,6 +134,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	if canDeferr && s.clientConfigUnknown {
 		// if client supports it, request deferral when client configuration not fully known
+		resp.PlannedState = req.ProposedNewState
 		resp.Deferred = &tfprotov5.Deferred{
 			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
 		}

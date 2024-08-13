@@ -27,7 +27,16 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 
 	cp := req.ClientCapabilities
 	if cp != nil && cp.DeferralAllowed && s.clientConfigUnknown {
+		v := tftypes.NewValue(tftypes.DynamicPseudoType, nil)
+		dv, err := tfprotov5.NewDynamicValue(v.Type(), v)
+		if err != nil {
+			return resp, err
+		}
 		// if client support it, request deferral when client configuration not fully known
+		resp.ImportedResources = append(resp.ImportedResources, &tfprotov5.ImportedResource{
+			TypeName: req.TypeName,
+			State:    &dv,
+		})
 		resp.Deferred = &tfprotov5.Deferred{
 			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
 		}

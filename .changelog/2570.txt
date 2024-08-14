@@ -1,0 +1,3 @@
+```release-note:improvement
+deferred actions: return unknown value instead of nil when requesting deferral of a planned resource change.
+```

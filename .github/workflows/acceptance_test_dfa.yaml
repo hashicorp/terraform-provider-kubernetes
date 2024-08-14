@@ -12,7 +12,7 @@ on:
     inputs:
       terraformVersion:
         description: Terraform version
-        default: 1.9.0-alpha20240516
+        default: 1.10.0-alpha20240807
 
 jobs:
   acceptance_tests:

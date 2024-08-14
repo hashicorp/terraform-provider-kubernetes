@@ -23,6 +23,7 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	cp := req.ClientCapabilities
 	if cp != nil && cp.DeferralAllowed && s.clientConfigUnknown {
 		// if client support it, request deferral when client configuration not fully known
+		resp.NewState = req.CurrentState
 		resp.Deferred = &tfprotov5.Deferred{
 			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
 		}

@@ -15,7 +15,7 @@ import (
 
 func dataSourceKubernetesServiceAccountV1() *schema.Resource {
 	return &schema.Resource{
-		Description: "A service account provides an identity for processes that run in a Pod. This data source reads the service account and makes specific attributes available to Terraform. Read more at [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/)",
+		Description: "A service account provides an identity for processes that run in a Pod. This data source reads the service account and makes specific attributes available to Terraform. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/.",
 		ReadContext: dataSourceKubernetesServiceAccountV1Read,
 
 		Schema: map[string]*schema.Schema{

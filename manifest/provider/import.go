@@ -27,7 +27,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 
 	cp := req.ClientCapabilities
 	if cp != nil && cp.DeferralAllowed && s.clientConfigUnknown {
-		v := tftypes.NewValue(tftypes.DynamicPseudoType, nil)
+		v := tftypes.NewValue(tftypes.DynamicPseudoType, tftypes.UnknownValue)
 		dv, err := tfprotov5.NewDynamicValue(v.Type(), v)
 		if err != nil {
 			return resp, err

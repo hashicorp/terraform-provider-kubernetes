@@ -17,6 +17,7 @@ import (
 
 func resourceKubernetesClusterRoleV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A ClusterRole creates a role at the cluster level and in all namespaces.",
 		CreateContext: resourceKubernetesClusterRoleV1Create,
 		ReadContext:   resourceKubernetesClusterRoleV1Read,
 		UpdateContext: resourceKubernetesClusterRoleV1Update,

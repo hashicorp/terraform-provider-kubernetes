@@ -17,7 +17,7 @@ on:
         default: "1.27"
       terraformVersion:
         description: Terraform version
-        default: 1.5.6
+        default: 1.7.5
       runTests:
         description: The regex passed to the -run option of `go test`
         default: "^TestAcc"
@@ -38,21 +38,22 @@ env:
   
 jobs:
   acceptance_tests_aks:
-    runs-on: [custom, linux, medium]
+    if: ${{ github.repository_owner == 'hashicorp' }}
+    runs-on: custom-linux-medium
     steps:
       - name: Checkout repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: Set up go
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: 'go.mod'
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5308c4843bcd56d36 # v3.0.0
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }} 
           terraform_wrapper: false
       - name: Azure login 
-        uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
+        uses: azure/login@8c334a195cbb38e46038007b304988d888bf676a # v2.0.0
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Provision AKS

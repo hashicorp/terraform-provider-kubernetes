@@ -3,10 +3,11 @@
 PROVIDER_DIR := $(abspath $(lastword $(dir $(MAKEFILE_LIST))))
 TEST         := "$(PROVIDER_DIR)/kubernetes"
 GOFMT_FILES  := $$(find $(PROVIDER_DIR) -name '*.go')
-WEBSITE_REPO := github.com/hashicorp/terraform-website
 PKG_NAME     := kubernetes
 OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
 TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
+
+PROVIDER_FUNCTIONS_DIR := "$(PROVIDER_DIR)/internal/framework/provider/functions"
 
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
@@ -22,7 +23,7 @@ PARALLEL_RUNS?=8
 
 default: build
 
-all: build depscheck fmtcheck test testacc test-compile tests-lint tests-lint-fix tools vet website-lint website-lint-fix
+all: build depscheck fmtcheck test testacc test-compile tests-lint tests-lint-fix tools vet docs-lint docs-lint-fix
 
 build: fmtcheck
 	go install
@@ -75,6 +76,9 @@ test: fmtcheck vet
 testacc: fmtcheck vet
 	TF_ACC=1 go test $(TEST) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
 
+testfuncs: fmtcheck 
+	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) 
+
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package. For example,"; \
@@ -99,8 +103,8 @@ tests-lint-fix: tools
 tools:
 	go install github.com/client9/misspell/cmd/misspell@v0.3.4
 	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.28.1
-	go install github.com/bflad/tfproviderdocs@v0.9.1
-	go install github.com/katbyte/terrafmt@v0.5.2
+	go install github.com/bflad/tfproviderdocs@v0.12.0
+	go install github.com/katbyte/terrafmt@v0.5.3
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 	go install github.com/hashicorp/go-changelog/cmd/changelog-build@latest
 	go install github.com/hashicorp/go-changelog/cmd/changelog-entry@latest
@@ -120,8 +124,8 @@ vet:
 
 # The docker command and run options may be overridden using env variables DOCKER and DOCKER_RUN_OPTS.
 # Example:
-#   DOCKER="podman --cgroup-manager=cgroupfs" make website-lint
-#   DOCKER_RUN_OPTS="--userns=keep-id" make website-lint
+#   DOCKER="podman --cgroup-manager=cgroupfs" make docs-lint
+#   DOCKER_RUN_OPTS="--userns=keep-id" make docs-lint
 #   This option is needed for systems using SELinux and rootless containers.
 #   DOCKER_VOLUME_OPTS="rw,Z"
 # For more info, see https://docs.docker.com/storage/bind-mounts/#configure-the-selinux-label
@@ -135,40 +139,40 @@ ifeq ($(.SHELLSTATUS),0)
 DOCKER_VOLUME_OPTS="rw,Z"
 endif
 
-website-lint: tools
+docs-lint: tools
 	@echo "==> Checking website against linters..."
-	@misspell -error -source=text ./website || (echo; \
+	@misspell -error -source=text ./docs || (echo; \
 		echo "Unexpected mispelling found in website files."; \
-		echo "To automatically fix the misspelling, run 'make website-lint-fix' and commit the changes."; \
+		echo "To automatically fix the misspelling, run 'make docs-lint-fix' and commit the changes."; \
 		exit 1)
 	@echo "==> Running markdownlint-cli using DOCKER='$(DOCKER)', DOCKER_RUN_OPTS='$(DOCKER_RUN_OPTS)' and DOCKER_VOLUME_OPTS='$(DOCKER_VOLUME_OPTS)'"
-	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli ./website || (echo; \
+	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli ./docs || (echo; \
 		echo "Unexpected issues found in website Markdown files."; \
-		echo "To apply any automatic fixes, run 'make website-lint-fix' and commit the changes."; \
+		echo "To apply any automatic fixes, run 'make docs-lint-fix' and commit the changes."; \
 		exit 1)
 	@echo "==> Running terrafmt diff..."
-	@terrafmt diff ./website --check --pattern '*.markdown' --quiet || (echo; \
+	@terrafmt diff ./docs --check --pattern '*.markdown' --quiet || (echo; \
 		echo "Unexpected differences in website HCL formatting."; \
-		echo "To see the full differences, run: terrafmt diff ./website --pattern '*.markdown'"; \
-		echo "To automatically fix the formatting, run 'make website-lint-fix' and commit the changes."; \
+		echo "To see the full differences, run: terrafmt diff ./docs --pattern '*.markdown'"; \
+		echo "To automatically fix the formatting, run 'make docs-lint-fix' and commit the changes."; \
 		exit 1)
 	@echo "==> Statically compiling provider for tfproviderdocs..."
 	@env CGO_ENABLED=0 GOOS=$$(go env GOOS) GOARCH=$$(go env GOARCH) go build -a -o $(TF_PROV_DOCS)/terraform-provider-kubernetes
 	@echo "==> Getting provider schema for tfproviderdocs..."
-		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 init
-		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:0.12.29 providers schema -json > $(TF_PROV_DOCS)/schema.json
+		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:1.8.2 init
+		@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(TF_PROV_DOCS):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace hashicorp/terraform:1.8.2 providers schema -json > $(TF_PROV_DOCS)/schema.json
 	@echo "==> Running tfproviderdocs..."
 	@tfproviderdocs check -providers-schema-json $(TF_PROV_DOCS)/schema.json -provider-name kubernetes
 	@rm -f $(TF_PROV_DOCS)/schema.json $(TF_PROV_DOCS)/terraform-provider-kubernetes
 	@echo "==> Checking for broken links..."
 	@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 
-website-lint-fix: tools
+docs-lint-fix: tools
 	@echo "==> Applying automatic website linter fixes..."
-	@misspell -w -source=text ./website
+	@misspell -w -source=text ./docs
 	@echo "==> Running markdownlint-cli --fix using DOCKER='$(DOCKER)', DOCKER_RUN_OPTS='$(DOCKER_RUN_OPTS)' and DOCKER_VOLUME_OPTS='$(DOCKER_VOLUME_OPTS)'"
-	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli --fix ./website
+	@$(DOCKER) run $(DOCKER_RUN_OPTS) -v $(PROVIDER_DIR):/workspace:$(DOCKER_VOLUME_OPTS) -w /workspace 06kellyjac/markdownlint-cli --fix ./docs
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
-	@terrafmt fmt ./website --pattern '*.markdown'
+	@terrafmt fmt ./docs --pattern '*.markdown'
 
-.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix website-lint website-lint-fix changelog changelog-entry
+.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry

@@ -19,6 +19,7 @@ import (
 
 func resourceKubernetesAPIServiceV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "An API Service is an abstraction which defines for locating and communicating with servers.",
 		CreateContext: resourceKubernetesAPIServiceV1Create,
 		ReadContext:   resourceKubernetesAPIServiceV1Read,
 		UpdateContext: resourceKubernetesAPIServiceV1Update,

@@ -1,4 +1,6 @@
-dependencies:
-  - vendor/**/*
-documentation:
-  - website/**/*
+Dependencies:
+- changed-files:
+  - any-glob-to-any-file: 'vendor/*'
+Documentation:
+- changed-files:
+  - any-glob-to-any-file: 'docs/*'

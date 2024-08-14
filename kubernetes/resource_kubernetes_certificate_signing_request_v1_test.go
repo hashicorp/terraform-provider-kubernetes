@@ -39,6 +39,7 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.signer_name", signerName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.usages.0", usages[0]),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.expiration_seconds", "604800"),
 				),
 			},
 		},
@@ -150,7 +151,8 @@ func testAccKubernetesCertificateSigningRequestV1Config_basic(name, signerName s
   }
   auto_approve = %t
   spec {
-    request     = <<EOT
+    expiration_seconds = 604800 # 1 week
+    request            = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIHSMIGBAgEAMCoxGDAWBgNVBAoTD2V4YW1wbGUgY2x1c3RlcjEOMAwGA1UEAxMF
 YWRtaW4wTjAQBgcqhkjOPQIBBgUrgQQAIQM6AASSG8S2+hQvfMq5ucngPCzK0m0C
@@ -159,8 +161,8 @@ BAMCA0AAMD0CHQDErNLjX86BVfOsYh/A4zmjmGknZpc2u6/coTHqAhxcR41hEU1I
 DpNPvh30e0Js8/DYn2YUfu/pQU19
 -----END CERTIFICATE REQUEST-----
 EOT
-    signer_name = %q
-    usages      = %q
+    signer_name        = %q
+    usages             = %q
   }
 }
 `, name, autoApprove, signerName, usages)

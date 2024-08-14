@@ -85,6 +85,12 @@ plugin/k8s: Fix broken code
 ```
 ~~~
 
+### Deprecations 
+
+```release-note:note
+resource/k8s_resource_name: This resource is being deprecated as it is no longer supported in upgraded dependencies.
+```
+
 ### Long Description with Markdown
 
 ~~~
@@ -108,3 +114,8 @@ For more information as to what each flag does, make sure to run `changelog-buil
 ```
 changelog-build -last-release v0.5.0 -entries-dir .changelog/ -changelog-template changelog.tmpl -note-template note.tmpl -this-release 86b6b38faa7c69f26f1d4c71e271cd4285daadf9
 ```
+## Changes that should not have a changelog entry
+
+Testing updates
+Resource and provider documentation updates
+Code refactoring 

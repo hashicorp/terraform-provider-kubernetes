@@ -1440,6 +1440,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.27.0")
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -1477,6 +1478,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraintMinDomains(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.27.0")
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -1609,7 +1611,10 @@ func TestAccKubernetesPodV1_os(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.24.0")
+		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{

@@ -159,7 +159,7 @@ func TestFlattenMetadata(t *testing.T) {
 	uid := "7e9439cb-2584-4b50-81bc-441127e11b26"
 	cases := map[string]struct {
 		meta         metav1.ObjectMeta
-		providerMeta kubeClientsets
+		providerMeta providerMetadata
 		expected     []interface{}
 	}{
 		"IgnoreAnnotations": {
@@ -180,7 +180,7 @@ func TestFlattenMetadata(t *testing.T) {
 				ResourceVersion: "1",
 				UID:             types.UID(uid),
 			},
-			kubeClientsets{
+			providerMetadata{
 				IgnoreAnnotations: []string{"foo.example.com"},
 				IgnoreLabels:      []string{},
 			},
@@ -216,7 +216,7 @@ func TestFlattenMetadata(t *testing.T) {
 				ResourceVersion: "1",
 				UID:             types.UID(uid),
 			},
-			kubeClientsets{
+			providerMetadata{
 				IgnoreAnnotations: []string{},
 				IgnoreLabels:      []string{"foo"},
 			},
@@ -252,7 +252,7 @@ func TestFlattenMetadata(t *testing.T) {
 				ResourceVersion: "1",
 				UID:             types.UID(uid),
 			},
-			kubeClientsets{
+			providerMetadata{
 				IgnoreAnnotations: []string{"foo.example.com"},
 				IgnoreLabels:      []string{"foo"},
 			},

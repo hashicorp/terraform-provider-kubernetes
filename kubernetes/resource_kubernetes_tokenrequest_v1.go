@@ -15,6 +15,7 @@ import (
 
 func resourceKubernetesTokenRequestV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "TokenRequest requests a token for a given service account.",
 		CreateContext: resourceKubernetesTokenRequestV1Create,
 		ReadContext:   resourceKubernetesTokenRequestV1Read,
 		UpdateContext: resourceKubernetesTokenRequestV1Update,

@@ -9,11 +9,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesSecretV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "The resource provides mechanisms to inject containers with sensitive information, such as passwords, while keeping containers agnostic of Kubernetes. Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs. The resource will by default create a secret which is available to any pod in the specified (or default) namespace.",
 		ReadContext: dataSourceKubernetesSecretV1Read,
 
 		Schema: map[string]*schema.Schema{
@@ -61,6 +63,9 @@ func dataSourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceDat
 	log.Printf("[INFO] Reading secret %s", metadata.Name)
 	secret, err := conn.CoreV1().Secrets(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received secret: %#v", secret.ObjectMeta)

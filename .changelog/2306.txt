@@ -1,0 +1,3 @@
+```release-note:feature
+New data source: `kubernetes_server_version`
+```

@@ -20,6 +20,7 @@ import (
 
 func resourceKubernetesPriorityClassV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.",
 		CreateContext: resourceKubernetesPriorityClassV1Create,
 		ReadContext:   resourceKubernetesPriorityClassV1Read,
 		UpdateContext: resourceKubernetesPriorityClassV1Update,

@@ -22,6 +22,7 @@ import (
 
 func resourceKubernetesPodV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod/.",
 		CreateContext: resourceKubernetesPodV1Create,
 		ReadContext:   resourceKubernetesPodV1Read,
 		UpdateContext: resourceKubernetesPodV1Update,

@@ -4,45 +4,15 @@
 package kubernetes
 
 import (
-	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesStatefulSetV1_minimal(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := busyboxImage
-
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
-				),
-			},
-		},
-	})
-}
-
-func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
+func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic(t *testing.T) {
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
@@ -52,7 +22,7 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfRunningInEks(t)
+			skipIfNotRunningInEks(t)
 		},
 		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
@@ -64,7 +34,7 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigBasic(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
@@ -96,15 +66,25 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.port.0.name", "web"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "ss-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.mount_path", "/work-dir"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_device.0.name", "ss-device-test"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_device.0.device_path", "/dev/xvda"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.update_strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.update_strategy.0.rolling_update.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.update_strategy.0.rolling_update.0.partition", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.metadata.0.name", "ss-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.access_modes.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.access_modes.0", "ReadWriteOnce"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.resources.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.resources.0.requests.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.resources.0.requests.storage", "1Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.1.metadata.0.name", "ss-device-test"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.1.spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.1.spec.0.access_modes.0", "ReadWriteOnce"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.1.spec.0.volume_mode", "Block"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.1.spec.0.resources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.1.spec.0.resources.0.requests.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.1.spec.0.resources.0.requests.storage", "1Gi"),
 				),
 			},
 			{
@@ -125,7 +105,7 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStatefulSetV1_basic_idempotency(t *testing.T) {
+func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic_idempotency(t *testing.T) {
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
@@ -135,7 +115,7 @@ func TestAccKubernetesStatefulSetV1_basic_idempotency(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfRunningInEks(t)
+			skipIfNotRunningInEks(t)
 		},
 		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
@@ -147,13 +127,13 @@ func TestAccKubernetesStatefulSetV1_basic_idempotency(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigBasic(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 				),
 			},
 			{
-				Config:             testAccKubernetesStatefulSetV1ConfigBasic(name, imageName),
+				Config:             testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -164,7 +144,7 @@ func TestAccKubernetesStatefulSetV1_basic_idempotency(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
+func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
@@ -174,7 +154,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfRunningInEks(t)
+			skipIfNotRunningInEks(t)
 		},
 		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
@@ -186,20 +166,20 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigMinimalWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateImage(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateImageWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabels(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabelsWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.%", "2"),
@@ -211,7 +191,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, "3"),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicasWithVolumeDevice(name, imageName, "3"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -219,7 +199,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, ""),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicasWithVolumeDevice(name, imageName, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -228,7 +208,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, "0"),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateReplicasWithVolumeDevice(name, imageName, "0"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -236,7 +216,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name, imageName, 10),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateMinReadySecondsWithVolumeDevice(name, imageName, 10),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -244,7 +224,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name, imageName, 0),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateMinReadySecondsWithVolumeDevice(name, imageName, 0),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -252,7 +232,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigRollingUpdatePartition(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigRollingUpdatePartitionWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -260,7 +240,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDeleteWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -270,7 +250,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDeleteWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -280,7 +260,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdateTemplateWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -305,7 +285,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicy(name, imageName),
+				Config: testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicyWithVolumeDevice(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -317,7 +297,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
+func TestAccKubernetesStatefulSetV1WIthVolumeDevice_waitForRollout(t *testing.T) {
 	var conf1, conf2 appsv1.StatefulSet
 	imageName := busyboxImage
 	imageName1 := agnhostImage
@@ -325,7 +305,10 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	resourceName := "kubernetes_stateful_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfRunningInEks(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfNotRunningInEks(t)
+		},
 		IDRefreshName: resourceName,
 		IDRefreshIgnore: []string{
 			"spec.0.template.0.spec.0.container.0.resources.0.limits",
@@ -336,14 +319,14 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutWithVolumeDevice(name, imageName, "true"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName1, "false"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutWithVolumeDevice(name, imageName1, "false"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "false"),
@@ -354,154 +337,7 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStatefulSetV1_minimalWithTemplateNamespace(t *testing.T) {
-	var conf1, conf2 appsv1.StatefulSet
-
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := busyboxImage
-
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace", ""),
-				),
-			},
-			{
-				Config: testAccKubernetesStatefulSetV1ConfigMinimalWithTemplateNamespace(name, imageName),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
-					resource.TestCheckResourceAttrSet(resourceName, "spec.0.template.0.metadata.0.namespace"),
-					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, true),
-				),
-			},
-		},
-	})
-}
-
-func testAccCheckKubernetesStatefulSetForceNew(old, new *appsv1.StatefulSet, wantNew bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if wantNew {
-			if old.ObjectMeta.UID == new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting new resource for StatefulSet %s", old.ObjectMeta.UID)
-			}
-		} else {
-			if old.ObjectMeta.UID != new.ObjectMeta.UID {
-				return fmt.Errorf("Expecting StatefulSet UIDs to be the same: expected %s got %s", old.ObjectMeta.UID, new.ObjectMeta.UID)
-			}
-		}
-		return nil
-	}
-}
-
-func testAccCheckKubernetesStatefulSetV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
-	if err != nil {
-		return err
-	}
-	ctx := context.TODO()
-
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_stateful_set_v1" {
-			continue
-		}
-
-		namespace, name, err := idParts(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-
-		resp, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err == nil {
-			if resp.Namespace == namespace && resp.Name == name {
-				return fmt.Errorf("StatefulSet still exists: %s: (Generation %#v)", rs.Primary.ID, resp.Status.ObservedGeneration)
-			}
-		}
-
-		// StatefulSet can create a PVC via volumeClaimTemplate. However, once the StatefulSet is removed, the PVC remains.
-		// There is a beta feature(persistentVolumeClaimRetentionPolicy) since 1.27 that aims to address this problem:
-		// - https://kubernetes.io/blog/2021/12/16/kubernetes-1-23-statefulset-pvc-auto-deletion/
-		// - https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention
-		// By default, StatefulSetAutoDeletePVC feature is not enabled in the feature gate.
-		// That is why we clean up resources manually here.
-		pvc, err := conn.CoreV1().PersistentVolumeClaims(namespace).List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return fmt.Errorf("Failed to list PVCs in %q namespace", namespace)
-		}
-		for _, p := range pvc.Items {
-			// PVC gets generated in the following format:
-			// *.volumeClaimTemplate.metatada.name-statefulSet.metatada.name
-			//
-			// Since statefulSet.metatada.name is uniq, we could use it as a match.
-			if strings.Contains(p.Name, name) {
-				err := conn.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, p.Name, metav1.DeleteOptions{})
-				if err != nil {
-					if !errors.IsNotFound(err) {
-						return fmt.Errorf("Failed to delete PVC %q in namespace %q", p.Name, namespace)
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func getStatefulSetFromResourceName(s *terraform.State, n string) (*appsv1.StatefulSet, error) {
-	rs, ok := s.RootModule().Resources[n]
-	if !ok {
-		return nil, fmt.Errorf("Not found: %s", n)
-	}
-
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
-	if err != nil {
-		return nil, err
-	}
-	ctx := context.TODO()
-
-	namespace, name, err := idParts(rs.Primary.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	return out, nil
-}
-
-func testAccCheckKubernetesStatefulSetV1Exists(n string, obj *appsv1.StatefulSet) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		d, err := getStatefulSetFromResourceName(s, n)
-		if err != nil {
-			return err
-		}
-		*obj = *d
-		return nil
-	}
-}
-
-func testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigMinimalWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     name = "%s"
@@ -533,7 +369,7 @@ func testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName string) string 
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -600,6 +436,11 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
       }
     }
@@ -626,12 +467,28 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
         }
       }
     }
+
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
   }
 }
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigUpdateImage(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigUpdateImageWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -683,6 +540,11 @@ func testAccKubernetesStatefulSetV1ConfigUpdateImage(name, imageName string) str
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
       }
     }
@@ -702,7 +564,22 @@ func testAccKubernetesStatefulSetV1ConfigUpdateImage(name, imageName string) str
 
       spec {
         access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
 
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
         resources {
           requests = {
             storage = "1Gi"
@@ -715,7 +592,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateImage(name, imageName string) str
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabels(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabelsWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -769,6 +646,11 @@ func testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabels(name, imageName s
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
       }
     }
@@ -788,7 +670,22 @@ func testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabels(name, imageName s
 
       spec {
         access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
 
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
         resources {
           requests = {
             storage = "1Gi"
@@ -801,7 +698,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdatedSelectorLabels(name, imageName s
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, replicas string) string {
+func testAccKubernetesStatefulSetV1ConfigUpdateReplicasWithVolumeDevice(name, imageName, replicas string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -853,6 +750,11 @@ func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, replica
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -873,7 +775,22 @@ func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, replica
 
       spec {
         access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
 
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
         resources {
           requests = {
             storage = "1Gi"
@@ -886,7 +803,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateReplicas(name, imageName, replica
 `, name, replicas, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name string, imageName string, minReadySeconds int) string {
+func testAccKubernetesStatefulSetV1ConfigUpdateMinReadySecondsWithVolumeDevice(name string, imageName string, minReadySeconds int) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -939,6 +856,11 @@ func testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name string, imag
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -959,7 +881,22 @@ func testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name string, imag
 
       spec {
         access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
 
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
         resources {
           requests = {
             storage = "1Gi"
@@ -972,7 +909,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateMinReadySeconds(name string, imag
 `, name, minReadySeconds, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigUpdateTemplateWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -1029,6 +966,11 @@ func testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name, imageName string) 
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
 
         dns_config {
@@ -1064,7 +1006,22 @@ func testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name, imageName string) 
 
       spec {
         access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
 
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
         resources {
           requests = {
             storage = "1Gi"
@@ -1077,7 +1034,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name, imageName string) 
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigRollingUpdatePartition(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigRollingUpdatePartitionWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -1128,6 +1085,11 @@ func testAccKubernetesStatefulSetV1ConfigRollingUpdatePartition(name, imageName 
           volume_mount {
             name       = "ss-test"
             mount_path = "/work-dir"
+          }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
           }
         }
       }
@@ -1148,7 +1110,22 @@ func testAccKubernetesStatefulSetV1ConfigRollingUpdatePartition(name, imageName 
 
       spec {
         access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
 
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
         resources {
           requests = {
             storage = "1Gi"
@@ -1161,7 +1138,7 @@ func testAccKubernetesStatefulSetV1ConfigRollingUpdatePartition(name, imageName 
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDeleteWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -1213,6 +1190,11 @@ func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName 
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
       }
     }
@@ -1228,7 +1210,22 @@ func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName 
 
       spec {
         access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
 
+    volume_claim_template {
+      metadata {
+        name = "ss-device-test"
+      }
+
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
         resources {
           requests = {
             storage = "1Gi"
@@ -1243,7 +1240,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName 
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitForRollout string) string {
+func testAccKubernetesStatefulSetV1ConfigWaitForRolloutWithVolumeDevice(name, imageName, waitForRollout string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     name = "%s"
@@ -1306,7 +1303,7 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
 `, name, imageName, waitForRollout)
 }
 
-func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicy(name, imageName string) string {
+func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicyWithVolumeDevice(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     annotations = {
@@ -1371,6 +1368,11 @@ func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPol
             name       = "ss-test"
             mount_path = "/work-dir"
           }
+
+          volume_device {
+            name        = "ss-device-test"
+            device_path = "/dev/xvda"
+          }
         }
       }
     }
@@ -1397,39 +1399,20 @@ func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPol
         }
       }
     }
-  }
-}
-`, name, imageName)
-}
 
-func testAccKubernetesStatefulSetV1ConfigMinimalWithTemplateNamespace(name, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
-  metadata {
-    name = "%s"
-  }
-  spec {
-    selector {
-      match_labels = {
-        app = "ss-test"
-      }
-    }
-    service_name = "ss-test-service"
-    template {
+    volume_claim_template {
       metadata {
-        // The namespace field is just a stub and does not influence where the Pod will be created.
-        // The Pod will be created within the same Namespace as the Stateful Set resource.
-        namespace = "fake" // Doesn't have to exist.
-        labels = {
-          app = "ss-test"
-        }
+        name = "ss-device-test"
       }
+
       spec {
-        container {
-          name    = "ss-test"
-          image   = "%s"
-          command = ["sleep", "300"]
+        access_modes = ["ReadWriteOnce"]
+        volume_mode  = "Block"
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
         }
-        termination_grace_period_seconds = 1
       }
     }
   }

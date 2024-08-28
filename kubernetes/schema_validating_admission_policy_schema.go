@@ -10,10 +10,12 @@ func auditAnnotationsFields() map[string]*schema.Schema {
 		"key": {
 			Type:        schema.TypeString,
 			Description: "key specifies the audit annotation key.",
+			Required:    true,
 		},
 		"value_expression": {
 			Type:        schema.TypeString,
 			Description: "valueExpression represents the expression which is evaluated by CEL to produce an audit annotation value.",
+			Required:    true,
 		},
 	}
 }

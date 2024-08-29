@@ -21,6 +21,17 @@ func flattenLabelSelector(in *metav1.LabelSelector) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenNamespaceSelector(in *metav1.LabelSelector) []interface{} {
+	att := make(map[string]interface{})
+	if len(in.MatchLabels) > 0 {
+		att["match_labels"] = in.MatchLabels
+	}
+	if len(in.MatchExpressions) > 0 {
+		att["match_expressions"] = flattenLabelSelectorRequirement(in.MatchExpressions)
+	}
+	return []interface{}{att}
+}
+
 func flattenLabelSelectorRequirement(in []metav1.LabelSelectorRequirement) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, n := range in {
@@ -40,6 +51,21 @@ func expandLabelSelector(l []interface{}) *metav1.LabelSelector {
 		return &metav1.LabelSelector{}
 	}
 	in := l[0].(map[string]interface{})
+	obj := &metav1.LabelSelector{}
+	if v, ok := in["match_labels"].(map[string]interface{}); ok && len(v) > 0 {
+		obj.MatchLabels = expandStringMap(v)
+	}
+	if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
+		obj.MatchExpressions = expandLabelSelectorRequirement(v)
+	}
+	return obj
+}
+
+func expandNamespaceSelector(n []interface{}) *metav1.LabelSelector {
+	if len(n) == 0 || n[0] == nil {
+		return &metav1.LabelSelector{}
+	}
+	in := n[0].(map[string]interface{})
 	obj := &metav1.LabelSelector{}
 	if v, ok := in["match_labels"].(map[string]interface{}); ok && len(v) > 0 {
 		obj.MatchLabels = expandStringMap(v)

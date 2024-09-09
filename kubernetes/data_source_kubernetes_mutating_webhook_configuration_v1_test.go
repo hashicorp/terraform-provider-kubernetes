@@ -11,18 +11,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 )
 
-func TestAccKubernetesDataSourceMutatingWebhookConfiguration_basic(t *testing.T) {
-	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
+func TestAccKubernetesDataSourceMutatingWebhookConfigurationV1_basic(t *testing.T) {
 	resourceName := "kubernetes_mutating_webhook_configuration_v1.test"
 	dataSourceName := fmt.Sprintf("data.%s", resourceName)
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// AKS sets up some namespaceSelectors and thus we have to skip these tests
+			skipIfRunningInAks(t)
+		},
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name),
+				Config: testAccKubernetesDataSourceMutatingWebhookConfigurationV1_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesMutatingWebhookConfigurationExists(resourceName),
+					testAccCheckKubernetesMutatingWebhookConfigurationV1Exists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -57,8 +61,8 @@ func TestAccKubernetesDataSourceMutatingWebhookConfiguration_basic(t *testing.T)
 				),
 			},
 			{
-				Config: testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name) +
-					testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_read(),
+				Config: testAccKubernetesDataSourceMutatingWebhookConfigurationV1_basic(name) +
+					testAccKubernetesDataSourceMutatingWebhookConfigurationV1_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.generation"),
@@ -97,28 +101,43 @@ func TestAccKubernetesDataSourceMutatingWebhookConfiguration_basic(t *testing.T)
 	})
 }
 
-func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_mutating_webhook_configuration_v1" "test" {
+func TestAccKubernetesDataSourceMutatingWebhookConfigurationV1_not_found(t *testing.T) {
+	dataSourceName := "data.kubernetes_mutating_webhook_configuration_v1.test"
+	name := fmt.Sprintf("ceci-n.est-pas-une-webhook-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourceMutatingWebhookConfigurationV1_nonexistent(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "webhook.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesDataSourceMutatingWebhookConfigurationV1_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_mutating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
-
   webhook {
     name = %q
-
     admission_review_versions = [
       "v1",
       "v1beta1"
     ]
-
     client_config {
       service {
         namespace = "example-namespace"
         name      = "example-service"
       }
     }
-
     rule {
       api_groups   = ["apps"]
       api_versions = ["v1"]
@@ -126,7 +145,6 @@ resource "kubernetes_mutating_webhook_configuration_v1" "test" {
       resources    = ["pods"]
       scope        = "Namespaced"
     }
-
     reinvocation_policy = "IfNeeded"
     side_effects        = "None"
     timeout_seconds     = 10
@@ -135,12 +153,20 @@ resource "kubernetes_mutating_webhook_configuration_v1" "test" {
 `, name, name)
 }
 
-func testAccKubernetesDataSourceMutatingWebhookConfigurationConfig_read() string {
-	return `
-data "kubernetes_mutating_webhook_configuration_v1" "test" {
+func testAccKubernetesDataSourceMutatingWebhookConfigurationV1_read() string {
+	return `data "kubernetes_mutating_webhook_configuration_v1" "test" {
   metadata {
     name = "${kubernetes_mutating_webhook_configuration_v1.test.metadata.0.name}"
   }
 }
 `
+}
+
+func testAccKubernetesDataSourceMutatingWebhookConfigurationV1_nonexistent(name string) string {
+	return fmt.Sprintf(`data "kubernetes_mutating_webhook_configuration_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+}
+`, name)
 }

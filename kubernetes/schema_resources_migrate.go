@@ -42,77 +42,77 @@ func patchPodSpecWithResourcesFieldV0(m map[string]*schema.Schema) map[string]*s
 	return m
 }
 
-func upgradeJobTemplatePodSpecWithResourcesFieldV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+func upgradeJobTemplatePodSpecWithResourcesFieldV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) map[string]interface{} {
 	s, ok := rawState["spec"].([]interface{})
 	if !ok || len(s) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	spec := s[0].(map[string]interface{})
 	jt, ok := spec["job_template"].([]interface{})
 	if !ok || len(jt) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	jobTemplate := jt[0].(map[string]interface{})
 	js, ok := jobTemplate["spec"].([]interface{})
 	if !ok || len(js) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	jobSpec := js[0].(map[string]interface{})
 	t, ok := jobSpec["template"].([]interface{})
 	if !ok || len(t) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	template := t[0].(map[string]interface{})
 	ps, ok := template["spec"].([]interface{})
 	if !ok || len(ps) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	podSpec := ps[0].(map[string]interface{})
 	template["spec"] = []interface{}{upgradeContainers(podSpec)}
 
-	return rawState, nil
+	return rawState
 }
 
-func upgradeTemplatePodSpecWithResourcesFieldV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+func upgradeTemplatePodSpecWithResourcesFieldV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) map[string]interface{} {
 	s, ok := rawState["spec"].([]interface{})
 	if !ok || len(s) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	spec := s[0].(map[string]interface{})
 	t, ok := spec["template"].([]interface{})
 	if !ok || len(t) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	template := t[0].(map[string]interface{})
 	ps, ok := template["spec"].([]interface{})
 
 	if !ok || len(ps) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	podSpec := ps[0].(map[string]interface{})
 	template["spec"] = []interface{}{upgradeContainers(podSpec)}
 
-	return rawState, nil
+	return rawState
 }
 
-func upgradePodSpecWithResourcesFieldV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+func upgradePodSpecWithResourcesFieldV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) map[string]interface{} {
 	s, ok := rawState["spec"].([]interface{})
 	if !ok || len(s) == 0 {
-		return rawState, nil
+		return rawState
 	}
 
 	spec := s[0].(map[string]interface{})
 	rawState["spec"] = []interface{}{upgradeContainers(spec)}
 
-	return rawState, nil
+	return rawState
 }
 
 func upgradeContainers(rawState map[string]interface{}) map[string]interface{} {

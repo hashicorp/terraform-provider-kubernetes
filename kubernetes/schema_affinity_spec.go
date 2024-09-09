@@ -123,6 +123,15 @@ func nodeSelectorRequirementsFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"match_fields": {
+			Type:        schema.TypeList,
+			Description: "A list of node selector requirements by node's fields. The requirements are ANDed.",
+			Optional:    true,
+			ForceNew:    true,
+			Elem: &schema.Resource{
+				Schema: nodeSelectorRequirementFields(),
+			},
+		},
 	}
 }
 

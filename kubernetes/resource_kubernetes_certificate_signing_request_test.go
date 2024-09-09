@@ -19,12 +19,14 @@ func TestAccKubernetesCertificateSigningRequest_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	usages := []string{"client auth"}
 	signerName := "kubernetes.io/legacy-unknown"
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_certificate_signing_request.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
-		IDRefreshName:     "kubernetes_certificate_signing_request.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestDestroy,
@@ -39,12 +41,14 @@ func TestAccKubernetesCertificateSigningRequest_basic(t *testing.T) {
 
 func TestAccKubernetesCertificateSigningRequest_generateName(t *testing.T) {
 	generateName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_certificate_signing_request.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
-		IDRefreshName:     "kubernetes_certificate_signing_request.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestDestroy,

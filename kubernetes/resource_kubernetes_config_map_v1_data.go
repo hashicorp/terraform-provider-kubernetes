@@ -15,10 +15,12 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesConfigMapV1Data() *schema.Resource {
 	return &schema.Resource{
+		Description:   "This resource allows Terraform to manage data within a pre-existing ConfigMap. This resource uses [field management](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management) and [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to manage only the data that is defined in the Terraform configuration. Existing data not specified in the configuration will be ignored. If data specified in the config and is already managed by another client it will cause a conflict which can be overridden by setting `force` to true.",
 		CreateContext: resourceKubernetesConfigMapV1DataCreate,
 		ReadContext:   resourceKubernetesConfigMapV1DataRead,
 		UpdateContext: resourceKubernetesConfigMapV1DataUpdate,
@@ -158,7 +160,11 @@ func resourceKubernetesConfigMapV1DataUpdate(ctx context.Context, d *schema.Reso
 			// if the resource is gone
 			return nil
 		}
-		return diag.Errorf("The configmap %q does not exist", name)
+		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
+			return diag.Errorf("The ConfigMap %q does not exist", name)
+		}
+
+		return diag.Errorf("Have got the following error while validating the existence of the ConfigMap %q: %v", name, err)
 	}
 
 	// craft the patch to update the data
@@ -190,7 +196,7 @@ func resourceKubernetesConfigMapV1DataUpdate(ctx context.Context, d *schema.Reso
 		patchbytes,
 		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
-			Force:        ptrToBool(d.Get("force").(bool)),
+			Force:        ptr.To(d.Get("force").(bool)),
 		},
 	)
 	if err != nil {

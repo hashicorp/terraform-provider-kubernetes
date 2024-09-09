@@ -21,6 +21,7 @@ import (
 
 func resourceKubernetesRuntimeClassV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A runtime class is used to determine which container runtime is used to run all containers in a pod.",
 		CreateContext: resourceKubernetesRuntimeClassV1Create,
 		ReadContext:   resourceKubernetesRuntimeClassV1Read,
 		UpdateContext: resourceKubernetesRuntimeClassV1Update,

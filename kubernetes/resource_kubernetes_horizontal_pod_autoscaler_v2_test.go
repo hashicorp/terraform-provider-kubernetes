@@ -19,14 +19,14 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_minimal(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.23.0")
 		},
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Config_minimal(name),
@@ -58,7 +58,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.23.0")
@@ -66,7 +66,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Config_basic(name),
@@ -131,9 +131,10 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Config_modified(name),
@@ -179,7 +180,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_containerResource(t *testing.T) 
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.23.0")
@@ -187,7 +188,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_containerResource(t *testing.T) 
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
 		ErrorCheck: func(err error) error {
 			t.Skipf("HPAContainerMetrics feature might not be enabled on the cluster and therefore this step will be skipped if an error occurs. Refer to the error for more details:\n%s", err)
 			return nil
@@ -223,6 +224,35 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_containerResource(t *testing.T) 
 			},
 		},
 	})
+}
+
+func testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy(s *terraform.State) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+
+	if err != nil {
+		return err
+	}
+	ctx := context.TODO()
+
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "kubernetes_horizontal_pod_autoscaler_v2" {
+			continue
+		}
+
+		namespace, name, err := idParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		resp, err := conn.AutoscalingV1().HorizontalPodAutoscalers(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err == nil {
+			if resp.Namespace == namespace && resp.Name == name {
+				return fmt.Errorf("Horizontal Pod Autoscaler still exists: %s", rs.Primary.ID)
+			}
+		}
+	}
+
+	return nil
 }
 
 func testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(n string) resource.TestCheckFunc {
@@ -469,8 +499,7 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_modified(name string) stri
 }
 
 func testAccKubernetesHorizontalPodAutoscalerV2Config_containerResource(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_horizontal_pod_autoscaler_v2" "test" {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler_v2" "test" {
   metadata {
     name = %q
 

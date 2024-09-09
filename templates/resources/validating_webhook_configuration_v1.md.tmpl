@@ -1,0 +1,28 @@
+---
+subcategory: "admissionregistration/v1"
+page_title: "Kubernetes: kubernetes_validating_webhook_configuration_v1"
+description: |-
+  Validating Webhook Configuration configures a validating admission webhook
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }} 
+
+## Example Usage
+
+{{tffile "examples/resources/validating_webhook_configuration_v1/example_1.tf"}}
+
+## API version support
+
+The provider supports clusters running either `v1` or `v1beta1` of the Admission Registration API.
+
+## Import
+
+Validating Webhook Configuration can be imported using the name, e.g.
+
+```
+$ terraform import kubernetes_validating_webhook_configuration_v1.example terraform-example
+```

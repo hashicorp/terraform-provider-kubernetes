@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 func flattenReplicationControllerSpec(in corev1.ReplicationControllerSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
@@ -41,7 +42,7 @@ func expandReplicationControllerSpec(rc []interface{}) (*corev1.ReplicationContr
 	}
 	in := rc[0].(map[string]interface{})
 	obj.MinReadySeconds = int32(in["min_ready_seconds"].(int))
-	obj.Replicas = ptrToInt32(int32(in["replicas"].(int)))
+	obj.Replicas = ptr.To(int32(in["replicas"].(int)))
 	obj.Selector = expandStringMap(in["selector"].(map[string]interface{}))
 
 	template, err := expandReplicationControllerTemplate(in["template"].([]interface{}))

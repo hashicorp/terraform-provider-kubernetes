@@ -23,11 +23,7 @@ func expandEnv(e []interface{}) []map[string]interface{} {
 			newEnv["value"] = value
 		}
 		if v, ok := p["value_from"].([]interface{}); ok && len(v) > 0 {
-			var err error
-			newEnv["valueFrom"], err = expandEnvValueFromMap(v[0])
-			if err != nil {
-				return envs
-			}
+			newEnv["valueFrom"] = expandEnvValueFromMap(v[0])
 		}
 		envs = append(envs, newEnv)
 	}
@@ -35,9 +31,9 @@ func expandEnv(e []interface{}) []map[string]interface{} {
 	return envs
 }
 
-func expandEnvValueFromMap(e interface{}) (map[string]interface{}, error) {
+func expandEnvValueFromMap(e interface{}) map[string]interface{} {
 	if e == nil {
-		return nil, nil
+		return nil
 	}
 
 	in := e.(map[string]interface{})
@@ -56,7 +52,7 @@ func expandEnvValueFromMap(e interface{}) (map[string]interface{}, error) {
 		expandedValues["secretKeyRef"] = v[0]
 	}
 
-	return expandedValues, nil
+	return expandedValues
 }
 
 func expandFieldRefMap(e interface{}) map[string]interface{} {
@@ -117,11 +113,7 @@ func flattenEnv(e []interface{}) []interface{} {
 			newEnv["value"] = value
 		}
 		if v, ok := p["valueFrom"].(map[string]interface{}); ok && len(v) > 0 {
-			var err error
-			newEnv["value_from"], err = flattenEnvValueFromMap(v)
-			if err != nil {
-				return envs
-			}
+			newEnv["value_from"] = flattenEnvValueFromMap(v)
 		}
 		envs = append(envs, newEnv)
 	}
@@ -129,9 +121,9 @@ func flattenEnv(e []interface{}) []interface{} {
 	return envs
 }
 
-func flattenEnvValueFromMap(e interface{}) ([]interface{}, error) {
+func flattenEnvValueFromMap(e interface{}) []interface{} {
 	if e == nil {
-		return nil, nil
+		return nil
 	}
 
 	in := e.(map[string]interface{})
@@ -150,7 +142,7 @@ func flattenEnvValueFromMap(e interface{}) ([]interface{}, error) {
 		expandedValues["secret_key_ref"] = []interface{}{v}
 	}
 
-	return []interface{}{expandedValues}, nil
+	return []interface{}{expandedValues}
 }
 
 func flattenFieldRefMap(e interface{}) []interface{} {

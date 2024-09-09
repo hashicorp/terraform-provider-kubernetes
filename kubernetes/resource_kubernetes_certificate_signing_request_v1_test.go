@@ -19,12 +19,15 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	usages := []string{"client auth"}
 	signerName := "kubernetes.io/kube-apiserver-client"
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_certificate_signing_request_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
+			skipIfNotRunningInKind(t)
 		},
-		IDRefreshName:     "kubernetes_certificate_signing_request_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
@@ -33,9 +36,10 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 				Config: testAccKubernetesCertificateSigningRequestV1Config_basic(name, signerName, usages, true),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCertificateSigningRequestV1Valid,
-					resource.TestCheckResourceAttrSet("kubernetes_certificate_signing_request_v1.test", "certificate"),
-					resource.TestCheckResourceAttr("kubernetes_certificate_signing_request_v1.test", "spec.0.signer_name", signerName),
-					resource.TestCheckResourceAttr("kubernetes_certificate_signing_request_v1.test", "spec.0.usages.0", usages[0]),
+					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.signer_name", signerName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.usages.0", usages[0]),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.expiration_seconds", "604800"),
 				),
 			},
 		},
@@ -44,12 +48,15 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 
 func TestAccKubernetesCertificateSigningRequestV1_generateName(t *testing.T) {
 	generateName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resource.Test(t, resource.TestCase{
+	resourceName := "kubernetes_certificate_signing_request_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
+			skipIfNotRunningInKind(t)
 		},
-		IDRefreshName:     "kubernetes_certificate_signing_request_v1.test",
+		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
@@ -58,7 +65,40 @@ func TestAccKubernetesCertificateSigningRequestV1_generateName(t *testing.T) {
 				Config: testAccKubernetesCertificateSigningRequestV1Config_generateName(generateName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCertificateSigningRequestV1Valid,
-					resource.TestCheckResourceAttrSet("kubernetes_certificate_signing_request_v1.test", "certificate"),
+					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesCertificateSigningRequestV1_awsBasic(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	usages := []string{"digital signature"}
+	// More information about the signer name:
+	// - https://docs.aws.amazon.com/eks/latest/userguide/cert-signing.html
+	// - https://github.com/aws/containers-roadmap/issues/1604
+	signerName := "beta.eks.amazonaws.com/app-serving"
+	resourceName := "kubernetes_certificate_signing_request_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+			skipIfNotRunningInEks(t)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesCertificateSigningRequestV1Config_basic(name, signerName, usages, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesCertificateSigningRequestV1Valid,
+					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.signer_name", signerName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.usages.0", usages[0]),
 				),
 			},
 		},
@@ -111,7 +151,8 @@ func testAccKubernetesCertificateSigningRequestV1Config_basic(name, signerName s
   }
   auto_approve = %t
   spec {
-    request     = <<EOT
+    expiration_seconds = 604800 # 1 week
+    request            = <<EOT
 -----BEGIN CERTIFICATE REQUEST-----
 MIHSMIGBAgEAMCoxGDAWBgNVBAoTD2V4YW1wbGUgY2x1c3RlcjEOMAwGA1UEAxMF
 YWRtaW4wTjAQBgcqhkjOPQIBBgUrgQQAIQM6AASSG8S2+hQvfMq5ucngPCzK0m0C
@@ -120,8 +161,8 @@ BAMCA0AAMD0CHQDErNLjX86BVfOsYh/A4zmjmGknZpc2u6/coTHqAhxcR41hEU1I
 DpNPvh30e0Js8/DYn2YUfu/pQU19
 -----END CERTIFICATE REQUEST-----
 EOT
-    signer_name = %q
-    usages      = %q
+    signer_name        = %q
+    usages             = %q
   }
 }
 `, name, autoApprove, signerName, usages)

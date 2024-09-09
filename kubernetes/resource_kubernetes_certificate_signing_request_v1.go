@@ -5,18 +5,18 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	certificates "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
+	kretry "k8s.io/client-go/util/retry"
 )
 
 func resourceKubernetesCertificateSigningRequestV1() *schema.Resource {
@@ -25,6 +25,7 @@ func resourceKubernetesCertificateSigningRequestV1() *schema.Resource {
 	apiDocStatus := certificates.CertificateSigningRequestStatus{}.SwaggerDoc()
 
 	return &schema.Resource{
+		Description:   "Use this resource to generate TLS certificates using Kubernetes. This is a *logical resource*, so it contributes only to the current Terraform state and does not persist any external managed resources. This resource enables automation of [X.509](https://www.itu.int/rec/T-REC-X.509) credential provisioning (including TLS/SSL certificates). It does this by creating a CertificateSigningRequest using the Kubernetes API, which generates a certificate from the Certificate Authority (CA) configured in the Kubernetes cluster. The CSR can be approved automatically by Terraform, or it can be approved by a custom controller running in Kubernetes. See [Kubernetes reference](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) for all available options pertaining to CertificateSigningRequests.",
 		CreateContext: resourceKubernetesCertificateSigningRequestV1Create,
 		ReadContext:   resourceKubernetesCertificateSigningRequestV1Read,
 		DeleteContext: resourceKubernetesCertificateSigningRequestV1Delete,
@@ -56,6 +57,12 @@ func resourceKubernetesCertificateSigningRequestV1() *schema.Resource {
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"expiration_seconds": {
+							Type:        schema.TypeInt,
+							Description: apiDocSpec["expirationSeconds"],
+							Optional:    true,
+							ForceNew:    true,
+						},
 						"request": {
 							Type:        schema.TypeString,
 							Description: apiDocSpec["request"],
@@ -93,10 +100,7 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandCertificateSigningRequestV1Spec(d.Get("spec").([]interface{}))
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	spec := expandCertificateSigningRequestV1Spec(d.Get("spec").([]interface{}))
 
 	csr := certificates.CertificateSigningRequest{
 		ObjectMeta: metadata,
@@ -115,7 +119,7 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 	defer conn.CertificatesV1().CertificateSigningRequests().Delete(ctx, csrName, metav1.DeleteOptions{})
 
 	if d.Get("auto_approve").(bool) {
-		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		retryErr := kretry.RetryOnConflict(kretry.DefaultRetry, func() error {
 			pendingCSR, getErr := conn.CertificatesV1().CertificateSigningRequests().Get(
 				ctx, csrName, metav1.GetOptions{})
 			if getErr != nil {
@@ -140,11 +144,11 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 	}
 
 	log.Printf("[DEBUG] Waiting for certificate to be issued")
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 		out, err := conn.CertificatesV1().CertificateSigningRequests().Get(ctx, csrName, metav1.GetOptions{})
 		if err != nil {
 			log.Printf("[ERROR] Received error: %v", err)
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		// Check to see if a certificate has been issued, and update status accordingly,
@@ -159,8 +163,7 @@ func resourceKubernetesCertificateSigningRequestV1Create(ctx context.Context, d 
 			}
 		}
 		log.Printf("[DEBUG] CertificateSigningRequest %s status received: %#v", csrName, out.Status)
-		return resource.RetryableError(fmt.Errorf(
-			"Waiting for certificate to be issued"))
+		return retry.RetryableError(errors.New("Waiting for certificate to be issued"))
 	})
 	if err != nil {
 		return diag.FromErr(err)

@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -150,24 +150,10 @@ func resourceKubernetesCronJobV1Beta1Read(ctx context.Context, d *schema.Resourc
 	log.Printf("[INFO] Received cron job: %#v", job)
 
 	// Remove server-generated labels unless using manual selector
-	if _, ok := d.GetOk("spec.0.manual_selector"); !ok {
-		labels := job.ObjectMeta.Labels
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
-		}
-
-		if _, ok := labels["cron-job-name"]; ok {
-			delete(labels, "cron-job-name")
-		}
-
-		if job.Spec.JobTemplate.Spec.Selector != nil &&
-			job.Spec.JobTemplate.Spec.Selector.MatchLabels != nil {
-			labels = job.Spec.JobTemplate.Spec.Selector.MatchLabels
-		}
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
+	if _, ok := d.GetOk("spec.0.job_template.spec.0.manual_selector"); !ok {
+		removeGeneratedLabels(job.ObjectMeta.Labels)
+		if job.Spec.JobTemplate.Spec.Selector != nil {
+			removeGeneratedLabels(job.Spec.JobTemplate.Spec.Selector.MatchLabels)
 		}
 	}
 
@@ -206,17 +192,17 @@ func resourceKubernetesCronJobV1Beta1Delete(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.BatchV1beta1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("Cron Job %s still exists", name)
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

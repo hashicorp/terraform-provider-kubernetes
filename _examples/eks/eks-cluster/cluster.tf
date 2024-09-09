@@ -26,7 +26,7 @@ resource "aws_eks_node_group" "k8s-acc" {
 
   scaling_config {
     desired_size = 1
-    max_size     = 1
+    max_size     = 3
     min_size     = 1
   }
 
@@ -37,4 +37,12 @@ resource "aws_eks_node_group" "k8s-acc" {
     aws_iam_role_policy_attachment.k8s-acc-AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.k8s-acc-AmazonEC2ContainerRegistryReadOnly,
   ]
+}
+
+output "cluster_url" {
+  value = aws_eks_cluster.k8s-acc.endpoint
+}
+
+output "cluster_ca" {
+  value = aws_eks_cluster.k8s-acc.certificate_authority[0].data
 }

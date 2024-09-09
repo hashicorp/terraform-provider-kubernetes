@@ -1,0 +1,32 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_pod_v1"
+description: |-
+  A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/pod_v1/example_1.tf"}}
+
+terraform version of the [pods/pod-with-node-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-node-affinity.yaml) example.
+
+{{tffile "examples/resources/pod_v1/example_2.tf"}}
+
+terraform version of the [pods/pod-with-pod-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-pod-affinity.yaml) example.
+
+{{tffile "examples/resources/pod_v1/example_3.tf"}}
+
+## Import
+
+Pod can be imported using the namespace and name, e.g.
+
+```
+$ terraform import kubernetes_pod_v1.example default/terraform-example
+```

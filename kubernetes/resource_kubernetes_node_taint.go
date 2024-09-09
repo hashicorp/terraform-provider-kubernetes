@@ -14,10 +14,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func resourceKubernetesNodeTaint() *schema.Resource {
 	return &schema.Resource{
+		Description:   "[Node affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) is a property of Pods that attracts them to a set of [nodes](https://kubernetes.io/docs/concepts/architecture/nodes/) (either as a preference or a hard requirement). Taints are the opposite -- they allow a node to repel a set of pods.",
 		CreateContext: resourceKubernetesNodeTaintCreate,
 		ReadContext:   resourceKubernetesNodeTaintRead,
 		UpdateContext: resourceKubernetesNodeTaintUpdate,
@@ -100,6 +102,12 @@ func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData
 
 	conn, err := m.(KubeClientsets).MainClientset()
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	nodeApi := conn.CoreV1().Nodes()
+
+	node, err := nodeApi.Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 			// The node is gone so the resource should be deleted.
 			return diag.Diagnostics{{
@@ -108,12 +116,6 @@ func resourceKubernetesNodeTaintRead(ctx context.Context, d *schema.ResourceData
 				Detail:   fmt.Sprintf("The underlying node %q has been deleted. You should remove it from your configuration.", nodeName),
 			}}
 		}
-		return diag.FromErr(err)
-	}
-	nodeApi := conn.CoreV1().Nodes()
-
-	node, err := nodeApi.Get(ctx, nodeName, metav1.GetOptions{})
-	if err != nil {
 		return diag.FromErr(err)
 	}
 	nodeTaints := node.Spec.Taints
@@ -162,6 +164,7 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 			"taints": taints,
 		},
 	}
+
 	patch := unstructured.Unstructured{
 		Object: patchObj,
 	}
@@ -171,7 +174,7 @@ func resourceKubernetesNodeTaintUpdate(ctx context.Context, d *schema.ResourceDa
 	}
 	patchOpts := metav1.PatchOptions{
 		FieldManager: d.Get("field_manager").(string),
-		Force:        ptrToBool(d.Get("force").(bool)),
+		Force:        ptr.To(d.Get("force").(bool)),
 	}
 	node, err := nodeApi.Patch(ctx, nodeName, types.ApplyPatchType, patchBytes, patchOpts)
 	if err != nil {

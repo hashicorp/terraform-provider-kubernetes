@@ -1,0 +1,3 @@
+```release-note:enhancement
+`kubernetes/schema_pod_spec.go`: Add `os` to podSpecFields
+```

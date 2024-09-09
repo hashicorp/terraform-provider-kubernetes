@@ -5,12 +5,14 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	networking "k8s.io/api/networking/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesIngressV1() *schema.Resource {
@@ -22,6 +24,7 @@ func dataSourceKubernetesIngressV1() *schema.Resource {
 	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 
 	return &schema.Resource{
+		Description: "Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc. This data source allows you to pull data about such ingress.",
 		ReadContext: dataSourceKubernetesIngressV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("ingress", false),
@@ -146,13 +149,47 @@ func dataSourceKubernetesIngressV1() *schema.Resource {
 }
 
 func dataSourceKubernetesIngressV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	om := meta_v1.ObjectMeta{
+	om := metav1.ObjectMeta{
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesIngressV1Read(ctx, d, meta)
+	log.Printf("[INFO] Reading ingress %s", metadata.Name)
+	ing, err := conn.NetworkingV1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received ingress: %#v", ing)
+
+	err = d.Set("metadata", flattenMetadataFields(ing.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("spec", flattenIngressV1Spec(ing.Spec))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("status", []interface{}{
+		map[string][]interface{}{
+			"load_balancer": flattenIngressV1Status(ing.Status.LoadBalancer),
+		},
+	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

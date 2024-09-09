@@ -40,12 +40,19 @@ module "eks" {
 
   eks_managed_node_groups = {
     default_node_group = {
-      desired_size   = local.node_count
-      min_size       = 1
-      max_size       = local.node_count
-      instance_types = [var.instance_type]
+      ami_type                   = "AL2_ARM_64"
+      capacity_type              = var.capacity_type
+      desired_size               = local.node_count
+      min_size                   = 1
+      max_size                   = local.node_count
+      instance_types             = [var.instance_type]
       use_custom_launch_template = false
+
+      iam_role_additional_policies = {
+        AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+      }
     }
+
   }
 
   tags = local.tags

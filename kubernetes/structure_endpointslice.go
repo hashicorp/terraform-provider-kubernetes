@@ -9,10 +9,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	api "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
 
 func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
-	if in == nil || len(in) == 0 {
+	if len(in) == 0 {
 		return []api.Endpoint{}
 	}
 	endpoints := make([]api.Endpoint, len(in))
@@ -23,19 +24,19 @@ func expandEndpointSliceEndpoints(in []interface{}) []api.Endpoint {
 			r.Addresses = expandStringSlice(v)
 		}
 		if v, ok := endpointConfig["condition"].([]interface{}); ok {
-			r.Conditions = expandEndpointSliceCondition(v)
+			r.Conditions = expandEndpointSliceConditions(v)
 		}
 		if v, ok := endpointConfig["hostname"].(string); ok && v != "" {
-			r.Hostname = ptrToString(v)
+			r.Hostname = ptr.To(v)
 		}
 		if v, ok := endpointConfig["node_name"].(string); ok && v != "" {
-			r.NodeName = ptrToString(v)
+			r.NodeName = ptr.To(v)
 		}
 		if v, ok := endpointConfig["target_ref"].([]interface{}); ok && len(v) != 0 {
 			r.TargetRef = expandObjectReference(v)
 		}
 		if v, ok := endpointConfig["zone"].(string); ok && v != "" {
-			r.Zone = ptrToString(v)
+			r.Zone = ptr.To(v)
 		}
 
 		endpoints[i] = r
@@ -70,7 +71,7 @@ func expandObjectReference(l []interface{}) *v1.ObjectReference {
 }
 
 func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
-	if in == nil || len(in) == 0 {
+	if len(in) == 0 {
 		return []api.EndpointPort{}
 	}
 	ports := make([]api.EndpointPort, len(in))
@@ -78,42 +79,42 @@ func expandEndpointSlicePorts(in []interface{}) []api.EndpointPort {
 		r := api.EndpointPort{}
 		portCfg := port.(map[string]interface{})
 		if v, ok := portCfg["name"].(string); ok {
-			r.Name = ptrToString(v)
+			r.Name = ptr.To(v)
 		}
 		if v, ok := portCfg["port"].(string); ok {
 			if v == "" {
 				continue
 			}
 			v, _ := strconv.ParseInt(v, 10, 32)
-			r.Port = ptrToInt32(int32(v))
+			r.Port = ptr.To(int32(v))
 		}
 		if v, ok := portCfg["protocol"].(v1.Protocol); ok {
 			r.Protocol = &v
 		}
 		if v, ok := portCfg["app_protocol"].(string); ok {
-			r.AppProtocol = ptrToString(v)
+			r.AppProtocol = ptr.To(v)
 		}
 		ports[i] = r
 	}
 	return ports
 }
 
-func expandEndpointSliceCondition(in []interface{}) api.EndpointConditions {
+func expandEndpointSliceConditions(in []interface{}) api.EndpointConditions {
 	obj := api.EndpointConditions{}
 
-	if in[0] == nil || len(in) == 0 {
+	if len(in) == 0 || in[0] == nil {
 		return obj
 	}
 	cond := in[0].(map[string]interface{})
 
 	if v, ok := cond["ready"].(bool); ok {
-		obj.Ready = ptrToBool(v)
+		obj.Ready = ptr.To(v)
 	}
 	if v, ok := cond["serving"].(bool); ok {
-		obj.Serving = ptrToBool(v)
+		obj.Serving = ptr.To(v)
 	}
 	if v, ok := cond["terminating"].(bool); ok {
-		obj.Terminating = ptrToBool(v)
+		obj.Terminating = ptr.To(v)
 	}
 
 	return obj
@@ -123,45 +124,45 @@ func flattenEndpointSliceEndpoints(in []api.Endpoint) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, e := range in {
 		m := make(map[string]interface{})
+		if len(e.Addresses) != 0 {
+			m["addresses"] = e.Addresses
+		}
+		m["condition"] = flattenEndpointSliceConditions(e.Conditions)
 		if e.Hostname != nil {
 			m["hostname"] = e.Hostname
 		}
 		if e.NodeName != nil {
 			m["node_name"] = e.NodeName
 		}
-		if &e.Conditions != nil {
-			m["condition"] = flattenEndpointSliceConditions(e.Conditions)
+		if e.TargetRef != nil {
+			m["target_ref"] = flattenObjectReference(e.TargetRef)
 		}
 		if e.Zone != nil {
 			m["zone"] = e.Zone
 		}
-		if len(e.Addresses) != 0 {
-			m["addresses"] = e.Addresses
-		}
-		if e.TargetRef != nil {
-			m["target_ref"] = flattenObjectReference(e.TargetRef)
-		}
-		if &e.Conditions != nil {
-			m["hostname"] = e.Hostname
-		}
 		att[i] = m
 	}
+
 	return att
 }
 
 func flattenEndpointSliceConditions(in api.EndpointConditions) []interface{} {
-	m := make(map[string]interface{})
+	att := make(map[string]interface{})
 	if in.Ready != nil {
-		m["ready"] = in.Ready
+		att["ready"] = in.Ready
 	}
 	if in.Serving != nil {
-		m["serving"] = in.Serving
+		att["serving"] = in.Serving
 	}
 	if in.Terminating != nil {
-		m["terminating"] = in.Terminating
+		att["terminating"] = in.Terminating
 	}
 
-	return []interface{}{m}
+	if len(att) > 0 {
+		return []interface{}{att}
+	}
+
+	return []interface{}{}
 }
 
 func flattenEndpointSlicePorts(in []api.EndpointPort) []interface{} {

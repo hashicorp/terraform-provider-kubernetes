@@ -1,0 +1,7 @@
+```release-note:bug
+`resource/kubernetes_ingress`: Fix an issue where the empty `tls` attribute in the configuration does not generate the corresponding Ingress object without any TLS configuration.
+```
+
+```release-note:bug
+`resource/kubernetes_ingress_v1`: Fix an issue where the empty `tls` attribute in the configuration does not generate the corresponding Ingress object without any TLS configuration.
+```

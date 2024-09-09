@@ -1,0 +1,24 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_persistent_volume_claim"
+description: |-
+  This resource allows the user to request for and claim to a persistent volume.
+---
+
+# {{ .Name }}
+
+This resource allows the user to request for and claim to a persistent volume.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/persistent_volume_claim/example_1.tf"}}
+
+##Import
+
+Persistent Volume Claim can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_persistent_volume_claim.example default/example-name
+```

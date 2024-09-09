@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/apimachinery/pkg/api/errors"
 
@@ -21,6 +21,7 @@ import (
 
 func resourceKubernetesCronJobV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "A Cron Job creates Jobs on a time-based schedule.One CronJob object is like one line of a crontab (cron table) file. It runs a job periodically on a given schedule, written in Cron format.Note: All CronJob `schedule` times are based on the timezone of the master where the job is initiated. For instructions on creating and working with cron jobs, and for an example of a spec file for a cron job, see [Kubernetes reference](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/).",
 		CreateContext: resourceKubernetesCronJobV1Create,
 		ReadContext:   resourceKubernetesCronJobV1Read,
 		UpdateContext: resourceKubernetesCronJobV1Update,
@@ -58,11 +59,6 @@ func resourceKubernetesCronJobV1Create(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
-	ignoreAnnotations := meta.(kubeClientsets).IgnoreAnnotations
-	annotations := removeInternalKeys(metadata.Annotations, make(map[string]interface{}))
-	metadata.Annotations = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-
 	job := batch.CronJob{
 		ObjectMeta: metadata,
 		Spec:       spec,
@@ -96,11 +92,6 @@ func resourceKubernetesCronJobV1Update(ctx context.Context, d *schema.ResourceDa
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	configAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
-	ignoreAnnotations := meta.(kubeClientsets).IgnoreAnnotations
-	annotations := removeInternalKeys(metadata.Annotations, make(map[string]interface{}))
-	metadata.Annotations = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-	spec.JobTemplate.ObjectMeta.Annotations = metadata.Annotations
 
 	cronjob := &batch.CronJob{
 		ObjectMeta: metadata,
@@ -147,26 +138,13 @@ func resourceKubernetesCronJobV1Read(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Received cron job: %#v", job)
 
 	// Remove server-generated labels unless using manual selector
-	if _, ok := d.GetOk("spec.0.manual_selector"); !ok {
-		labels := job.ObjectMeta.Labels
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
-		}
-
-		if _, ok := labels["cron-job-name"]; ok {
-			delete(labels, "cron-job-name")
-		}
-
-		if job.Spec.JobTemplate.Spec.Selector != nil &&
-			job.Spec.JobTemplate.Spec.Selector.MatchLabels != nil {
-			labels = job.Spec.JobTemplate.Spec.Selector.MatchLabels
-		}
-
-		if _, ok := labels["controller-uid"]; ok {
-			delete(labels, "controller-uid")
+	if _, ok := d.GetOk("spec.0.job_template.spec.0.manual_selector"); !ok {
+		removeGeneratedLabels(job.ObjectMeta.Labels)
+		if job.Spec.JobTemplate.Spec.Selector != nil {
+			removeGeneratedLabels(job.Spec.JobTemplate.Spec.Selector.MatchLabels)
 		}
 	}
+
 	err = d.Set("metadata", flattenMetadata(job.ObjectMeta, d, meta))
 	if err != nil {
 		return diag.FromErr(err)
@@ -202,17 +180,17 @@ func resourceKubernetesCronJobV1Delete(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("Cron Job %s still exists", name)
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

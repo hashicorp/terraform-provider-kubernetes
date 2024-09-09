@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 
 variable "kubernetes_version" {
-  default = "1.18"
+  default = "1.27"
 }
 
 variable "workers_count" {
@@ -13,6 +13,7 @@ variable "cluster_name" {
   type = string
 }
 
-locals {
-  google_zone = data.google_compute_zones.available.names[0]
+variable "idp_enabled" {
+  type    = bool
+  default = false
 }

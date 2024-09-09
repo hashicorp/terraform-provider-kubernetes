@@ -5,6 +5,7 @@ example.tf
 kubeconfig
 terraform.tfplan
 terraform.tfstate
+.terraform.tfstate.lock.info
 bin/
 modules-dev/
 /pkg/
@@ -34,3 +35,4 @@ website/vendor
 
 # output binary
 terraform-provider-kubernetes
+__debug_bin

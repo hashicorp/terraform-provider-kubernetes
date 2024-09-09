@@ -1,0 +1,24 @@
+---
+subcategory: "rbac/v1"
+page_title: "Kubernetes: kubernetes_cluster_role_binding_v1"
+description: |-
+  A ClusterRoleBinding may be used to grant permission at the cluster level and in all namespaces.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/cluster_role_binding_v1/example_1.tf"}}
+
+## Import
+
+ClusterRoleBinding can be imported using the name, e.g.
+
+```
+$ terraform import kubernetes_cluster_role_binding_v1.example terraform-name
+```

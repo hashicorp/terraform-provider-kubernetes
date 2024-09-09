@@ -5,18 +5,22 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
+func dataSourceKubernetesMutatingWebhookConfigurationV1() *schema.Resource {
 	apiDoc := admissionregistrationv1.MutatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.MutatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		ReadContext: dataSourceKubernetesMutatingWebhookConfigurationRead,
+		Description: "A Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks). This data source allows you to pull data about a given mutating webhook configuration based on its name.",
+		ReadContext: dataSourceKubernetesMutatingWebhookConfigurationV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("mutating webhook configuration", false),
 			"webhook": {
@@ -110,9 +114,37 @@ func dataSourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 	}
 }
 
-func dataSourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	name := d.Get("metadata.0.name").(string)
-	d.SetId(name)
+func dataSourceKubernetesMutatingWebhookConfigurationV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
-	return resourceKubernetesMutatingWebhookConfigurationV1Read(ctx, d, meta)
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	d.SetId(metadata.Name)
+
+	log.Printf("[INFO] Reading mutating webhook configuration %s", metadata.Name)
+	cfg, err := conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.FromErr(err)
+	}
+	log.Printf("[INFO] Received mutating webhook configuration: %#v", cfg)
+
+	err = d.Set("metadata", flattenMetadataFields(cfg.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	log.Printf("[DEBUG] Setting mutating webhook configuration to: %#v", cfg.Webhooks)
+
+	err = d.Set("webhook", flattenMutatingWebhooks(cfg.Webhooks))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

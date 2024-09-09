@@ -5,48 +5,74 @@ on:
     inputs:
       kindVersion:
         description: The kind version
-        default: 0.20.0 # Kubernetes version: 1.27.X
+        default: 0.20.0
       runTests:
         description: The regex passed to the -run option of `go test`
-        default: ".*"
+        default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.5.3
+        default: 1.7.5
+      parallelRuns:
+        description: The maximum number of tests to run simultaneously
+        default: 8
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'kubernetes/*.go'
+      - 'go.mod'
   schedule:
     - cron: '0 21 * * *'
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kind_version || vars.KIND_VERSION }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || vars.KIND_VERSION || '0.23.0' }}
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS || '8' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION || '1.9.2' }}
 
 jobs:
-  acceptance_tests:
-    runs-on: ubuntu-latest
+  acceptance_tests_kind:
+    if: ${{ github.repository_owner == 'hashicorp' }}
+    runs-on: custom-linux-medium
+    strategy:
+      # Don't cancel all in-progress and queued jobs in the matrix if any job in the matrix fails.
+      # That will be helpful to catch any issues related to a particular Kubernetes version.
+      fail-fast: false
+      matrix:
+        kubernetes_version:
+          # kind images: https://github.com/kubernetes-sigs/kind/releases (note the images are kind release specific)
+          - v1.29.0@sha256:eaa1450915475849a73a9227b8f201df25e55e268e5d619312131292e324d570
+          - v1.28.0@sha256:b7a4cad12c197af3ba43202d3efe03246b3f0793f162afb40a33c923952d5b31
+          - v1.27.3@sha256:3966ac761ae0136263ffdb6cfd4db23ef8a83cba8a463690e98317add2c9ba72
+          - v1.26.6@sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
+          - v1.25.11@sha256:227fa11ce74ea76a0474eeefb84cb75d8dad1b08638371ecf0e86259b35be0c8
+          - v1.23.17@sha256:59c989ff8a517a93127d4a536e7014d28e235fb3529d9fba91b3951d461edfdb
     steps:
       - name: Checkout repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - name: Set up Go
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: 'go.mod'
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@633666f66e0061ca3b725c73b2ec20cd13a8fdd1 # v2.0.3
+        uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5308c4843bcd56d36 # v3.0.0
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
       - name: Setup kind
-        uses: helm/kind-action@fa81e57adff234b2908110485695db0f181f3c67 # v1.7.0
+        uses: helm/kind-action@99576bfa6ddf9a8e612d83b513da5a75875caced # v1.9.0
         with:
           wait: 2m
           version: v${{ env.KIND_VERSION }}
+          node_image: kindest/node:${{ matrix.kubernetes_version }}
           config: .github/config/acceptance_tests_kind_config.yaml
       - name: Run Acceptance Test Suite
         env:
           KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}
-          TF_ACC_TERRAFORM_VERSION: ${{ env.TERRAFORM_VERSION }}
-          TESTARGS: -run '${{ github.event.inputs.runTests }}'
+          TESTARGS: -run ${{ github.event.inputs.runTests || '^TestAcc' }}
+          # Do not set TF_ACC_TERRAFORM_PATH or TF_ACC_TERRAFORM_VERSION.
+          # In this case, the framework will search for the Terraform CLI binary based on the operating system PATH.
+          # Eventually, it will use the one we set up.
+          # More information: https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#terraform-cli-installation-behaviors
         run: |
           make testacc
-
-
-

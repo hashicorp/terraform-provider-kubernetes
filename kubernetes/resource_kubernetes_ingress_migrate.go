@@ -5,9 +5,10 @@ package kubernetes
 
 import (
 	"context"
+	"log"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	networking "k8s.io/api/networking/v1beta1"
-	"log"
 )
 
 // resourceKubernetesIngressV0 is a copy of the Kubernetes Ingress schema (before migration).
@@ -140,5 +141,6 @@ func resourceKubernetesIngressV0() *schema.Resource {
 func resourceKubernetesIngressStateUpgradeV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
 	log.Println("[INFO] Found Kubernetes Service state v0; upgrading state to v1")
 	delete(rawState, "load_balancer_ingress")
+	// Return a nil error here to satisfy StateUpgradeFunc signature
 	return rawState, nil
 }

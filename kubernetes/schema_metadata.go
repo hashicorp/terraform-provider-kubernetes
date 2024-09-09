@@ -13,7 +13,7 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"annotations": {
 			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("An unstructured key value map stored with the %s that may be used to store arbitrary metadata. More info: http://kubernetes.io/docs/user-guide/annotations", objectName),
+			Description:  fmt.Sprintf("An unstructured key value map stored with the %s that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/", objectName),
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: validateAnnotations,
@@ -25,14 +25,14 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		},
 		"labels": {
 			Type:         schema.TypeMap,
-			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: http://kubernetes.io/docs/user-guide/labels", objectName),
+			Description:  fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/", objectName),
 			Optional:     true,
 			Elem:         &schema.Schema{Type: schema.TypeString},
 			ValidateFunc: validateLabels,
 		},
 		"name": {
 			Type:         schema.TypeString,
-			Description:  fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/identifiers#names", objectName),
+			Description:  fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names", objectName),
 			Optional:     true,
 			ForceNew:     true,
 			Computed:     true,
@@ -40,12 +40,12 @@ func metadataFields(objectName string) map[string]*schema.Schema {
 		},
 		"resource_version": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
+			Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
 			Computed:    true,
 		},
 		"uid": {
 			Type:        schema.TypeString,
-			Description: fmt.Sprintf("The unique in time and space value for this %s. More info: http://kubernetes.io/docs/user-guide/identifiers#uids", objectName),
+			Description: fmt.Sprintf("The unique in time and space value for this %s. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids", objectName),
 			Computed:    true,
 		},
 	}
@@ -57,7 +57,7 @@ func metadataSchema(objectName string, generatableName bool) *schema.Schema {
 	if generatableName {
 		fields["generate_name"] = &schema.Schema{
 			Type:          schema.TypeString,
-			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:      true,
 			ForceNew:      true,
 			ValidateFunc:  validateGenerateName,
@@ -98,7 +98,7 @@ func namespacedMetadataSchemaIsTemplate(objectName string, generatableName, isTe
 	if generatableName {
 		fields["generate_name"] = &schema.Schema{
 			Type:          schema.TypeString,
-			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. Read more: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Description:   "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:      true,
 			ForceNew:      true,
 			ValidateFunc:  validateGenerateName,

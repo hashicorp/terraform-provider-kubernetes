@@ -10,7 +10,7 @@ import (
 	apiv1 "k8s.io/api/authentication/v1"
 )
 
-func tokenRequestSpecFields() map[string]*schema.Schema {
+func tokenRequestV1SpecFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"audiences": {
 			Type:        schema.TypeList,

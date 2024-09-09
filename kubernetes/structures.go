@@ -41,9 +41,10 @@ func buildIdWithVersionKind(meta metav1.ObjectMeta, apiVersion, kind string) str
 
 func expandMetadata(in []interface{}) metav1.ObjectMeta {
 	meta := metav1.ObjectMeta{}
-	if len(in) < 1 {
+	if len(in) == 0 || in[0] == nil {
 		return meta
 	}
+
 	m := in[0].(map[string]interface{})
 
 	if v, ok := m["annotations"].(map[string]interface{}); ok && len(v) > 0 {
@@ -114,72 +115,61 @@ func expandStringSlice(s []interface{}) []string {
 	return result
 }
 
-func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMetadata interface{}, metaPrefix ...string) []interface{} {
+// flattenMetadataFields flattens all metadata fields.
+func flattenMetadataFields(meta metav1.ObjectMeta) []interface{} {
 	m := make(map[string]interface{})
-	prefix := ""
-	if len(metaPrefix) > 0 {
-		prefix = metaPrefix[0]
-	}
-
-	if prefix == "" {
-		configAnnotations := d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-		ignoreAnnotations := providerMetadata.(kubeClientsets).IgnoreAnnotations
-		annotations := removeInternalKeys(meta.Annotations, configAnnotations)
-		m["annotations"] = removeKeys(annotations, configAnnotations, ignoreAnnotations)
-	} else {
-		m["annotations"] = d.Get(prefix + "metadata.0.annotations").(map[string]interface{})
-	}
-
+	m["annotations"] = meta.Annotations
 	if meta.GenerateName != "" {
 		m["generate_name"] = meta.GenerateName
 	}
-
-	configLabels := d.Get(prefix + "metadata.0.labels").(map[string]interface{})
-	ignoreLabels := providerMetadata.(kubeClientsets).IgnoreLabels
-	labels := removeInternalKeys(meta.Labels, configLabels)
-	m["labels"] = removeKeys(labels, configLabels, ignoreLabels)
-	m["name"] = meta.Name
-	m["resource_version"] = meta.ResourceVersion
-	m["uid"] = fmt.Sprintf("%v", meta.UID)
 	m["generation"] = meta.Generation
-
+	m["labels"] = meta.Labels
+	m["name"] = meta.Name
 	if meta.Namespace != "" {
 		m["namespace"] = meta.Namespace
 	}
+	m["resource_version"] = meta.ResourceVersion
+	m["uid"] = string(meta.UID)
 
 	return []interface{}{m}
 }
 
-func removeInternalKeys(m map[string]string, d map[string]interface{}) map[string]string {
+func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMeta interface{}) []interface{} {
+	metadataAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
+	metadataLabels := d.Get("metadata.0.labels").(map[string]interface{})
+
+	ignoreAnnotations := providerMeta.(providerMetadata).IgnoreAnnotations
+	removeInternalKeys(meta.Annotations, metadataAnnotations)
+	removeKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
+
+	ignoreLabels := providerMeta.(providerMetadata).IgnoreLabels
+	removeInternalKeys(meta.Labels, metadataLabels)
+	removeKeys(meta.Labels, metadataLabels, ignoreLabels)
+
+	return flattenMetadataFields(meta)
+}
+
+func removeInternalKeys(m map[string]string, d map[string]interface{}) {
 	for k := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
-	return m
 }
 
 // removeKeys removes given Kubernetes metadata(annotations and labels) keys.
 // In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
-func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) map[string]string {
+func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) {
 	for k := range m {
 		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
-	return m
 }
 
 func isKeyInMap(key string, d map[string]interface{}) bool {
-	if d == nil {
-		return false
-	}
-	for k := range d {
-		if k == key {
-			return true
-		}
-	}
-	return false
+	_, ok := d[key]
+	return ok
 }
 
 func isInternalKey(annotationKey string) bool {
@@ -236,22 +226,6 @@ func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 		result[k] = string(v)
 	}
 	return result
-}
-
-func ptrToString(s string) *string {
-	return &s
-}
-
-func ptrToBool(b bool) *bool {
-	return &b
-}
-
-func ptrToInt32(i int32) *int32 {
-	return &i
-}
-
-func ptrToInt64(i int64) *int64 {
-	return &i
 }
 
 func sliceOfString(slice []interface{}) []string {

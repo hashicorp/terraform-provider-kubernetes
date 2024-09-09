@@ -20,7 +20,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV1_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v1.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler_v1.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -50,9 +50,10 @@ func TestAccKubernetesHorizontalPodAutoscalerV1_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV1Config_metaModified(name),
@@ -103,7 +104,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV1_generatedName(t *testing.T) {
 	var conf api.HorizontalPodAutoscaler
 	prefix := "tf-acc-test-"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     "kubernetes_horizontal_pod_autoscaler_v1.test",
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},

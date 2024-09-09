@@ -42,6 +42,14 @@ type Waiter interface {
 	Wait(context.Context) error
 }
 
+type WaiterError struct {
+	Reason string
+}
+
+func (e WaiterError) Error() string {
+	return fmt.Sprintf("timed out waiting on %v", e.Reason)
+}
+
 // NewResourceWaiter constructs an appropriate Waiter using the supplied waitForBlock configuration
 func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, resourceType tftypes.Type, th map[string]string, waitForBlock tftypes.Value, hl hclog.Logger) (Waiter, error) {
 	var waitForBlockVal map[string]tftypes.Value
@@ -145,7 +153,7 @@ func (w *FieldWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return context.DeadlineExceeded
+				return WaiterError{Reason: "field matchers"}
 			}
 		}
 
@@ -240,9 +248,9 @@ func FieldPathToTftypesPath(fieldPath string) (*tftypes.AttributePath, error) {
 
 	path := tftypes.NewAttributePath()
 	for _, p := range t {
-		switch p.(type) {
+		switch t := p.(type) {
 		case hcl.TraverseRoot:
-			path = path.WithAttributeName(p.(hcl.TraverseRoot).Name)
+			path = path.WithAttributeName(t.Name)
 		case hcl.TraverseIndex:
 			indexKey := p.(hcl.TraverseIndex).Key
 			indexKeyType := indexKey.Type()
@@ -260,7 +268,7 @@ func FieldPathToTftypesPath(fieldPath string) (*tftypes.AttributePath, error) {
 				return tftypes.NewAttributePath(), fmt.Errorf("unsupported type in field path: %s", indexKeyType.FriendlyName())
 			}
 		case hcl.TraverseAttr:
-			path = path.WithAttributeName(p.(hcl.TraverseAttr).Name)
+			path = path.WithAttributeName(t.Name)
 		case hcl.TraverseSplat:
 			return tftypes.NewAttributePath(), fmt.Errorf("splat is not supported")
 		}
@@ -283,7 +291,7 @@ func (w *RolloutWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return context.DeadlineExceeded
+				return WaiterError{Reason: "rollout to complete"}
 			}
 		}
 
@@ -333,7 +341,7 @@ func (w *ConditionsWaiter) Wait(ctx context.Context) error {
 	for {
 		if deadline, ok := ctx.Deadline(); ok {
 			if time.Now().After(deadline) {
-				return context.DeadlineExceeded
+				return WaiterError{Reason: "conditions"}
 			}
 		}
 

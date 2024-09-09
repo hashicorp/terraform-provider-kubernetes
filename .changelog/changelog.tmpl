@@ -19,7 +19,7 @@ SECURITY:
 FEATURES:
 
 {{range $features | sort -}}
-{{ template "note" . }}
+* {{ template "note" . }}
 {{ end -}}
 {{- end -}}
 
@@ -27,7 +27,7 @@ FEATURES:
 ENHANCEMENTS:
 
 {{range .NotesByType.enhancement | sort -}}
-{{ template "note" .}}
+* {{ template "note" .}}
 {{ end -}}
 {{- end -}}
 
@@ -51,6 +51,14 @@ BUG FIXES:
 DOCS:
 
 {{range .NotesByType.doc -}}
+* {{ template "note" . }}
+{{ end -}}
+{{- end -}}
+
+{{- if .NotesByType.note }}
+NOTES:
+
+{{range .NotesByType.note -}}
 * {{ template "note" . }}
 {{ end -}}
 {{- end -}}

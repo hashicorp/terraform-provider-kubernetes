@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestFlattenSecretKeyRef(t *testing.T) {
@@ -21,7 +22,7 @@ func TestFlattenSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -78,7 +79,7 @@ func TestExpandSecretKeyRef(t *testing.T) {
 					Name: "Secret1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 		},
 		{
@@ -102,10 +103,7 @@ func TestExpandSecretKeyRef(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := expandSecretKeyRef(tc.Input)
-		if err != nil {
-			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
-		}
+		output := expandSecretKeyRef(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -124,7 +122,7 @@ func TestFlattenConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 			[]interface{}{
 				map[string]interface{}{
@@ -181,7 +179,7 @@ func TestExpandConfigMapKeyRef(t *testing.T) {
 					Name: "configmap1",
 				},
 				Key:      "key1",
-				Optional: ptrToBool(true),
+				Optional: ptr.To(true),
 			},
 		},
 		{
@@ -205,10 +203,7 @@ func TestExpandConfigMapKeyRef(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := expandConfigMapKeyRef(tc.Input)
-		if err != nil {
-			t.Fatalf("Unexpected failure in expander.\nInput: %#v, error: %#v", tc.Input, err)
-		}
+		output := expandConfigMapKeyRef(tc.Input)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)
@@ -310,10 +305,7 @@ func TestFlattenContainerVolumeMounts_mountPropogation(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output, err := flattenContainerVolumeMounts(tc.Input)
-		if err != nil {
-			t.Fatalf("Unexpected failure in flattener.\nInput: %#v, error: %#v", tc.Input, err)
-		}
+		output := flattenContainerVolumeMounts(tc.Input)
 		if !reflect.DeepEqual(output, tc.Expected) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.Expected, output)

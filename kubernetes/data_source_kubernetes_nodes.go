@@ -12,12 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
 func dataSourceKubernetesNodes() *schema.Resource {
 	return &schema.Resource{
+		Description: "This data source provides a mechanism for listing the names of nodes in a kubernetes cluster.By default, all nodes in the cluster are returned, but queries by node label are also supported. It can be used to check for the existence of a specific node or to lookup a node to apply a taint with the `kubernetes_node_taint` resource.",
 		ReadContext: dataSourceKubernetesNodesRead,
 		Schema: map[string]*schema.Schema{
 			"metadata": {
@@ -29,7 +31,7 @@ func dataSourceKubernetesNodes() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"labels": {
 							Type:         schema.TypeMap,
-							Description:  "Select nodes with these labels. More info: http://kubernetes.io/docs/user-guide/labels",
+							Description:  "Select nodes with these labels. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/",
 							Required:     true,
 							Elem:         &schema.Schema{Type: schema.TypeString},
 							ValidateFunc: validateLabels,
@@ -74,9 +76,9 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 
 	listOptions := metav1.ListOptions{}
 
-	m := d.Get("metadata").([]interface{})
-	if len(m) > 0 {
-		metadata := expandMetadata(m)
+	metadata := d.Get("metadata").([]interface{})
+	if len(metadata) > 0 {
+		metadata := expandMetadata(metadata)
 		labelMap, err := metav1.LabelSelectorAsMap(&metav1.LabelSelector{MatchLabels: metadata.Labels})
 		if err != nil {
 			return diag.FromErr(err)
@@ -89,18 +91,19 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	log.Printf("[INFO] Listing nodes")
 	nodesRaw, err := conn.CoreV1().Nodes().List(ctx, listOptions)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return diag.FromErr(err)
 	}
 	nodes := make([]interface{}, len(nodesRaw.Items))
 	for i, v := range nodesRaw.Items {
 		log.Printf("[INFO] Received node: %s", v.Name)
-		prefix := fmt.Sprintf("nodes.%d.", i)
-		n := map[string]interface{}{
-			"metadata": flattenMetadata(v.ObjectMeta, d, meta, prefix),
+		nodes[i] = map[string]interface{}{
+			"metadata": flattenMetadataFields(v.ObjectMeta),
 			"spec":     flattenNodeSpec(v.Spec),
 			"status":   flattenNodeStatus(v.Status),
 		}
-		nodes[i] = n
 	}
 	if err := d.Set("nodes", nodes); err != nil {
 		return diag.FromErr(err)
@@ -113,5 +116,6 @@ func dataSourceKubernetesNodesRead(ctx context.Context, d *schema.ResourceData, 
 	}
 	id := fmt.Sprintf("%x", idsum.Sum(nil))
 	d.SetId(id)
+
 	return nil
 }

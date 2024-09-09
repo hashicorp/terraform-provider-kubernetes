@@ -20,6 +20,16 @@ import (
 func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.ReadResourceRequest) (*tfprotov5.ReadResourceResponse, error) {
 	resp := &tfprotov5.ReadResourceResponse{}
 
+	cp := req.ClientCapabilities
+	if cp != nil && cp.DeferralAllowed && s.clientConfigUnknown {
+		// if client support it, request deferral when client configuration not fully known
+		resp.NewState = req.CurrentState
+		resp.Deferred = &tfprotov5.Deferred{
+			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
+		}
+		return resp, nil
+	}
+
 	// loop private state back in - ATM it's not needed here
 	resp.Private = req.Private
 

@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -19,8 +20,9 @@ func TestAccKubernetesIgnoreKubernetesMetadata_basic(t *testing.T) {
 	namespaceName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	ignoreKubernetesMetadata := "terraform.io/provider"
 	dataSourceName := "data.kubernetes_namespace_v1.this"
+	oneOrMore := regexp.MustCompile(`^[1-9][0-9]*$`)
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			createNamespaceIgnoreKubernetesMetadata(namespaceName, ignoreKubernetesMetadata)
@@ -33,8 +35,8 @@ func TestAccKubernetesIgnoreKubernetesMetadata_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesIgnoreKubernetesMetadataProviderConfig(namespaceName, ignoreKubernetesMetadata),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, "metadata.annotations.#", "0"),
-					resource.TestCheckResourceAttr(dataSourceName, "metadata.labels.#", "0"),
+					resource.TestMatchResourceAttr(dataSourceName, "metadata.0.annotations.%", oneOrMore),
+					resource.TestMatchResourceAttr(dataSourceName, "metadata.0.labels.%", oneOrMore),
 				),
 			},
 		},
@@ -42,8 +44,7 @@ func TestAccKubernetesIgnoreKubernetesMetadata_basic(t *testing.T) {
 }
 
 func testAccKubernetesIgnoreKubernetesMetadataProviderConfig(namespaceName string, ignoreKubernetesMetadata string) string {
-	return fmt.Sprintf(`
-provider "kubernetes" {
+	return fmt.Sprintf(`provider "kubernetes" {
   ignore_annotations = [
     "%s",
   ]
@@ -66,15 +67,12 @@ func createNamespaceIgnoreKubernetesMetadata(namespaceName string, ignoreKuberne
 		return err
 	}
 	ns := corev1.Namespace{}
-	m := map[string]string{ignoreKubernetesMetadata: "kubernetes"}
 	ns.SetName(namespaceName)
+	m := map[string]string{ignoreKubernetesMetadata: "kubernetes"}
 	ns.SetAnnotations(m)
 	ns.SetLabels(m)
-	namespace, err := conn.CoreV1().Namespaces().Create(context.Background(), &ns, metav1.CreateOptions{})
-	switch namespace.Status.Phase {
-	case corev1.NamespaceActive:
-		return err
-	}
+	_, err = conn.CoreV1().Namespaces().Create(context.Background(), &ns, metav1.CreateOptions{})
+
 	return err
 }
 

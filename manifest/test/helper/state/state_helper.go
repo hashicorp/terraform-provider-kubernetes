@@ -26,6 +26,11 @@ type Helper struct {
 func NewHelper(tfstate *tfjson.State) *Helper {
 	return &Helper{tfstate}
 }
+func (s *Helper) ResourceExists(t *testing.T, resourceAddress string) bool {
+	t.Helper()
+	_, err := getAttributesValuesFromResource(s, resourceAddress)
+	return err == nil
+}
 
 // getAttributesValuesFromResource pulls out the AttributeValues field from the resource at the given address
 func getAttributesValuesFromResource(state *Helper, address string) (interface{}, error) {

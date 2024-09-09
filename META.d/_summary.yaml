@@ -1,0 +1,16 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+---
+
+schema: 1.1
+
+partition: tf-ecosystem
+
+summary:
+  owner: team-tf-hybrid-cloud
+  description: |
+    The Kubernetes provider for Terraform is a plugin that enables full lifecycle management of Kubernetes resources.
+    
+  visibility: external
+  

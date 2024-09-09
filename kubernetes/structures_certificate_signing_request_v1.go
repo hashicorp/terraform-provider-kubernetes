@@ -7,14 +7,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	certificates "k8s.io/api/certificates/v1"
+	"k8s.io/utils/ptr"
 )
 
-func expandCertificateSigningRequestV1Spec(csr []interface{}) (*certificates.CertificateSigningRequestSpec, error) {
+func expandCertificateSigningRequestV1Spec(csr []interface{}) *certificates.CertificateSigningRequestSpec {
 	obj := &certificates.CertificateSigningRequestSpec{}
 	if len(csr) == 0 || csr[0] == nil {
-		return obj, nil
+		return obj
 	}
 	in := csr[0].(map[string]interface{})
+	if v, ok := in["expiration_seconds"].(int); ok && v >= 600 {
+		obj.ExpirationSeconds = ptr.To(int32(v))
+	}
 	obj.Request = []byte(in["request"].(string))
 	if v, ok := in["usages"].(*schema.Set); ok && v.Len() > 0 {
 		obj.Usages = expandCertificateSigningRequestV1Usages(v.List())
@@ -22,7 +26,7 @@ func expandCertificateSigningRequestV1Spec(csr []interface{}) (*certificates.Cer
 	if v, ok := in["signer_name"].(string); ok && v != "" {
 		obj.SignerName = v
 	}
-	return obj, nil
+	return obj
 }
 
 func expandCertificateSigningRequestV1Usages(s []interface{}) []certificates.KeyUsage {

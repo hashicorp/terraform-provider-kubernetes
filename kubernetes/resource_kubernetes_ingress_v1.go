@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	networking "k8s.io/api/networking/v1"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +21,7 @@ import (
 
 func resourceKubernetesIngressV1() *schema.Resource {
 	return &schema.Resource{
+		Description:   "Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.",
 		CreateContext: resourceKubernetesIngressV1Create,
 		ReadContext:   resourceKubernetesIngressV1Read,
 		UpdateContext: resourceKubernetesIngressV1Update,
@@ -197,28 +198,28 @@ func resourceKubernetesIngressV1Create(ctx context.Context, d *schema.ResourceDa
 	}
 
 	log.Printf("[INFO] Waiting for load balancer to become ready: %#v", out)
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 		res, err := conn.NetworkingV1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			// NOTE it is possible in some HA apiserver setups that are eventually consistent
 			// that we could get a 404 when doing a Get immediately after a Create
 			if errors.IsNotFound(err) {
-				return resource.RetryableError(err)
+				return retry.RetryableError(err)
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		if len(res.Status.LoadBalancer.Ingress) > 0 {
 			diagnostics := resourceKubernetesIngressV1Read(ctx, d, meta)
 			if diagnostics.HasError() {
 				errmsg := diagnostics[0].Summary
-				return resource.NonRetryableError(fmt.Errorf("Error reading ingress: %v", errmsg))
+				return retry.NonRetryableError(fmt.Errorf("Error reading ingress: %v", errmsg))
 			}
 			return nil
 		}
 
 		log.Printf("[INFO] Load Balancer not ready yet...")
-		return resource.RetryableError(fmt.Errorf("Load Balancer is not ready yet"))
+		return retry.RetryableError(fmt.Errorf("Load Balancer is not ready yet"))
 	})
 	if err != nil {
 		return diag.FromErr(err)
@@ -266,7 +267,7 @@ func resourceKubernetesIngressV1Read(ctx context.Context, d *schema.ResourceData
 
 	err = d.Set("status", []interface{}{
 		map[string][]interface{}{
-			"load_balancer": flattenLoadBalancerStatus(ing.Status.LoadBalancer),
+			"load_balancer": flattenIngressV1Status(ing.Status.LoadBalancer),
 		},
 	})
 	if err != nil {
@@ -325,17 +326,17 @@ func resourceKubernetesIngressV1Delete(ctx context.Context, d *schema.ResourceDa
 		return diag.Errorf("Failed to delete Ingress %s because: %s", d.Id(), err)
 	}
 
-	err = resource.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *resource.RetryError {
+	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {
 		_, err := conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
 				return nil
 			}
-			return resource.NonRetryableError(err)
+			return retry.NonRetryableError(err)
 		}
 
 		e := fmt.Errorf("Ingress (%s) still exists", d.Id())
-		return resource.RetryableError(e)
+		return retry.RetryableError(e)
 	})
 	if err != nil {
 		return diag.FromErr(err)

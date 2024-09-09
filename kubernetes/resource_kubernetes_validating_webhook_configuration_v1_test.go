@@ -20,8 +20,12 @@ func TestAccKubernetesValidatingWebhookConfigurationV1_basic(t *testing.T) {
 	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
 	resourceName := "kubernetes_validating_webhook_configuration_v1.test"
 
-	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// AKS sets up some namespaceSelectors and thus we have to skip these tests
+			skipIfRunningInAks(t)
+		},
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
@@ -64,9 +68,10 @@ func TestAccKubernetesValidatingWebhookConfigurationV1_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				Config: testAccKubernetesValidatingWebhookConfigurationV1Config_modified(name),
@@ -193,8 +198,7 @@ func testAccCheckKubernetesValidatingWebhookConfigurationV1Exists(n string) reso
 }
 
 func testAccKubernetesValidatingWebhookConfigurationV1Config_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_validating_webhook_configuration_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
@@ -230,8 +234,7 @@ resource "kubernetes_validating_webhook_configuration_v1" "test" {
 }
 
 func testAccKubernetesValidatingWebhookConfigurationV1Config_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_validating_webhook_configuration_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }
@@ -286,8 +289,7 @@ resource "kubernetes_validating_webhook_configuration_v1" "test" {
 }
 
 func testAccKubernetesValidatingWebhookConfigurationV1Config_without_rules(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_validating_webhook_configuration_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_validating_webhook_configuration_v1" "test" {
   metadata {
     name = %q
   }

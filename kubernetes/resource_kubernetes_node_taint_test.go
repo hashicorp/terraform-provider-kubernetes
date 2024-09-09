@@ -23,6 +23,8 @@ const (
 	taintEffect  = "PreferNoSchedule"
 )
 
+//Due to the nature of this resource it will not be modified to run in parallel
+
 func TestAccKubernetesResourceNodeTaint_basic(t *testing.T) {
 	resourceName := "kubernetes_node_taint.test"
 
@@ -153,8 +155,7 @@ func testAccKubernetesNodeTaintExists(n string) resource.TestCheckFunc {
 }
 
 func testAccKubernetesNodeTaintConfig_basic() string {
-	return fmt.Sprintf(`
-data "kubernetes_nodes" "test" {}
+	return fmt.Sprintf(`data "kubernetes_nodes" "test" {}
 
 resource "kubernetes_node_taint" "test" {
   metadata {
@@ -171,8 +172,7 @@ resource "kubernetes_node_taint" "test" {
 }
 
 func testAccKubernetesNodeTaintConfig_multipleBasic() string {
-	return fmt.Sprintf(`
-data "kubernetes_nodes" "test" {}
+	return fmt.Sprintf(`data "kubernetes_nodes" "test" {}
 
 resource "kubernetes_node_taint" "test" {
   metadata {
@@ -199,8 +199,7 @@ resource "kubernetes_node_taint" "test" {
 }
 
 func testAccKubernetesNodeTaintConfig_updateTaint() string {
-	return fmt.Sprintf(`
-data "kubernetes_nodes" "test" {}
+	return fmt.Sprintf(`data "kubernetes_nodes" "test" {}
 
 resource "kubernetes_node_taint" "test" {
   metadata {
@@ -227,8 +226,7 @@ resource "kubernetes_node_taint" "test" {
 }
 
 func testAccKubernetesNodeTaintConfig_removeTaint() string {
-	return fmt.Sprintf(`
-data "kubernetes_nodes" "test" {}
+	return fmt.Sprintf(`data "kubernetes_nodes" "test" {}
 
 resource "kubernetes_node_taint" "test" {
   metadata {

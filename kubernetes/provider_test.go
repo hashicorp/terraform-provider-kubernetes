@@ -24,11 +24,8 @@ import (
 
 // Global constants for testing images (reduces the number of docker pulls).
 const (
-	nginxImageVersion    = "nginx:1.19.4"
-	nginxImageVersion1   = "nginx:1.19.3"
-	busyboxImageVersion  = "busybox:1.32.0"
-	busyboxImageVersion1 = "busybox:1.31"
-	alpineImageVersion   = "alpine:3.12.1"
+	busyboxImage = "busybox:1.36"
+	agnhostImage = "registry.k8s.io/e2e-test-images/agnhost:2.43"
 )
 
 var testAccProvider *schema.Provider
@@ -125,7 +122,7 @@ func unsetEnv(t *testing.T) func() {
 		"KUBE_TOKEN":                e.Token,
 	}
 
-	for k, _ := range envVars {
+	for k := range envVars {
 		if err := os.Unsetenv(k); err != nil {
 			t.Fatalf("Error unsetting env var %s: %s", k, err)
 		}
@@ -197,7 +194,6 @@ func testAccPreCheck(t *testing.T) {
 	if diags.HasError() {
 		t.Fatal(diags[0].Summary)
 	}
-	return
 }
 
 func getClusterVersion() (*gversion.Version, error) {
@@ -223,20 +219,20 @@ func getClusterVersion() (*gversion.Version, error) {
 func setClusterVersionVar(t *testing.T, varName string) {
 	cv, err := getClusterVersion()
 	if err != nil {
-		t.Skip(fmt.Sprint("Could not get cluster version"))
+		t.Skipf("Could not get cluster version")
 	}
 	os.Setenv(varName, fmt.Sprintf("v%s", cv.Core().Original()))
 }
 
 func skipIfClusterVersionLessThan(t *testing.T, vs string) {
 	if clusterVersionLessThan(vs) {
-		t.Skip(fmt.Sprintf("This test does not run on cluster versions below %v", vs))
+		t.Skipf("This test does not run on cluster versions below %v", vs)
 	}
 }
 
 func skipIfClusterVersionGreaterThanOrEqual(t *testing.T, vs string) {
 	if clusterVersionGreaterThanOrEqual(vs) {
-		t.Skip(fmt.Sprintf("This test does not run on cluster versions %v and above", vs))
+		t.Skipf("This test does not run on cluster versions %v and above", vs)
 	}
 }
 
@@ -298,6 +294,16 @@ func skipIfNotRunningInEks(t *testing.T) {
 	}
 }
 
+func skipIfRunningInAks(t *testing.T) {
+	isInAks, err := isRunningInAks()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInAks {
+		t.Skip("This test cannot be run in AKS cluster")
+	}
+}
+
 func skipIfRunningInEks(t *testing.T) {
 	isInEks, err := isRunningInEks()
 	if err != nil {
@@ -305,6 +311,16 @@ func skipIfRunningInEks(t *testing.T) {
 	}
 	if isInEks {
 		t.Skip("This test cannot be run in EKS cluster")
+	}
+}
+
+func skipIfRunningInGke(t *testing.T) {
+	isInGke, err := isRunningInGke()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isInGke {
+		t.Skip("This test cannot be run in GKE cluster")
 	}
 }
 

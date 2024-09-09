@@ -10,11 +10,12 @@ import (
 )
 
 func resourceKubernetesJobV0() *schema.Resource {
-	schemaV1 := resourceKubernetesJobSchemaV1()
+	schemaV1 := resourceKubernetesJobV1Schema()
 	schemaV0 := patchTemplatePodSpecWithResourcesFieldV0(schemaV1)
 	return &schema.Resource{Schema: schemaV0}
 }
 
 func resourceKubernetesJobUpgradeV0(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
-	return upgradeTemplatePodSpecWithResourcesFieldV0(ctx, rawState, meta)
+	// Return a nil error here to satisfy StateUpgradeFunc signature
+	return upgradeTemplatePodSpecWithResourcesFieldV0(ctx, rawState, meta), nil
 }

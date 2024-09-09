@@ -5,14 +5,17 @@ package kubernetes
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func dataSourceKubernetesEndpointsV1() *schema.Resource {
 	return &schema.Resource{
+		Description: "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
 		ReadContext: dataSourceKubernetesEndpointsV1Read,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("endpoints", true),
@@ -28,11 +31,39 @@ func dataSourceKubernetesEndpointsV1() *schema.Resource {
 }
 
 func dataSourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+
 	om := metav1.ObjectMeta{
-		Namespace: d.Get("metadata.0.namespace").(string),
-		Name:      d.Get("metadata.0.name").(string),
+		Namespace: metadata.Namespace,
+		Name:      metadata.Name,
 	}
 	d.SetId(buildId(om))
 
-	return resourceKubernetesEndpointsRead(ctx, d, meta)
+	log.Printf("[INFO] Reading endpoints %s", metadata.Name)
+	ep, err := conn.CoreV1().Endpoints(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		log.Printf("[DEBUG] Received error: %#v", err)
+		return diag.Errorf("Failed to read endpoint because: %s", err)
+	}
+	log.Printf("[INFO] Received endpoints: %#v", ep)
+
+	err = d.Set("metadata", flattenMetadataFields(ep.ObjectMeta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("subset", flattenEndpointsSubsets(ep.Subsets))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return nil
 }

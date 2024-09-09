@@ -108,7 +108,7 @@ func resourcesFieldV1(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			Computed:    true,
 			ForceNew:    !isUpdatable,
-			Description: "Describes the maximum amount of compute resources allowed. More info: http://kubernetes.io/docs/user-guide/compute-resources/",
+			Description: "Describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/",
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
@@ -260,14 +260,14 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			ForceNew:    !isUpdatable,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
+			Description: "Arguments to the entrypoint. The docker image's CMD is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell",
 		},
 		"command": {
 			Type:        schema.TypeList,
 			Optional:    true,
 			ForceNew:    !isUpdatable,
 			Elem:        &schema.Schema{Type: schema.TypeString},
-			Description: "Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/containers#containers-and-commands",
+			Description: "Entrypoint array. Not executed within a shell. The docker image's ENTRYPOINT is used if this is not provided. Variable references $(VAR_NAME) are expanded using the container's environment. If a variable cannot be resolved, the reference in the input string will be unchanged. The $(VAR_NAME) syntax can be escaped with a double $$, ie: $$(VAR_NAME). Escaped references will never be expanded, regardless of whether the variable exists or not. Cannot be updated. More info: https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#running-a-command-in-a-shell",
 		},
 		"env": {
 			Type:        schema.TypeList,
@@ -311,7 +311,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Optional:    true,
 												ForceNew:    !isUpdatable,
-												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+												Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 											},
 											"optional": {
 												Type:        schema.TypeBool,
@@ -390,7 +390,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Optional:    true,
 												ForceNew:    !isUpdatable,
-												Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+												Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 											},
 											"optional": {
 												Type:        schema.TypeBool,
@@ -424,7 +424,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Required:    true,
 									ForceNew:    !isUpdatable,
-									Description: "Name of the referent. More info: http://kubernetes.io/docs/user-guide/identifiers#names",
+									Description: "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 								},
 								"optional": {
 									Type:        schema.TypeBool,
@@ -470,14 +470,14 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			ForceNew:    !isUpdatable,
-			Description: "Docker image name. More info: http://kubernetes.io/docs/user-guide/images",
+			Description: "Docker image name. More info: https://kubernetes.io/docs/concepts/containers/images/",
 		},
 		"image_pull_policy": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Computed:    true,
 			ForceNew:    !isUpdatable,
-			Description: "Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/images#updating-images",
+			Description: "Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images/#updating-images",
 		},
 		"lifecycle": {
 			Type:        schema.TypeList,
@@ -488,7 +488,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"post_start": {
 						Type:        schema.TypeList,
-						Description: `post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: http://kubernetes.io/docs/user-guide/container-environment#hook-details`,
+						Description: `post_start is called immediately after a container is created. If the handler fails, the container is terminated and restarted according to its restart policy. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks`,
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
@@ -497,7 +497,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 					},
 					"pre_stop": {
 						Type:        schema.TypeList,
-						Description: `pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: http://kubernetes.io/docs/user-guide/container-environment#hook-details`,
+						Description: `pre_stop is called immediately before a container is terminated. The container is terminated after the handler completes. The reason for termination is passed to the handler. Regardless of the outcome of the handler, the container is eventually terminated. Other management of the container blocks until the hook completes. More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks`,
 						Optional:    true,
 						ForceNew:    !isUpdatable,
 						Elem: &schema.Resource{
@@ -512,7 +512,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
-			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 			Elem:        probeSchema(),
 		},
 		"name": {
@@ -573,7 +573,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
-			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 			Elem:        probeSchema(),
 		},
 		"resources": {
@@ -582,7 +582,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Computed:    true,
-			Description: "Compute Resources required by this container. Cannot be updated. More info: http://kubernetes.io/docs/user-guide/persistent-volumes#resources",
+			Description: "Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources",
 			Elem: &schema.Resource{
 				Schema: resourcesFieldV1(isUpdatable),
 			},
@@ -592,7 +592,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Optional:    true,
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
-			Description: "Security options the pod should run with. More info: http://releases.k8s.io/HEAD/docs/design/security_context.md",
+			Description: "Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
 			Elem:        securityContextSchema(isUpdatable),
 		},
 		"startup_probe": {
@@ -693,7 +693,7 @@ func probeSchema() *schema.Resource {
 	h["initial_delay_seconds"] = &schema.Schema{
 		Type:        schema.TypeInt,
 		Optional:    true,
-		Description: "Number of seconds after the container has started before liveness probes are initiated. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+		Description: "Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 	}
 	h["period_seconds"] = &schema.Schema{
 		Type:         schema.TypeInt,
@@ -715,7 +715,7 @@ func probeSchema() *schema.Resource {
 		Optional:     true,
 		Default:      1,
 		ValidateFunc: validatePositiveInteger,
-		Description:  "Number of seconds after which the probe times out. More info: http://kubernetes.io/docs/user-guide/pod-states#container-probes",
+		Description:  "Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 	}
 	return &schema.Resource{
 		Schema: h,

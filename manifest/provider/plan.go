@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/morph"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/payload"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -103,7 +104,7 @@ func (s *RawProviderServer) getFieldManagerConfig(v map[string]tftypes.Value) (s
 }
 
 func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
-	if p == nil || len(p) == 0 {
+	if len(p) == 0 {
 		return
 	}
 	ps, err := getPrivateStateValue(p)
@@ -128,30 +129,6 @@ func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
 // PlanResourceChange function
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
-
-	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
-	resp.Diagnostics = append(resp.Diagnostics, d...)
-	if !isImported {
-		resp.RequiresReplace = append(resp.RequiresReplace,
-			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
-			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
-			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
-		)
-	} else {
-		resp.PlannedPrivate = req.PriorPrivate
-	}
-
-	execDiag := s.canExecute()
-	if len(execDiag) > 0 {
-		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
-		return resp, nil
-	}
-
-	// test if credentials are valid - we're going to need them further down
-	resp.Diagnostics = append(resp.Diagnostics, s.checkValidCredentials(ctx)...)
-	if len(resp.Diagnostics) > 0 {
-		return resp, nil
-	}
 
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
@@ -182,6 +159,47 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			Summary:  "Failed to extract planned resource state from tftypes.Value",
 			Detail:   err.Error(),
 		})
+		return resp, nil
+	}
+
+	canDeferr := req.ClientCapabilities != nil && req.ClientCapabilities.DeferralAllowed
+
+	if canDeferr && s.clientConfigUnknown {
+		// if client supports it, request deferral when client configuration not fully known
+		proposedVal["object"] = tftypes.NewValue(tftypes.DynamicPseudoType, tftypes.UnknownValue)
+		newPlannedState := tftypes.NewValue(proposedState.Type(), proposedVal)
+		ps, err := tfprotov5.NewDynamicValue(newPlannedState.Type(), newPlannedState)
+		if err != nil {
+			return resp, err
+		}
+		resp.PlannedState = &ps
+		resp.Deferred = &tfprotov5.Deferred{
+			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
+		}
+		return resp, nil
+	}
+
+	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
+	resp.Diagnostics = append(resp.Diagnostics, d...)
+	if !isImported {
+		resp.RequiresReplace = append(resp.RequiresReplace,
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
+		)
+	} else {
+		resp.PlannedPrivate = req.PriorPrivate
+	}
+
+	execDiag := s.canExecute()
+	if len(execDiag) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
+		return resp, nil
+	}
+
+	// test if credentials are valid - we're going to need them further down
+	resp.Diagnostics = append(resp.Diagnostics, s.checkValidCredentials(ctx)...)
+	if len(resp.Diagnostics) > 0 {
 		return resp, nil
 	}
 
@@ -278,11 +296,19 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 	gvk, err := GVKFromTftypesObject(&ppMan, rm)
 	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+		rd := &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to determine GroupVersionResource for manifest",
+			Summary:  "API did not recognize GroupVersionKind from manifest (CRD may not be installed)",
 			Detail:   err.Error(),
-		})
+		}
+		resp.Diagnostics = append(resp.Diagnostics, rd)
+		if canDeferr && meta.IsNoMatchError(err) {
+			// request deferral when client configuration not fully known
+			resp.Deferred = &tfprotov5.Deferred{
+				Reason: tfprotov5.DeferredReasonResourceConfigUnknown,
+			}
+			rd.Severity = tfprotov5.DiagnosticSeverityWarning
+		}
 		return resp, nil
 	}
 
@@ -500,16 +526,4 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	resp.PlannedState = &plannedState
 	return resp, nil
-}
-
-func getAttributeValue(v tftypes.Value, path string) (tftypes.Value, error) {
-	p, err := FieldPathToTftypesPath(path)
-	if err != nil {
-		return tftypes.Value{}, err
-	}
-	vv, _, err := tftypes.WalkAttributePath(v, p)
-	if err != nil {
-		return tftypes.Value{}, err
-	}
-	return vv.(tftypes.Value), nil
 }

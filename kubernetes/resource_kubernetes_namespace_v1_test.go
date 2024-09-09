@@ -110,34 +110,34 @@ func TestAccKubernetesNamespaceV1_basic(t *testing.T) {
 	})
 }
 
-// func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
-// 	var nsConf corev1.Namespace
-// 	var saConf corev1.ServiceAccount
-// 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-// 	resourceName := "kubernetes_namespace_v1.test"
+func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
+	var nsConf corev1.Namespace
+	var saConf corev1.ServiceAccount
+	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_namespace_v1.test"
 
-// 	resource.ParallelTest(t, resource.TestCase{
-// 		PreCheck:          func() { testAccPreCheck(t) },
-// 		IDRefreshName:     resourceName,
-// 		ProviderFactories: testAccProviderFactories,
-// 		CheckDestroy:      testAccCheckKubernetesNamespaceV1Destroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: testAccKubernetesNamespaceV1Config_wait_for_default_service_acccount(nsName),
-// 				Check: resource.ComposeAggregateTestCheckFunc(
-// 					testAccCheckKubernetesNamespaceV1Exists(resourceName, &nsConf),
-// 					testAccCheckKubernetesDefaultServiceAccountExists(resourceName, &saConf),
-// 				),
-// 			},
-// 			{
-// 				ResourceName:            resourceName,
-// 				ImportState:             true,
-// 				ImportStateVerify:       true,
-// 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
-// 			},
-// 		},
-// 	})
-// }
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesNamespaceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNamespaceV1Config_wait_for_default_service_acccount(nsName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceV1Exists(resourceName, &nsConf),
+					testAccCheckKubernetesDefaultServiceAccountExists(resourceName, &saConf),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
+			},
+		},
+	})
+}
 
 func TestAccKubernetesNamespaceV1_generatedName(t *testing.T) {
 	var conf corev1.Namespace
@@ -179,7 +179,7 @@ func TestAccKubernetesNamespaceV1_withSpecialCharacters(t *testing.T) {
 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_namespace_v1.test"
 
-	resource.ParallelTest(t, resource.TestCase{
+	v6resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -190,16 +190,16 @@ func TestAccKubernetesNamespaceV1_withSpecialCharacters(t *testing.T) {
 				Config: testAccKubernetesNamespaceV1Config_specialCharacters(nsName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNamespaceV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.myhost.co.uk/any-path", "one"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.myhost.co.uk/any-path", "one"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", nsName),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "2"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.myhost.co.uk/any-path", "one"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.Different", "1234"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "2"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.myhost.co.uk/any-path", "one"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.TestLabelThree", "three"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.name", nsName),
+					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
 		},
@@ -211,7 +211,7 @@ func TestAccKubernetesNamespaceV1_deleteTimeout(t *testing.T) {
 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_namespace_v1.test"
 
-	resource.ParallelTest(t, resource.TestCase{
+	v6resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -222,12 +222,12 @@ func TestAccKubernetesNamespaceV1_deleteTimeout(t *testing.T) {
 				Config: testAccKubernetesNamespaceV1Config_deleteTimeout(nsName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesNamespaceV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", nsName),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					v6resource.TestCheckResourceAttr(resourceName, "metadata.0.name", nsName),
+					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
 		},

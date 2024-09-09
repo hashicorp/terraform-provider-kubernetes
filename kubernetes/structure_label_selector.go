@@ -66,15 +66,13 @@ func expandNamespaceSelector(n []interface{}) *metav1.LabelSelector {
 		return &metav1.LabelSelector{}
 	}
 
-	in, ok := n[0].(map[string]interface{})
-	if !ok {
-		return &metav1.LabelSelector{}
-	}
+	in := n[0].(map[string]interface{})
 
 	obj := &metav1.LabelSelector{}
 	if v, ok := in["match_labels"].(map[string]interface{}); ok && len(v) > 0 {
 		obj.MatchLabels = expandStringMap(v)
 	}
+	//We are using labelSelector metav1,  due to NamespaceSelector not existing as a type in metav1
 	if v, ok := in["match_expressions"].([]interface{}); ok && len(v) > 0 {
 		obj.MatchExpressions = expandLabelSelectorRequirement(v)
 	}

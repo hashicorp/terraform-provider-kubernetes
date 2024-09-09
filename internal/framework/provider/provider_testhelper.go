@@ -6,7 +6,6 @@ package provider
 import (
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -42,13 +41,6 @@ func ParallelTest(t testing.T, tc resource.TestCase) {
 			}
 			tc.Steps[i].Config = convertBlockToObject(step.Config)
 		}
-
-		// The PreCheck func checks for k8s env vars and configures the singleton instance testAccProvider
-		// this is needed for CheckDestroy functions which use the singleton for a k8s connection.
-		// The internal/framework currently only supports KUBE_CONFIG_PATHS (plural) which is not in the PreCheck
-		// temporarily set KUBE_CONFIG_PATH to avoid failure (which is in the PreCheck)
-		os.Setenv("KUBE_CONFIG_PATH", os.Getenv("KUBE_CONFIG_PATHS"))
-		defer os.Unsetenv("KUBE_CONFIG_PATH")
 	}
 
 	resource.ParallelTest(t, tc)
@@ -70,20 +62,26 @@ func TestCheckResourceAttrSet(name, key string) resource.TestCheckFunc {
 	return resource.TestCheckResourceAttrSet(name, key)
 }
 
+func TestMatchResourceAttr(name, key string, r *regexp.Regexp) resource.TestCheckFunc {
+	if os.Getenv("TF_X_KUBERNETES_CODEGEN_PLUGIN6") == "1" {
+		key = singleNestedPath(key)
+	}
+
+	return resource.TestMatchResourceAttr(name, key, r)
+}
+
 func singleNestedPath(path string) string {
 	var newParts []string
 	parts := strings.Split(path, ".")
-	for _, p := range parts {
-		if !isInt(p) {
+	for i, p := range parts {
+		// making assumption that all intermediate 0 indices represented a single nested TypeList path,
+		// now represented by a nested object. Breaks for checking first element of a true intermediate list
+		// within the path. Won't break if key stops at the list item.
+		if p != "0" || i == len(parts)-1 {
 			newParts = append(newParts, p)
 		}
 	}
 	return strings.Join(newParts, ".")
-}
-
-func isInt(str string) bool {
-	_, err := strconv.Atoi(str)
-	return err == nil
 }
 
 func convertBlockToObject(config string) string {
@@ -97,7 +95,7 @@ func convertBlockToObject(config string) string {
 		blockName := parts[2]
 
 		// List of top-level blocks that should not be converted
-		topLevelBlocks := []string{"resource", "data", "module", "variable", "output", "locals", "terraform"}
+		topLevelBlocks := []string{"resource", "data", "module", "variable", "output", "locals", "terraform", "timeouts"}
 
 		for _, topBlock := range topLevelBlocks {
 			if blockName == topBlock {

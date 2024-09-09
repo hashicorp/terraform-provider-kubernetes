@@ -30,11 +30,7 @@ const (
 
 var testAccProvider *schema.Provider
 var testAccExternalProviders map[string]resource.ExternalProvider
-var testAccProviderFactories = map[string]func() (*schema.Provider, error){
-	"kubernetes": func() (*schema.Provider, error) {
-		return Provider(), nil
-	},
-}
+var testAccProviderFactories map[string]func() (*schema.Provider, error)
 
 func init() {
 	testAccProvider = Provider()

@@ -105,8 +105,8 @@ func Provider() *schema.Provider {
 				Optional:      true,
 				Sensitive:     true,
 				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_DATA", nil),
-				Description:   "Raw kube config data for the kubernetes provider",
-				ConflictsWith: []string{"config_paths", "config_path", "config_context", "config_context_auth_info", "config_context_cluster", "token", "proxy_url", "exec"},
+				Description:   "Raw Kubernetes config data. Can be set with KUBE_CONFIG_DATA. Takes precidence over all over configutaion. No overrides allowed.",
+				ConflictsWith: []string{"config_path", "config_paths"},
 			},
 			"config_context": {
 				Type:        schema.TypeString,
@@ -512,7 +512,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 		}
 		return cfg, nil
 	}
-
 
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}

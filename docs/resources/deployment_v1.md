@@ -248,10 +248,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
 
 Optional:
 
@@ -281,10 +283,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution`
 
 Optional:
 
@@ -330,10 +334,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
 
 Optional:
 
@@ -363,10 +369,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution`
 
 Optional:
 

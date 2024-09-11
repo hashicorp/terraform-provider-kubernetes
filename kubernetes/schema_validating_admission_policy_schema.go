@@ -1,180 +1,151 @@
 package kubernetes
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func auditAnnotationsFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"key": {
-			Type:        schema.TypeString,
+func auditAnnotationsFields() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"key": schema.StringAttribute{
 			Description: "key specifies the audit annotation key.",
 			Required:    true,
 		},
-		"value_expression": {
-			Type:        schema.TypeString,
+		"value_expressions": schema.StringAttribute{
 			Description: "valueExpression represents the expression which is evaluated by CEL to produce an audit annotation value.",
 			Required:    true,
 		},
 	}
 }
 
-func matchConditionsFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"expression": {
-			Type:        schema.TypeString,
+func matchConditionsFields() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"expression": schema.StringAttribute{
 			Description: "Expression represents the expression which will be evaluated by CEL.",
 			Required:    true,
 		},
-		"name": {
-			Type:        schema.TypeString,
+		"name": schema.StringAttribute{
 			Description: "Name is an identifier for this match condition, used for strategic merging of MatchConditions, as well as providing an identifier for logging purposes.",
 			Required:    true,
 		},
 	}
 }
 
-func matchConstraintsFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"exclude_resource_rules": {
-			Type:        schema.TypeList,
+func matchConstraintsFields() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"exclude_resource_rules": schema.ListNestedAttribute{
 			Description: "ExcludeResourceRules describes what operations on what resources/subresources the ValidatingAdmissionPolicy should not care about.",
 			Optional:    true,
-			Elem: &schema.Resource{
-				Schema: namedRuleWithOperationsFields(),
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: namedRuleWithOperationsFields(),
 			},
 		},
-		"matchPolicy": {
-			Type:        schema.TypeString,
+		"matchPolicy": schema.StringAttribute{
 			Optional:    true,
 			Description: "matchPolicy defines how the MatchResources list is used to match incoming requests. Allowed values are Exact or Equivalent.",
-			ValidateFunc: validation.StringInSlice([]string{
-				"Exact",
-				"Equivalent",
-			}, false),
+			Validators: []validator.String{
+				stringvalidator.OneOf("Exact", "Equivalent"),
+			},
 		},
-		"namespace_selector": {
-			Type:        schema.TypeList,
+		"namespace_selector": schema.SingleNestedAttribute{
 			Description: "NamespaceSelector decides whether to run the admission control policy on an object based on whether the namespace for that object matches the selector.",
 			Optional:    true,
-			MaxItems:    1,
-			Elem: &schema.Resource{
-				Schema: labelSelectorFields(true),
-			},
+			Attributes:  namedRuleWithOperationsFields(),
 		},
-		"object_selector": {
-			Type:        schema.TypeList,
+		"object_selector": schema.SingleNestedAttribute{
 			Description: "ObjectSelector decides whether to run the validation based on if the object has matching labels.",
 			Optional:    true,
-			MaxItems:    1,
-			Elem: &schema.Resource{
-				Schema: labelSelectorFields(true),
-			},
+			Attributes:  labelSelectorFields(true),
 		},
-		"resource_rules": {
-			Type:        schema.TypeList,
+		"resource_rules": schema.ListNestedAttribute{
 			Description: "ResourceRules describes what operations on what resources/subresources the ValidatingAdmissionPolicy matches.",
 			Optional:    true,
-			Elem: &schema.Resource{
-				Schema: namedRuleWithOperationsFields(),
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: namedRuleWithOperationsFields(),
 			},
 		},
 	}
 }
 
-func paramKindFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"api_version": {
-			Type:        schema.TypeString,
+func paramKindFields() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"api_version": schema.StringAttribute{
 			Description: "APIVersion is the API group version the resources belong to. In format of \"group/version\"",
 			Required:    true,
 		},
-		"kind": {
-			Type:        schema.TypeString,
+		"kind": schema.StringAttribute{
 			Description: "Kind is the API kind the resources belong to.",
 			Required:    true,
 		},
 	}
 }
 
-func validationFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"expression": {
-			Type:        schema.TypeString,
+func validationFields() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"expression": schema.StringAttribute{
 			Description: "Expression represents the expression which will be evaluated by CEL.",
 			Required:    true,
 		},
-		"message": {
-			Type:        schema.TypeString,
+		"message": schema.StringAttribute{
 			Description: "Message represents the message displayed when validation fails.",
 			Required:    true,
 		},
-		"message_expression": {
-			Type:        schema.TypeString,
+		"message_expression": schema.StringAttribute{
 			Description: "Message Expression declares a CEL expression that evaluates to the validation failure message that is returned when this rule fails.",
 			Optional:    true,
 		},
-		"reason": {
-			Type:        schema.TypeString,
+		"reason": schema.StringAttribute{
 			Description: "Reason represents a machine-readable description of why this validation failed.",
 			Optional:    true,
 		},
 	}
 }
 
-func variableFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"expression": {
-			Type:        schema.TypeString,
+func variableFields() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"expression": schema.StringAttribute{
 			Description: "Expression is the expression that will be evaluated as the value of the variable.",
 			Optional:    true,
 		},
-		"name": {
-			Type:        schema.TypeString,
+		"name": schema.StringAttribute{
 			Description: "Name is the name of the variable.",
 			Optional:    true,
 		},
 	}
 }
 
-func namedRuleWithOperationsFields() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"api_groups": {
-			Type:        schema.TypeList,
+func namedRuleWithOperationsFields() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"api_groups": schema.ListAttribute{
 			Description: "APIGroups is the API groups the resources belong to. '\\*' is all groups. If '\\*' is present, the length of the slice must be one.",
 			Required:    true,
-			Elem:        schema.TypeString,
+			ElementType: types.StringType,
 		},
-		"api_versions": {
-			Type:        schema.TypeList,
+		"api_versions": schema.ListAttribute{
 			Description: "APIVersions is the API versions the resources belong to. '\\*' is all versions. If '\\*' is present, the length of the slice must be one. Required.",
 			Required:    true,
-			Elem:        schema.TypeString,
+			ElementType: types.StringType,
 		},
-		"operations": {
-			Type:        schema.TypeList,
+		"operations": schema.ListAttribute{
 			Description: "Operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or * for all of those operations and any future admission operations that are added.",
 			Required:    true,
-			Elem:        schema.TypeString,
+			ElementType: types.StringType,
 		},
-		"resource_names": {
-			Type:        schema.TypeList,
+		"resource_names": schema.ListAttribute{
 			Description: "ResourceNames is an optional white list of names that the rule applies to. An empty set means that everything is allowed.",
 			Optional:    true,
-			Elem:        schema.TypeString,
+			ElementType: types.StringType,
 		},
-		"resources": {
-			Type:        schema.TypeList,
+		"resources": schema.ListAttribute{
 			Description: "Resources is a list of resources this rule applies to.",
 			Required:    true,
-			Elem:        schema.TypeString,
+			ElementType: types.StringType,
 		},
-		"scope": {
-			Type:        schema.TypeString,
+		"scope": schema.StringAttribute{
 			Description: "scope specifies the scope of this rule.",
 			Optional:    true,
-			Default:     "*",
 		},
 	}
 }

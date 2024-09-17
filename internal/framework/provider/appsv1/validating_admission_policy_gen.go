@@ -12,7 +12,7 @@ import (
 var _ resource.Resource = &ValidatingAdmissionPolicy{}
 var _ resource.ResourceWithImportState = &ValidatingAdmissionPolicy{}
 
-func NewValidatingAdmissionPolicy() resource.Resource {
+func NewDValidatingAdmissionPolicy() resource.Resource {
 	return &ValidatingAdmissionPolicy{
 		Kind:       "ValidatingAdmissionPolicy",
 		APIVersion: "apps/v1",
@@ -27,7 +27,7 @@ type ValidatingAdmissionPolicy struct {
 }
 
 func (r *ValidatingAdmissionPolicy) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = "kubernetes_validating_admission_policy_v1_gen"
+	resp.TypeName = "kubernetes_deployment_v1_gen"
 }
 
 func (r *ValidatingAdmissionPolicy) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

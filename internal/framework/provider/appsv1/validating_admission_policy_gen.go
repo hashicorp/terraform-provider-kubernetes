@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-codegen-kubernetes/autocrud"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/client"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -23,11 +23,11 @@ type ValidatingAdmissionPolicy struct {
 	APIVersion string
 	Kind       string
 
-	clientGetter client.KubernetesClientGetter
+	clientGetter autocrud.KubernetesClientGetter
 }
 
 func (r *ValidatingAdmissionPolicy) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = "kubernetes_deployment_v1_gen"
+	resp.TypeName = "kubernetes_validating_admission_policy_v1_gen"
 }
 
 func (r *ValidatingAdmissionPolicy) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -36,7 +36,7 @@ func (r *ValidatingAdmissionPolicy) Configure(ctx context.Context, req resource.
 		return
 	}
 
-	clientGetter, ok := req.ProviderData.(client.KubernetesClientGetter)
+	clientGetter, ok := req.ProviderData.(autocrud.KubernetesClientGetter)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",

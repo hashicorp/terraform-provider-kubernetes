@@ -443,6 +443,8 @@ func testAccKubernetesCronJobV1ConfigMinimal(name, imageName string) string {
     job_template {
       metadata {}
       spec {
+        backoff_limit_per_index = 3
+        max_failed_indexes = 4
         template {
           metadata {}
           spec {
@@ -471,6 +473,8 @@ func testAccKubernetesCronJobV1ConfigMinimalWithPodFailurePolicy(name, imageName
     job_template {
       metadata {}
       spec {
+	    backoff_limit_per_index = 3
+        max_failed_indexes = 4
         pod_failure_policy {
           rule {
             action = "FailJob"

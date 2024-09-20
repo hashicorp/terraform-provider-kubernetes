@@ -10,11 +10,8 @@ resource "kubernetes_manifest" "test" {
       namespace = var.namespace
     }
     spec = {
-      count = 100
-      resources = {
-        foo = "bar"
-        baz = "42"
-      }
+      count     = 100
+      resources = false
     }
   }
 }

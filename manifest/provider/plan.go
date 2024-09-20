@@ -459,8 +459,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				if hasChanged {
 					h, ok := hints[morph.ValueToTypePath(ap).String()]
 					if ok && h == manifest.PreserveUnknownFieldsLabel {
-						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
-						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
+						resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+							Severity: tfprotov5.DiagnosticSeverityWarning,
+							Summary:  fmt.Sprintf("The attribute path %v value's type is an x-kubernetes-preserve-unknown-field", morph.ValueToTypePath(ap).String()),
+							Detail:   "Changes to the type may cause some unexpected behavior.",
+						})
 					}
 				}
 				if isComputed {

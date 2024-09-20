@@ -248,10 +248,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
 
 Optional:
 
@@ -281,10 +283,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution`
 
 Optional:
 
@@ -330,10 +334,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_anti_affinity.preferred_during_scheduling_ignored_during_execution.pod_affinity_term`
 
 Optional:
 
@@ -363,10 +369,12 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `namespace_selector` (Block List) A label query over a set of namespaces. This allows pod anti-affinity to select pods from a specified namespace, based on namespace labels.
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
 <a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector"></a>
-### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution.label_selector`
+<a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--namespace_selector"></a>
+### Nested Schema for `namespace_selector` and `label_selector` in `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution`
 
 Optional:
 
@@ -415,6 +423,7 @@ Optional:
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
 - `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--volume_mount))
+- `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--template--spec--container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
 <a id="nestedblock--spec--template--spec--container--env"></a>
@@ -898,6 +907,13 @@ Optional:
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 
+<a id="nestedblock--spec--template--spec--container--volume_device"></a>
+### Nested Schema for `spec.template.spec.container.volume_device`
+
+Required:
+
+- `device_path` (String) Path within the container at which the volume device should be attached. For example '/dev/xvda'.
+- `name` (String) This must match the Name of a PersistentVolumeClaim.
 
 
 <a id="nestedblock--spec--template--spec--dns_config"></a>
@@ -967,6 +983,7 @@ Optional:
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
 - `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--volume_mount))
+- `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--template--spec--init_container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
 <a id="nestedblock--spec--template--spec--init_container--env"></a>
@@ -1450,6 +1467,13 @@ Optional:
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 
+<a id="nestedblock--spec--template--spec--init_container--volume_device"></a>
+### Nested Schema for `spec.template.spec.init_container.volume_device`
+
+Required:
+
+- `device_path` (String) Path within the container at which the volume device should be attached. For example '/dev/xvda'.
+- `name` (String) This must match the Name of a PersistentVolumeClaim.
 
 
 <a id="nestedblock--spec--template--spec--os"></a>

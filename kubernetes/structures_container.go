@@ -308,6 +308,25 @@ func flattenContainerVolumeMounts(in []v1.VolumeMount) []interface{} {
 	return att
 }
 
+func flattenContainerVolumeDevices(in []v1.VolumeDevice) []interface{} {
+	att := make([]interface{}, len(in))
+
+	for i, v := range in {
+		m := map[string]interface{}{}
+
+		if v.DevicePath != "" {
+			m["device_path"] = v.DevicePath
+		}
+
+		if v.Name != "" {
+			m["name"] = v.Name
+		}
+
+		att[i] = m
+	}
+	return att
+}
+
 func flattenContainerEnvs(in []v1.EnvVar) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, v := range in {
@@ -434,6 +453,11 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 			}
 			c["volume_mount"] = flattenContainerVolumeMounts(v.VolumeMounts)
 		}
+
+		if len(v.VolumeDevices) > 0 {
+			c["volume_device"] = flattenContainerVolumeDevices(v.VolumeDevices)
+		}
+
 		att[i] = c
 	}
 	return att, nil
@@ -545,6 +569,10 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 
 		if v, ok := ctr["volume_mount"].([]interface{}); ok && len(v) > 0 {
 			cs[i].VolumeMounts = expandContainerVolumeMounts(v)
+		}
+
+		if v, ok := ctr["volume_device"].([]interface{}); ok && len(v) > 0 {
+			cs[i].VolumeDevices = expandContainerVolumeDevices(v)
 		}
 
 		if v, ok := ctr["working_dir"].(string); ok && v != "" {
@@ -798,6 +826,23 @@ func expandContainerVolumeMounts(in []interface{}) []v1.VolumeMount {
 		}
 	}
 	return vmp
+}
+
+func expandContainerVolumeDevices(in []interface{}) []v1.VolumeDevice {
+	if len(in) == 0 {
+		return []v1.VolumeDevice{}
+	}
+	volumeDevices := make([]v1.VolumeDevice, len(in))
+	for i, c := range in {
+		p := c.(map[string]interface{})
+		if devicePath, ok := p["device_path"]; ok {
+			volumeDevices[i].DevicePath = devicePath.(string)
+		}
+		if name, ok := p["name"]; ok {
+			volumeDevices[i].Name = name.(string)
+		}
+	}
+	return volumeDevices
 }
 
 func expandContainerEnv(in []interface{}) ([]v1.EnvVar, error) {

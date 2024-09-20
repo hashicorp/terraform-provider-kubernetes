@@ -1,0 +1,3 @@
+```release-note:enhancement
+Added support for `namespace_selector` field in `PodAffinityTerm` to enhance pod affinity and anti-affinity rules, allowing selection of namespaces based on label selectors.
+```

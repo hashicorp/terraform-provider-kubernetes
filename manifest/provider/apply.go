@@ -43,7 +43,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-
+	//Unmarshal Planned state into the appropriate type rt
 	applyPlannedState, err := req.PlannedState.Unmarshal(rt)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -54,7 +54,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		return resp, nil
 	}
 	s.logger.Trace("[ApplyResourceChange][PlannedState] %#v", applyPlannedState)
-
+	//Unmarshal Prior State into the appropriate type rt
 	applyPriorState, err := req.PriorState.Unmarshal(rt)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -65,7 +65,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		return resp, nil
 	}
 	s.logger.Trace("[ApplyResourceChange]", "[PriorState]", dump(applyPriorState))
-
+	//Unamrshal config into the appropriate type rt
 	config, err := req.Config.Unmarshal(rt)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -85,7 +85,6 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-
 	var plannedStateVal map[string]tftypes.Value = make(map[string]tftypes.Value)
 	err = applyPlannedState.As(&plannedStateVal)
 	if err != nil {
@@ -492,6 +491,15 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 				Summary:  "Failed to extract prior resource state values",
 				Detail:   err.Error(),
 			})
+			return resp, nil
+		}
+		ignoreDestroy := false
+		if ignoreDestroyVal, ok := priorStateVal["ignore_destroy"]; ok && !ignoreDestroyVal.IsNull() {
+			ignoreDestroyVal.As(&ignoreDestroy)
+		}
+		if ignoreDestroy {
+			s.logger.Trace("[ApplyResourceChange][Delete] Skipping deletion because apply_only is true")
+			resp.NewState = req.PlannedState
 			return resp, nil
 		}
 		pco, ok := priorStateVal["object"]

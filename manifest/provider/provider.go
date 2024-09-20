@@ -192,6 +192,12 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						Description: "The resulting resource state, as returned by the API server after applying the desired state from `manifest`.",
 					},
 					{
+						Name:        "ignore_destroy",
+						Type:        tftypes.Bool,
+						Optional:    true,
+						Description: "When set to true, Terraform will only apply the resource and skip deletion during destroy.",
+					},
+					{
 						Name: "wait_for",
 						Type: tftypes.Object{
 							AttributeTypes: map[string]tftypes.Type{

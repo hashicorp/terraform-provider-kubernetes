@@ -134,7 +134,6 @@ func TestKubernetesManifest_CustomResource_x_preserve_unknown_fields(t *testing.
 		},
 	})
 
-
 	tfconfig = loadTerraformConfig(t, "x-kubernetes-preserve-unknown-fields/test-cr-4.tf", tfvars)
 	step1.SetConfig(ctx, string(tfconfig))
 	step1.Apply(ctx)

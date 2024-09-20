@@ -447,6 +447,7 @@ Optional:
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
 - `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--volume_mount))
+- `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--template--spec--container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
 <a id="nestedblock--spec--template--spec--container--env"></a>
@@ -930,6 +931,13 @@ Optional:
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 
+<a id="nestedblock--spec--template--spec--container--volume_device"></a>
+### Nested Schema for `spec.template.spec.container.volume_device`
+
+Required:
+
+- `device_path` (String) Path within the container at which the volume device should be attached. For example '/dev/xvda'.
+- `name` (String) This must match the Name of a PersistentVolumeClaim.
 
 
 <a id="nestedblock--spec--template--spec--dns_config"></a>
@@ -999,6 +1007,7 @@ Optional:
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
 - `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--volume_mount))
+- `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--template--spec--init_container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
 <a id="nestedblock--spec--template--spec--init_container--env"></a>
@@ -1482,6 +1491,13 @@ Optional:
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 
+<a id="nestedblock--spec--template--spec--init_container--volume_device"></a>
+### Nested Schema for `spec.template.spec.init_container.volume_device`
+
+Required:
+
+- `device_path` (String) Path within the container at which the volume device should be attached. For example '/dev/xvda'.
+- `name` (String) This must match the Name of a PersistentVolumeClaim.
 
 
 <a id="nestedblock--spec--template--spec--os"></a>
@@ -2370,7 +2386,7 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
   }
 
   spec {
-    min_ready_seconds = 10
+    min_ready_seconds      = 10
     pod_management_policy  = "Parallel"
     replicas               = 1
     revision_history_limit = 5
@@ -2405,6 +2421,11 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
             name       = "prometheus-data"
             mount_path = "/data"
             sub_path   = ""
+          }
+
+          volume_device {
+            name        = "prometheus-device"
+            device_path = "/dev/xvda"
           }
         }
 
@@ -2477,6 +2498,11 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
             sub_path   = ""
           }
 
+          volume_device {
+            name        = "prometheus-device"
+            device_path = "/dev/xvda"
+          }
+
           readiness_probe {
             http_get {
               path = "/-/ready"
@@ -2527,6 +2553,24 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
       spec {
         access_modes       = ["ReadWriteOnce"]
         storage_class_name = "standard"
+
+        resources {
+          requests = {
+            storage = "16Gi"
+          }
+        }
+      }
+    }
+
+    volume_claim_template {
+      metadata {
+        name = "prometheus-device"
+      }
+
+      spec {
+        access_modes       = ["ReadWriteOnce"]
+        storage_class_name = "local-storage"
+        volume_mode        = "Block"
 
         resources {
           requests = {

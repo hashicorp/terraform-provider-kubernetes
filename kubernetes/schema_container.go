@@ -253,6 +253,21 @@ func volumeMountFields() map[string]*schema.Schema {
 	}
 }
 
+func volumeDeviceFields() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"device_path": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Path within the container at which the volume device should be attached. For example '/dev/xvda'.",
+		},
+		"name": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "This must match the Name of a PersistentVolumeClaim.",
+		},
+	}
+}
+
 func containerFields(isUpdatable bool) map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"args": {
@@ -649,6 +664,15 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Description: "Pod volumes to mount into the container's filesystem. Cannot be updated.",
 			Elem: &schema.Resource{
 				Schema: volumeMountFields(),
+			},
+		},
+		"volume_device": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
+			Description: "Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated.",
+			Elem: &schema.Resource{
+				Schema: volumeDeviceFields(),
 			},
 		},
 		"working_dir": {

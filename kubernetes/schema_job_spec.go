@@ -60,7 +60,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 		"backoff_limit_per_index": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			ForceNew:     false,
+			ForceNew:     true,
 			Default:      6,
 			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the limit for the number of retries within an index before marking this index as failed. When enabled the number of failures per index is kept in the pod's batch.kubernetes.io/job-index-failure-count annotation. It can only be set when Job's completionMode=Indexed, and the Pod's restart policy is Never. The field is immutable.",

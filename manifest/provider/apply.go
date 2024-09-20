@@ -498,7 +498,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			ignoreDestroyVal.As(&ignoreDestroy)
 		}
 		if ignoreDestroy {
-			s.logger.Trace("[ApplyResourceChange][Delete] Skipping deletion because apply_only is true")
+			s.logger.Trace("[ApplyResourceChange][Delete] Skipping deletion because ignore_destroy is true")
 			resp.NewState = req.PlannedState
 			return resp, nil
 		}

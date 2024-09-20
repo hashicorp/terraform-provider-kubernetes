@@ -133,4 +133,21 @@ func TestKubernetesManifest_CustomResource_x_preserve_unknown_fields(t *testing.
 			"baz": interface{}("42"),
 		},
 	})
+
+
+	tfconfig = loadTerraformConfig(t, "x-kubernetes-preserve-unknown-fields/test-cr-4.tf", tfvars)
+	step1.SetConfig(ctx, string(tfconfig))
+	step1.Apply(ctx)
+
+	s4, err := step1.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate4 := tfstatehelper.NewHelper(s4)
+	tfstate4.AssertAttributeValues(t, tfstatehelper.AttributeValues{
+		"kubernetes_manifest.test.object.metadata.name":      name,
+		"kubernetes_manifest.test.object.metadata.namespace": namespace,
+		"kubernetes_manifest.test.object.spec.count":         json.Number("100"),
+		"kubernetes_manifest.test.object.spec.resources":     false,
+	})
 }

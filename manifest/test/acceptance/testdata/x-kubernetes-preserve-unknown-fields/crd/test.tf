@@ -4,14 +4,14 @@
 resource "kubernetes_manifest" "customresourcedefinition_cephrbdmirrors_ceph_rook_io" {
   manifest = {
     apiVersion = "apiextensions.k8s.io/v1"
-    kind = "CustomResourceDefinition"
+    kind       = "CustomResourceDefinition"
     metadata = {
       name = "${var.plural}.${var.group}"
     }
     spec = {
       group = var.group
       names = {
-        kind = var.kind
+        kind   = var.kind
         plural = var.plural
       }
       scope = "Namespaced"
@@ -24,14 +24,14 @@ resource "kubernetes_manifest" "customresourcedefinition_cephrbdmirrors_ceph_roo
                 spec = {
                   properties = {
                     annotations = {
-                      nullable = true
-                      type = "object"
+                      nullable                               = true
+                      type                                   = "object"
                       "x-kubernetes-preserve-unknown-fields" = true
                     }
                     count = {
                       maximum = 100
                       minimum = 1
-                      type = "integer"
+                      type    = "integer"
                     }
                     peers = {
                       properties = {
@@ -45,30 +45,29 @@ resource "kubernetes_manifest" "customresourcedefinition_cephrbdmirrors_ceph_roo
                       type = "object"
                     }
                     placement = {
-                      nullable = true
-                      type = "object"
+                      nullable                               = true
+                      type                                   = "object"
                       "x-kubernetes-preserve-unknown-fields" = true
                     }
                     priorityClassName = {
                       type = "string"
                     }
                     resources = {
-                      nullable = true
-                      type = "object"
+                      nullable                               = true
                       "x-kubernetes-preserve-unknown-fields" = true
                     }
                   }
                   type = "object"
                 }
                 status = {
-                  type = "object"
+                  type                                   = "object"
                   "x-kubernetes-preserve-unknown-fields" = true
                 }
               }
               type = "object"
             }
           }
-          served = true
+          served  = true
           storage = true
           subresources = {
             status = {}

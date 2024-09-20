@@ -205,6 +205,8 @@ func TestAccKubernetesCronJobV1_minimalWithPodFailurePolicy(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.backoff_limit_per_index", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.max_failed_indexes", "4"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.pod_failure_policy.0.rule.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.pod_failure_policy.0.rule.0.action", "FailJob"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.job_template.0.spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", "test"),

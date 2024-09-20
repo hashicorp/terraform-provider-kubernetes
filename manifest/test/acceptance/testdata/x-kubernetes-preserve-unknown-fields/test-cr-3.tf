@@ -12,7 +12,7 @@ resource "kubernetes_manifest" "test" {
     spec = {
       count = 100
       resources = {
-        foo = "bar"
+        foo = ["bar"]
         baz = "42"
       }
     }

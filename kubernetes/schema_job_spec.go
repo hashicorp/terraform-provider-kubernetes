@@ -60,10 +60,18 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 		"backoff_limit_per_index": {
 			Type:         schema.TypeInt,
 			Optional:     true,
-			Default:      6,
 			ForceNew:     false,
+			Default:      6,
 			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Specifies the limit for the number of retries within an index before marking this index as failed. When enabled the number of failures per index is kept in the pod's batch.kubernetes.io/job-index-failure-count annotation. It can only be set when Job's completionMode=Indexed, and the Pod's restart policy is Never. The field is immutable.",
+			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+
+				if v, ok := d.GetOk("completion_mode"); ok {
+					return v.(string) != "Indexed"
+				}
+
+				return true
+			},
 		},
 		// This field is immutable in Jobs.
 		"completions": {
@@ -98,6 +106,14 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 			Default:      6,
 			ValidateFunc: validateNonNegativeInteger,
 			Description:  "Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md",
+			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+
+				if v, ok := d.GetOk("completion_mode"); ok {
+					return v.(string) != "Indexed"
+				}
+
+				return true
+			},
 		},
 		"parallelism": {
 			Type:         schema.TypeInt,

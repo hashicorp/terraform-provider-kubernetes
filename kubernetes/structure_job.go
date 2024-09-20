@@ -79,7 +79,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.BackoffLimit = ptr.To(int32(v))
 	}
 
-	if v, ok := in["backoff_limit_per_index"].(int); ok && v >= 0 {
+	if v, ok := in["backoff_limit_per_index"].(int); in["completion_mode"].(string) == "Indexed" && ok && v >= 0 {
 		obj.BackoffLimitPerIndex = ptr.To(int32(v))
 	}
 
@@ -96,7 +96,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.ManualSelector = ptr.To(v.(bool))
 	}
 
-	if v, ok := in["max_failed_indexes"].(int); ok && v >= 0 {
+	if v, ok := in["max_failed_indexes"].(int); in["completion_mode"].(string) == "Indexed" && ok && v >= 0 {
 		obj.MaxFailedIndexes = ptr.To(int32(v))
 	}
 

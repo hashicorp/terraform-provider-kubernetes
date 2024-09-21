@@ -23,6 +23,14 @@ func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface
 		att["backoff_limit"] = *in.BackoffLimit
 	}
 
+	if in.BackoffLimitPerIndex != nil {
+		att["backoff_limit_per_index"] = *in.BackoffLimitPerIndex
+	}
+
+	if in.MaxFailedIndexes != nil {
+		att["max_failed_indexes"] = *in.MaxFailedIndexes
+	}
+
 	if in.Completions != nil {
 		att["completions"] = *in.Completions
 	}
@@ -79,7 +87,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.BackoffLimit = ptr.To(int32(v))
 	}
 
-	if v, ok := in["backoff_limit_per_index"].(int); in["completion_mode"].(string) == "Indexed" && ok && v >= 0 {
+	if v, ok := in["backoff_limit_per_index"].(int); in["completion_mode"] == "Indexed" && ok && v >= 0 {
 		obj.BackoffLimitPerIndex = ptr.To(int32(v))
 	}
 
@@ -96,7 +104,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.ManualSelector = ptr.To(v.(bool))
 	}
 
-	if v, ok := in["max_failed_indexes"].(int); in["completion_mode"].(string) == "Indexed" && ok && v >= 0 {
+	if v, ok := in["max_failed_indexes"].(int); in["completion_mode"] == "Indexed" && ok && v >= 0 {
 		obj.MaxFailedIndexes = ptr.To(int32(v))
 	}
 

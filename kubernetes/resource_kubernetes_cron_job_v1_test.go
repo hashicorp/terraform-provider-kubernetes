@@ -475,8 +475,8 @@ func testAccKubernetesCronJobV1ConfigMinimalWithPodFailurePolicy(name, imageName
       spec {
         backoff_limit_per_index = 3
         max_failed_indexes      = 4
-        completions = 4
-        completion_mode = "Indexed"
+        completions             = 4
+        completion_mode         = "Indexed"
         pod_failure_policy {
           rule {
             action = "FailJob"

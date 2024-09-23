@@ -540,14 +540,25 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		err = rs.Delete(ctxDeadline, rname, metav1.DeleteOptions{})
 		if err != nil {
-			rn := types.NamespacedName{Namespace: rnamespace, Name: rname}.String()
-			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
-					Summary:  fmt.Sprintf("Error deleting resource %s: %s", rn, err),
-					Detail:   err.Error(),
-				})
-			return resp, nil
+			if apierrors.IsNotFound(err) {
+				s.logger.Trace("[ApplyResourceChange][Delete]", "Resource is already deleted")
+
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityWarning,
+						Summary:  fmt.Sprintf("Resource %q was already deleted", rname),
+						Detail:   fmt.Sprintf("The resource %q was not found in the Kubernetes API. This may be due to the resource being already deleted.", rname),
+					})
+				return resp, nil
+			} else {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  fmt.Sprintf("Error deleting resource %s: %s", rname, err),
+						Detail:   err.Error(),
+					})
+				return resp, nil
+			}
 		}
 
 		// wait for delete
@@ -564,16 +575,24 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			_, err := rs.Get(ctxDeadline, rname, metav1.GetOptions{})
 			if err != nil {
 				if apierrors.IsNotFound(err) {
-					s.logger.Trace("[ApplyResourceChange][Delete]", "Resource is deleted")
+					s.logger.Trace("[ApplyResourceChange][Delete]", "Resource is already deleted")
+
+					resp.Diagnostics = append(resp.Diagnostics,
+						&tfprotov5.Diagnostic{
+							Severity: tfprotov5.DiagnosticSeverityWarning,
+							Summary:  fmt.Sprintf("Resource %q was already deleted", rname),
+							Detail:   fmt.Sprintf("The resource %q was not found in the Kubernetes API. This may be due to the resource being already deleted.", rname),
+						})
 					break
+				} else {
+					resp.Diagnostics = append(resp.Diagnostics,
+						&tfprotov5.Diagnostic{
+							Severity: tfprotov5.DiagnosticSeverityError,
+							Summary:  "Error waiting for deletion.",
+							Detail:   fmt.Sprintf("Error when waiting for resource %q to be deleted: %v", rname, err),
+						})
+					return resp, nil
 				}
-				resp.Diagnostics = append(resp.Diagnostics,
-					&tfprotov5.Diagnostic{
-						Severity: tfprotov5.DiagnosticSeverityError,
-						Summary:  "Error waiting for deletion.",
-						Detail:   fmt.Sprintf("Error when waiting for resource %q to be deleted: %v", rname, err),
-					})
-				return resp, nil
 			}
 			time.Sleep(1 * time.Second) // lintignore:R018
 		}

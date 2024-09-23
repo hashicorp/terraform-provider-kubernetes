@@ -128,6 +128,70 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 					},
 				},
 			},
+			"status": schema.SingleNestedAttribute{
+				MarkdownDescription: `The status of the ValidatingAdmissionPolicy, including warnings that are useful to determine if the policy behaves in the expected way.`,
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"conditions": schema.ListNestedAttribute{
+						MarkdownDescription: `The conditions represent the latest available observations of a policy's current state.`,
+						Optional:            true,
+						NestedObject: schema.NestedAttributeObject{
+							Attributes: map[string]schema.Attribute{
+								"last_transition_time": schema.StringAttribute{
+									MarkdownDescription: `Last time the condition transitioned from one status to another.`,
+									Optional:            true,
+								},
+								"message": schema.StringAttribute{
+									MarkdownDescription: `A human readable message indicating details about the transition.`,
+									Optional:            true,
+								},
+								"observed_generation": schema.Int64Attribute{
+									MarkdownDescription: `The generation observed by the deployment controller.`,
+									Optional:            true,
+								},
+								"reason": schema.StringAttribute{
+									MarkdownDescription: `The reason for the condition's last transition.`,
+									Optional:            true,
+								},
+								"status": schema.StringAttribute{
+									MarkdownDescription: `Status of the condition, one of True, False, Unknown.`,
+									Optional:            true,
+								},
+								"type": schema.StringAttribute{
+									MarkdownDescription: `Type of deployment condition.`,
+									Optional:            true,
+								},
+							},
+						},
+					},
+					"observed_generation": schema.Int64Attribute{
+						MarkdownDescription: `The generation observed by the deployment controller.`,
+						Optional:            true,
+					},
+					"type_checking": schema.SingleNestedAttribute{
+						MarkdownDescription: `The results of type checking for each expression. Presence of this field indicates the completion of the type checking.`,
+						Optional:            true,
+						Attributes: map[string]schema.Attribute{
+							"expression_warning": schema.ListNestedAttribute{
+								MarkdownDescription: `The type checking warnings for each expression.`,
+								Optional:            true,
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"field_ref": schema.StringAttribute{
+											Description: "The path to the field that refers the expression. For example, the reference to the expression of the first item of validations is \"spec.validations[0].expression\"",
+											Optional:    true,
+										},
+										"warning": schema.StringAttribute{
+											MarkdownDescription: `The content of type checking information in a human-readable form. Each line of the warning contains the type that the expression is checked against, followed by the type check error from the compiler.`,
+											Optional:            true,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }

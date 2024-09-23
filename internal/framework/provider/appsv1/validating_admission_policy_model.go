@@ -82,5 +82,22 @@ type ValidatingAdmissionPolicyModel struct {
 			Expression types.String `tfsdk:"expression" manifest:"expression"`
 			Name       types.String `tfsdk:"name" manifest:"name"`
 		}
+		Status struct {
+			Conditions []struct {
+				LastTransitionTime types.String `tfsdk:"last_transition_time" manifest:"lastTransitionTime"`
+				Message            types.String `tfsdk:"message" manifest:"message"`
+				ObservedGeneration types.Int64  `tfsdk:"observed_generation" manifest:"observedGeneration"`
+				Reason             types.String `tfsdk:"reason" manifest:"reason"`
+				Status             types.String `tfsdk:"status" manifest:"status"`
+				Type               types.String `tfsdk:"type" manifest:"type"`
+			} `tfsdk:"conditions" manifest:"conditions"`
+			ObservedGeneration types.Int64 `tfsdk:"observed_generation" manifest:"observedGeneration"`
+			TypeChecking       struct {
+				ExpressionWarning []struct {
+					FieldRef types.String `tfsdk:"field_ref" manifest:"fieldRef"`
+					Warning  types.String `tfsdk:"warning" manifest:"warning"`
+				} `tfsdk:"expression_warning" manifest:"expressionWarning"`
+			} `tfsdk:"type_checking" manifest:"typeChecking"`
+		}
 	}
 }

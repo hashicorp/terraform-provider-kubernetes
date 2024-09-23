@@ -12,7 +12,7 @@ import (
 var _ resource.Resource = &ValidatingAdmissionPolicy{}
 var _ resource.ResourceWithImportState = &ValidatingAdmissionPolicy{}
 
-func NewDValidatingAdmissionPolicy() resource.Resource {
+func NewValidatingAdmissionPolicy() resource.Resource {
 	return &ValidatingAdmissionPolicy{
 		Kind:       "ValidatingAdmissionPolicy",
 		APIVersion: "apps/v1",

@@ -70,7 +70,9 @@ func (r *Secret) Read(ctx context.Context, req resource.ReadRequest, resp *resou
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req, &dataModel)
+	var id string
+	req.State.GetAttribute(ctx, path.Root("id"), &id)
+	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, id, &dataModel)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading resource", err.Error())
 		return

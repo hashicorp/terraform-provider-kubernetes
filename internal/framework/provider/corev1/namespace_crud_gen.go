@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
@@ -67,7 +68,9 @@ func (r *Namespace) Read(ctx context.Context, req resource.ReadRequest, resp *re
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req, &dataModel)
+	var id string
+	req.State.GetAttribute(ctx, path.Root("id"), &id)
+	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, id, &dataModel)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading resource", err.Error())
 		return
@@ -148,5 +151,25 @@ func (r *Namespace) Delete(ctx context.Context, req resource.DeleteRequest, resp
 }
 
 func (r *Namespace) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	var dataModel NamespaceModel
+
+	err := autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req.ID, &dataModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Error importing resource", err.Error())
+		return
+	}
+
+	// awkward timeouts/types.Object issue https://github.com/hashicorp/terraform-plugin-framework-timeouts/issues/46 & https://github.com/hashicorp/terraform-plugin-framework/issues/716
+	var timeouts timeouts.Value
+	resp.Diagnostics.Append(resp.State.GetAttribute(ctx, path.Root("timeouts"), &timeouts)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	dataModel.Timeouts = timeouts
+
+	diags := resp.State.Set(ctx, &dataModel)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

@@ -41,12 +41,12 @@ func TestAccKubernetesNamespaceV1_basic(t *testing.T) {
 					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
-			// {
-			// 	ResourceName:            resourceName,
-			// 	ImportState:             true,
-			// 	ImportStateVerify:       true,
-			// 	ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
-			// },
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
+			},
 			{
 				Config: testAccKubernetesNamespaceV1Config_addAnnotations(nsName),
 				Check: resource.ComposeAggregateTestCheckFunc(

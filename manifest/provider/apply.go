@@ -540,16 +540,25 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		err = rs.Delete(ctxDeadline, rname, metav1.DeleteOptions{})
 		if err != nil {
-			rn := types.NamespacedName{Namespace: rnamespace, Name: rname}.String()
-			resp.Diagnostics = append(resp.Diagnostics,
-				&tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
-					Summary:  fmt.Sprintf("Error deleting resource %s: %s", rn, err),
-					Detail:   err.Error(),
-				})
-			return resp, nil
-		}
+			if apierrors.IsNotFound(err) {
+				s.logger.Trace("[ApplyResourceChange][Delete]", "Resource is already deleted")
 
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityWarning,
+						Summary:  fmt.Sprintf("Resource %q was already deleted", rname),
+						Detail:   fmt.Sprintf("The resource %q was not found in the Kubernetes API. This may be due to the resource being already deleted.", rname),
+					})
+			} else {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  fmt.Sprintf("Error deleting resource %s: %s", rname, err),
+						Detail:   err.Error(),
+					})
+				return resp, nil
+			}
+		}
 		// wait for delete
 		for {
 			if time.Now().After(deadline) {

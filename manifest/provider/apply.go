@@ -556,8 +556,8 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 						Summary:  fmt.Sprintf("Error deleting resource %s: %s", rname, err),
 						Detail:   err.Error(),
 					})
-				return resp, nil
 			}
+			return resp, nil
 		}
 		// wait for delete
 		for {

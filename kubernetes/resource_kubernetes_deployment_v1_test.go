@@ -1463,7 +1463,7 @@ func testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, re
           name    = "tf-acc-test"
           command = ["sleep", "300"]
         }
-        restart_policy = "%s"
+        restart_policy                   = "%s"
         termination_grace_period_seconds = 1
       }
     }

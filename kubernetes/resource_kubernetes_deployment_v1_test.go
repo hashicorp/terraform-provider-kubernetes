@@ -1239,8 +1239,8 @@ func TestAccKubernetesDeploymentV1_with_restart_policy(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config:   testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, "Never"),
-        ExpectError: regexp.MustCompile("expected spec\\.0\\.template\\.0\\.spec\\.0\\.restart_policy to be one of \\[\"Always\"\\], got Never"),
+				Config:      testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, "Never"),
+				ExpectError: regexp.MustCompile("expected spec\\.0\\.template\\.0\\.spec\\.0\\.restart_policy to be one of \\[\"Always\"\\], got Never"),
 			},
 			{
 				Config: testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, "Always"),

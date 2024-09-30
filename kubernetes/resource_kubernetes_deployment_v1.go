@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -199,7 +200,7 @@ func resourceKubernetesDeploymentSchemaV1() map[string]*schema.Schema {
 									Required:    true,
 									MaxItems:    1,
 									Elem: &schema.Resource{
-										Schema: podSpecFields(true, false),
+										Schema: deploymentPodTemplateSpecFields(),
 									},
 								},
 							},
@@ -215,6 +216,16 @@ func resourceKubernetesDeploymentSchemaV1() map[string]*schema.Schema {
 			Optional:    true,
 		},
 	}
+}
+
+func deploymentPodTemplateSpecFields() map[string]*schema.Schema {
+	psf := podSpecFields(true, false)
+	rp := psf["restart_policy"]
+	rp.ValidateFunc = validation.StringInSlice([]string{
+		string(corev1.RestartPolicyAlways),
+	}, false)
+	rp.Description = "Restart policy for all containers within the pod. Defaults to Always. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy."
+	return psf
 }
 
 func resourceKubernetesDeploymentV1Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

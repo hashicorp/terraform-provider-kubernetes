@@ -37,6 +37,6 @@ jobs:
   
         - name: Undocumented changes 
           run: |
-            echo "Documentation is not up to date. Please refer to the `Making Changes` in the Contribution Guide on how to properly update documentation."
+            echo 'Documentation is not up to date. Please refer to the `Making Changes` in the Contribution Guide on how to properly update documentation.'
             exit 1
           if: failure()

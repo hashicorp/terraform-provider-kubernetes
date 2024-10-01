@@ -224,7 +224,7 @@ func deploymentPodTemplateSpecFields() map[string]*schema.Schema {
 	rp.ValidateFunc = validation.StringInSlice([]string{
 		string(corev1.RestartPolicyAlways),
 	}, false)
-	rp.Description = "Restart policy for all containers within the pod. Defaults to Always. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy."
+	rp.Description = "Restart policy for all containers within the pod. Defaults to Always as the only option. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy."
 	return psf
 }
 

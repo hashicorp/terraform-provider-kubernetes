@@ -28,6 +28,7 @@ func resourceKubernetesJobV1() *schema.Resource {
 		ReadContext:   resourceKubernetesJobV1Read,
 		UpdateContext: resourceKubernetesJobV1Update,
 		DeleteContext: resourceKubernetesJobV1Delete,
+		CustomizeDiff: resourceKubernetesJobV1CustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -46,6 +47,42 @@ func resourceKubernetesJobV1() *schema.Resource {
 		},
 		Schema: resourceKubernetesJobV1Schema(),
 	}
+}
+
+func resourceKubernetesJobV1CustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if d.Id() == "" {
+		log.Printf("[DEBUG] Resource ID is empty, resource not created yet.")
+		return nil
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
+	ttlAttr := d.Get("spec.0.ttl_seconds_after_finished")
+	ttlSeconds, ok := ttlAttr.(int)
+	if !ok || ttlSeconds != 0 {
+		return nil
+	}
+
+	// getting the job
+	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Suppress diff
+			d.Clear("spec")
+			d.Clear("metadata")
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func resourceKubernetesJobV1Schema() map[string]*schema.Schema {
@@ -118,8 +155,17 @@ func resourceKubernetesJobV1Read(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 	if !exists {
-		d.SetId("")
-		return diag.Diagnostics{}
+		// Check if ttl_seconds_after_finished is set
+		if ttl, ok := d.GetOk("spec.0.ttl_seconds_after_finished"); ok {
+			// ttl_seconds_after_finished is set, Job is deleted due to TTL
+			// We don't need to remove the resource from the state
+			log.Printf("[INFO] Job %s has been deleted by Kubernetes due to TTL (ttl_seconds_after_finished = %v), keeping resource in state", d.Id(), ttl)
+			return diag.Diagnostics{}
+		} else {
+			// ttl_seconds_after_finished is not set, remove the resource from the state
+			d.SetId("")
+			return diag.Diagnostics{}
+		}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {

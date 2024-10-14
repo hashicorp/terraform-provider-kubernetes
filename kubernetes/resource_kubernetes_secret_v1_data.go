@@ -2,15 +2,14 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	v1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -24,7 +23,6 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 		DeleteContext: resourceKubernetesSecretV1DataDelete,
 
 		Schema: map[string]*schema.Schema{
-			// meta attr, which contains info about the secret. It is required and can have a maxvalue of 1
 			"metadata": {
 				Type:        schema.TypeList,
 				Description: "Metadata for the kubernetes Secret.",
@@ -34,13 +32,13 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 					Schema: map[string]*schema.Schema{
 						"name": {
 							Type:        schema.TypeString,
-							Description: "The name of the ConfigMap.",
+							Description: "The name of the Secret.",
 							Required:    true,
 							ForceNew:    true,
 						},
 						"namespace": {
 							Type:        schema.TypeString,
-							Description: "The namespace of the ConfigMap.",
+							Description: "The namespace of the Secret.",
 							Optional:    true,
 							ForceNew:    true,
 							Default:     "default",
@@ -48,7 +46,6 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 					},
 				},
 			},
-			// map data attr, contains data to be store in secret. Elem, specifies the schema for each value in the map
 			"data": {
 				Type:        schema.TypeMap,
 				Description: "Data to be stored in the Kubernetes Secret.",
@@ -61,14 +58,14 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 				Type:        schema.TypeBool,
 				Description: "Flag to force updates to the Kubernetes Secret.",
 				Optional:    true,
-				Default:     false,
+				//Default:     true,
 			},
 			"field_manager": {
-				Type:         schema.TypeString,
-				Description:  "Set the name of the field manager for the specified labels",
-				Optional:     true,
-				Default:      defaultFieldManagerName,
-				ValidateFunc: validation.StringIsNotWhiteSpace,
+				Type:        schema.TypeString,
+				Description: "Set the name of the field manager for the specified labels",
+				Optional:    true,
+				Default:     defaultFieldManagerName,
+				//ValidateFunc: validation.StringIsNotWhiteSpace,
 			},
 		},
 	}
@@ -84,7 +81,7 @@ func resourceKubernetesSecretV1DataCreate(ctx context.Context, d *schema.Resourc
 	if diag.HasError() {
 		d.SetId("")
 	}
-	return nil
+	return diag
 }
 
 // Retrieves the current state of the k8s secret, and update the current sate
@@ -94,16 +91,15 @@ func resourceKubernetesSecretV1DataRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	//extracting ns and name from res id
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	// Retrieve the K8s secret
-	secret, err := conn.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+
+	// getting the secret data
+	res, err := conn.CoreV1().Secrets(namespace).Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Handle case where the Secret is not found
 			return diag.Diagnostics{{
 				Severity: diag.Warning,
 				Summary:  "Secret deleted",
@@ -113,41 +109,52 @@ func resourceKubernetesSecretV1DataRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	// Extract managed data from the secret
-	managedData, err := getManagedSecretData(secret)
+	configuredData := d.Get("data").(map[string]interface{})
+
+	// stripping out the data not managed by Terraform
+	fieldManagerName := d.Get("field_manager").(string)
+
+	managedSecretData, err := getManagedSecretData(res.GetManagedFields(), fieldManagerName)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	// filter out the data not managed by terraform
-	configuredData := d.Get("data").(map[string]interface{})
-	for k := range managedData {
-		if _, exists := configuredData[k]; !exists {
-			delete(managedData, k)
+	data := res.Data
+	for k := range data {
+		_, managed := managedSecretData["f:"+k]
+		_, configured := configuredData[k]
+		if !managed && !configured {
+			delete(data, k)
 		}
 	}
-	// Update the state with the managed data
-	d.Set("data", managedData)
+	decodedData := make(map[string]string, len(data))
+	for k, v := range data {
+		decodedData[k] = string(v)
+	}
+
+	d.Set("data", decodedData)
+
 	return nil
 }
 
-// extracts data from the secret that is managed by terraform
-func getManagedSecretData(secret *v1.Secret) (map[string]interface{}, error) {
-	managedData := make(map[string]interface{})
-
-	//looping through all data in the secret
-	for key, value := range secret.Data {
-		// decode base64-encoded value
-		decodedValue, err := base64.StdEncoding.DecodeString(string(value))
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode value for key %q: %w", key, err)
+// getManagedSecretData reads the field manager metadata to discover which fields we're managing
+func getManagedSecretData(managedFields []v1.ManagedFieldsEntry, manager string) (map[string]interface{}, error) {
+	var data map[string]interface{}
+	for _, m := range managedFields {
+		// Only consider entries managed by the specified manager
+		if m.Manager != manager {
+			continue
 		}
-
-		// just storing the decoded value I got in the managed data map
-		managedData[key] = string(decodedValue)
+		var mm map[string]interface{}
+		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
+		if err != nil {
+			return nil, err
+		}
+		// Check if the "data" field exists and extract it
+		if l, ok := mm["f:data"].(map[string]interface{}); ok {
+			data = l
+		}
 	}
-	return managedData, nil
-
+	return data, nil
 }
 
 func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -160,7 +167,7 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 	name := metadata.GetName()
 	namespace := metadata.GetNamespace()
 
-	_, err = conn.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	_, err = conn.CoreV1().Secrets(namespace).Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if d.Id() == "" {
 			// If we are deleting then there is nothing to do if the resource is gone
@@ -171,12 +178,23 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 		}
 		return diag.Errorf("Have got the following error while validating the existence of the Secret %q: %v", name, err)
 	}
+
 	// Craft the patch to update the data
-	data := d.Get("data")
+	dataInterface := d.Get("data")
+	data, ok := dataInterface.(map[string]interface{})
+	if !ok {
+		return diag.Errorf("Error casting data to map[string]interface{}")
+	}
 	if d.Id() == "" {
 		// If we're deleting then we just patch with an empty data map
 		data = map[string]interface{}{}
 	}
+
+	encodedData := make(map[string][]byte, len(data))
+	for k, v := range data {
+		encodedData[k] = []byte(v.(string))
+	}
+
 	patchobj := map[string]interface{}{
 		"apiVersion": "v1",
 		"kind":       "Secret",
@@ -184,7 +202,7 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 			"name":      name,
 			"namespace": namespace,
 		},
-		"data": data,
+		"data": encodedData,
 	}
 	patch := unstructured.Unstructured{}
 	patch.Object = patchobj
@@ -192,12 +210,13 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
 	// Apply the patch
 	_, err = conn.CoreV1().Secrets(namespace).Patch(ctx,
 		name,
 		types.ApplyPatchType,
 		patchbytes,
-		metav1.PatchOptions{
+		v1.PatchOptions{
 			FieldManager: d.Get("field_manager").(string),
 			Force:        ptr.To(d.Get("force").(bool)),
 		},
@@ -207,16 +226,17 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 			return diag.Diagnostics{{
 				Severity: diag.Error,
 				Summary:  "Field manager conflict",
-				Detail:   fmt.Sprintf(`Another client is managing a field Terraform tried to update. Set "force" to true to override: %v`, err),
+				Detail:   fmt.Sprintf("Another client is managing a field Terraform tried to update. Set 'force' to true to override: %v", err),
 			}}
 		}
 		return diag.FromErr(err)
 	}
+
 	if d.Id() == "" {
 		return nil
 	}
-	return resourceKubernetesSecretV1DataRead(ctx, d, m)
 
+	return resourceKubernetesSecretV1DataRead(ctx, d, m)
 }
 
 func resourceKubernetesSecretV1DataDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

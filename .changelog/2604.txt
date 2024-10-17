@@ -1,0 +1,3 @@
+```release-note:enhancement
+Adding the `kubernetes_secret_v1_data` resource to the kubernetes provider. This resource will allow users to manage kubernetes secrets
+```

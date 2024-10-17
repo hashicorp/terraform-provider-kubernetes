@@ -1,0 +1,3 @@
+```release-note:improvement
+resource/kubernetes_deployment_v1: Fix validation of `restart_policy` values
+```

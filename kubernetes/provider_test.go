@@ -30,11 +30,7 @@ const (
 
 var testAccProvider *schema.Provider
 var testAccExternalProviders map[string]resource.ExternalProvider
-var testAccProviderFactories = map[string]func() (*schema.Provider, error){
-	"kubernetes": func() (*schema.Provider, error) {
-		return Provider(), nil
-	},
-}
+var testAccProviderFactories map[string]func() (*schema.Provider, error)
 
 func init() {
 	testAccProvider = Provider()
@@ -165,7 +161,8 @@ func testAccPreCheck(t *testing.T) {
 	ctx := context.TODO()
 	hasFileCfg := (os.Getenv("KUBE_CTX_AUTH_INFO") != "" && os.Getenv("KUBE_CTX_CLUSTER") != "") ||
 		os.Getenv("KUBE_CTX") != "" ||
-		os.Getenv("KUBE_CONFIG_PATH") != ""
+		os.Getenv("KUBE_CONFIG_PATH") != "" ||
+		os.Getenv("KUBE_CONFIG_PATHS") != ""
 	hasUserCredentials := os.Getenv("KUBE_USER") != "" && os.Getenv("KUBE_PASSWORD") != ""
 	hasClientCert := os.Getenv("KUBE_CLIENT_CERT_DATA") != "" && os.Getenv("KUBE_CLIENT_KEY_DATA") != ""
 	hasStaticCfg := (os.Getenv("KUBE_HOST") != "" &&

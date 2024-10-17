@@ -1,6 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
-
 package kubernetes
 
 import (
@@ -16,19 +15,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// This test function tests the basic func of the secret resource "secret_v1"
-func TestAccKubernetesSecretV1Data_basic(t *testing.T) {
-	// Setting up the test parameters
-	resourceName := "kubernetes_secret_v1_data.test"
-	namespace := "default"
-	// Creating unique names to ensure tests are isolated
+// Handling the case for a empty secret
+func TestAccKubernetesSecretV1Data_empty(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_secret_v1_data.test"
 
-	// Running the test case
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			createSecret(name, namespace)
+			createEmptySecret(name, namespace)
 		},
 		IDRefreshName:     resourceName,
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
@@ -38,38 +34,6 @@ func TestAccKubernetesSecretV1Data_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				// Test case for an empty secret
-				Config: testAccKubernetesSecretV1Data_empty(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
-					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
-				),
-			},
-			{
-				// Test case for a secret with some data
-				Config: testAccKubernetesSecretV1Data_basic(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "data.key1", "value1"),
-					resource.TestCheckResourceAttr(resourceName, "data.key2", "value2"),
-					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
-				),
-			},
-			{
-				// Testing a modified secret
-				Config: testAccKubernetesSecretV1Data_modified(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "data.key1", "one"),
-					resource.TestCheckResourceAttr(resourceName, "data.key3", "three"),
-					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
-				),
-			},
-			{
-				// Testing a secret that doesn't exist
 				Config: testAccKubernetesSecretV1Data_empty(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -81,8 +45,56 @@ func TestAccKubernetesSecretV1Data_basic(t *testing.T) {
 	})
 }
 
-// Create a kubernetes secret
-func createSecret(name, namespace string) error {
+func createEmptySecret(name, namespace string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+
+	secret := v1.Secret{}
+	secret.SetName(name)
+	secret.SetNamespace(namespace)
+	secret.Data = map[string][]byte{}
+	_, err = conn.CoreV1().Secrets(namespace).Create(ctx, &secret, metav1.CreateOptions{
+		FieldManager: "tftest",
+	})
+	return err
+}
+
+// Handling the case of secret creation with basic data
+func TestAccKubernetesSecretV1Data_basic_data(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_secret_v1_data.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createSecretWithData(name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroySecret(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretV1Data_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.key1", "value1"),
+					resource.TestCheckResourceAttr(resourceName, "data.key2", "value2"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+		},
+	})
+}
+
+func createSecretWithData(name, namespace string) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
@@ -98,7 +110,63 @@ func createSecret(name, namespace string) error {
 	secret.SetName(name)
 	secret.SetNamespace(namespace)
 	secret.Data = data
-	_, err = conn.CoreV1().Secrets(namespace).Create(ctx, &secret, metav1.CreateOptions{})
+	_, err = conn.CoreV1().Secrets(namespace).Create(ctx, &secret, metav1.CreateOptions{
+		FieldManager: "tftest",
+	})
+	return err
+}
+
+// Handling the case for a modified secret
+func TestAccKubernetesSecretV1Data_modified(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	namespace := "default"
+	resourceName := "kubernetes_secret_v1_data.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createModifiedSecret(name, namespace)
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroySecret(name, namespace)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretV1Data_modified(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "data.key1", "one"),
+					resource.TestCheckResourceAttr(resourceName, "data.key3", "three"),
+					resource.TestCheckResourceAttr(resourceName, "field_manager", "tftest"),
+				),
+			},
+		},
+	})
+}
+
+func createModifiedSecret(name, namespace string) error {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+
+	data := map[string][]byte{
+		"key1": []byte("one"),
+		"key3": []byte("three"),
+	}
+
+	secret := v1.Secret{}
+	secret.SetName(name)
+	secret.SetNamespace(namespace)
+	secret.Data = data
+	_, err = conn.CoreV1().Secrets(namespace).Create(ctx, &secret, metav1.CreateOptions{
+		FieldManager: "tftest",
+	})
 	return err
 }
 
@@ -146,7 +214,7 @@ func testAccKubernetesSecretV1Data_empty(name string) string {
 `, name)
 }
 
-// Generate some basic config, with a secret with test data
+// Generate some basic config, with a secret with basic data
 func testAccKubernetesSecretV1Data_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret_v1_data" "test" {

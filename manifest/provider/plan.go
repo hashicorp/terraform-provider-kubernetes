@@ -130,40 +130,6 @@ func isImportedFlagFromPrivate(p []byte) (f bool, d []*tfprotov5.Diagnostic) {
 func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfprotov5.PlanResourceChangeRequest) (*tfprotov5.PlanResourceChangeResponse, error) {
 	resp := &tfprotov5.PlanResourceChangeResponse{}
 
-	canDeferr := req.ClientCapabilities != nil && req.ClientCapabilities.DeferralAllowed
-
-	if canDeferr && s.clientConfigUnknown {
-		// if client supports it, request deferral when client configuration not fully known
-		resp.Deferred = &tfprotov5.Deferred{
-			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
-		}
-		return resp, nil
-	}
-
-	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
-	resp.Diagnostics = append(resp.Diagnostics, d...)
-	if !isImported {
-		resp.RequiresReplace = append(resp.RequiresReplace,
-			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
-			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
-			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
-		)
-	} else {
-		resp.PlannedPrivate = req.PriorPrivate
-	}
-
-	execDiag := s.canExecute()
-	if len(execDiag) > 0 {
-		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
-		return resp, nil
-	}
-
-	// test if credentials are valid - we're going to need them further down
-	resp.Diagnostics = append(resp.Diagnostics, s.checkValidCredentials(ctx)...)
-	if len(resp.Diagnostics) > 0 {
-		return resp, nil
-	}
-
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -193,6 +159,47 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 			Summary:  "Failed to extract planned resource state from tftypes.Value",
 			Detail:   err.Error(),
 		})
+		return resp, nil
+	}
+
+	canDeferr := req.ClientCapabilities != nil && req.ClientCapabilities.DeferralAllowed
+
+	if canDeferr && s.clientConfigUnknown {
+		// if client supports it, request deferral when client configuration not fully known
+		proposedVal["object"] = tftypes.NewValue(tftypes.DynamicPseudoType, tftypes.UnknownValue)
+		newPlannedState := tftypes.NewValue(proposedState.Type(), proposedVal)
+		ps, err := tfprotov5.NewDynamicValue(newPlannedState.Type(), newPlannedState)
+		if err != nil {
+			return resp, err
+		}
+		resp.PlannedState = &ps
+		resp.Deferred = &tfprotov5.Deferred{
+			Reason: tfprotov5.DeferredReasonProviderConfigUnknown,
+		}
+		return resp, nil
+	}
+
+	isImported, d := isImportedFlagFromPrivate(req.PriorPrivate)
+	resp.Diagnostics = append(resp.Diagnostics, d...)
+	if !isImported {
+		resp.RequiresReplace = append(resp.RequiresReplace,
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("apiVersion"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("kind"),
+			tftypes.NewAttributePath().WithAttributeName("manifest").WithAttributeName("metadata").WithAttributeName("name"),
+		)
+	} else {
+		resp.PlannedPrivate = req.PriorPrivate
+	}
+
+	execDiag := s.canExecute()
+	if len(execDiag) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, execDiag...)
+		return resp, nil
+	}
+
+	// test if credentials are valid - we're going to need them further down
+	resp.Diagnostics = append(resp.Diagnostics, s.checkValidCredentials(ctx)...)
+	if len(resp.Diagnostics) > 0 {
 		return resp, nil
 	}
 
@@ -452,8 +459,11 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 				if hasChanged {
 					h, ok := hints[morph.ValueToTypePath(ap).String()]
 					if ok && h == manifest.PreserveUnknownFieldsLabel {
-						apm := append(tftypes.NewAttributePath().WithAttributeName("manifest").Steps(), ap.Steps()...)
-						resp.RequiresReplace = append(resp.RequiresReplace, tftypes.NewAttributePathWithSteps(apm))
+						resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+							Severity: tfprotov5.DiagnosticSeverityWarning,
+							Summary:  fmt.Sprintf("The attribute path %v value's type is an x-kubernetes-preserve-unknown-field", morph.ValueToTypePath(ap).String()),
+							Detail:   "Changes to the type may cause some unexpected behavior.",
+						})
 					}
 				}
 				if isComputed {

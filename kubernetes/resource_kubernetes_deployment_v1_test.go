@@ -1225,6 +1225,36 @@ func TestAccKubernetesDeploymentV1_config_with_automount_service_account_token(t
 	})
 }
 
+func TestAccKubernetesDeploymentV1_with_restart_policy(t *testing.T) {
+	var conf appsv1.Deployment
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_deployment_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, "Never"),
+				ExpectError: regexp.MustCompile("expected spec\\.0\\.template\\.0\\.spec\\.0\\.restart_policy to be one of \\[\"Always\"\\], got Never"),
+			},
+			{
+				Config: testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, "Always"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDeploymentForceNew(old, new *appsv1.Deployment, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -1407,6 +1437,39 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, restartPolicy string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    replicas = 2
+    selector {
+      match_labels = {
+        TestLabelOne = "one"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          TestLabelOne = "one"
+        }
+      }
+      spec {
+        container {
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
+        }
+        restart_policy                   = "%s"
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+}
+`, name, imageName, restartPolicy)
 }
 
 func testAccKubernetesDeploymentV1Config_initContainer(namespace, name, imageName, imageName1, memory, envName, initName, initCommand, pullPolicy string) string {

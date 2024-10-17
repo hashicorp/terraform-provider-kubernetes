@@ -55,6 +55,8 @@ Optional:
 
 - `active_deadline_seconds` (Number) Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.
 - `backoff_limit` (Number) Specifies the number of retries before marking this job failed. Defaults to 6
+- `backoff_limit_per_index` - (Number) Specifies the limit for the number of retries within an index before marking this index as failed. When enabled the number of failures per index is kept in the pod's batch.kubernetes.io/job-index-failure-count annotation. It can only be set when Job's completionMode=Indexed, and the Pod's restart policy is Never. The field is immutable.
+- `max_failed_indexes` - (Number) Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md
 - `completion_mode` (String) Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. More info: https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode
 - `completions` (Number) Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/
 - `manual_selector` (Boolean) Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md
@@ -419,6 +421,7 @@ Optional:
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
 - `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--volume_mount))
+- `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--template--spec--container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
 <a id="nestedblock--spec--template--spec--container--env"></a>
@@ -902,6 +905,13 @@ Optional:
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 
+<a id="nestedblock--spec--template--spec--container--volume_device"></a>
+### Nested Schema for `spec.template.spec.container.volume_device`
+
+Required:
+
+- `device_path` (String) Path within the container at which the volume device should be attached. For example '/dev/xvda'.
+- `name` (String) This must match the Name of a PersistentVolumeClaim.
 
 
 <a id="nestedblock--spec--template--spec--dns_config"></a>
@@ -971,6 +981,7 @@ Optional:
 - `termination_message_policy` (String) Optional: Indicate how the termination message should be populated. File will use the contents of terminationMessagePath to populate the container status message on both success and failure. FallbackToLogsOnError will use the last chunk of container log output if the termination message file is empty and the container exited with an error. The log output is limited to 2048 bytes or 80 lines, whichever is smaller. Defaults to File. Cannot be updated.
 - `tty` (Boolean) Whether this container should allocate a TTY for itself
 - `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--volume_mount))
+- `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--template--spec--init_container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
 <a id="nestedblock--spec--template--spec--init_container--env"></a>
@@ -1454,6 +1465,13 @@ Optional:
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 
+<a id="nestedblock--spec--template--spec--init_container--volume_device"></a>
+### Nested Schema for `spec.template.spec.init_container.volume_device`
+
+Required:
+
+- `device_path` (String) Path within the container at which the volume device should be attached. For example '/dev/xvda'.
+- `name` (String) This must match the Name of a PersistentVolumeClaim.
 
 
 <a id="nestedblock--spec--template--spec--os"></a>

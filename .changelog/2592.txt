@@ -1,0 +1,3 @@
+```release-note:enhancement
+`kubernetes_manifest` - handling "404 Not Found" errors during the deletion of Kubernetes resources, particularly in cases where the resource may have already been deleted by an operator managing the CRD before Terraform attempts to delete it.
+```

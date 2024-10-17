@@ -37,6 +37,7 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 					"ReadWriteOnce",
 					"ReadOnlyMany",
 					"ReadWriteMany",
+					"ReadWriteOncePod",
 				}, false),
 			},
 			Set: schema.HashString,

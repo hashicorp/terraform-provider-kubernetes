@@ -1,3 +1,23 @@
+## 2.33.0 (Oct 10, 2024)
+
+ENHANCEMENTS:
+
+* Add `backoff_per_limit_index` and `max_failed_indexes` fields in `structure_job.go` [[GH-2421](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2421)]
+* Added support for `namespace_selector` field in `PodAffinityTerm` to enhance pod affinity and anti-affinity rules, allowing selection of namespaces based on label selectors. [[GH-2577](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2577)]
+* `kubernetes_manifest` - handling "404 Not Found" errors during the deletion of Kubernetes resources, particularly in cases where the resource may have already been deleted by an operator managing the CRD before Terraform attempts to delete it. [[GH-2592](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2592)]
+* `schema_container.go`: Add VolumeDevices [[GH-2573](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2573)]
+
+## 2.32.0 (Aug 14, 2024)
+
+FEATURES:
+
+* New data source: `kubernetes_server_version` [[GH-2306](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2306)]
+
+ENHANCEMENTS:
+
+* `resource/kubernetes_certificate_signing_request_v1`: Add argument `spec.expiration_seconds` [[GH-2559](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2559)]
+* `resource/kubernetes_persistent_volume_v1`: support `ReadWriteOncePod` access mode for PVs [[GH-2488](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2488)]
+
 ## 2.30.0 (May 8, 2024)
 
 BUG FIXES:

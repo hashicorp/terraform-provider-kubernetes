@@ -61,14 +61,12 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 				Type:        schema.TypeBool,
 				Description: "Flag to force updates to the Kubernetes Secret.",
 				Optional:    true,
-				//Default:     true,
 			},
 			"field_manager": {
 				Type:        schema.TypeString,
 				Description: "Set the name of the field manager for the specified labels",
 				Optional:    true,
 				Default:     defaultFieldManagerName,
-				//ValidateFunc: validation.StringIsNotWhiteSpace,
 			},
 		},
 	}
@@ -128,6 +126,7 @@ func resourceKubernetesSecretV1DataRead(ctx context.Context, d *schema.ResourceD
 		if !managed && !configured {
 			delete(data, k)
 		}
+
 	}
 	decodedData := make(map[string]string, len(data))
 	for k, v := range data {

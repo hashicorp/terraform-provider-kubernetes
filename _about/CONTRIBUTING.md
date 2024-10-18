@@ -10,7 +10,7 @@ If you want to learn more about developing a Terraform provider, please refer to
 
     [Install](https://go.dev/doc/install) the version of Golang as indicated in the [go.mod](../go.mod) file.
 
-1. Fork this repo
+2. Fork this repo
 
     [Fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo) the provider repository and clone it on your computer.
 
@@ -23,7 +23,7 @@ If you want to learn more about developing a Terraform provider, please refer to
 
     From now on, we are going to assume that you have a copy of the repository on your computer and work within the `terraform-provider-kubernetes` directory.
 
-1. Prepare a Kubernetes Cluster
+3. Prepare a Kubernetes Cluster
 
     While our preference is to use [KinD](https://kind.sigs.k8s.io/) for setting up a Kubernetes cluster for development and test purposes, feel free to opt for the solution that best suits your preferences. Please bear in mind that some acceptance tests might require specific cluster settings, which we maintain in the KinD [configuration file](../.github/config/acceptance_tests_kind_config.yaml).
 
@@ -55,30 +55,32 @@ If you want to learn more about developing a Terraform provider, please refer to
 This quick guide covers best practices for adding a new Resource. 
 
 1. Ensure all dependncies are installed.
-1. Add an SDK Client. 
-1. Add Resource Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). A best and recommended practice is reuse constants from the Kuberentes packages as a default value in an attribute or within a validation function. 
-1. Scaffold an empty/new resource.
-1. Add Acceptance Tests(s) for the resource.
-1. Run Acceptance Tests(s) for this resource. 
-1. Add Documentation for this resource by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}).
-1. Execute `make docs-lint` and `make tests-lint` commands 
-1. Create a Pull Request for your changes. 
+2. Add an SDK Client. 
+3. Add Resource Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). A best and recommended practice is reuse constants from the Kuberentes packages as a default value in an attribute or within a validation function. 
+4. Scaffold an empty/new resource.
+5. Add Acceptance Tests(s) for the resource.
+6. Run Acceptance Tests(s) for this resource. 
+7. Add documentation for this resource in the appropriate `docs/resources/<TYPE>_<VERSION>.go.md` file.
+<!-- 7. Add Documentation for this resource by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}). -->
+8. Execute `make docs-lint` and `make tests-lint` commands 
+9. Create a Pull Request for your changes. 
 
 ### Adding a New Data Source
 
 1. Ensure all dependncies are installed.
-1. Add an SDK Client. 
-1. Add Data Source Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs).
+2. Add an SDK Client. 
+3. Add Data Source Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs).
 A best and recommended practice is reuse constants from the Kuberentes packages as a default value in an attribute or within a validation function. 
-1. Scaffold an empty/new resource.
-1. Add Acceptance Tests(s) for the data source.
-1. Run Acceptance Tests(s) for this data source. 
-1. Add Documentation for this data source by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}).    
-1. Execute `make docs-lint` and `make tests-lint` commands 
-1. Create a Pull Request for your changes. 
+4. Scaffold an empty/new resource.
+5. Add Acceptance Tests(s) for the data source.
+6. Run Acceptance Tests(s) for this data source. 
+7. Add documentation for this data source in the appropriate `docs/data-sources/<TYPE>_<VERSION>.md` file.
+<!-- 7. Add Documentation for this data source by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}).     -->
+8. Execute `make docs-lint` and `make tests-lint` commands 
+9. Create a Pull Request for your changes. 
 
-### Adding/Editing Documentation
-All Documentation is edited in the `.md.tmpl` file. Please note that the `tfplugindocs generate` command should be executed to ensure it is updated and reflected in the `.md` files. 
+<!-- ### Adding/Editing Documentation
+All Documentation is edited in the `.md.tmpl` file. Please note that the `tfplugindocs generate` command should be executed to ensure it is updated and reflected in the `.md` files.  -->
 
 ## Testing
 

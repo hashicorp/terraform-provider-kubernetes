@@ -73,7 +73,7 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 }
 
 func resourceKubernetesSecretV1DataCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := expandMetadata(d.Get("metadata").([]any))
 	// Sets the resource id based on the metadata
 	d.SetId(buildId(metadata))
 
@@ -110,7 +110,7 @@ func resourceKubernetesSecretV1DataRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	configuredData := d.Get("data").(map[string]interface{})
+	configuredData := d.Get("data").(map[string]any)
 
 	// stripping out the data not managed by Terraform
 	fieldManagerName := d.Get("field_manager").(string)
@@ -140,19 +140,19 @@ func resourceKubernetesSecretV1DataRead(ctx context.Context, d *schema.ResourceD
 
 // getManagedSecretData reads the field manager metadata to discover which fields we're managing
 func getManagedSecretData(managedFields []v1.ManagedFieldsEntry, manager string) (map[string]interface{}, error) {
-	var data map[string]interface{}
+	var data map[string]any
 	for _, m := range managedFields {
 		// Only consider entries managed by the specified manager
 		if m.Manager != manager {
 			continue
 		}
-		var mm map[string]interface{}
+		var mm map[string]any
 		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
 		if err != nil {
 			return nil, err
 		}
 		// Check if the "data" field exists and extract it
-		if l, ok := mm["f:data"].(map[string]interface{}); ok {
+		if l, ok := mm["f:data"].(map[string]any); ok {
 			data = l
 		}
 	}
@@ -165,7 +165,7 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadata := expandMetadata(d.Get("metadata").([]any))
 	name := metadata.GetName()
 	namespace := metadata.GetNamespace()
 
@@ -182,11 +182,7 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 	}
 
 	// Craft the patch to update the data
-	dataInterface := d.Get("data")
-	data, ok := dataInterface.(map[string]interface{})
-	if !ok {
-		return diag.Errorf("Error casting data to map[string]interface{}")
-	}
+	data := d.Get("data").(map[string]any)
 	if d.Id() == "" {
 		// If we're deleting then we just patch with an empty data map
 		data = map[string]interface{}{}
@@ -197,10 +193,10 @@ func resourceKubernetesSecretV1DataUpdate(ctx context.Context, d *schema.Resourc
 		encodedData[k] = []byte(v.(string))
 	}
 
-	patchobj := map[string]interface{}{
+	patchobj := map[string]any{
 		"apiVersion": "v1",
 		"kind":       "Secret",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      name,
 			"namespace": namespace,
 		},

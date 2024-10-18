@@ -93,30 +93,28 @@ func resourceKubernetesJobV1CustomizeDiff(ctx context.Context, d *schema.Resourc
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Job is missing
-			if oldTTLInt == 0 {
-				if newTTLInt == 0 {
-					// TTL remains 0; suppress diff to prevent recreation
-					log.Printf("[DEBUG] Job %s not found and ttl_seconds_after_finished remains 0; suppressing diff", d.Id())
+			if oldTTLInt >= 0 {
+				if oldTTLInt != newTTLInt {
+					// TTL value changed; force recreation
+					log.Printf("[DEBUG] Job %s not found and ttl_seconds_after_finished changed from %d to %d; forcing recreation", d.Id(), oldTTLInt, newTTLInt)
+					d.ForceNew("spec.0.ttl_seconds_after_finished")
+					return nil
+				} else {
+					// TTL remains the same; suppress diff
+					log.Printf("[DEBUG] Job %s not found and ttl_seconds_after_finished remains %d; suppressing diff", d.Id(), oldTTLInt)
 					d.Clear("spec")
 					d.Clear("metadata")
 					return nil
-				} else {
-					// TTL changed from 0 to non-zero; force recreation
-					log.Printf("[DEBUG] Job %s not found and ttl_seconds_after_finished changed from 0 to %d; forcing recreation", d.Id(), newTTLInt)
-					d.ForceNew("spec.0.ttl_seconds_after_finished")
-					return nil
 				}
-			} else {
-				return nil
 			}
 		} else {
 			return err
 		}
 	} else {
-		// Job exists
-		if oldTTLInt == 0 && newTTLInt != 0 {
-			// TTL changing from 0 to non-zero; force recreation
-			log.Printf("[DEBUG] Job %s exists and ttl_seconds_after_finished changed from 0 to %d; forcing recreation", d.Id(), newTTLInt)
+		// Job exists, check if TTL changed
+		if oldTTLInt != newTTLInt {
+			// TTL changed; force recreation
+			log.Printf("[DEBUG] Job %s exists and ttl_seconds_after_finished changed from %d to %d; forcing recreation", d.Id(), oldTTLInt, newTTLInt)
 			d.ForceNew("spec.0.ttl_seconds_after_finished")
 			return nil
 		}
@@ -263,21 +261,22 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Job is missing; cannot update
+			// Job is missing; check TTL
 			ttlAttr := d.Get("spec.0.ttl_seconds_after_finished")
 			ttlStr, _ := ttlAttr.(string)
 			ttlInt, err := strconv.Atoi(ttlStr)
 			if err != nil {
 				ttlInt = 0
 			}
-			if ttlInt == 0 {
-				// Job was deleted due to TTL = 0; nothing to update
-				log.Printf("[INFO] Job %s not found but ttl_seconds_after_finished = 0; nothing to update", d.Id())
+
+			if ttlInt >= 0 {
+				// Job was deleted due to TTL nothing to update
+				log.Printf("[INFO] Job %s not found but ttl_seconds_after_finished = %v; nothing to update", d.Id(), ttlInt)
 				return nil
-			} else {
-				// Job was deleted unexpectedly; return an error
-				return diag.Errorf("Job %s not found; cannot update because it has been deleted", d.Id())
 			}
+
+			// Job was deleted unexpectedly; return an error
+			return diag.Errorf("Job %s not found; cannot update because it has been deleted", d.Id())
 		}
 		return diag.Errorf("Error retrieving Job: %s", err)
 	}

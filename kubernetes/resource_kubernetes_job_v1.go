@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -16,6 +17,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -28,6 +30,7 @@ func resourceKubernetesJobV1() *schema.Resource {
 		ReadContext:   resourceKubernetesJobV1Read,
 		UpdateContext: resourceKubernetesJobV1Update,
 		DeleteContext: resourceKubernetesJobV1Delete,
+		CustomizeDiff: resourceKubernetesJobV1CustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -46,6 +49,78 @@ func resourceKubernetesJobV1() *schema.Resource {
 		},
 		Schema: resourceKubernetesJobV1Schema(),
 	}
+}
+
+func resourceKubernetesJobV1CustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if d.Id() == "" {
+		log.Printf("[DEBUG] Resource ID is empty, resource not created yet.")
+		return nil
+	}
+
+	// Retrieve old and new TTL values as strings
+	oldTTLRaw, newTTLRaw := d.GetChange("spec.0.ttl_seconds_after_finished")
+
+	var oldTTLStr, newTTLStr string
+
+	if oldTTLRaw != nil {
+		oldTTLStr, _ = oldTTLRaw.(string)
+	}
+	if newTTLRaw != nil {
+		newTTLStr, _ = newTTLRaw.(string)
+	}
+
+	oldTTLInt, err := strconv.Atoi(oldTTLStr)
+	if err != nil {
+		oldTTLInt = 0
+	}
+	newTTLInt, err := strconv.Atoi(newTTLStr)
+	if err != nil {
+		newTTLInt = 0
+	}
+
+	conn, err := meta.(KubeClientsets).MainClientset()
+	if err != nil {
+		return err
+	}
+
+	namespace, name, err := idParts(d.Id())
+	if err != nil {
+		return err
+	}
+
+	// Check if the Job exists
+	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Job is missing
+			if oldTTLInt >= 0 {
+				if oldTTLInt != newTTLInt {
+					// TTL value changed; force recreation
+					log.Printf("[DEBUG] Job %s not found and ttl_seconds_after_finished changed from %d to %d; forcing recreation", d.Id(), oldTTLInt, newTTLInt)
+					d.ForceNew("spec.0.ttl_seconds_after_finished")
+					return nil
+				} else {
+					// TTL remains the same; suppress diff
+					log.Printf("[DEBUG] Job %s not found and ttl_seconds_after_finished remains %d; suppressing diff", d.Id(), oldTTLInt)
+					d.Clear("spec")
+					d.Clear("metadata")
+					return nil
+				}
+			}
+		} else {
+			return err
+		}
+	} else {
+		// Job exists, check if TTL changed
+		if oldTTLInt != newTTLInt {
+			// TTL changed; force recreation
+			log.Printf("[DEBUG] Job %s exists and ttl_seconds_after_finished changed from %d to %d; forcing recreation", d.Id(), oldTTLInt, newTTLInt)
+			d.ForceNew("spec.0.ttl_seconds_after_finished")
+			return nil
+		}
+	}
+
+	return nil
 }
 
 func resourceKubernetesJobV1Schema() map[string]*schema.Schema {
@@ -118,8 +193,17 @@ func resourceKubernetesJobV1Read(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 	if !exists {
-		d.SetId("")
-		return diag.Diagnostics{}
+		// Check if ttl_seconds_after_finished is set
+		if ttl, ok := d.GetOk("spec.0.ttl_seconds_after_finished"); ok {
+			// ttl_seconds_after_finished is set, Job is deleted due to TTL
+			// We don't need to remove the resource from the state
+			log.Printf("[INFO] Job %s has been deleted by Kubernetes due to TTL (ttl_seconds_after_finished = %v), keeping resource in state", d.Id(), ttl)
+			return diag.Diagnostics{}
+		} else {
+			// ttl_seconds_after_finished is not set, remove the resource from the state
+			d.SetId("")
+			return diag.Diagnostics{}
+		}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
@@ -173,6 +257,31 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
+	// Attempt to get the Job
+	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Job is missing; check TTL
+			ttlAttr := d.Get("spec.0.ttl_seconds_after_finished")
+			ttlStr, _ := ttlAttr.(string)
+			ttlInt, err := strconv.Atoi(ttlStr)
+			if err != nil {
+				ttlInt = 0
+			}
+
+			if ttlInt >= 0 {
+				// Job was deleted due to TTL nothing to update
+				log.Printf("[INFO] Job %s not found but ttl_seconds_after_finished = %v; nothing to update", d.Id(), ttlInt)
+				return nil
+			}
+
+			// Job was deleted unexpectedly; return an error
+			return diag.Errorf("Job %s not found; cannot update because it has been deleted", d.Id())
+		}
+		return diag.Errorf("Error retrieving Job: %s", err)
+	}
+
+	// Proceed with the update as usual
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {
@@ -204,7 +313,6 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	}
 	return resourceKubernetesJobV1Read(ctx, d, meta)
 }
-
 func resourceKubernetesJobV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {

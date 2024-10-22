@@ -4,10 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-codegen-kubernetes/autocrud"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-
-	"github.com/hashicorp/terraform-plugin-codegen-kubernetes/autocrud"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func (r *Secret) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -18,7 +20,6 @@ func (r *Secret) Create(ctx context.Context, req resource.CreateRequest, resp *r
 	if diag.HasError() {
 		return
 	}
-	r.BeforeCreate(ctx, req, resp, &dataModel)
 
 	defaultTimeout, err := time.ParseDuration("20m")
 	if err != nil {
@@ -32,6 +33,8 @@ func (r *Secret) Create(ctx context.Context, req resource.CreateRequest, resp *r
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	r.BeforeCreate(ctx, req, resp, &dataModel)
 
 	err = autocrud.Create(ctx, r.clientGetter, r.APIVersion, r.Kind, &dataModel)
 	if err != nil {
@@ -70,7 +73,9 @@ func (r *Secret) Read(ctx context.Context, req resource.ReadRequest, resp *resou
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req, &dataModel)
+	var id string
+	req.State.GetAttribute(ctx, path.Root("id"), &id)
+	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, id, &dataModel)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading resource", err.Error())
 		return
@@ -94,8 +99,6 @@ func (r *Secret) Update(ctx context.Context, req resource.UpdateRequest, resp *r
 		return
 	}
 
-	r.BeforeUpdate(ctx, req, resp, &dataModel)
-
 	defaultTimeout, err := time.ParseDuration("20m")
 	if err != nil {
 		resp.Diagnostics.AddError("Error parsing timeout", err.Error())
@@ -108,6 +111,8 @@ func (r *Secret) Update(ctx context.Context, req resource.UpdateRequest, resp *r
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	r.BeforeUpdate(ctx, req, resp, &dataModel)
 
 	err = autocrud.Update(ctx, r.clientGetter, r.Kind, r.APIVersion, &dataModel)
 	if err != nil {
@@ -157,5 +162,23 @@ func (r *Secret) Delete(ctx context.Context, req resource.DeleteRequest, resp *r
 }
 
 func (r *Secret) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	var dataModel SecretModel
+
+	err := autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req.ID, &dataModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Error importing resource", err.Error())
+		return
+	}
+
+	// awkward timeouts/types.Object issue https://github.com/hashicorp/terraform-plugin-framework-timeouts/issues/46 & https://github.com/hashicorp/terraform-plugin-framework/issues/716
+	dataModel.Timeouts = timeouts.Value{
+		Object: types.ObjectNull(map[string]attr.Type{
+			"create": types.StringType,
+			"delete": types.StringType,
+			"read":   types.StringType,
+			"update": types.StringType,
+		}),
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &dataModel)...)
 }

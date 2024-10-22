@@ -30,6 +30,7 @@ func (r *ServiceAccount) Schema(ctx context.Context, req resource.SchemaRequest,
 			"image_pull_secrets": schema.ListNestedAttribute{
 				MarkdownDescription: `ImagePullSecrets is a list of references to secrets in the same namespace to use for pulling any images in pods that reference this ServiceAccount. ImagePullSecrets are distinct from Secrets because Secrets can be mounted in the pod, but ImagePullSecrets are only accessed by the kubelet. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod`,
 				Optional:            true,
+
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
@@ -42,6 +43,7 @@ func (r *ServiceAccount) Schema(ctx context.Context, req resource.SchemaRequest,
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: `Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata`,
 				Required:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"annotations": schema.MapAttribute{
 						MarkdownDescription: `Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations`,
@@ -102,6 +104,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 			"secrets": schema.ListNestedAttribute{
 				MarkdownDescription: `Secrets is a list of the secrets in the same namespace that pods running using this ServiceAccount are allowed to use. Pods are only limited to this list if this service account has a "kubernetes.io/enforce-mountable-secrets" annotation set to "true". This field should not be used to find auto-generated service account token secrets for use outside of pods. Instead, tokens can be requested directly using the TokenRequest API, or service account token secrets can be manually created. More info: https://kubernetes.io/docs/concepts/configuration/secret`,
 				Optional:            true,
+
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"api_version": schema.StringAttribute{

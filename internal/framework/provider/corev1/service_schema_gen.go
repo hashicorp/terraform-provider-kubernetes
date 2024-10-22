@@ -26,6 +26,7 @@ func (r *Service) Schema(ctx context.Context, req resource.SchemaRequest, resp *
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: `Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata`,
 				Required:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"annotations": schema.MapAttribute{
 						MarkdownDescription: `Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations`,
@@ -83,6 +84,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 			"spec": schema.SingleNestedAttribute{
 				MarkdownDescription: `Spec defines the behavior of a service. https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status`,
 				Optional:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"allocate_load_balancer_node_ports": schema.BoolAttribute{
 						MarkdownDescription: `allocateLoadBalancerNodePorts defines if NodePorts will be automatically allocated for services with type LoadBalancer.  Default is "true". It may be set to "false" if the cluster load-balancer does not rely on NodePorts.  If the caller requests specific NodePorts (by specifying a value), those requests will be respected, regardless of this field. This field may only be set for services with type LoadBalancer and will be cleared if the type is changed to any other type.`,
@@ -105,7 +107,7 @@ This field may hold a maximum of two entries (dual-stack IPs, in either order). 
 						Optional:            true,
 					},
 					"external_name": schema.StringAttribute{
-						MarkdownDescription: `externalName is the external reference that discovery mechanisms will return as an alias for this service (e.g. a DNS CNAME record). No proxying will be involved.  Must be a lowercase RFC-1123 hostname (https://tools.ietf.org/html/rfc1123) and requires "type" to be "ExternalName".`,
+						MarkdownDescription: `externalName is the external reference that discovery mechanisms will return as an alias for this service (e.g. a DNS CNAME record). No proxying will be involved.  Must be a lowercase RFC-1123 hostname (https://tools.ietf.org/html/rfc1123) and requires type to be "ExternalName".`,
 						Optional:            true,
 					},
 					"external_traffic_policy": schema.StringAttribute{
@@ -147,6 +149,7 @@ This field may hold a maximum of two entries (dual-stack families, in either ord
 					"ports": schema.ListNestedAttribute{
 						MarkdownDescription: `The list of ports that are exposed by this service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies`,
 						Optional:            true,
+
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"app_protocol": schema.StringAttribute{
@@ -201,10 +204,12 @@ This field may hold a maximum of two entries (dual-stack families, in either ord
 					"session_affinity_config": schema.SingleNestedAttribute{
 						MarkdownDescription: `sessionAffinityConfig contains the configurations of session affinity.`,
 						Optional:            true,
+
 						Attributes: map[string]schema.Attribute{
 							"client_ip": schema.SingleNestedAttribute{
 								MarkdownDescription: `clientIP contains the configurations of Client IP based session affinity.`,
 								Optional:            true,
+
 								Attributes: map[string]schema.Attribute{
 									"timeout_seconds": schema.Int64Attribute{
 										MarkdownDescription: `timeoutSeconds specifies the seconds of ClientIP type session sticky time. The value must be >0 && <=86400(for 1 day) if ServiceAffinity == "ClientIP". Default value is 10800(for 3 hours).`,

@@ -177,6 +177,10 @@ github.com/hashicorp/terraform-json v0.22.1 h1:xft84GZR0QzjPVWs4lRUwvTcPnegqlyS7
 github.com/hashicorp/terraform-json v0.22.1/go.mod h1:JbWSQCLFSXFFhg42T7l9iJwdGXBYV8fmmD6o/ML4p3A=
 github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.0 h1:cPPZitB7w5qYPbSad0IkhDaXZc7LpDhsgm4g8Kj2cOY=
 github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.0/go.mod h1:AOwjDhbkWel/4J4fnLB59l52cGmV13FjkqKxaNVJjok=
+github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022191930-51e5c0aa016a h1:NjEx7QP4I2xXV0hNYft98cTJtz5bOrR/ig3bbqPzPsI=
+github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022191930-51e5c0aa016a/go.mod h1:AfADi0tmCqyqPiz4Yyprr//qe+Kwz5HdxWaERDcDCl4=
+github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022192615-7f55d8b45646 h1:hMR+nw3FRKeRVhBrLf9WjAK8TWPjmTIsxdA8Qlgi6uk=
+github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022192615-7f55d8b45646/go.mod h1:AfADi0tmCqyqPiz4Yyprr//qe+Kwz5HdxWaERDcDCl4=
 github.com/hashicorp/terraform-plugin-docs v0.16.0 h1:UmxFr3AScl6Wged84jndJIfFccGyBZn52KtMNsS12dI=
 github.com/hashicorp/terraform-plugin-docs v0.16.0/go.mod h1:M3ZrlKBJAbPMtNOPwHicGi1c+hZUh7/g0ifT/z7TVfA=
 github.com/hashicorp/terraform-plugin-framework v1.7.0 h1:wOULbVmfONnJo9iq7/q+iBOBJul5vRovaYJIu2cY/Pw=

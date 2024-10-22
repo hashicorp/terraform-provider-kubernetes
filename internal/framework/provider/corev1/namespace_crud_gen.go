@@ -4,10 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-codegen-kubernetes/autocrud"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-
-	"github.com/hashicorp/terraform-plugin-codegen-kubernetes/autocrud"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func (r *Namespace) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -67,7 +69,9 @@ func (r *Namespace) Read(ctx context.Context, req resource.ReadRequest, resp *re
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req, &dataModel)
+	var id string
+	req.State.GetAttribute(ctx, path.Root("id"), &id)
+	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, id, &dataModel)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading resource", err.Error())
 		return
@@ -148,5 +152,23 @@ func (r *Namespace) Delete(ctx context.Context, req resource.DeleteRequest, resp
 }
 
 func (r *Namespace) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	var dataModel NamespaceModel
+
+	err := autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req.ID, &dataModel)
+	if err != nil {
+		resp.Diagnostics.AddError("Error importing resource", err.Error())
+		return
+	}
+
+	// awkward timeouts/types.Object issue https://github.com/hashicorp/terraform-plugin-framework-timeouts/issues/46 & https://github.com/hashicorp/terraform-plugin-framework/issues/716
+	dataModel.Timeouts = timeouts.Value{
+		Object: types.ObjectNull(map[string]attr.Type{
+			"create": types.StringType,
+			"delete": types.StringType,
+			"read":   types.StringType,
+			"update": types.StringType,
+		}),
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &dataModel)...)
 }

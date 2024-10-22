@@ -26,6 +26,7 @@ func (r *ClusterRoleBinding) Schema(ctx context.Context, req resource.SchemaRequ
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: `Standard object's metadata.`,
 				Required:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"annotations": schema.MapAttribute{
 						MarkdownDescription: `Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations`,
@@ -77,6 +78,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 			"role_ref": schema.SingleNestedAttribute{
 				MarkdownDescription: `RoleRef can only reference a ClusterRole in the global namespace. If the RoleRef cannot be resolved, the Authorizer must return an error. This field is immutable.`,
 				Optional:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"api_group": schema.StringAttribute{
 						MarkdownDescription: `APIGroup is the group for the resource being referenced`,
@@ -95,6 +97,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 			"subjects": schema.ListNestedAttribute{
 				MarkdownDescription: `Subjects holds references to the objects the role applies to.`,
 				Optional:            true,
+
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"api_group": schema.StringAttribute{

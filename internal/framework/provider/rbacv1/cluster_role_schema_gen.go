@@ -26,15 +26,18 @@ func (r *ClusterRole) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"aggregation_rule": schema.SingleNestedAttribute{
 				MarkdownDescription: `AggregationRule is an optional field that describes how to build the Rules for this ClusterRole. If AggregationRule is set, then the Rules are controller managed and direct changes to Rules will be stomped by the controller.`,
 				Optional:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"cluster_role_selectors": schema.ListNestedAttribute{
 						MarkdownDescription: `ClusterRoleSelectors holds a list of selectors which will be used to find ClusterRoles and create the rules. If any of the selectors match, then the ClusterRole's permissions will be added`,
 						Optional:            true,
+
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"match_expressions": schema.ListNestedAttribute{
 									MarkdownDescription: `matchExpressions is a list of label selector requirements. The requirements are ANDed.`,
 									Optional:            true,
+
 									NestedObject: schema.NestedAttributeObject{
 										Attributes: map[string]schema.Attribute{
 											"key": schema.StringAttribute{
@@ -66,6 +69,7 @@ func (r *ClusterRole) Schema(ctx context.Context, req resource.SchemaRequest, re
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: `Standard object's metadata.`,
 				Required:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"annotations": schema.MapAttribute{
 						MarkdownDescription: `Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations`,
@@ -117,6 +121,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 			"rules": schema.ListNestedAttribute{
 				MarkdownDescription: `Rules holds all the PolicyRules for this ClusterRole`,
 				Optional:            true,
+
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"api_groups": schema.ListAttribute{

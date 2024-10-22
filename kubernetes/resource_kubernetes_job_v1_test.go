@@ -295,7 +295,7 @@ func TestAccKubernetesJobV1_updateTTLFromZero(t *testing.T) {
 			// Step 2: Wait for the Job to complete and be deleted
 			{
 				PreConfig: func() {
-					time.Sleep(70 * time.Second)
+					time.Sleep(120 * time.Second)
 				},
 				Config:             testAccKubernetesJobV1Config_customizeDiff_ttlZero(name, imageName),
 				PlanOnly:           true,

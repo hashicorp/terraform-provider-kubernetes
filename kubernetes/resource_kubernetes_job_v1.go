@@ -57,44 +57,40 @@ func resourceKubernetesJobV1CustomizeDiff(ctx context.Context, d *schema.Resourc
 		return nil
 	}
 
-	// Retrieve old and new TTL schema values as
+	// Retrieve old and new TTL values
 	oldTTLRaw, newTTLRaw := d.GetChange("spec.0.ttl_seconds_after_finished")
-	oldTTLStr, _ := oldTTLRaw.(string)
-	newTTLStr, _ := newTTLRaw.(string)
+
+	// If both TTL values are not set or are empty, skip TTL diff
+	if (oldTTLRaw == nil && newTTLRaw == nil) || (oldTTLRaw == "" && newTTLRaw == "") {
+		log.Printf("[DEBUG] No ttl_seconds_after_finished provided or both values are empty; skipping TTL diff")
+		return nil
+	}
+
+	// Only check TTL if present
+	var oldTTLStr, newTTLStr string
+	if oldTTLRaw != nil {
+		oldTTLStr, _ = oldTTLRaw.(string)
+	}
+	if newTTLRaw != nil {
+		newTTLStr, _ = newTTLRaw.(string)
+	}
 
 	oldTTLInt, err := strconv.Atoi(oldTTLStr)
 	if err != nil {
-		return fmt.Errorf("invalid old TTL value: %v", err)
+		log.Printf("[DEBUG] Invalid old TTL value: %s, skipping diff", oldTTLStr)
+		return nil
 	}
-
 	newTTLInt, err := strconv.Atoi(newTTLStr)
 	if err != nil {
-		return fmt.Errorf("invalid new TTL value: %v", err)
+		log.Printf("[DEBUG] Invalid new TTL value: %s, skipping diff", newTTLStr)
+		return nil
 	}
 
-	conn, err := meta.(KubeClientsets).MainClientset()
-	if err != nil {
-		return err
-	}
-
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return err
-	}
-
-	// Check if the Job exists
-	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// Job is missing, suppress diff if the TTL is the same
-			if oldTTLInt == newTTLInt {
-				log.Printf("[DEBUG] Job %s not found and ttl_seconds_after_finished remains unchanged; suppressing diff", d.Id())
-				d.Clear("spec")
-				d.Clear("metadata")
-			}
-		} else {
-			return err
-		}
+	// Suppress the diff if the old and new TTL values are the same
+	if oldTTLInt == newTTLInt {
+		log.Printf("[DEBUG] ttl_seconds_after_finished has not changed; suppressing diff")
+		d.Clear("spec")
+		d.Clear("metadata")
 	}
 
 	return nil

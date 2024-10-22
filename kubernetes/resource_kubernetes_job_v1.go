@@ -69,10 +69,10 @@ func resourceKubernetesJobV1CustomizeDiff(ctx context.Context, d *schema.Resourc
 	// Only check TTL if present
 	var oldTTLStr, newTTLStr string
 	if oldTTLRaw != nil {
-		oldTTLStr, _ = oldTTLRaw.(string)
+		oldTTLStr = oldTTLRaw.(string)
 	}
 	if newTTLRaw != nil {
-		newTTLStr, _ = newTTLRaw.(string)
+		newTTLStr = newTTLRaw.(string)
 	}
 
 	oldTTLInt, err := strconv.Atoi(oldTTLStr)

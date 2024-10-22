@@ -26,6 +26,7 @@ func (r *Role) Schema(ctx context.Context, req resource.SchemaRequest, resp *res
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: `Standard object's metadata.`,
 				Required:            true,
+
 				Attributes: map[string]schema.Attribute{
 					"annotations": schema.MapAttribute{
 						MarkdownDescription: `Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations`,
@@ -77,6 +78,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 			"rules": schema.ListNestedAttribute{
 				MarkdownDescription: `Rules holds all the PolicyRules for this Role`,
 				Optional:            true,
+
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"api_groups": schema.ListAttribute{

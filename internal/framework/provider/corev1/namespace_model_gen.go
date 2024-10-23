@@ -8,8 +8,9 @@ import (
 type NamespaceModel struct {
 	Timeouts timeouts.Value `tfsdk:"timeouts"`
 
-	ID       types.String `tfsdk:"id" manifest:""`
-	Metadata struct {
+	ID                           types.String  `tfsdk:"id" manifest:""`
+	WaitForDefaultServiceAccount types.Dynamic `tfsdk:"wait_for_default_service_account" manifest:""`
+	Metadata                     struct {
 		Annotations     map[string]types.String `tfsdk:"annotations" manifest:"annotations"`
 		GenerateName    types.String            `tfsdk:"generate_name" manifest:"generateName"`
 		Generation      types.Int64             `tfsdk:"generation" manifest:"generation"`

@@ -23,6 +23,10 @@ func (r *Namespace) Schema(ctx context.Context, req resource.SchemaRequest, resp
 				Optional:            true,
 				Computed:            true,
 			},
+			"wait_for_default_service_account": schema.DynamicAttribute{
+				MarkdownDescription: ``,
+				Optional:            true,
+			},
 			"metadata": schema.SingleNestedAttribute{
 				MarkdownDescription: `Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata`,
 				Required:            true,

@@ -40,6 +40,8 @@ func (r *Namespace) Create(ctx context.Context, req resource.CreateRequest, resp
 		return
 	}
 
+	r.AfterCreate(ctx, req, resp, &dataModel)
+
 	diags := resp.State.Set(ctx, &dataModel)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

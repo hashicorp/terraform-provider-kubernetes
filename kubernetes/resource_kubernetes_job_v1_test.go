@@ -252,7 +252,7 @@ func TestAccKubernetesJobV1_customizeDiff_ttlZero(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create the Job
 			{
-				Config: testAccKubernetesJobV1Config_customizeDiff_ttlZero(name, imageName),
+				Config: testAccKubernetesJobV1Config_Diff(name, imageName, 0),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "0"),
@@ -263,7 +263,7 @@ func TestAccKubernetesJobV1_customizeDiff_ttlZero(t *testing.T) {
 				PreConfig: func() {
 					time.Sleep(70 * time.Second)
 				},
-				Config:             testAccKubernetesJobV1Config_customizeDiff_ttlZero(name, imageName),
+				Config:             testAccKubernetesJobV1Config_Diff(name, imageName, 0),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
@@ -286,7 +286,7 @@ func TestAccKubernetesJobV1_updateTTLFromZero(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create the Job with ttl_seconds_after_finished = 0
 			{
-				Config: testAccKubernetesJobV1Config_customizeDiff_ttlZero(name, imageName),
+				Config: testAccKubernetesJobV1Config_Diff(name, imageName, 0),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "0"),
@@ -297,13 +297,13 @@ func TestAccKubernetesJobV1_updateTTLFromZero(t *testing.T) {
 				PreConfig: func() {
 					time.Sleep(120 * time.Second)
 				},
-				Config:             testAccKubernetesJobV1Config_customizeDiff_ttlZero(name, imageName),
+				Config:             testAccKubernetesJobV1Config_Diff(name, imageName, 0),
 				PlanOnly:           true,
 				ExpectNonEmptyPlan: false,
 			},
 			// Step 3: Update the Job to ttl_seconds_after_finished = 5
 			{
-				Config: testAccKubernetesJobV1Config_customizeDiff_ttlFive(name, imageName),
+				Config: testAccKubernetesJobV1Config_Diff(name, imageName, 5),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "5"),
@@ -593,14 +593,14 @@ func testAccKubernetesJobV1Config_modified(name, imageName string) string {
 }`, name, imageName)
 }
 
-func testAccKubernetesJobV1Config_customizeDiff_ttlZero(name, imageName string) string {
+func testAccKubernetesJobV1Config_Diff(name, imageName string, ttl int) string {
 	return fmt.Sprintf(`
 resource "kubernetes_job_v1" "test" {
   metadata {
     name = "%s"
   }
   spec {
-    ttl_seconds_after_finished = 0
+    ttl_seconds_after_finished = %d
     template {
       metadata {}
       spec {
@@ -615,30 +615,5 @@ resource "kubernetes_job_v1" "test" {
   }
   wait_for_completion = false
 }
-`, name, imageName)
-}
-
-func testAccKubernetesJobV1Config_customizeDiff_ttlFive(name, imageName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_job_v1" "test" {
-  metadata {
-    name = "%s"
-  }
-  spec {
-    ttl_seconds_after_finished = 5
-    template {
-      metadata {}
-      spec {
-        container {
-          name    = "wait-test"
-          image   = "%s"
-          command = ["sleep", "60"]
-        }
-        restart_policy = "Never"
-      }
-    }
-  }
-  wait_for_completion = false
-}
-`, name, imageName)
+`, name, ttl, imageName)
 }

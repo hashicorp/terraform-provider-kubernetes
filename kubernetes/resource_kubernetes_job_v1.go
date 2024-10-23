@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -17,7 +16,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -30,7 +28,6 @@ func resourceKubernetesJobV1() *schema.Resource {
 		ReadContext:   resourceKubernetesJobV1Read,
 		UpdateContext: resourceKubernetesJobV1Update,
 		DeleteContext: resourceKubernetesJobV1Delete,
-		CustomizeDiff: resourceKubernetesJobV1CustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -49,51 +46,6 @@ func resourceKubernetesJobV1() *schema.Resource {
 		},
 		Schema: resourceKubernetesJobV1Schema(),
 	}
-}
-
-func resourceKubernetesJobV1CustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	if d.Id() == "" {
-		log.Printf("[DEBUG] Resource ID is empty, resource not created yet.")
-		return nil
-	}
-
-	// Retrieve old and new TTL values
-	oldTTLRaw, newTTLRaw := d.GetChange("spec.0.ttl_seconds_after_finished")
-
-	// If both TTL values are not set or are empty, skip TTL diff
-	if (oldTTLRaw == nil && newTTLRaw == nil) || (oldTTLRaw == "" && newTTLRaw == "") {
-		log.Printf("[DEBUG] No ttl_seconds_after_finished provided or both values are empty; skipping TTL diff")
-		return nil
-	}
-
-	// Only check TTL if present
-	var oldTTLStr, newTTLStr string
-	if oldTTLRaw != nil {
-		oldTTLStr = oldTTLRaw.(string)
-	}
-	if newTTLRaw != nil {
-		newTTLStr = newTTLRaw.(string)
-	}
-
-	oldTTLInt, err := strconv.Atoi(oldTTLStr)
-	if err != nil {
-		log.Printf("[DEBUG] Invalid old TTL value: %s, skipping diff", oldTTLStr)
-		return nil
-	}
-	newTTLInt, err := strconv.Atoi(newTTLStr)
-	if err != nil {
-		log.Printf("[DEBUG] Invalid new TTL value: %s, skipping diff", newTTLStr)
-		return nil
-	}
-
-	// Suppress the diff if the old and new TTL values are the same
-	if oldTTLInt == newTTLInt {
-		log.Printf("[DEBUG] ttl_seconds_after_finished has not changed; suppressing diff")
-		d.Clear("spec")
-		d.Clear("metadata")
-	}
-
-	return nil
 }
 
 func resourceKubernetesJobV1Schema() map[string]*schema.Schema {
@@ -230,31 +182,6 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	// Attempt to get the Job
-	_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// Job is missing; check TTL
-			ttlAttr := d.Get("spec.0.ttl_seconds_after_finished")
-			ttlStr, _ := ttlAttr.(string)
-			ttlInt, err := strconv.Atoi(ttlStr)
-			if err != nil {
-				ttlInt = 0
-			}
-
-			if ttlInt >= 0 {
-				// Job was deleted due to TTL nothing to update
-				log.Printf("[INFO] Job %s not found but ttl_seconds_after_finished = %v; nothing to update", d.Id(), ttlInt)
-				return nil
-			}
-
-			// Job was deleted unexpectedly; return an error
-			return diag.Errorf("Job %s not found; cannot update because it has been deleted", d.Id())
-		}
-		return diag.Errorf("Error retrieving Job: %s", err)
-	}
-
-	// Proceed with the update as usual
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
 	if d.HasChange("spec") {

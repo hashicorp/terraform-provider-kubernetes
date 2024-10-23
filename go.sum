@@ -34,6 +34,8 @@ github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQ
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=
 github.com/bufbuild/protocompile v0.4.0/go.mod h1:3v93+mbWn/v3xzN+31nwkJfrEpAUwp+BagBSZWx+TP8=
+github.com/cenkalti/backoff/v4 v4.2.1 h1:y4OZtCnogmCPw98Zjyt5a6+QwPLGkiQsYW5oUqylYbM=
+github.com/cenkalti/backoff/v4 v4.2.1/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/chai2010/gettext-go v1.0.2 h1:1Lwwip6Q2QGsAdl/ZKPCwTe9fe0CjlUbqj5bFNSjIRk=
 github.com/chai2010/gettext-go v1.0.2/go.mod h1:y+wnP2cHYaVj19NZhYKAwEMH2CI1gNHeQQ+5AjwawxA=
@@ -175,10 +177,6 @@ github.com/hashicorp/terraform-exec v0.21.0 h1:uNkLAe95ey5Uux6KJdua6+cv8asgILFVW
 github.com/hashicorp/terraform-exec v0.21.0/go.mod h1:1PPeMYou+KDUSSeRE9szMZ/oHf4fYUmB923Wzbq1ICg=
 github.com/hashicorp/terraform-json v0.22.1 h1:xft84GZR0QzjPVWs4lRUwvTcPnegqlyS7orfb5Ltvec=
 github.com/hashicorp/terraform-json v0.22.1/go.mod h1:JbWSQCLFSXFFhg42T7l9iJwdGXBYV8fmmD6o/ML4p3A=
-github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.0 h1:cPPZitB7w5qYPbSad0IkhDaXZc7LpDhsgm4g8Kj2cOY=
-github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.0/go.mod h1:AOwjDhbkWel/4J4fnLB59l52cGmV13FjkqKxaNVJjok=
-github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022191930-51e5c0aa016a h1:NjEx7QP4I2xXV0hNYft98cTJtz5bOrR/ig3bbqPzPsI=
-github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022191930-51e5c0aa016a/go.mod h1:AfADi0tmCqyqPiz4Yyprr//qe+Kwz5HdxWaERDcDCl4=
 github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022192615-7f55d8b45646 h1:hMR+nw3FRKeRVhBrLf9WjAK8TWPjmTIsxdA8Qlgi6uk=
 github.com/hashicorp/terraform-plugin-codegen-kubernetes v0.1.1-0.20241022192615-7f55d8b45646/go.mod h1:AfADi0tmCqyqPiz4Yyprr//qe+Kwz5HdxWaERDcDCl4=
 github.com/hashicorp/terraform-plugin-docs v0.16.0 h1:UmxFr3AScl6Wged84jndJIfFccGyBZn52KtMNsS12dI=

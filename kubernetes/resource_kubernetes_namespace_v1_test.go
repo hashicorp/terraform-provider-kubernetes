@@ -41,12 +41,12 @@ func TestAccKubernetesNamespaceV1_basic(t *testing.T) {
 					v6resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
-			// {
-			// 	ResourceName:            resourceName,
-			// 	ImportState:             true,
-			// 	ImportStateVerify:       true,
-			// 	ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
-			// },
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
+			},
 			{
 				Config: testAccKubernetesNamespaceV1Config_addAnnotations(nsName),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -116,7 +116,7 @@ func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
 	nsName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_namespace_v1.test"
 
-	resource.ParallelTest(t, resource.TestCase{
+	v6resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
@@ -139,6 +139,8 @@ func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
 	})
 }
 
+// this test cannot pass on the plugin-framework implementation as it uses k8s server side apply which
+// requires name (and thus can't support generate name)
 func TestAccKubernetesNamespaceV1_generatedName(t *testing.T) {
 	var conf corev1.Namespace
 	prefix := "tf-acc-test-gen-"

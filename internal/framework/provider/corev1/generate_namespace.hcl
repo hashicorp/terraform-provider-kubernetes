@@ -21,6 +21,11 @@ resource "kubernetes_namespace_v1_gen" {
     
     autocrud_options {
       wait_for_deletion = true
+      hooks {
+        after {
+          create = true
+        }
+      }
     }
   }
 
@@ -36,6 +41,10 @@ resource "kubernetes_namespace_v1_gen" {
     "metadata.deletion_grace_period_seconds",
     "status",
     "spec"
+  ]
+
+  custom_attributes = [
+    "wait_for_default_service_account"
   ]
 
   required_attributes = [

@@ -4,6 +4,7 @@ go 1.21.5
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/getkin/kin-openapi v0.111.0
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/go-hclog v1.6.3

@@ -14,9 +14,17 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
+	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
+	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
+	framework "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	manifest "github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 )
 
 const (
@@ -29,6 +37,11 @@ const (
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
 
 func main() {
+	if os.Getenv("TF_X_KUBERNETES_CODEGEN_PLUGIN6") == "1" {
+		plugin6main()
+		return
+	}
+
 	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
 	flag.Parse()
 
@@ -55,6 +68,50 @@ func main() {
 	}
 
 	tf5server.Serve(providerName, func() tfprotov5.ProviderServer { return muxer }, opts...)
+}
+
+func plugin6main() {
+	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
+	flag.Parse()
+
+	upgradedSdkServer, _ := tf5to6server.UpgradeServer(
+		context.Background(),
+		kubernetes.Provider().GRPCProvider,
+	)
+
+	upgradedManifestServer, _ := tf5to6server.UpgradeServer(
+		context.Background(),
+		manifest.Provider(),
+	)
+
+	providers := []func() tfprotov6.ProviderServer{
+		func() tfprotov6.ProviderServer { return upgradedSdkServer },
+		func() tfprotov6.ProviderServer { return upgradedManifestServer },
+		providerserver.NewProtocol6(framework.New(Version)),
+	}
+
+	ctx := context.Background()
+	muxer, err := tf6muxserver.NewMuxServer(ctx, providers...)
+	if err != nil {
+		log.Println(err.Error())
+		os.Exit(1)
+	}
+
+	opts := []tf6server.ServeOpt{}
+	if *debugFlag {
+		reattachConfigCh := make(chan *plugin.ReattachConfig)
+		go func() {
+			reattachConfig, err := waitForReattachConfig(reattachConfigCh)
+			if err != nil {
+				fmt.Printf("Error getting reattach config: %s\n", err)
+				return
+			}
+			printReattachConfig(reattachConfig)
+		}()
+		opts = append(opts, tf6server.WithDebug(ctx, reattachConfigCh, nil))
+	}
+
+	tf6server.Serve(providerName, muxer.ProviderServer, opts...)
 }
 
 // convertReattachConfig converts plugin.ReattachConfig to tfexec.ReattachConfig

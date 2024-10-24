@@ -118,8 +118,17 @@ func resourceKubernetesJobV1Read(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 	if !exists {
-		d.SetId("")
-		return diag.Diagnostics{}
+		// Check if ttl_seconds_after_finished is set
+		if ttl, ok := d.GetOk("spec.0.ttl_seconds_after_finished"); ok {
+			// ttl_seconds_after_finished is set, Job is deleted due to TTL
+			// We don't need to remove the resource from the state
+			log.Printf("[INFO] Job %s has been deleted by Kubernetes due to TTL (ttl_seconds_after_finished = %v), keeping resource in state", d.Id(), ttl)
+			return diag.Diagnostics{}
+		} else {
+			// ttl_seconds_after_finished is not set, remove the resource from the state
+			d.SetId("")
+			return diag.Diagnostics{}
+		}
 	}
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
@@ -204,7 +213,6 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	}
 	return resourceKubernetesJobV1Read(ctx, d, meta)
 }
-
 func resourceKubernetesJobV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {

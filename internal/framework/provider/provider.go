@@ -19,8 +19,9 @@ import (
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
 var (
-	_ provider.Provider              = &KubernetesProvider{}
-	_ provider.ProviderWithFunctions = &KubernetesProvider{}
+	_ provider.Provider                       = &KubernetesProvider{}
+	_ provider.ProviderWithFunctions          = &KubernetesProvider{}
+	_ provider.ProviderWithEphemeralResources = &KubernetesProvider{}
 )
 
 // KubernetesProvider defines the provider implementation.
@@ -29,6 +30,9 @@ type KubernetesProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
+
+	// legacyMeta is the provider meta from the SDKv2 code
+	legacyMeta func() any
 }
 
 // KubernetesProviderModel describes the provider data model.
@@ -208,8 +212,9 @@ func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Fu
 	}
 }
 
-func New(version string) provider.Provider {
+func New(version string, legacyMeta func() any) provider.Provider {
 	return &KubernetesProvider{
-		version: version,
+		version:    version,
+		legacyMeta: legacyMeta,
 	}
 }

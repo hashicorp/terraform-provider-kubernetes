@@ -261,7 +261,7 @@ func TestAccKubernetesJobV1_customizeDiff_ttlZero(t *testing.T) {
 			// Step 2: Wait for the Job to complete and be deleted
 			{
 				PreConfig: func() {
-					time.Sleep(70 * time.Second)
+					time.Sleep(30 * time.Second)
 				},
 				Config:             testAccKubernetesJobV1Config_Diff(name, imageName, 0),
 				PlanOnly:           true,
@@ -295,7 +295,7 @@ func TestAccKubernetesJobV1_updateTTLFromZero(t *testing.T) {
 			// Step 2: Wait for the Job to complete and be deleted
 			{
 				PreConfig: func() {
-					time.Sleep(120 * time.Second)
+					time.Sleep(30 * time.Second)
 				},
 				Config:             testAccKubernetesJobV1Config_Diff(name, imageName, 0),
 				PlanOnly:           true,
@@ -607,7 +607,7 @@ resource "kubernetes_job_v1" "test" {
         container {
           name    = "wait-test"
           image   = "%s"
-          command = ["sleep", "60"]
+          command = ["sleep", "20"]
         }
         restart_policy = "Never"
       }

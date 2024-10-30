@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -108,6 +109,50 @@ func TestAccKubernetesResourceNodeTaint_MultipleBasic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesResourceNodeTaint_MultipleSameKeyDifferentEffect(t *testing.T) {
+	resourceName := "kubernetes_node_taint.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccKubernetesNodeTaintDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNodeTaintConfig_multipleSameKeyDifferentEffect(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccKubernetesNodeTaintExists(resourceName),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
+					resource.TestCheckResourceAttr(resourceName, "taint.0.key", taintKey),
+					resource.TestCheckResourceAttr(resourceName, "taint.0.value", taintValue),
+					resource.TestCheckResourceAttr(resourceName, "taint.0.effect", "NoSchedule"),
+					resource.TestCheckResourceAttr(resourceName, "taint.1.key", taintKey),
+					resource.TestCheckResourceAttr(resourceName, "taint.1.value", taintValue),
+					resource.TestCheckResourceAttr(resourceName, "taint.1.effect", "NoExecute"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesResourceNodeTaint_DuplicateTaintKeyAndEffectExpectError(t *testing.T) {
+	resourceName := "kubernetes_node_taint.test"
+
+	expectPattern := "duplicate taint for key .* and effect \"\\w*\"; taints must be unique over key and effect"
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccKubernetesNodeTaintDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKubernetesNodeTaintConfig_duplicateKeyAndEffect(),
+				ExpectError: regexp.MustCompile(expectPattern),
+			},
+		},
+	})
+}
+
 func testAccKubernetesCheckNodeTaint(rs *terraform.ResourceState) error {
 	nodeName, taint, err := idToNodeTaint(rs.Primary.ID)
 	if err != nil {
@@ -169,6 +214,50 @@ resource "kubernetes_node_taint" "test" {
   field_manager = %q
 }
 `, taintKey, taintValue, taintEffect, fieldManager)
+}
+
+func testAccKubernetesNodeTaintConfig_multipleSameKeyDifferentEffect() string {
+	return fmt.Sprintf(`data "kubernetes_nodes" "test" {}
+
+resource "kubernetes_node_taint" "test" {
+  metadata {
+    name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
+  }
+  taint {
+    key    = %q
+    value  = %q
+    effect = %q
+  }
+  taint {
+    key    = %q
+    value  = %q
+    effect = %q
+  }
+  field_manager = %q
+}
+`, taintKey, taintValue, "NoSchedule", taintKey, taintValue, "NoExecute", fieldManager)
+}
+
+func testAccKubernetesNodeTaintConfig_duplicateKeyAndEffect() string {
+	return fmt.Sprintf(`data "kubernetes_nodes" "test" {}
+
+resource "kubernetes_node_taint" "test" {
+  metadata {
+    name = data.kubernetes_nodes.test.nodes.0.metadata.0.name
+  }
+  taint {
+    key    = %q
+    value  = %q
+    effect = %q
+  }
+  taint {
+    key    = %q
+    value  = %q
+    effect = %q
+  }
+  field_manager = %q
+}
+`, taintKey, taintValue, "NoSchedule", taintKey, "dedicated", "NoSchedule", fieldManager)
 }
 
 func testAccKubernetesNodeTaintConfig_multipleBasic() string {

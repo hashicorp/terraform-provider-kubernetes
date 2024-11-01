@@ -410,9 +410,6 @@ func flattenVolumes(volumes []v1.Volume) []interface{} {
 		if v.Cinder != nil {
 			obj["cinder"] = flattenCinderVolumeSource(v.Cinder)
 		}
-		if v.CephFS != nil {
-			obj["ceph_fs"] = flattenCephFSVolumeSource(v.CephFS)
-		}
 		if v.CSI != nil {
 			obj["csi"] = flattenCSIVolumeSource(v.CSI)
 		}
@@ -1603,9 +1600,6 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 		if v, ok := m["cinder"].([]interface{}); ok && len(v) > 0 {
 			vl[i].Cinder = expandCinderVolumeSource(v)
-		}
-		if v, ok := m["ceph_fs"].([]interface{}); ok && len(v) > 0 {
-			vl[i].CephFS = expandCephFSVolumeSource(v)
 		}
 		if v, ok := m["csi"].([]interface{}); ok && len(v) > 0 {
 			vl[i].CSI = expandCSIVolumeSource(v)

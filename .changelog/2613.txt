@@ -1,0 +1,3 @@
+```release-note:enhancement
+Removed deprecated support for CephFS volumes in the Kubernetes provider to align with updated Kubernetes storage options.
+```

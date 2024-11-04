@@ -18,7 +18,7 @@ This resource allows Terraform to manage data within a pre-existing ConfigMap. T
 - `metadata` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--metadata))
 
 ### Optional
-
+- `binary_data` (Map of String) BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet. This field only accepts base64-encoded payloads that will be decoded/encoded before being sent/received to/from the apiserver.
 - `field_manager` (String) Set the name of the field manager for the specified labels.
 - `force` (Boolean) Force overwriting data that is managed outside of Terraform.
 
@@ -49,6 +49,9 @@ resource "kubernetes_config_map_v1_data" "example" {
   }
   data = {
     "owner" = "myteam"
+  }
+  binary_data = {
+    "logo.png" = "HxShiC0rp..."
   }
 }
 ```

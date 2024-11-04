@@ -53,6 +53,12 @@ func resourceKubernetesConfigMapV1Data() *schema.Resource {
 				Description: "The data we want to add to the ConfigMap.",
 				Required:    true,
 			},
+			"binary_data": {
+				Type:         schema.TypeMap,
+				Description:  "BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet. This field only accepts base64-encoded payloads that will be decoded/encoded before being sent/received to/from the apiserver.",
+				Optional:     true,
+				ValidateFunc: validateBase64EncodedMap,
+			},
 			"force": {
 				Type:        schema.TypeBool,
 				Description: "Force overwriting data that is managed outside of Terraform.",
@@ -120,6 +126,7 @@ func resourceKubernetesConfigMapV1DataRead(ctx context.Context, d *schema.Resour
 	}
 
 	d.Set("data", data)
+	d.Set("binary_data", flattenByteMapToBase64Map(res.BinaryData))
 	return nil
 }
 
@@ -169,6 +176,7 @@ func resourceKubernetesConfigMapV1DataUpdate(ctx context.Context, d *schema.Reso
 
 	// craft the patch to update the data
 	data := d.Get("data")
+	binaryData := expandBase64MapToByteMap(d.Get("binary_data").(map[string]interface{}))
 	if d.Id() == "" {
 		// if we're deleting then just we just patch
 		// with an empty data map
@@ -181,7 +189,8 @@ func resourceKubernetesConfigMapV1DataUpdate(ctx context.Context, d *schema.Reso
 			"name":      name,
 			"namespace": namespace,
 		},
-		"data": data,
+		"data":       data,
+		"binaryData": binaryData,
 	}
 	patch := unstructured.Unstructured{}
 	patch.Object = patchobj

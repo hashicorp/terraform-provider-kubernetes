@@ -5,6 +5,8 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -84,6 +86,53 @@ func TestAccKubernetesConfigMapV1Data_validation(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesConfigMapV1Data_binaryData(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_config_map_v1_data.test"
+	baseDir := "."
+	cwd, _ := os.Getwd()
+	if filepath.Base(cwd) != "kubernetes" { // running from test binary
+		baseDir = "kubernetes"
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			createConfigMap(name, "default")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy: func(s *terraform.State) error {
+			return destroyConfigMap(name, "default")
+		},
+		Steps: []resource.TestStep{
+
+			{
+				Config: testAccKubernetesConfigMapV1Data_binaryData(name, baseDir),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "data.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "data.text", "initial data"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "binary_data.binary1"),
+				),
+			},
+
+			{
+				Config: testAccKubernetesConfigMapV1Data_binaryDataUpdated(name, baseDir),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "data.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "data.text", "updated data"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "3"),
+					resource.TestCheckResourceAttrSet(resourceName, "binary_data.binary1"),
+					resource.TestCheckResourceAttrSet(resourceName, "binary_data.binary2"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.inline_binary", "UmF3IGlubGluZSBkYXRh"),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesConfigMapV1Data_empty(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_config_map_v1_data" "test" {
   metadata {
@@ -121,4 +170,44 @@ func testAccKubernetesConfigMapV1Data_modified(name string) string {
   field_manager = "tftest"
 }
 `, name)
+}
+
+func testAccKubernetesConfigMapV1Data_binaryData(name string, baseDir string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1_data" "test" {
+  metadata {
+    name = %q
+  }
+
+  data = {
+    "text" = "initial data"
+  }
+
+  binary_data = {
+    "binary1" = "${filebase64("%s/test-fixtures/binary.data")}"
+  }
+
+  field_manager = "tftest"
+}
+`, name, baseDir)
+}
+
+func testAccKubernetesConfigMapV1Data_binaryDataUpdated(name string, baseDir string) string {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1_data" "test" {
+  metadata {
+    name = %q
+  }
+
+  data = {
+    "text" = "updated data"
+  }
+
+  binary_data = {
+    "binary1" = "${filebase64("%s/test-fixtures/binary.data")}"
+    "binary2" = "${filebase64("%s/test-fixtures/binary2.data")}"
+    "inline_binary" = "${base64encode("Raw inline data")}"
+  }
+
+  field_manager = "tftest"
+}
+`, name, baseDir, baseDir)
 }

@@ -67,27 +67,6 @@ func flattenAzureFilePersistentVolumeSource(in *v1.AzureFilePersistentVolumeSour
 	return []interface{}{att}
 }
 
-func flattenCephFSPersistentVolumeSource(in *v1.CephFSPersistentVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-	att["monitors"] = newStringSet(schema.HashString, in.Monitors)
-	if in.Path != "" {
-		att["path"] = in.Path
-	}
-	if in.User != "" {
-		att["user"] = in.User
-	}
-	if in.SecretFile != "" {
-		att["secret_file"] = in.SecretFile
-	}
-	if in.SecretRef != nil {
-		att["secret_ref"] = flattenSecretReference(in.SecretRef)
-	}
-	if in.ReadOnly {
-		att["read_only"] = in.ReadOnly
-	}
-	return []interface{}{att}
-}
-
 func flattenCinderPersistentVolumeSource(in *v1.CinderPersistentVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["volume_id"] = in.VolumeID
@@ -321,9 +300,6 @@ func flattenPersistentVolumeSource(in v1.PersistentVolumeSource) []interface{} {
 	}
 	if in.Cinder != nil {
 		att["cinder"] = flattenCinderPersistentVolumeSource(in.Cinder)
-	}
-	if in.CephFS != nil {
-		att["ceph_fs"] = flattenCephFSPersistentVolumeSource(in.CephFS)
 	}
 	if in.FC != nil {
 		att["fc"] = flattenFCVolumeSource(in.FC)
@@ -600,32 +576,6 @@ func expandAzureFilePersistentVolumeSource(l []interface{}) *v1.AzureFilePersist
 	}
 	if v, ok := in["secret_namespace"].(string); ok && v != "" {
 		obj.SecretNamespace = &v
-	}
-	return obj
-}
-
-func expandCephFSPersistentVolumeSource(l []interface{}) *v1.CephFSPersistentVolumeSource {
-	if len(l) == 0 || l[0] == nil {
-		return &v1.CephFSPersistentVolumeSource{}
-	}
-	in := l[0].(map[string]interface{})
-	obj := &v1.CephFSPersistentVolumeSource{
-		Monitors: sliceOfString(in["monitors"].(*schema.Set).List()),
-	}
-	if v, ok := in["path"].(string); ok {
-		obj.Path = v
-	}
-	if v, ok := in["user"].(string); ok {
-		obj.User = v
-	}
-	if v, ok := in["secret_file"].(string); ok {
-		obj.SecretFile = v
-	}
-	if v, ok := in["secret_ref"].([]interface{}); ok && len(v) > 0 {
-		obj.SecretRef = expandSecretReference(v)
-	}
-	if v, ok := in["read_only"].(bool); ok {
-		obj.ReadOnly = v
 	}
 	return obj
 }
@@ -936,9 +886,6 @@ func expandPersistentVolumeSource(l []interface{}) v1.PersistentVolumeSource {
 	}
 	if v, ok := in["cinder"].([]interface{}); ok && len(v) > 0 {
 		obj.Cinder = expandCinderPersistentVolumeSource(v)
-	}
-	if v, ok := in["ceph_fs"].([]interface{}); ok && len(v) > 0 {
-		obj.CephFS = expandCephFSPersistentVolumeSource(v)
 	}
 	if v, ok := in["fc"].([]interface{}); ok && len(v) > 0 {
 		obj.FC = expandFCVolumeSource(v)

@@ -544,6 +544,45 @@ func TestAccKubernetesPersistentVolumeV1_local_volumeSource(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolumeV1_cephFsSecretRef(t *testing.T) {
+	var conf api.PersistentVolume
+	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := fmt.Sprintf("tf-acc-test-%s", randString)
+	resourceName := "kubernetes_persistent_volume_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeV1Config_cephFsSecretRef(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.capacity.storage", "2Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.access_modes.0", "ReadWriteMany"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.ceph_fs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.ceph_fs.0.monitors.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.ceph_fs.0.monitors.0", "10.16.154.78:6789"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.ceph_fs.0.monitors.1", "10.16.154.82:6789"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.ceph_fs.0.secret_ref.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_source.0.ceph_fs.0.secret_ref.0.name", "ceph-secret"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPersistentVolumeV1_storageClass(t *testing.T) {
 	var conf api.PersistentVolume
 	randString := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
@@ -1715,6 +1754,33 @@ func testAccKubernetesPersistentVolumeV1Config_local_volumeSource(name, storage,
   }
 }
 `, name, storage, path, hostname)
+}
+
+func testAccKubernetesPersistentVolumeV1Config_cephFsSecretRef(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_persistent_volume_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    capacity = {
+      storage = "2Gi"
+    }
+
+    access_modes = ["ReadWriteMany"]
+
+    persistent_volume_source {
+      ceph_fs {
+        monitors = ["10.16.154.78:6789", "10.16.154.82:6789"]
+
+        secret_ref {
+          name = "ceph-secret"
+        }
+      }
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesPersistentVolumeV1Config_storageClass(name, diskName, storageClassName, storageClassName2, zone, refName string) string {

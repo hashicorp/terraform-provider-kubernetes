@@ -36,6 +36,10 @@ func TestAccKubernetesDataSourceNodes_basic(t *testing.T) {
 		resource.TestMatchResourceAttr(dataSourceName, "nodes.0.status.0.conditions.#", oneOrMore),
 		resource.TestCheckResourceAttrSet(dataSourceName, "nodes.0.status.0.conditions.0.type"),
 		resource.TestCheckResourceAttrSet(dataSourceName, "nodes.0.status.0.conditions.0.status"),
+		resource.TestCheckResourceAttrSet(dataSourceName, "nodes.0.status.0.conditions.0.last_heartbeat_time"),
+		resource.TestCheckResourceAttrSet(dataSourceName, "nodes.0.status.0.conditions.0.last_transition_time"),
+		resource.TestCheckResourceAttrSet(dataSourceName, "nodes.0.status.0.conditions.0.reason"),
+		resource.TestCheckResourceAttrSet(dataSourceName, "nodes.0.status.0.conditions.0.message"),
 	)
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },

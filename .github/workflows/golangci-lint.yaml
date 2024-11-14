@@ -5,6 +5,7 @@ on:
   pull_request:
     branches:
       - main
+      - v3-major-release
     paths:
       - '**/*.go'
       - '**/go.mod'

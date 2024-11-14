@@ -18,6 +18,7 @@ on:
   pull_request:
     branches:
       - main
+      - v3-major-release
     paths:
       - 'kubernetes/*.go'
       - 'go.mod'
@@ -41,12 +42,17 @@ jobs:
       matrix:
         kubernetes_version:
           # kind images: https://github.com/kubernetes-sigs/kind/releases (note the images are kind release specific)
+          - v1.30.0@sha256:047357ac0cfea04663786a612ba1eaba9702bef25227a794b52890dd8bcd692e
           - v1.29.0@sha256:eaa1450915475849a73a9227b8f201df25e55e268e5d619312131292e324d570
           - v1.28.0@sha256:b7a4cad12c197af3ba43202d3efe03246b3f0793f162afb40a33c923952d5b31
           - v1.27.3@sha256:3966ac761ae0136263ffdb6cfd4db23ef8a83cba8a463690e98317add2c9ba72
           - v1.26.6@sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
           - v1.25.11@sha256:227fa11ce74ea76a0474eeefb84cb75d8dad1b08638371ecf0e86259b35be0c8
           - v1.23.17@sha256:59c989ff8a517a93127d4a536e7014d28e235fb3529d9fba91b3951d461edfdb
+        include:
+          # This version will only run on the 'v3-major-release' branch
+          - kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9
+            branches: ['v3-major-release']
     steps:
       - name: Checkout repository
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4

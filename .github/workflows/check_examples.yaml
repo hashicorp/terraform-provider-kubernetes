@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - main
+      - v3-major-release
     paths:
       - "_examples/kubernetes_manifest/**"
       - "**.go"
   pull_request:
     branches:
       - main
+      - v3-major-release
     paths:
       - "_examples/kubernetes_manifest/**"
       - "**.go"

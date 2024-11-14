@@ -67,6 +67,7 @@ Optional:
 - `aws_elastic_block_store` (Block List, Max: 1) Represents an AWS Disk resource that is attached to a kubelet's host machine and then exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore (see [below for nested schema](#nestedblock--spec--persistent_volume_source--aws_elastic_block_store))
 - `azure_disk` (Block List, Max: 1) Represents an Azure Data Disk mount on the host and bind mount to the pod. (see [below for nested schema](#nestedblock--spec--persistent_volume_source--azure_disk))
 - `azure_file` (Block List, Max: 1) Represents an Azure File Service mount on the host and bind mount to the pod. (see [below for nested schema](#nestedblock--spec--persistent_volume_source--azure_file))
+- `ceph_fs` (Block List, Max: 1) Represents a Ceph FS mount on the host that shares a pod's lifetime (see [below for nested schema](#nestedblock--spec--persistent_volume_source--ceph_fs))
 - `cinder` (Block List, Max: 1) Represents a cinder volume attached and mounted on kubelets host machine. More info: https://examples.k8s.io/mysql-cinder-pd/README.md (see [below for nested schema](#nestedblock--spec--persistent_volume_source--cinder))
 - `csi` (Block List, Max: 1) Represents a CSI Volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#csi (see [below for nested schema](#nestedblock--spec--persistent_volume_source--csi))
 - `fc` (Block List, Max: 1) Represents a Fibre Channel resource that is attached to a kubelet's host machine and then exposed to the pod. (see [below for nested schema](#nestedblock--spec--persistent_volume_source--fc))
@@ -125,6 +126,31 @@ Optional:
 
 - `read_only` (Boolean) Whether to force the read-only setting in VolumeMounts. Defaults to false (read/write).
 - `secret_namespace` (String) The namespace of the secret that contains Azure Storage Account Name and Key. For Kubernetes up to 1.18.x the default is the same as the Pod. For Kubernetes 1.19.x and later the default is "default" namespace.
+
+
+<a id="nestedblock--spec--persistent_volume_source--ceph_fs"></a>
+### Nested Schema for `spec.persistent_volume_source.ceph_fs`
+
+Required:
+
+- `monitors` (Set of String) Monitors is a collection of Ceph monitors. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+
+Optional:
+
+- `path` (String) Used as the mounted root, rather than the full Ceph tree, default is /
+- `read_only` (Boolean) Whether to force the read-only setting in VolumeMounts. Defaults to `false` (read/write). More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+- `secret_file` (String) The path to key ring for User, default is `/etc/ceph/user.secret`. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+- `secret_ref` (Block List, Max: 1) Reference to the authentication secret for User, default is empty. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it (see [below for nested schema](#nestedblock--spec--persistent_volume_source--ceph_fs--secret_ref))
+- `user` (String) User is the rados user name, default is admin. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it
+
+<a id="nestedblock--spec--persistent_volume_source--ceph_fs--secret_ref"></a>
+### Nested Schema for `spec.persistent_volume_source.ceph_fs.secret_ref`
+
+Optional:
+
+- `name` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+- `namespace` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
 
 
 <a id="nestedblock--spec--persistent_volume_source--cinder"></a>

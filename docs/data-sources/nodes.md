@@ -82,7 +82,7 @@ Read-Only:
 - `allocatable` (Map of String)
 - `capacity` (Map of String)
 - `node_info` (List of Object) (see [below for nested schema](#nestedobjatt--nodes--status--node_info))
-
+- `conditions` (List of Object) (see [below for nested schema](#nestedobjatt--nodes--status--conditions))
 <a id="nestedobjatt--nodes--status--addresses"></a>
 ### Nested Schema for `nodes.status.addresses`
 
@@ -108,7 +108,17 @@ Read-Only:
 - `os_image` (String)
 - `system_uuid` (String)
 
+<a id="nestedobjatt--nodes--status--conditions"></a>
+### Nested Schema for `nodes.status.conditions`
 
+Read-Only:
+
+- `type` (String)
+- `status` (String)
+- `last_heartbeat_time` (String)
+- `last_transition_time` (String)
+- `reason` (String)
+- `message` (String)
 
 
  

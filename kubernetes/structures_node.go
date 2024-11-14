@@ -71,12 +71,29 @@ func flattenNodeInfo(in v1.NodeSystemInfo) []interface{} {
 	return []interface{}{att}
 }
 
+func flattenNodeConditions(conditions []v1.NodeCondition) []interface{} {
+	out := make([]interface{}, len(conditions))
+	for i, condition := range conditions {
+		m := make(map[string]interface{})
+		m["type"] = condition.Type
+		m["status"] = condition.Status
+		m["last_heartbeat_time"] = condition.LastHeartbeatTime.String()
+		m["last_transition_time"] = condition.LastTransitionTime.String()
+		m["reason"] = condition.Reason
+		m["message"] = condition.Message
+		out[i] = m
+	}
+	return out
+}
+
 func flattenNodeStatus(in v1.NodeStatus) []interface{} {
 	att := make(map[string]interface{})
 	att["addresses"] = flattenAddresses(in.Addresses...)
 	att["allocatable"] = flattenResourceList(in.Allocatable)
 	att["capacity"] = flattenResourceList(in.Capacity)
 	att["node_info"] = flattenNodeInfo(in.NodeInfo)
+	att["conditions"] = flattenNodeConditions(in.Conditions)
+
 	return []interface{}{att}
 }
 

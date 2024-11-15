@@ -738,6 +738,7 @@ func TestAccKubernetesPodV1_with_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.name", "db"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.sub_path_expr", ""),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.mount_propagation", "HostToContainer"),
 				),
 			},
@@ -774,11 +775,13 @@ func TestAccKubernetesPodV1_with_cfg_map_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.name", "cfg"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.sub_path_expr", ""),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.mount_propagation", "None"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.1.mount_path", "/tmp/my_raw_path"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.1.name", "cfg-binary"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.1.read_only", "false"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.1.sub_path", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.1.sub_path_expr", ""),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.name", "cfg"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.config_map.0.name", cfgMap),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.config_map.0.default_mode", "0777")),
@@ -1635,6 +1638,42 @@ func TestAccKubernetesPodV1_os(t *testing.T) {
 			{
 				Config:   testAccKubernetesPodV1ConfigOS(name, imageName),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPodV1_with_volume_mount_sub_path_expr(t *testing.T) {
+	var conf api.Pod
+	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigWithVolumeMountsSubPathExpr(secretName, podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.mount_path", "/tmp/my_path"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.name", "db"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.read_only", "false"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.sub_path_expr", "$(POD_NAME)"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.mount_propagation", "HostToContainer"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -3550,4 +3589,51 @@ func testAccKubernetesPodV1ConfigOS(name, imageName string) string {
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesPodV1ConfigWithVolumeMountsSubPathExpr(secretName, podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  data = {
+    one = "first"
+  }
+}
+
+resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+    name = "%s"
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+      env {
+        name = "POD_NAME"
+        value_from {
+          field_ref {
+            field_path = "metadata.name"
+          }
+        }
+      }
+      volume_mount {
+        mount_path        = "/tmp/my_path"
+        name              = "db"
+        mount_propagation = "HostToContainer"
+        sub_path_expr     = "$(POD_NAME)"
+      }
+    }
+    volume {
+      name = "db"
+      secret {
+        secret_name = kubernetes_secret_v1.test.metadata[0].name
+      }
+    }
+  }
+}
+`, secretName, podName, imageName)
 }

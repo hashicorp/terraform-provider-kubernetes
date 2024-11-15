@@ -16,7 +16,7 @@ import (
 func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []interface{} {
 	att := make(map[string]interface{})
 	att["access_modes"] = flattenPersistentVolumeAccessModes(in.AccessModes)
-	att["resources"] = flattenResourceRequirements(in.Resources)
+	att["resources"] = flattenVolumeResourceRequirements(in.Resources)
 	if in.Selector != nil {
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
@@ -32,7 +32,7 @@ func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []int
 	return []interface{}{att}
 }
 
-func flattenResourceRequirements(in corev1.ResourceRequirements) []interface{} {
+func flattenVolumeResourceRequirements(in corev1.VolumeResourceRequirements) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.Limits) > 0 {
 		att["limits"] = flattenResourceList(in.Limits)
@@ -73,7 +73,7 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
-	resourceRequirements, err := expandResourceRequirements(in["resources"].([]interface{}))
+	resourceRequirements, err := expandVolumeResourceRequirements(in["resources"].([]interface{}))
 	if err != nil {
 		return nil, err
 	}
@@ -94,8 +94,8 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 	return obj, nil
 }
 
-func expandResourceRequirements(l []interface{}) (*corev1.ResourceRequirements, error) {
-	obj := &corev1.ResourceRequirements{}
+func expandVolumeResourceRequirements(l []interface{}) (*corev1.VolumeResourceRequirements, error) {
+	obj := &corev1.VolumeResourceRequirements{}
 	if len(l) == 0 || l[0] == nil {
 		return obj, nil
 	}

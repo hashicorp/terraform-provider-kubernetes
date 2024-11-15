@@ -802,6 +802,7 @@ Read-Only:
 - `name` (String)
 - `read_only` (Boolean)
 - `sub_path` (String)
+- `sub_path_expr` (String)
 
 
 
@@ -1321,6 +1322,7 @@ Read-Only:
 - `name` (String)
 - `read_only` (Boolean)
 - `sub_path` (String)
+- `sub_path_expr` (String)
 
 
 

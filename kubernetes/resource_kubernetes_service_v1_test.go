@@ -819,6 +819,36 @@ func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesServiceV1_trafficDistribution(t *testing.T) {
+	var conf corev1.Service
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_service_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceV1Config_trafficDistribution(name, "PreferClose"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.traffic_distribution", "PreferClose"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
+			},
+		},
+	})
+}
+
 func testAccCheckServiceV1Ports(svc *corev1.Service, expected []corev1.ServicePort) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(svc.Spec.Ports) == 0 {
@@ -1416,4 +1446,27 @@ func testAccKubernetesServiceV1ConfigV1_ipFamilies(prefix string) string {
   }
 }
 `, prefix)
+}
+
+func testAccKubernetesServiceV1Config_trafficDistribution(name, trafficDistribution string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    traffic_distribution = "%s"
+
+    port {
+      port        = 8080
+      target_port = 80
+    }
+
+    selector = {
+      app = "MyApp"
+    }
+  }
+}
+`, name, trafficDistribution)
 }

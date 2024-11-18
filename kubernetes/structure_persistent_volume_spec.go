@@ -67,27 +67,6 @@ func flattenAzureFilePersistentVolumeSource(in *v1.AzureFilePersistentVolumeSour
 	return []interface{}{att}
 }
 
-func flattenCephFSVolumeSource(in *v1.CephFSVolumeSource) []interface{} {
-	att := make(map[string]interface{})
-	att["monitors"] = newStringSet(schema.HashString, in.Monitors)
-	if in.Path != "" {
-		att["path"] = in.Path
-	}
-	if in.User != "" {
-		att["user"] = in.User
-	}
-	if in.SecretFile != "" {
-		att["secret_file"] = in.SecretFile
-	}
-	if in.SecretRef != nil {
-		att["secret_ref"] = flattenLocalObjectReference(in.SecretRef)
-	}
-	if in.ReadOnly {
-		att["read_only"] = in.ReadOnly
-	}
-	return []interface{}{att}
-}
-
 func flattenCephFSPersistentVolumeSource(in *v1.CephFSPersistentVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["monitors"] = newStringSet(schema.HashString, in.Monitors)
@@ -621,32 +600,6 @@ func expandAzureFilePersistentVolumeSource(l []interface{}) *v1.AzureFilePersist
 	}
 	if v, ok := in["secret_namespace"].(string); ok && v != "" {
 		obj.SecretNamespace = &v
-	}
-	return obj
-}
-
-func expandCephFSVolumeSource(l []interface{}) *v1.CephFSVolumeSource {
-	if len(l) == 0 || l[0] == nil {
-		return &v1.CephFSVolumeSource{}
-	}
-	in := l[0].(map[string]interface{})
-	obj := &v1.CephFSVolumeSource{
-		Monitors: sliceOfString(in["monitors"].(*schema.Set).List()),
-	}
-	if v, ok := in["path"].(string); ok {
-		obj.Path = v
-	}
-	if v, ok := in["user"].(string); ok {
-		obj.User = v
-	}
-	if v, ok := in["secret_file"].(string); ok {
-		obj.SecretFile = v
-	}
-	if v, ok := in["secret_ref"].([]interface{}); ok && len(v) > 0 {
-		obj.SecretRef = expandLocalObjectReference(v)
-	}
-	if v, ok := in["read_only"].(bool); ok {
-		obj.ReadOnly = v
 	}
 	return obj
 }
@@ -1519,28 +1472,6 @@ func patchPersistentVolumeSource(pathPrefix, prefix string, d *schema.ResourceDa
 			}
 		} else if oldOk && len(oldV) > 0 {
 			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/cinder"})
-		}
-	}
-
-	if d.HasChange(prefix + "ceph_fs") {
-		oldIn, newIn := d.GetChange(prefix + "ceph_fs")
-		oldV, oldOk := oldIn.([]interface{})
-		newV, newOk := newIn.([]interface{})
-
-		if newOk && len(newV) > 0 {
-			if oldOk && len(oldV) > 0 {
-				ops = append(ops, &ReplaceOperation{
-					Path:  pathPrefix + "/cephfs",
-					Value: expandCephFSVolumeSource(newV),
-				})
-			} else {
-				ops = append(ops, &AddOperation{
-					Path:  pathPrefix + "/cephfs",
-					Value: expandCephFSVolumeSource(newV),
-				})
-			}
-		} else if oldOk && len(oldV) > 0 {
-			ops = append(ops, &RemoveOperation{Path: pathPrefix + "/cephfs"})
 		}
 	}
 

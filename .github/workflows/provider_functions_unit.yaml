@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+      - v3-major-release
     paths:
       - "internal/framework/provider/functions/**/*.go"
   pull_request:
     branches:
       - main
+      - v3-major-release
     paths:
       - "internal/framework/provider/functions/**/*.go"
   workflow_dispatch:

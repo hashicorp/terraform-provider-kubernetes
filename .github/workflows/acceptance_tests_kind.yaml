@@ -50,10 +50,10 @@ jobs:
           - v1.26.6@sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
           - v1.25.11@sha256:227fa11ce74ea76a0474eeefb84cb75d8dad1b08638371ecf0e86259b35be0c8
           - v1.23.17@sha256:59c989ff8a517a93127d4a536e7014d28e235fb3529d9fba91b3951d461edfdb
-        isMain:
-          - ${{ contains(github.ref, 'main') }}
+        isBaseMain:
+          - ${{ contains(github.base_ref, 'main') }}
         exclude:
-          - isMain: true
+          - isBaseMain: true
             kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9
     steps:
       - name: Checkout repository

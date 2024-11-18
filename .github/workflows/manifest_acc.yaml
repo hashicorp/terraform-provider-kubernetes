@@ -40,10 +40,15 @@ jobs:
           - v1.23.17@sha256:59c989ff8a517a93127d4a536e7014d28e235fb3529d9fba91b3951d461edfdb
         isMain:
           - ${{ contains(github.ref, 'main') }}
+        isBaseMajorRelease:
+          - ${{ contains(github.base_ref, 'v3-major-release') }}
         exclude:
           - isMain: true
+            isBaseMajorRelease: false
             kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9
-
+          - isMain: false
+            isBaseMajorRelease: true
+            kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9
         terraform_version:
           - 1.9.8
           - 1.8.5

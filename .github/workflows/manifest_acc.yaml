@@ -43,9 +43,11 @@ jobs:
         isBaseMajorRelease:
           - ${{ contains(github.base_ref, 'v3-major-release') }}
         exclude:
+          # Exclude if reference is main and base reference is not v3-major-release
           - isMain: true
             isBaseMajorRelease: false
             kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9
+          # Exclude if reference is not main and base reference is v3-major-release
           - isMain: false
             isBaseMajorRelease: true
             kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9

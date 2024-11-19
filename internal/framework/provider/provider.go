@@ -5,6 +5,8 @@ package provider
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -52,8 +54,8 @@ type KubernetesProviderModel struct {
 
 	ProxyURL types.String `tfsdk:"proxy_url"`
 
-	IgnoreAnnotations types.List `tfsdk:"ignore_annotations"`
-	IgnoreLabels      types.List `tfsdk:"ignore_labels"`
+	IgnoreAnnotations []types.String `tfsdk:"ignore_annotations"`
+	IgnoreLabels      []types.String `tfsdk:"ignore_labels"`
 
 	Exec []struct {
 		APIVersion types.String            `tfsdk:"api_version"`
@@ -185,7 +187,18 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 }
 
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	resources := []func() resource.Resource{}
+	if os.Getenv("TF_X_KUBERNETES_CODEGEN_PLUGIN6") == "1" {
+		// NOTE only add resources if plugin6 experiment is enabled
+		resources = append(resources, generatedResources...)
+		//hijack the implementations during testing to have a non "_gen" suffixed TypeName
+		if os.Getenv("TF_ACC") == "1" {
+			for i, r := range resources {
+				resources[i] = makeTestable(r)
+			}
+		}
+	}
+	return resources
 }
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
@@ -203,5 +216,39 @@ func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Fu
 func New(version string) provider.Provider {
 	return &KubernetesProvider{
 		version: version,
+	}
+}
+
+type testableResource struct {
+	resource.ResourceWithConfigure
+}
+
+func (r testableResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	r.ResourceWithConfigure.Metadata(ctx, req, resp)
+	resp.TypeName = strings.TrimSuffix(resp.TypeName, "_gen")
+}
+
+type testableResourceWithImportState struct {
+	testableResource
+}
+
+func (r testableResourceWithImportState) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	r.ResourceWithConfigure.(resource.ResourceWithImportState).ImportState(ctx, req, resp)
+}
+
+func makeTestable(constructor func() resource.Resource) func() resource.Resource {
+	return func() resource.Resource {
+		r := constructor()
+		testable := testableResource{
+			ResourceWithConfigure: r.(resource.ResourceWithConfigure),
+		}
+
+		if _, ok := r.(resource.ResourceWithImportState); ok {
+			return testableResourceWithImportState{
+				testableResource: testable,
+			}
+		}
+
+		return testable
 	}
 }

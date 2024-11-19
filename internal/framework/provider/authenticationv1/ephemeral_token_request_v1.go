@@ -21,7 +21,7 @@ var (
 )
 
 type TokenRequestEphemeralResource struct {
-	legacyMeta func() any
+	SDKv2Meta func() any
 }
 
 type TokenRequestMetadata struct {
@@ -59,7 +59,7 @@ func (r *TokenRequestEphemeralResource) Configure(ctx context.Context, req ephem
 		return
 	}
 
-	r.legacyMeta = req.ProviderData.(func() any)
+	r.SDKv2Meta = req.ProviderData.(func() any)
 }
 
 func (r *TokenRequestEphemeralResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
@@ -144,7 +144,7 @@ func (r *TokenRequestEphemeralResource) Open(ctx context.Context, req ephemeral.
 	name := data.Metadata.Name.ValueString()
 	namespace := data.Metadata.Namespace.ValueString()
 
-	conn, err := r.legacyMeta().(kubernetes.KubeClientsets).MainClientset()
+	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
 		panic(err.Error())
 	}

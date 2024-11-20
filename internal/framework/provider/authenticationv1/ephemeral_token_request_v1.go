@@ -67,55 +67,72 @@ func (r *TokenRequestEphemeralResource) Metadata(ctx context.Context, req epheme
 }
 
 func (r *TokenRequestEphemeralResource) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
+	objectMetaOpenAPI := metav1.ObjectMeta{}.SwaggerDoc()
+
+	tokenreqOpenAPISpec := authv1.TokenRequestSpec{}.SwaggerDoc()
+	tokenreqOpenAPIStatus := authv1.TokenRequestStatus{}.SwaggerDoc()
+	tokenreqOpenAPIBoundObjRef := authv1.BoundObjectReference{}.SwaggerDoc()
+
 	resp.Schema = schema.Schema{
 		Description: "TokenRequest requests a token for a given service account.",
 		Attributes: map[string]schema.Attribute{
 			"token": schema.StringAttribute{
-				Computed: true,
-				Optional: true,
+				Computed:    true,
+				Optional:    true,
+				Description: tokenreqOpenAPIStatus["token"],
 			},
 			"expiration_timestamp": schema.StringAttribute{
-				Computed: true,
-				Optional: true,
+				Computed:    true,
+				Optional:    true,
+				Description: tokenreqOpenAPIStatus["expirationTimestamp"],
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"metadata": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: objectMetaOpenAPI["name"],
 					},
 					"namespace": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: objectMetaOpenAPI["namespace"],
 					},
 				},
 			},
 			"spec": schema.SingleNestedBlock{
+				Description: tokenreqOpenAPISpec[""],
 				Attributes: map[string]schema.Attribute{
 					"audiences": schema.ListAttribute{
 						Optional:    true,
 						Computed:    true,
 						ElementType: types.StringType,
+						Description: tokenreqOpenAPISpec["audiences"],
 					},
 					"expiration_seconds": schema.Int64Attribute{
-						Optional: true,
-						Computed: true,
+						Optional:    true,
+						Computed:    true,
+						Description: tokenreqOpenAPISpec["expirationSeconds"],
 					},
 				},
 				Blocks: map[string]schema.Block{
 					"bound_object_ref": schema.SingleNestedBlock{
 						Attributes: map[string]schema.Attribute{
 							"api_version": schema.StringAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: tokenreqOpenAPIBoundObjRef["apiVersion"],
 							},
 							"kind": schema.StringAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: tokenreqOpenAPIBoundObjRef["kind"],
 							},
 							"name": schema.StringAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: tokenreqOpenAPIBoundObjRef["name"],
 							},
 							"uid": schema.StringAttribute{
-								Optional: true,
+								Optional:    true,
+								Description: tokenreqOpenAPIBoundObjRef["uid"],
 							},
 						},
 					},
@@ -143,6 +160,9 @@ func (r *TokenRequestEphemeralResource) Open(ctx context.Context, req ephemeral.
 
 	name := data.Metadata.Name.ValueString()
 	namespace := data.Metadata.Namespace.ValueString()
+	if namespace == "" {
+		namespace = "default"
+	}
 
 	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
@@ -154,18 +174,21 @@ func (r *TokenRequestEphemeralResource) Open(ctx context.Context, req ephemeral.
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: authv1.TokenRequestSpec{
-			Audiences:         expandStringSlice(data.Spec.Audiences),
-			ExpirationSeconds: data.Spec.ExpirationSeconds.ValueInt64Pointer(),
-		},
 	}
 
-	if data.Spec.BoundObjecRef != nil {
-		tokenRequest.Spec.BoundObjectRef = &authv1.BoundObjectReference{
-			Kind:       data.Spec.BoundObjecRef.Kind.ValueString(),
-			APIVersion: data.Spec.BoundObjecRef.APIVersion.ValueString(),
-			Name:       data.Spec.BoundObjecRef.Name.ValueString(),
-			UID:        k8stypes.UID(data.Spec.BoundObjecRef.UID.ValueString()),
+	if data.Spec != nil {
+		tokenRequest.Spec = authv1.TokenRequestSpec{
+			Audiences:         expandStringSlice(data.Spec.Audiences),
+			ExpirationSeconds: data.Spec.ExpirationSeconds.ValueInt64Pointer(),
+		}
+
+		if data.Spec.BoundObjecRef != nil {
+			tokenRequest.Spec.BoundObjectRef = &authv1.BoundObjectReference{
+				Kind:       data.Spec.BoundObjecRef.Kind.ValueString(),
+				APIVersion: data.Spec.BoundObjecRef.APIVersion.ValueString(),
+				Name:       data.Spec.BoundObjecRef.Name.ValueString(),
+				UID:        k8stypes.UID(data.Spec.BoundObjecRef.UID.ValueString()),
+			}
 		}
 	}
 

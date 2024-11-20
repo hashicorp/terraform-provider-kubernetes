@@ -65,9 +65,10 @@ func (r *CertificateSigningRequestEphemeralResource) Metadata(ctx context.Contex
 }
 
 func (r *CertificateSigningRequestEphemeralResource) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
-	openapi := certificatesv1.CertificateSigningRequest{}.SwaggerDoc()
-	openapiSpec := certificatesv1.CertificateSigningRequestSpec{}.SwaggerDoc()
-	openapiStatus := certificatesv1.CertificateSigningRequestStatus{}.SwaggerDoc()
+	objectMetaOpenAPI := metav1.ObjectMeta{}.SwaggerDoc()
+	csrOpenAPI := certificatesv1.CertificateSigningRequest{}.SwaggerDoc()
+	csrOpenAPISpec := certificatesv1.CertificateSigningRequestSpec{}.SwaggerDoc()
+	csrOpenAPIStatus := certificatesv1.CertificateSigningRequestStatus{}.SwaggerDoc()
 
 	resp.Schema = schema.Schema{
 		Description: "TokenRequest requests a token for a given service account.",
@@ -79,38 +80,36 @@ func (r *CertificateSigningRequestEphemeralResource) Schema(ctx context.Context,
 			"certificate": schema.StringAttribute{
 				Computed:    true,
 				Optional:    true,
-				Description: openapiStatus["certificate"],
+				Description: csrOpenAPIStatus["certificate"],
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"metadata": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"name": schema.StringAttribute{
-						Required: true,
-					},
-					"namespace": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: objectMetaOpenAPI["name"],
 					},
 				},
 			},
 			"spec": schema.SingleNestedBlock{
-				Description: openapi[""],
+				Description: csrOpenAPI[""],
 				Attributes: map[string]schema.Attribute{
 					"usages": schema.ListAttribute{
-						Description: openapiSpec["usages"],
+						Description: csrOpenAPISpec["usages"],
 						Optional:    true,
 						ElementType: types.StringType,
 					},
 					"expiration_seconds": schema.Int32Attribute{
-						Description: openapiSpec["expirationSeconds"],
+						Description: csrOpenAPISpec["expirationSeconds"],
 						Optional:    true,
 					},
 					"request": schema.StringAttribute{
-						Description: openapiSpec["request"],
+						Description: csrOpenAPISpec["request"],
 						Required:    true,
 					},
 					"signer_name": schema.StringAttribute{
-						Description: openapiSpec["signerName"],
+						Description: csrOpenAPISpec["signerName"],
 						Required:    true,
 					},
 				},
@@ -197,11 +196,11 @@ func (r *CertificateSigningRequestEphemeralResource) Open(ctx context.Context, r
 	waitingErr := fmt.Errorf("waiting")
 	waitForIssue := kwait.Backoff{
 		Steps:    5,
-		Duration: 5 * time.Minute,
+		Duration: 1 * time.Minute,
 		Factor:   1.0,
 		Jitter:   0.1,
 	}
-	err = kretry.OnError(waitForIssue, func(e error) bool { return true }, func() error {
+	err = kretry.OnError(waitForIssue, func(e error) bool { return e == waitingErr }, func() error {
 		out, err := conn.CertificatesV1().CertificateSigningRequests().Get(ctx,
 			newcsr.GetName(), metav1.GetOptions{})
 		if err != nil {

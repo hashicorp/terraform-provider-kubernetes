@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -15,7 +17,10 @@ import (
 // CLI command executed to create a provider server to which the CLI can
 // reattach.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+	// TODO init SDKv2 so we can use the client from it
+
 	"kubernetes": providerserver.NewProtocol6WithError(New("test", nil)),
+	"echo":       echoprovider.NewProviderServer(),
 }
 
 func testAccPreCheck(t *testing.T) {

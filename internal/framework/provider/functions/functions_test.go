@@ -10,5 +10,5 @@ import (
 )
 
 var testAccProtoV5ProviderFactories = map[string]func() (tfprotov5.ProviderServer, error){
-	"kubernetes": providerserver.NewProtocol5WithError(provider.New("test")),
+	"kubernetes": providerserver.NewProtocol5WithError(provider.New("test", nil)),
 }

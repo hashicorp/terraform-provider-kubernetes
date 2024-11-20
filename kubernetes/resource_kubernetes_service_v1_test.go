@@ -1161,18 +1161,10 @@ resource "kubernetes_service_v1" "test" {
       target_port = 8080
     }
   }
+}
+`, name)
+}
 
-  status {
-    load_balancer {
-      ingress {
-        ip      = "192.168.1.100"
-        ip_mode = "%s"
-      }
-    }
-  }
-}
-`, name, ipMode)
-}
 func testAccKubernetesServiceV1Config_headless(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {

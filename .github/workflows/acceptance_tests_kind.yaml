@@ -90,3 +90,4 @@ jobs:
           # More information: https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#terraform-cli-installation-behaviors
         run: |
           make testacc
+          make frameworkacc

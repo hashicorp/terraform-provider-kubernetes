@@ -166,7 +166,8 @@ func (r *TokenRequestEphemeralResource) Open(ctx context.Context, req ephemeral.
 
 	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
-		panic(err.Error())
+		resp.Diagnostics.AddError("error initializing kubernetes client", err.Error())
+		return
 	}
 
 	tokenRequest := authv1.TokenRequest{
@@ -194,7 +195,8 @@ func (r *TokenRequestEphemeralResource) Open(ctx context.Context, req ephemeral.
 
 	res, err := conn.CoreV1().ServiceAccounts(namespace).CreateToken(ctx, name, &tokenRequest, metav1.CreateOptions{})
 	if err != nil {
-		panic(err.Error())
+		resp.Diagnostics.AddError("error creating token request", err.Error())
+		return
 	}
 
 	data.ExpirationTimestamp = types.StringValue(res.Status.ExpirationTimestamp.Format(time.RFC3339))

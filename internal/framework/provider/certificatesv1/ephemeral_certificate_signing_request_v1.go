@@ -1,3 +1,5 @@
+// Copyright (c) HashiCorp, Inc.
+
 package certificatesv1
 
 import (

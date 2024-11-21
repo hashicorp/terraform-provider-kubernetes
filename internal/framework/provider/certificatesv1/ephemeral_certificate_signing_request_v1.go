@@ -29,8 +29,7 @@ type CertificateSigningRequestEphemeralResource struct {
 }
 
 type CertificateSigningRequestMetadata struct {
-	Name      types.String `tfsdk:"name"`
-	Namespace types.String `tfsdk:"namespace"`
+	Name types.String `tfsdk:"name"`
 }
 
 type CertificateSigningRequestSpec struct {
@@ -42,7 +41,7 @@ type CertificateSigningRequestSpec struct {
 
 type CertificateSigningRequestModel struct {
 	Metadata CertificateSigningRequestMetadata `tfsdk:"metadata"`
-	Spec     *CertificateSigningRequestSpec    `tfsdk:"spec"`
+	Spec     CertificateSigningRequestSpec     `tfsdk:"spec"`
 
 	AutoApprove types.Bool   `tfsdk:"auto_approve"`
 	Certificate types.String `tfsdk:"certificate"`
@@ -140,17 +139,15 @@ func (r *CertificateSigningRequestEphemeralResource) Open(ctx context.Context, r
 	}
 
 	name := data.Metadata.Name.ValueString()
-	namespace := data.Metadata.Namespace.ValueString()
-
 	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
-		panic(err.Error())
+		resp.Diagnostics.AddError("error setting up kubernetes client", err.Error())
+		return
 	}
 
 	csr := certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name: name,
 		},
 		Spec: certificatesv1.CertificateSigningRequestSpec{
 			ExpirationSeconds: data.Spec.ExpirationSeconds.ValueInt32Pointer(),
@@ -162,7 +159,8 @@ func (r *CertificateSigningRequestEphemeralResource) Open(ctx context.Context, r
 	newcsr, err := conn.CertificatesV1().CertificateSigningRequests().Create(
 		ctx, &csr, metav1.CreateOptions{})
 	if err != nil {
-		panic(err.Error())
+		resp.Diagnostics.AddError("error creating CSR", err.Error())
+		return
 	}
 	defer conn.CertificatesV1().CertificateSigningRequests().Delete(
 		ctx, csr.GetName(), metav1.DeleteOptions{})
@@ -188,15 +186,16 @@ func (r *CertificateSigningRequestEphemeralResource) Open(ctx context.Context, r
 			return err
 		})
 		if err != nil {
-			panic(fmt.Sprintf("CSR auto-approve update failed: %v", err))
+			resp.Diagnostics.AddError("CSR auto approval failed", err.Error())
+			return
 		}
 	}
 
 	// wait for the certificate to be issued
-	waitingErr := fmt.Errorf("waiting")
+	waitingErr := fmt.Errorf("timed out waiting for certificate")
 	waitForIssue := kwait.Backoff{
 		Steps:    5,
-		Duration: 1 * time.Minute,
+		Duration: 1 * time.Second,
 		Factor:   1.0,
 		Jitter:   0.1,
 	}
@@ -216,12 +215,14 @@ func (r *CertificateSigningRequestEphemeralResource) Open(ctx context.Context, r
 		return waitingErr
 	})
 	if err != nil {
-		panic(err.Error())
+		resp.Diagnostics.AddError("error waiting for certificate to be issued", err.Error())
+		return
 	}
 
 	issued, err := conn.CertificatesV1().CertificateSigningRequests().Get(ctx, newcsr.GetName(), metav1.GetOptions{})
 	if err != nil {
-		panic(err.Error())
+		resp.Diagnostics.AddError("error getting CSR", err.Error())
+		return
 	}
 	data.Certificate = types.StringValue(string(issued.Status.Certificate))
 

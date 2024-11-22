@@ -825,7 +825,10 @@ func TestAccKubernetesServiceV1_trafficDistribution(t *testing.T) {
 	resourceName := "kubernetes_service_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.31")
+		},
 		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,

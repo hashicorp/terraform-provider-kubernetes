@@ -1,3 +1,7 @@
 ```release-note:enhancement
-Added the `traffic_distribution` field to the `kubernetes_service_v1` resource
+`resource/kubernetes_service`:  add a new field `traffic_distribution`.
+```
+
+```
+`resource/kubernetes_service_v1`:  add a new field `traffic_distribution`.
 ```

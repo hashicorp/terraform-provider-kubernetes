@@ -273,7 +273,7 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						Description: "Specifies the preferred strategy for distributing traffic to Service endpoints. When set to PreferClose, the Kubernetes will prioritize routing traffic to endpoints that are topologically closer",
 						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
-							"PreferClose",
+							corev1.ServiceTrafficDistributionPreferClose,
 						}, false),
 					},
 					"type": {

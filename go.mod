@@ -27,8 +27,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/hashstructure v1.1.0
 	github.com/robfig/cron v1.2.0
-<<<<<<< HEAD
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	golang.org/x/mod v0.17.0
 	k8s.io/api v0.30.3
 	k8s.io/apiextensions-apiserver v0.28.6
@@ -37,17 +36,6 @@ require (
 	k8s.io/kube-aggregator v0.28.6
 	k8s.io/kubectl v0.28.6
 	k8s.io/kubernetes v1.30.0
-=======
-	github.com/stretchr/testify v1.9.0
-	golang.org/x/mod v0.17.0
-	k8s.io/api v0.31.2
-	k8s.io/apiextensions-apiserver v0.30.3
-	k8s.io/apimachinery v0.31.2
-	k8s.io/client-go v0.31.2
-	k8s.io/kube-aggregator v0.30.3
-	k8s.io/kubectl v0.30.3
-	k8s.io/kubernetes v1.30.3
->>>>>>> 84df95b4 (updated go mod)
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -61,7 +49,6 @@ require (
 	github.com/bgentry/speakeasy v0.1.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
@@ -76,7 +63,6 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/exp v0.0.0-20230809150735-7b3493d9a819 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect

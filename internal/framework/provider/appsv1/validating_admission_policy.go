@@ -11,6 +11,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &ValidatingAdmissionPolicy{}
 var _ resource.ResourceWithImportState = &ValidatingAdmissionPolicy{}
+var _ resource.ResourceWithConfigure = &ValidatingAdmissionPolicy{}
 
 func NewValidatingAdmissionPolicy() resource.Resource {
 	return &ValidatingAdmissionPolicy{
@@ -27,7 +28,7 @@ type ValidatingAdmissionPolicy struct {
 }
 
 func (r *ValidatingAdmissionPolicy) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = "kubernetes_validating_admission_policy_v1_gen"
+	resp.TypeName = "kubernetes_validating_admission_policy"
 }
 
 func (r *ValidatingAdmissionPolicy) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

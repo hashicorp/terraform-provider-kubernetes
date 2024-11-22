@@ -13,7 +13,7 @@ import (
 
 func (r *ValidatingAdmissionPolicy) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `validatingadmissionpolicy`,
+		MarkdownDescription: `Validating Admission Policy Resource`,
 		Blocks: map[string]schema.Block{
 			"timeouts": timeouts.BlockAll(ctx),
 		},
@@ -231,7 +231,7 @@ func matchConstraintsFields() map[string]schema.Attribute {
 				Attributes: namedRuleWithOperationsFields(),
 			},
 		},
-		"matchPolicy": schema.StringAttribute{
+		"match_policy": schema.StringAttribute{
 			Optional:    true,
 			Description: "matchPolicy defines how the MatchResources list is used to match incoming requests. Allowed values are Exact or Equivalent.",
 			Validators: []validator.String{

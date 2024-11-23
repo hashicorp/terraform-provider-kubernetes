@@ -197,6 +197,77 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_volumeMatch(t *testing
 	})
 }
 
+func TestAccKubernetesPersistentVolumeClaimV1_withDataSource(t *testing.T) {
+	var sourcePVC, clonedPVC corev1.PersistentVolumeClaim
+	sourcePVCName := fmt.Sprintf("tf-acc-test-source-%s", acctest.RandString(10))
+	clonedPVCName := fmt.Sprintf("tf-acc-test-clone-%s", acctest.RandString(10))
+	resourceName := "kubernetes_persistent_volume_claim_v1.cloned"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeClaimV1Config_withDataSource(sourcePVCName, clonedPVCName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// Checking if the PVC exists
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(
+						"kubernetes_persistent_volume_claim_v1.source", &sourcePVC),
+					// Check if the cloned PVC exists and references the source PVC
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &clonedPVC),
+					// Validate that the data source field is set correctly
+					resource.TestCheckResourceAttr(resourceName, "spec.0.data_source.0.persistent_volume_claim.claim_name", sourcePVCName),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesPersistentVolumeClaimV1Config_withDataSource(sourcePVCName, clonedPVCName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_persistent_volume_claim_v1" "source" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+  }
+}
+
+resource "kubernetes_persistent_volume_claim_v1" "cloned" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+
+    data_source {
+      persistent_volume_claim {
+        claim_name = kubernetes_persistent_volume_claim_v1.source.metadata.0.name
+      }
+    }
+  }
+}
+`, sourcePVCName, clonedPVCName)
+}
+
 // Label matching isn't supported on GCE
 // TODO: Re-enable when we build test env for K8S that supports it
 

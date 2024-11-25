@@ -88,7 +88,10 @@ func rbacSubjectSchema() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "The Namespace of the subject resource.",
 			Optional:    true,
-			Default:     "default",
+			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+				// Suppress diff if namespace is "default" or omitted
+				return (old == "" && new == "default") || (old == "default" && new == "")
+			},
 		},
 	}
 }

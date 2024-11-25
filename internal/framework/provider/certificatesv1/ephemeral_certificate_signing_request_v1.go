@@ -196,9 +196,9 @@ func (r *CertificateSigningRequestEphemeralResource) Open(ctx context.Context, r
 	// wait for the certificate to be issued
 	waitingErr := fmt.Errorf("timed out waiting for certificate")
 	waitForIssue := kwait.Backoff{
-		Steps:    5,
-		Duration: 1 * time.Second,
-		Factor:   1.0,
+		Steps:    10,
+		Duration: 5 * time.Second,
+		Factor:   1.5,
 		Jitter:   0.1,
 	}
 	err = kretry.OnError(waitForIssue, func(e error) bool { return e == waitingErr }, func() error {

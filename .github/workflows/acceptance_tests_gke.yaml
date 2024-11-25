@@ -85,6 +85,7 @@ jobs:
           # More information: https://developer.hashicorp.com/terraform/plugin/sdkv2/testing/acceptance-tests#terraform-cli-installation-behaviors
         run: |
           make testacc
+          make frameworkacc
       - name: Destroy GKE cluster
         if: always() # we should destroy the cluster even if the tests fail
         working-directory: ${{ github.workspace }}/kubernetes/test-infra/gke

@@ -7,18 +7,22 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/authenticationv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
 var (
-	_ provider.Provider              = &KubernetesProvider{}
-	_ provider.ProviderWithFunctions = &KubernetesProvider{}
+	_ provider.Provider                       = &KubernetesProvider{}
+	_ provider.ProviderWithFunctions          = &KubernetesProvider{}
+	_ provider.ProviderWithEphemeralResources = &KubernetesProvider{}
 )
 
 // KubernetesProvider defines the provider implementation.
@@ -27,6 +31,9 @@ type KubernetesProvider struct {
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
+
+	// SDKv2Meta is a function which returns provider meta struct from the SDKv2 code
+	SDKv2Meta func() any
 }
 
 // KubernetesProviderModel describes the provider data model.
@@ -192,6 +199,13 @@ func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasourc
 	return []func() datasource.DataSource{}
 }
 
+func (p *KubernetesProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
+	return []func() ephemeral.EphemeralResource{
+		authenticationv1.NewTokenRequestEphemeralResource,
+		certificatesv1.NewCertificateSigningRequestEphemeralResource,
+	}
+}
+
 func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
 		pfunctions.NewManifestDecodeFunction,
@@ -200,8 +214,9 @@ func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Fu
 	}
 }
 
-func New(version string) provider.Provider {
+func New(version string, sdkv2Meta func() any) provider.Provider {
 	return &KubernetesProvider{
-		version: version,
+		version:   version,
+		SDKv2Meta: sdkv2Meta,
 	}
 }

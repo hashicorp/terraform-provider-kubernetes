@@ -8,6 +8,7 @@ OS_ARCH      := $(shell go env GOOS)_$(shell go env GOARCH)
 TF_PROV_DOCS := $(PWD)/kubernetes/test-infra/tfproviderdocs
 
 PROVIDER_FUNCTIONS_DIR := "$(PROVIDER_DIR)/internal/framework/provider/functions"
+PROVIDER_FRAMEWORK_DIR := "$(PROVIDER_DIR)/internal/framework/provider/..."
 
 ifneq ($(PWD),$(PROVIDER_DIR))
 $(error "Makefile must be run from the provider directory")
@@ -77,7 +78,10 @@ testacc: fmtcheck vet
 	TF_ACC=1 go test $(TEST) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
 
 testfuncs: fmtcheck 
-	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) 
+	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
+
+frameworkacc:
+	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -175,4 +179,4 @@ docs-lint-fix: tools
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
 	@terrafmt fmt ./docs --pattern '*.markdown'
 
-.PHONY: build test testacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry
+.PHONY: build test testacc frameworkacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry

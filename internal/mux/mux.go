@@ -15,10 +15,12 @@ import (
 )
 
 func MuxServer(ctx context.Context, v string) (tfprotov5.ProviderServer, error) {
+	kubernetesProvider := kubernetes.Provider()
+
 	providers := []func() tfprotov5.ProviderServer{
-		kubernetes.Provider().GRPCProvider,
+		kubernetesProvider.GRPCProvider,
 		manifest.Provider(),
-		providerserver.NewProtocol5(framework.New(v)),
+		providerserver.NewProtocol5(framework.New(v, kubernetesProvider.Meta)),
 	}
 
 	return tf5muxserver.NewMuxServer(ctx, providers...)

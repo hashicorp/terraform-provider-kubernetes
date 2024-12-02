@@ -67,6 +67,7 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
           make testacc
+          make frameworkacc
       - name: Destroy AKS
         if: always()
         working-directory: ${{ github.workspace }}/kubernetes/test-infra/aks 

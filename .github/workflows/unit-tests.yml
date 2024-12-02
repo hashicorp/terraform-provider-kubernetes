@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - v3-major-release
   pull_request:
     branches:
       - main
+      - v3-major-release
     paths:
       - 'kubernetes/*.go'
   workflow_dispatch:

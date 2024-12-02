@@ -124,6 +124,39 @@ func nodeStatusFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"conditions": {
+			Type:        schema.TypeList,
+			Computed:    true,
+			Description: "List of conditions describing each node's health and operational status.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"type": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"status": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"last_heartbeat_time": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"last_transition_time": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"reason": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"message": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+				},
+			},
+		},
 	}
 }
 

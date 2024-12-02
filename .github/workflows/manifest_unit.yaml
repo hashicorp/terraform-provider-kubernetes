@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - main
+      - v3-major-release
     paths:
       - "manifest/**/*.go"
       - "manifest/**/go.mod"
   pull_request:
     branches:
       - main
+      - v3-major-release
     paths:
       - "manifest/**/*.go"
       - "manifest/**/go.mod"

@@ -138,6 +138,7 @@ Read-Only:
 Read-Only:
 
 - `hostname` (String)
+- `ip_mode` (String)
 - `ip` (String)
 
 

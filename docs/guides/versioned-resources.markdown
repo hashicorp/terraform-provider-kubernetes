@@ -1,5 +1,5 @@
 ---
-subcategory: ""
+layout: "kubernetes"
 page_title: "Versioned resource names"
 description: |-
   This guide explains the naming conventions for resources and data sources in the Kubernetes provider. 

@@ -45,6 +45,7 @@ Read-Only:
 
 
 
+
 ~> **Note:** All arguments including the config map data will be stored in the raw state as plain-text. [Read more about sensitive data in state](/docs/state/sensitive-data.html).
 
 ## Example Usage

@@ -75,6 +75,8 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10%"),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},

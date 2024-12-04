@@ -41,6 +41,7 @@ resource "kubernetes_service_account_v1_gen" {
     "metadata.resource_version",
     "metadata.generation",
     "metadata.name",
+    "metadata.namespace"
   ]
 
   immutable_attributes = [

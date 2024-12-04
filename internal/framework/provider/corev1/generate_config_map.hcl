@@ -17,7 +17,7 @@ resource "kubernetes_config_map_v1_gen" {
   generate {
     schema     = true
     model      = true
-    autocrud   = true  
+    autocrud   = true
   }
 
   ignored_attributes = [
@@ -41,6 +41,7 @@ resource "kubernetes_config_map_v1_gen" {
     "metadata.resource_version",
     "metadata.generation",
     "metadata.name",
+    "metadata.namespace"
   ]
 
   immutable_attributes = [

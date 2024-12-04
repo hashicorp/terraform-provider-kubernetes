@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -27,7 +28,8 @@ func (r *Secret) Schema(ctx context.Context, req resource.SchemaRequest, resp *r
 				MarkdownDescription: `Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4`,
 				ElementType:         types.StringType,
 				Optional:            true,
-				Sensitive:           true,
+
+				Sensitive: true,
 			},
 			"immutable": schema.BoolAttribute{
 				MarkdownDescription: `Immutable, if set to true, ensures that data stored in the Secret cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time. Defaulted to nil.`,
@@ -65,6 +67,7 @@ Applied only if Name is not specified. More info: https://git.k8s.io/community/c
 						MarkdownDescription: `Name must be unique within a namespace. Is required when creating resources, although some resources may allow a client to request the generation of an appropriate name automatically. Name is primarily intended for creation idempotence and configuration definition. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names`,
 						Optional:            true,
 						Computed:            true,
+
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
@@ -74,6 +77,9 @@ Applied only if Name is not specified. More info: https://git.k8s.io/community/c
 
 Must be a DNS_LABEL. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces`,
 						Optional: true,
+						Computed: true,
+
+						Default: stringdefault.StaticString("default"),
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},

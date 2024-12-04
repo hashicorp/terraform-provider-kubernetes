@@ -54,6 +54,7 @@ resource "kubernetes_deployment_v1_gen" {
     "metadata.resource_version",
     "metadata.generation",
     "metadata.name",
+    "metadata.namespace"
   ]
 
   immutable_attributes = [

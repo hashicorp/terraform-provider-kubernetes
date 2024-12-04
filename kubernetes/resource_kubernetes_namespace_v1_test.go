@@ -139,7 +139,7 @@ func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
 	})
 }
 
-// this test cannot pass on the plugin-framework implementation as it uses k8s server side apply which
+// TODO: this test cannot pass on the plugin-framework implementation as it uses k8s server side apply which
 // requires name (and thus can't support generate name)
 func TestAccKubernetesNamespaceV1_generatedName(t *testing.T) {
 	var conf corev1.Namespace

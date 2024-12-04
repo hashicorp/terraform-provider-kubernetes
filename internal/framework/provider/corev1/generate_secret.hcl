@@ -55,6 +55,7 @@ resource "kubernetes_secret_v1_gen" {
     "metadata.resource_version",
     "metadata.generation",
     "metadata.name",
+    "metadata.namespace"
   ]
 
   sensitive_attributes = [

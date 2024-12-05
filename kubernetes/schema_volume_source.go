@@ -202,6 +202,7 @@ func commonVolumeSources() map[string]*schema.Schema {
 			Description: "Represents a Ceph FS mount on the host that shares a pod's lifetime",
 			Optional:    true,
 			MaxItems:    1,
+			Deprecated:  "ceph_fs is deprecated on clusters newer than 1.28",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"monitors": {

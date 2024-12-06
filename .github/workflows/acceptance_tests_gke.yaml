@@ -37,7 +37,7 @@ env:
   USE_GKE_GCLOUD_AUTH_PLUGIN: True
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION || '1.10.1' }}
   TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion || vars.CLUSTER_VERSION }}
   TF_VAR_node_count: ${{ github.event.inputs.nodeCount || vars.GOOGLE_NODE_COUNT }}
   TF_VAR_instance_type: ${{ github.event.inputs.instanceType || vars.GOOGLE_INSTANCE_TYPE }}

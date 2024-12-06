@@ -29,7 +29,7 @@ on:
 
 env:
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks/kubeconfig
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION || '1.10.1' }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS }}
   TF_VAR_location: ${{ github.event.inputs.location || vars.AZURE_LOCATION }}
   TF_VAR_node_count: ${{ github.event.inputs.nodeCount || vars.AZURE_NODE_COUNT }}

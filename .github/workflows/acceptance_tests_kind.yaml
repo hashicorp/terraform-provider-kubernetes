@@ -11,7 +11,7 @@ on:
         default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.10.0-rc3 # FIXME update this once 1.10 goes out 
+        default: 1.10.1
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8

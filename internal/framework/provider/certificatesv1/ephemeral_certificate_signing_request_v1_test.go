@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccEpehemeralCertificateSigningRequest_basic(t *testing.T) {
@@ -17,6 +18,9 @@ func TestAccEpehemeralCertificateSigningRequest_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testEphemeralCertificateSigningRequestRequestV1Config(name),

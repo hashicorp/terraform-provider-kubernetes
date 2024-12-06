@@ -73,10 +73,6 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10%"),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},
@@ -436,6 +432,44 @@ func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
+	var conf appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_daemon_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "0"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "0"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "2"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "10%"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10%"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -505,6 +539,90 @@ func testAccCheckKubernetesDaemonSetV1ForceNew(old, new *appsv1.DaemonSet, wantN
 		}
 		return nil
 	}
+}
+
+func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge string) string {
+	// If maxSurge is set to 0, maxUnavailable = 1
+	if maxSurge == "0" {
+		return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        foo = "bar"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          foo = "bar"
+        }
+      }
+
+      spec {
+        container {
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+
+    strategy {
+      rolling_update {
+        max_surge = "%s"
+        max_unavailable = "1"  # Set maxUnavailable to 1 if maxSurge is 0
+      }
+    }
+  }
+}
+`, name, imageName, maxSurge)
+	}
+
+	// If maxSurge is != 0
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        foo = "bar"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          foo = "bar"
+        }
+      }
+
+      spec {
+        container {
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+
+    strategy {
+      rolling_update {
+        max_surge = "%s"
+        max_unavailable = "0"  # Set maxUnavailable to 0 if maxSurge is set
+      }
+    }
+  }
+}
+`, name, imageName, maxSurge)
 }
 
 func testAccKubernetesDaemonSetV1Config_minimal(name, imageName string) string {

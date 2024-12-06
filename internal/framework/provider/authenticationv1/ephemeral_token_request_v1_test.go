@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccEpehemeralTokenRequest_basic(t *testing.T) {
@@ -19,7 +20,7 @@ func TestAccEpehemeralTokenRequest_basic(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.RequireVersion("1.10.0"),
+			tfversion.SkipBelow(tfversion.Version1_10_0),
 		},
 		Steps: []resource.TestStep{
 			{

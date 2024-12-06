@@ -27,9 +27,9 @@ on:
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kindVersion || vars.KIND_VERSION || '0.25.0' }}
-  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || vars.PARALLEL_RUNS || '8' }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || vars.TERRAFORM_VERSION || '1.10.0-rc3' }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.25.0' }}
+  PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.10.1' }}
 
 jobs:
   acceptance_tests_kind:

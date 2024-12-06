@@ -17,6 +17,9 @@ func TestAccEpehemeralCertificateSigningRequest_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.RequireVersion("1.10.0"),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testEphemeralCertificateSigningRequestRequestV1Config(name),

@@ -1,3 +1,15 @@
+## 2.34.0 (Nov 25, 2024)
+
+ENHANCEMENTS:
+
+* Added `conditions` attribute to `kubernetes_nodes` data source, which will provide detailed node health and status information [[GH-2612](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2612)]
+* Adding the `kubernetes_secret_v1_data` resource to the kubernetes provider. This resource will allow users to manage kubernetes secrets [[GH-2604](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2604)]
+* Properly handle Kubernetes Jobs with ttl_seconds_after_finished = 0 to prevent unnecessary recreation. [[GH-2596](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2596)]
+
+FEATURES:
+* New ephemeral resource: `kubernetes_certificate_signing_request_v1` [[GH-2628](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2628)] 
+* New ephemeral resource: `kubernetes_token_request_v1` [[GH-2628](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2628)]
+
 ## 2.33.0 (Oct 10, 2024)
 
 ENHANCEMENTS:

@@ -66,6 +66,31 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"data_source": {
+			Type:        schema.TypeList,
+			Description: "Specifies the data source for the PVC. Allows creating a PVC from another PVC, VolumeSnapshot, or VolumePopulator.",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"persistent_volume_claim": {
+						Type:        schema.TypeList,
+						Description: "Details of the source PersistentVolumeClaim.",
+						Required:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"claim_name": {
+									Type:        schema.TypeString,
+									Description: "The name of the source PersistentVolumeClaim.",
+									Required:    true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"selector": {
 			Type:        schema.TypeList,
 			Description: "A label query over volumes to consider for binding.",

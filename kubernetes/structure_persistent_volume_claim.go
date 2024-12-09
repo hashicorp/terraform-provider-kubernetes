@@ -29,6 +29,17 @@ func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []int
 	if in.VolumeMode != nil {
 		att["volume_mode"] = in.VolumeMode
 	}
+	if in.DataSource != nil {
+		dataSource := make(map[string]interface{})
+		if in.DataSource.Kind == "PersistentVolumeClaim" && in.DataSource.Name != "" {
+			dataSource["persistent_volume_claim"] = []interface{}{
+				map[string]interface{}{
+					"claim_name": in.DataSource.Name,
+				},
+			}
+		}
+		att["data_source"] = []interface{}{dataSource}
+	}
 	return []interface{}{att}
 }
 
@@ -90,6 +101,18 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 	}
 	if v, ok := in["volume_mode"].(string); ok && v != "" {
 		obj.VolumeMode = ptr.To(corev1.PersistentVolumeMode(v))
+	}
+	if v, ok := in["data_source"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		dataSource := v[0].(map[string]interface{})
+		if pvcSource, ok := dataSource["persistent_volume_claim"].([]interface{}); ok && len(pvcSource) > 0 && pvcSource[0] != nil {
+			pvcData := pvcSource[0].(map[string]interface{})
+			if claimName, ok := pvcData["claim_name"].(string); ok && claimName != "" {
+				obj.DataSource = &corev1.TypedLocalObjectReference{
+					Kind: "PersistentVolumeClaim",
+					Name: claimName,
+				}
+			}
+		}
 	}
 	return obj, nil
 }

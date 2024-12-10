@@ -649,6 +649,7 @@ func TestAccKubernetesDeploymentV1_with_volume_mount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.name", "db"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.read_only", "false"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.sub_path", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.volume_mount.0.sub_path_expr", ""),
 				),
 			},
 			{

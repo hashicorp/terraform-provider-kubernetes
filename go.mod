@@ -24,7 +24,6 @@ require (
 	github.com/hashicorp/terraform-plugin-testing v1.11.0
 	github.com/jinzhu/copier v0.3.5
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/mitchellh/hashstructure v1.1.0
 	github.com/robfig/cron v1.2.0
 	github.com/stretchr/testify v1.8.3
 	golang.org/x/mod v0.21.0

@@ -13,7 +13,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest"
-	"github.com/mitchellh/hashstructure"
 )
 
 func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaRef) (*openapi3.Schema, error) {
@@ -60,7 +59,6 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 		return nil, errors.New("cannot convert OpenAPI type (nil)")
 	}
 
-	h, herr := hashstructure.Hash(elem, nil)
 
 	var t tftypes.Type
 
@@ -80,6 +78,8 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 
 	// check if type is in cache
 	// HACK: this is temporarily disabled to diagnose a cache corruption issue.
+	// At the time of removal hashstructure v1 ("github.com/mitchellh/hashstructure") was in use.
+	// h, herr := hashstructure.Hash(elem, nil)
 	// if herr == nil {
 	// 	if t, ok := typeCache.Load(h); ok {
 	// 		return t.(tftypes.Type), nil
@@ -133,9 +133,10 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			} else {
 				t = tftypes.List{ElementType: et}
 			}
-			if herr == nil {
-				typeCache.Store(h, t)
-			}
+			// See above HACK
+			// if herr == nil {
+			// 	typeCache.Store(h, t)
+			// }
 			return t, nil
 		case elem.AdditionalProperties != nil && elem.Items == nil: // "overriden" array - translates to a tftypes.Tuple
 			it, err := resolveSchemaRef(elem.AdditionalProperties, defs)
@@ -170,9 +171,10 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 				atts[p] = pType
 			}
 			t = tftypes.Object{AttributeTypes: atts}
-			if herr == nil {
-				typeCache.Store(h, t)
-			}
+			// See above HACK
+			// if herr == nil {
+			// 	typeCache.Store(h, t)
+			// }
 			return t, nil
 
 		case elem.Properties == nil && elem.AdditionalProperties != nil:
@@ -187,17 +189,19 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 				return nil, err
 			}
 			t = tftypes.Map{ElementType: pt}
-			if herr == nil {
-				typeCache.Store(h, t)
-			}
+			// See above HACK
+			// if herr == nil {
+			// 	typeCache.Store(h, t)
+			// }
 			return t, nil
 
 		case elem.Properties == nil && elem.AdditionalProperties == nil:
 			// this is a strange case, encountered with io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1 and also io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceSubresourceStatus
 			t = tftypes.DynamicPseudoType
-			if herr == nil {
-				typeCache.Store(h, t)
-			}
+			// See above HACK
+			// if herr == nil {
+			// 	typeCache.Store(h, t)
+			// }
 			return t, nil
 
 		}

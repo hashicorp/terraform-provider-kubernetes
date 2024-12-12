@@ -1,3 +1,9 @@
+## 2.35.0 (Dec 12, 2024)
+
+FEATURES:
+
+* `resources_kubernetes_daemon_set_v1` : Added `max_surge` argument for to `rolling_update` block. [[GH-2630](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2630)]
+
 ## 2.34.0 (Nov 25, 2024)
 
 ENHANCEMENTS:

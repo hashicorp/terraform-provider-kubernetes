@@ -22,7 +22,7 @@ func flattenReplicationControllerSpec(in corev1.ReplicationControllerSpec, d *sc
 	}
 
 	if in.Template != nil {
-		podSpec, err := flattenPodSpec(in.Template.Spec)
+		podSpec, err := flattenPodSpec(in.Template.Spec, true)
 		if err != nil {
 			return nil, err
 		}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -562,6 +563,61 @@ func TestAccKubernetesPersistentVolumeClaimV1_volumeMode(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolumeClaimV1_dataSource(t *testing.T) {
+	var conf corev1.PersistentVolumeClaim
+	originalPVC := fmt.Sprintf("tf-acc-test-original-%s", acctest.RandString(10))
+	clonedPVC := fmt.Sprintf("tf-acc-test-clone-%s", acctest.RandString(10))
+	resourceName := "kubernetes_persistent_volume_claim_v1.test_clone"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeClaimV1Config_dataSourceOriginal(originalPVC),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists("kubernetes_persistent_volume_claim_v1.test_original", &conf),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim_v1.test_original", "metadata.0.name", originalPVC),
+					resource.TestCheckResourceAttr("kubernetes_persistent_volume_claim_v1.test_original", "spec.0.resources.0.requests.storage", "1Gi"),
+				),
+			},
+			{
+				Config: testAccKubernetesPersistentVolumeClaimV1Config_dataSourceClone(originalPVC, clonedPVC),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", clonedPVC),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.data_source.0.persistent_volume_claim.0.claim_name", originalPVC),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPersistentVolumeClaimV1_invalidDataSource(t *testing.T) {
+	invalidSourcePVC := fmt.Sprintf("tf-acc-test-nonexistent-%s", acctest.RandString(10))
+	clonedPVC := fmt.Sprintf("tf-acc-test-clone-%s", acctest.RandString(10))
+	resourceName := "kubernetes_persistent_volume_claim_v1.test_clone_invalid"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeClaimV1Config_dataSourceClone(invalidSourcePVC, clonedPVC),
+				ExpectError: regexp.MustCompile(
+					fmt.Sprintf(`data source PersistentVolumeClaim '%s' not found`, invalidSourcePVC),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPersistentVolumeClaimV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -959,6 +1015,55 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
   }
 }
 `, volumeName, diskName, zone, claimName)
+}
+
+func testAccKubernetesPersistentVolumeClaimV1Config_dataSourceOriginal(name string) string {
+	return fmt.Sprintf(`
+    resource "kubernetes_persistent_volume_claim_v1" "test_original" {
+        metadata {
+            name = "%s"
+        }
+
+        spec {
+            access_modes = ["ReadWriteOnce"]
+
+            resources {
+                requests = {
+                    storage = "1Gi"
+                }
+            }
+        }
+
+        wait_until_bound = false
+    }
+    `, name)
+}
+func testAccKubernetesPersistentVolumeClaimV1Config_dataSourceClone(sourceName, cloneName string) string {
+	return fmt.Sprintf(`
+    resource "kubernetes_persistent_volume_claim_v1" "test_clone" {
+        metadata {
+            name = "%s"
+        }
+
+        spec {
+            access_modes = ["ReadWriteOnce"]
+
+            resources {
+                requests = {
+                    storage = "1Gi"
+                }
+            }
+
+            data_source {
+                persistent_volume_claim {
+                    claim_name = "%s"
+                }
+            }
+        }
+
+        wait_until_bound = false
+    }
+    `, cloneName, sourceName)
 }
 
 // func testAccKubernetesPersistentVolumeClaimConfig_labelsMatch(volumeName, claimName string) string {

@@ -575,8 +575,8 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
 
     strategy {
       rolling_update {
-        max_surge = "%s"
-        max_unavailable = "1"  # Set maxUnavailable to 1 if maxSurge is 0
+        max_surge       = "%s"
+        max_unavailable = "1" # Set maxUnavailable to 1 if maxSurge is 0
       }
     }
   }
@@ -616,8 +616,8 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
 
     strategy {
       rolling_update {
-        max_surge = "%s"
-        max_unavailable = "0"  # Set maxUnavailable to 0 if maxSurge is set
+        max_surge       = "%s"
+        max_unavailable = "0" # Set maxUnavailable to 0 if maxSurge is set
       }
     }
   }

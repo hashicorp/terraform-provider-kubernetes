@@ -453,10 +453,31 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "2"),
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "5"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "5"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "10"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "100"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "100"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "5%"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "5%"),
 				),
 			},
 			{
@@ -464,6 +485,13 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10%"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "100%"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "100%"),
 				),
 			},
 		},

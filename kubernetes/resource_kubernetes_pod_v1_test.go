@@ -1640,6 +1640,61 @@ func TestAccKubernetesPodV1_os(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPodV1_imagePullSecret(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigImagePullSecret(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.image_pull_secrets.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.image_pull_secrets.0.name", "secret"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigImagePullSecretEmpty(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.image_pull_secrets.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.image_pull_secrets.0.name", ""),
+				),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigImagePullSecretMulty(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.image_pull_secrets.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.image_pull_secrets.0.name", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.image_pull_secrets.1.name", "secret"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config:   testAccKubernetesPodV1ConfigMinimal(name, imageName),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func testAccCheckCSIDriverExists(csiDriverName string) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -3542,6 +3597,63 @@ func testAccKubernetesPodV1ConfigOS(name, imageName string) string {
   spec {
     os {
       name = "linux"
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesPodV1ConfigImagePullSecret(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    image_pull_secrets {
+      name = "secret"
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesPodV1ConfigImagePullSecretEmpty(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    image_pull_secrets {
+      name = ""
+    }
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesPodV1ConfigImagePullSecretMulty(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    image_pull_secrets {
+      name = ""
+    }
+    image_pull_secrets {
+      name = "secret"
     }
     container {
       image = "%s"

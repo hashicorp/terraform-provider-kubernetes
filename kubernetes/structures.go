@@ -607,6 +607,12 @@ func expandLocalObjectReferenceArray(in []interface{}) []api.LocalObjectReferenc
 	}
 	att = make([]api.LocalObjectReference, len(in))
 	for i, c := range in {
+		// If an item is an empty string, we treat it as nil.
+		// Kubernetes accepts an empty string as a name but issues a warning: `invalid empty name ""`.
+		// Therefore, we should handle this case appropriately.
+		if c == nil {
+			continue
+		}
 		p := c.(map[string]interface{})
 		if name, ok := p["name"]; ok {
 			att[i].Name = name.(string)

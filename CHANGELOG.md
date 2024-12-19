@@ -1,3 +1,9 @@
+## 2.35.1 (Dec 19, 2024)
+
+BUG FIXES:
+
+* `kubernetes_daemon_set_v1`: fix issue where fields `spec.strategy.rolling_update.max_surge` and `spec.strategy.rolling_update.max_unavailable` were not being validated correctly. [[GH-2653](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2653)]
+
 ## 2.35.0 (Dec 12, 2024)
 
 FEATURES:

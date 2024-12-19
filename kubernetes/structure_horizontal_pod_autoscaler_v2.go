@@ -71,10 +71,18 @@ func expandV2MetricTarget(m map[string]interface{}) autoscalingv2.MetricTarget {
 		if v, ok := m["average_utilization"].(int); ok && v > 0 {
 			target.AverageUtilization = ptr.To(int32(v))
 		}
+		if v, ok := m["average_value"].(string); ok && v != "0" && v != "" {
+			q := resource.MustParse(v)
+			target.AverageValue = &q
+		}
 	case autoscalingv2.ValueMetricType:
 		if v, ok := m["value"].(string); ok && v != "0" && v != "" {
 			q := resource.MustParse(v)
 			target.Value = &q
+		}
+		if v, ok := m["average_value"].(string); ok && v != "0" && v != "" {
+			q := resource.MustParse(v)
+			target.AverageValue = &q
 		}
 	}
 
@@ -302,9 +310,19 @@ func flattenV2MetricTarget(target autoscalingv2.MetricTarget) []interface{} {
 	case autoscalingv2.AverageValueMetricType:
 		m["average_value"] = target.AverageValue.String()
 	case autoscalingv2.UtilizationMetricType:
-		m["average_utilization"] = *target.AverageUtilization
+		if target.AverageUtilization != nil {
+			m["average_utilization"] = *target.AverageUtilization
+		}
+		if target.AverageValue != nil {
+			m["average_value"] = target.AverageValue.String()
+		}
 	case autoscalingv2.ValueMetricType:
-		m["value"] = target.Value.String()
+		if target.Value != nil {
+			m["value"] = target.Value.String()
+		}
+		if target.AverageValue != nil {
+			m["average_value"] = target.AverageValue.String()
+		}
 	}
 
 	return []interface{}{m}

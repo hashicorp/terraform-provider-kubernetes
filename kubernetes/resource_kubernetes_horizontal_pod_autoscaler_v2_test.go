@@ -226,6 +226,63 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_containerResource(t *testing.T) 
 	})
 }
 
+func TestAccKubernetesHorizontalPodAutoscalerV2_MetricsPods(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_horizontal_pod_autoscaler_v2.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+		},
+		IDRefreshName:     resourceName,
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesHorizontalPodAutoscalerV2Config_MetricsPods(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.behavior.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.max_replicas", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.min_replicas", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scale_target_ref.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scale_target_ref.0.kind", "Deployment"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.scale_target_ref.0.name", "TerraformAccTest"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.#", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.type", "Pods"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.pods.0.metric.0.name", "Value_value_average_value"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.pods.0.target.0.type", "Value"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.pods.0.target.0.value", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.pods.0.target.0.average_value", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.1.type", "Pods"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.1.pods.0.metric.0.name", "Value_average_value"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.1.pods.0.target.0.type", "Value"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.1.pods.0.target.0.average_value", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.2.type", "Pods"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.2.pods.0.metric.0.name", "AverageValue_average_value"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.2.pods.0.target.0.type", "AverageValue"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.2.pods.0.target.0.average_value", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.3.type", "Pods"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.3.pods.0.metric.0.name", "Utilization_average_utilization_average_value"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.3.pods.0.target.0.type", "Utilization"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.3.pods.0.target.0.average_utilization", "15"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.3.pods.0.target.0.average_value", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.4.type", "Pods"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.4.pods.0.metric.0.name", "Utilization_average_value"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.4.pods.0.target.0.type", "Utilization"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.4.pods.0.target.0.average_value", "5"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -530,6 +587,85 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_containerResource(name str
         target {
           type                = "Utilization"
           average_utilization = "75"
+        }
+      }
+    }
+  }
+}
+`, name)
+}
+
+func testAccKubernetesHorizontalPodAutoscalerV2Config_MetricsPods(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler_v2" "test" {
+  metadata {
+    name = %q
+  }
+
+  spec {
+    max_replicas = 2
+    scale_target_ref {
+      kind = "Deployment"
+      name = "TerraformAccTest"
+    }
+    metric {
+      type = "Pods"
+      pods {
+        metric {
+          name = "Value_value_average_value"
+        }
+        target {
+          type          = "Value"
+          value         = "10"
+		  average_value = "5"
+        }
+      }
+    }
+    metric {
+      type = "Pods"
+      pods {
+        metric {
+          name = "Value_average_value"
+        }
+        target {
+          type          = "Value"
+		  average_value = "5"
+        }
+      }
+    }
+    metric {
+      type = "Pods"
+      pods {
+        metric {
+          name = "AverageValue_average_value"
+        }
+        target {
+          type          = "AverageValue"
+		  average_value = "5"
+        }
+      }
+    }
+    metric {
+      type = "Pods"
+      pods {
+        metric {
+          name = "Utilization_average_utilization_average_value"
+        }
+        target {
+          type                = "Utilization"
+		  average_utilization = "15"
+		  average_value       = "5"
+        }
+      }
+    }
+    metric {
+      type = "Pods"
+      pods {
+        metric {
+          name = "Utilization_average_value"
+        }
+        target {
+          type                = "Utilization"
+		  average_value       = "5"
         }
       }
     }

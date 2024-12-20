@@ -235,7 +235,7 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 		"ttl_seconds_after_finished": {
 			Type:     schema.TypeString,
 			Optional: true,
-			ForceNew: true,
+			ForceNew: false,
 			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
 				v, err := strconv.Atoi(value.(string))
 				if err != nil {

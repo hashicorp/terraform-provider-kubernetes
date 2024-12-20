@@ -237,82 +237,6 @@ func TestAccKubernetesJobV1_ttl_seconds_after_finished(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesJobV1_customizeDiff_ttlZero(t *testing.T) {
-	var conf batchv1.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-	imageName := busyboxImage
-	resourceName := "kubernetes_job_v1.test"
-
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.21.0")
-		},
-		ProviderFactories: testAccProviderFactories,
-		Steps: []resource.TestStep{
-			// Step 1: Create the Job
-			{
-				Config: testAccKubernetesJobV1Config_Diff(name, imageName, 0),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "0"),
-				),
-			},
-			// Step 2: Wait for the Job to complete and be deleted
-			{
-				PreConfig: func() {
-					time.Sleep(30 * time.Second)
-				},
-				Config:             testAccKubernetesJobV1Config_Diff(name, imageName, 0),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
-		},
-	})
-}
-
-func TestAccKubernetesJobV1_updateTTLFromZero(t *testing.T) {
-	var conf batchv1.Job
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
-	imageName := busyboxImage
-	resourceName := "kubernetes_job_v1.test"
-
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.21.0")
-		},
-		ProviderFactories: testAccProviderFactories,
-		Steps: []resource.TestStep{
-			// Step 1: Create the Job with ttl_seconds_after_finished = 0
-			{
-				Config: testAccKubernetesJobV1Config_Diff(name, imageName, 0),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "0"),
-				),
-			},
-			// Step 2: Wait for the Job to complete and be deleted
-			{
-				PreConfig: func() {
-					time.Sleep(30 * time.Second)
-				},
-				Config:             testAccKubernetesJobV1Config_Diff(name, imageName, 0),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
-			// Step 3: Update the Job to ttl_seconds_after_finished = 5
-			{
-				Config: testAccKubernetesJobV1Config_Diff(name, imageName, 5),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "5"),
-				),
-			},
-		},
-	})
-}
-
 func testAccCheckJobV1Waited(minDuration time.Duration) func(*terraform.State) error {
 	// NOTE this works because this function is called when setting up the test
 	// and the function it returns is called after the resource has been created
@@ -591,29 +515,4 @@ func testAccKubernetesJobV1Config_modified(name, imageName string) string {
   }
   wait_for_completion = false
 }`, name, imageName)
-}
-
-func testAccKubernetesJobV1Config_Diff(name, imageName string, ttl int) string {
-	return fmt.Sprintf(`
-resource "kubernetes_job_v1" "test" {
-  metadata {
-    name = "%s"
-  }
-  spec {
-    ttl_seconds_after_finished = %d
-    template {
-      metadata {}
-      spec {
-        container {
-          name    = "wait-test"
-          image   = "%s"
-          command = ["sleep", "20"]
-        }
-        restart_policy = "Never"
-      }
-    }
-  }
-  wait_for_completion = false
-}
-`, name, ttl, imageName)
 }

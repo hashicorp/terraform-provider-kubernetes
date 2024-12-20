@@ -1,3 +1,10 @@
+## 2.35.1 (Dec 20, 2024)
+
+BUG FIXES:
+
+* `resource/kubernetes_job_v1`: revert the changes introduced in v2.34.0, where `ttl_seconds_after_finished` was set to `0`. [[GH-2650](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2650)]
+* `resource/kubernetes_daemon_set_v1`: fix issue where fields `spec.strategy.rolling_update.max_surge` and `spec.strategy.rolling_update.max_unavailable` were not being validated correctly. [[GH-2653](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2653)]
+
 ## 2.35.0 (Dec 12, 2024)
 
 FEATURES:

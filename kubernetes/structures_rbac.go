@@ -159,36 +159,19 @@ func flattenClusterRoleAggregationRule(in *api.AggregationRule) []interface{} {
 
 // Patch Ops
 func patchRbacSubject(d *schema.ResourceData) PatchOperations {
-	o, n := d.GetChange("subject")
-	oldsubjects := expandRBACSubjects(o.([]interface{}))
-	newsubjects := expandRBACSubjects(n.([]interface{}))
-	ops := make([]PatchOperation, 0, len(newsubjects)+len(oldsubjects))
+	_, n := d.GetChange("subject")
+	newSubjects := expandRBACSubjects(n.([]interface{}))
 
-	common := len(newsubjects)
-	if common > len(oldsubjects) {
-		common = len(oldsubjects)
+	ops := PatchOperations{
+		&RemoveOperation{
+			Path: "/subjects",
+		},
+		&AddOperation{
+			Path:  "/subjects",
+			Value: newSubjects,
+		},
 	}
-	if len(oldsubjects) > len(newsubjects) {
-		for i := len(newsubjects); i < len(oldsubjects); i++ {
-			ops = append(ops, &RemoveOperation{
-				Path: "/subjects/" + strconv.Itoa(len(oldsubjects)-i),
-			})
-		}
-	}
-	for i, v := range newsubjects[:common] {
-		ops = append(ops, &ReplaceOperation{
-			Path:  "/subjects/" + strconv.Itoa(i),
-			Value: v,
-		})
-	}
-	if len(newsubjects) > len(oldsubjects) {
-		for i, v := range newsubjects[common:] {
-			ops = append(ops, &AddOperation{
-				Path:  "/subjects/" + strconv.Itoa(common+i),
-				Value: v,
-			})
-		}
-	}
+
 	return ops
 }
 

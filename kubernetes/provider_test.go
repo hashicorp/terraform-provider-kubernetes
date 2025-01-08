@@ -186,6 +186,7 @@ func getEnv() *currentEnv {
 
 func testAccPreCheck(t *testing.T) {
 	ctx := context.TODO()
+	hasEnvCfg := os.Getenv("KUBE_CONFIG_DATA_BASE64") != ""
 	hasFileCfg := (os.Getenv("KUBE_CTX_AUTH_INFO") != "" && os.Getenv("KUBE_CTX_CLUSTER") != "") ||
 		os.Getenv("KUBE_CTX") != "" ||
 		os.Getenv("KUBE_CONFIG_PATH") != ""
@@ -195,7 +196,7 @@ func testAccPreCheck(t *testing.T) {
 		os.Getenv("KUBE_CLUSTER_CA_CERT_DATA") != "") &&
 		(hasUserCredentials || hasClientCert || os.Getenv("KUBE_TOKEN") != "")
 
-	if !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
+	if !hasEnvCfg && !hasFileCfg && !hasStaticCfg && !hasUserCredentials {
 		t.Fatalf("File config (KUBE_CTX_AUTH_INFO and KUBE_CTX_CLUSTER) or static configuration"+
 			"(%s) or (%s) must be set for acceptance tests",
 			strings.Join([]string{

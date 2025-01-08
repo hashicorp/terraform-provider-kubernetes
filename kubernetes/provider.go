@@ -7,12 +7,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-kubernetes/util"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 
 	"github.com/hashicorp/go-cty/cty"
 	gversion "github.com/hashicorp/go-version"
@@ -565,7 +566,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 			}
 			log.Printf("[DEBUG] Using overridden context: %#v", overrides.Context)
 		}
-
+	}
 
 	// Overriding with static configuration
 	if v, ok := d.GetOk("insecure"); ok {

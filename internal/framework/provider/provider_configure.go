@@ -5,10 +5,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
-	"github.com/hashicorp/terraform-provider-kubernetes/util"
-	"os"
-	"path/filepath"
 
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 

@@ -589,7 +589,7 @@ func TestAccKubernetesPersistentVolumeClaimV1_dataSource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", clonedPVC),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.data_source.0.persistent_volume_claim.0.claim_name", originalPVC),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.data_source.0.name", originalPVC),
 				),
 			},
 		},
@@ -1055,9 +1055,7 @@ func testAccKubernetesPersistentVolumeClaimV1Config_dataSourceClone(sourceName, 
             }
 
             data_source {
-                persistent_volume_claim {
-                    claim_name = "%s"
-                }
+                name = "%s"
             }
         }
 

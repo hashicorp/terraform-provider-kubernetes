@@ -71,15 +71,7 @@ Optional:
 ### Nested Schema for `spec.data_source`
 
 Optional:
-
-- `persistent_volume_claim` (Block List, Max: 1) Details of the source PersistentVolumeClaim. (see [below for nested schema](#nestedblock--spec--data_source--persistent_volume_claim))
-
-<a id="nestedblock--spec--data_source--persistent_volume_claim"></a>
-### Nested Schema for `spec.data_source.persistent_volume_claim`
-
-Required:
-
-- `claim_name` (String) The name of the source PersistentVolumeClaim.
+- `name` (String) The name of the source PersistentVolumeClaim.
 
 <a id="nestedblock--spec--selector"></a>
 ### Nested Schema for `spec.selector`
@@ -158,9 +150,7 @@ resource "kubernetes_persistent_volume_claim_v1" "example_clone" {
       }
     }
     data_source {
-      persistent_volume_claim {
-        claim_name = "example-source-pvc"
-      }
+      name = "example-source-pvc"
     }
   }
 }

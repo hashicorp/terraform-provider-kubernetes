@@ -73,20 +73,10 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					"persistent_volume_claim": {
-						Type:        schema.TypeList,
-						Description: "Details of the source PersistentVolumeClaim.",
+					"name": {
+						Type:        schema.TypeString,
+						Description: "The name of the source PersistentVolumeClaim.",
 						Required:    true,
-						MaxItems:    1,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"claim_name": {
-									Type:        schema.TypeString,
-									Description: "The name of the source PersistentVolumeClaim.",
-									Required:    true,
-								},
-							},
-						},
 					},
 				},
 			},

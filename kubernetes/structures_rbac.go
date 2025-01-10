@@ -49,14 +49,10 @@ func expandRBACSubjects(in []interface{}) []api.Subject {
 		}
 
 		// Handle namespace logic
-		if subject.Kind == "Group" || subject.Kind == "User" {
-			// Exclude namespace for Group and User kinds
-		} else {
+		if subject.Kind != "Group" && subject.Kind != "User" {
 			if v, ok := m["namespace"]; ok && v != "" {
-				// We are using the provided namespace if it is set
 				subject.Namespace = v.(string)
 			} else {
-				//Due to it not being Group / Kind and namespace not being set, we Default to "default"
 				subject.Namespace = "default"
 			}
 		}
@@ -132,9 +128,7 @@ func flattenRBACSubjects(in []api.Subject) []interface{} {
 		m["kind"] = n.Kind
 		m["name"] = n.Name
 
-		if n.Kind == "Group" || n.Kind == "User" {
-			m["namespace"] = ""
-		} else {
+		if n.Kind != "Group" && n.Kind != "User" {
 			if n.Namespace == "" {
 				m["namespace"] = "default"
 			} else {

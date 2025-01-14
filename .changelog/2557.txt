@@ -1,0 +1,3 @@
+```release-note:enhancement
+`resource/Kubernetes_Persistent_VolumeClaim_V1`: Add argument `spec.ip_mode`
+```

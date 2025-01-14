@@ -108,16 +108,16 @@ func testAccKubernetesDataSourcePodV1_basic(name, imageName string) string {
 func testAccKubernetesDataSourcePodV1_basicWithLabel(name, imageName, labelKey, labelValue string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
-	name = "%s"
-	labels = {
-	  %s = "%s"
-	}
+    name = "%s"
+    labels = {
+      %s = "%s"
+    }
   }
   spec {
-	container {
-	  image = "%s"
-	  name  = "containername"
-	}
+    container {
+      image = "%s"
+      name  = "containername"
+    }
   }
 }
 `, name, labelKey, labelValue, imageName)
@@ -144,9 +144,9 @@ func testAccKubernetesDataSourcePodV1_nonexistent(name string) string {
 func testAccKubernetesDataSourcePodV1_readWithLabel(labelKey, labelValue string) string {
 	return fmt.Sprintf(`data "kubernetes_pod_v1" "test" {
   metadata {
-	labels = {
-	  %s = "%s"
-	}
+    labels = {
+      %s = "%s"
+    }
   }
 }
 `, labelKey, labelValue)

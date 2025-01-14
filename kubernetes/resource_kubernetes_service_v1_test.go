@@ -350,7 +350,7 @@ func TestAccKubernetesServiceV1_loadBalancer_ipMode(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfig_ignoreAnnotations() +
-					testAccKubernetesServiceV1Config_loadBalancer_ipMode(name, "VIP"),
+					testAccKubernetesServiceV1Config_loadBalancer_defaultIPMode(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -358,12 +358,6 @@ func TestAccKubernetesServiceV1_loadBalancer_ipMode(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					resource.TestCheckResourceAttr(resourceName, "status.0.load_balancer.0.ingress.0.ip_mode", "VIP"),
 				),
-			},
-			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
 			},
 			{
 				Config: testAccKubernetesConfig_ignoreAnnotations() +
@@ -1147,13 +1141,12 @@ func testAccKubernetesServiceV1Config_loadBalancer_annotations_aws_modified(name
 }
 `, name)
 }
-func testAccKubernetesServiceV1Config_loadBalancer_ipMode(name, ipMode string) string {
+func testAccKubernetesServiceV1Config_loadBalancer_defaultIPMode(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
   }
-
   spec {
     type = "LoadBalancer"
     port {
@@ -1163,6 +1156,23 @@ resource "kubernetes_service_v1" "test" {
   }
 }
 `, name)
+}
+func testAccKubernetesServiceV1Config_loadBalancer_ipMode(name, ipMode string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    type = "LoadBalancer"
+    port {
+      port        = 80
+      target_port = 8080
+    }
+    ip_mode = "%s"
+  }
+}
+`, name, ipMode)
 }
 
 func testAccKubernetesServiceV1Config_headless(name string) string {

@@ -190,6 +190,10 @@ func isInternalKey(annotationKey string) bool {
 
 	// internal *.kubernetes.io keys
 	if strings.HasSuffix(u.Hostname(), "kubernetes.io") {
+		// We want to ensure the following special annotations are not removed to ensure we are not messeing up with the generated load balancer by accident.
+		if annotationKey == "ingress.gcp.kubernetes.io/pre-shared-cert" || annotationKey == "kubernetes.io/ingress.global-static-ip-name" {
+			return false
+		}
 		return true
 	}
 

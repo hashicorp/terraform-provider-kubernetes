@@ -384,7 +384,6 @@ func testAccKubernetesClusterRoleBindingV1Config_namespaceHandling(name string) 
     kind      = "Group"
     name      = "testgroup"
     api_group = "rbac.authorization.k8s.io"
-    namespace = ""
   }
 
   # User subject with namespace explicitly set to ""
@@ -392,14 +391,12 @@ func testAccKubernetesClusterRoleBindingV1Config_namespaceHandling(name string) 
     kind      = "User"
     name      = "testuser"
     api_group = "rbac.authorization.k8s.io"
-    namespace = ""
   }
 
   # ServiceAccount subject with no namespace specified
   subject {
     kind      = "ServiceAccount"
     name      = "default"
-    api_group = ""
   }
 }
 `, name)

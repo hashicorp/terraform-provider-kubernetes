@@ -95,10 +95,6 @@ func resourceKubernetesJobV1Create(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	// if d.Get("wait_for_completion").(bool) && *spec.Suspend {
-	// 	return diag.Errorf("Cannot set both suspend and wait_for_completion to true")
-	// }
-
 	job := batchv1.Job{
 		ObjectMeta: metadata,
 		Spec:       spec,
@@ -185,15 +181,6 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
-	// // Rollback wait_for_completion and suspend in state if both of them were updated be true
-	// if d.Get("wait_for_completion").(bool) && d.Get("spec.0.suspend").(bool) {
-	// 	prevWaitForCompletion, _ := d.GetChange("wait_for_completion")
-	// 	prevSuspend, _ := d.GetChange("spec.0.suspend")
-	// 	d.Set("wait_for_completion", prevWaitForCompletion)
-	// 	d.Set("spec.0.suspend", prevSuspend)
-	// 	return diag.Errorf("Cannot set both suspend and wait_for_completion to true")
-	// }
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

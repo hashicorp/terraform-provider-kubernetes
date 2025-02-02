@@ -21,6 +21,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const (
+	waitForCompletionSuspendError = `cannot set both wait_for_completion and spec.suspend to true`
+)
+
 func resourceKubernetesJobV1() *schema.Resource {
 	return &schema.Resource{
 		Description:   "A Job creates one or more Pods and ensures that a specified number of them successfully terminate. As pods successfully complete, the Job tracks the successful completions. When a specified number of successful completions is reached, the task (ie, Job) is complete. Deleting a Job will clean up the Pods it created. A simple case is to create one Job object in order to reliably run one Pod to completion. The Job object will start a new Pod if the first Pod fails or is deleted (for example due to a node hardware failure or a node reboot. You can also use a Job to run multiple Pods in parallel. ",
@@ -45,6 +49,16 @@ func resourceKubernetesJobV1() *schema.Resource {
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
 		Schema: resourceKubernetesJobV1Schema(),
+		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			// wait_for_completion and suspend cannot be both set to true
+			if !diff.HasChange("wait_for_completion") && !diff.HasChange("spec.0.suspend") {
+				return nil
+			}
+			if diff.Get("wait_for_completion").(bool) && diff.Get("spec.0.suspend").(bool) {
+				return fmt.Errorf(waitForCompletionSuspendError)
+			}
+			return nil
+		},
 	}
 }
 
@@ -80,6 +94,10 @@ func resourceKubernetesJobV1Create(ctx context.Context, d *schema.ResourceData, 
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	// if d.Get("wait_for_completion").(bool) && *spec.Suspend {
+	// 	return diag.Errorf("Cannot set both suspend and wait_for_completion to true")
+	// }
 
 	job := batchv1.Job{
 		ObjectMeta: metadata,
@@ -167,6 +185,15 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	// // Rollback wait_for_completion and suspend in state if both of them were updated be true
+	// if d.Get("wait_for_completion").(bool) && d.Get("spec.0.suspend").(bool) {
+	// 	prevWaitForCompletion, _ := d.GetChange("wait_for_completion")
+	// 	prevSuspend, _ := d.GetChange("spec.0.suspend")
+	// 	d.Set("wait_for_completion", prevWaitForCompletion)
+	// 	d.Set("spec.0.suspend", prevSuspend)
+	// 	return diag.Errorf("Cannot set both suspend and wait_for_completion to true")
+	// }
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

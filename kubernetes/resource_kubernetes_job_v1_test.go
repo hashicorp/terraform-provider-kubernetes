@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -42,6 +43,7 @@ func TestAccKubernetesJobV1_wait_for_completion(t *testing.T) {
 					testAccCheckJobV1Waited(time.Duration(10)*time.Second),
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "false"),
 				),
 			},
 		},
@@ -90,6 +92,7 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.action", "Ignore"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.type", "DisruptionTarget"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.status", "False"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "false"),
 				),
 			},
 			{
@@ -110,6 +113,7 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.manual_selector", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "hello"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "false"),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "false"),
 				),
 			},
@@ -157,6 +161,7 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.action", "Ignore"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.type", "DisruptionTarget"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_failure_policy.0.rule.1.on_pod_condition.0.status", "False"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "false"),
 				),
 			},
 			{
@@ -232,6 +237,68 @@ func TestAccKubernetesJobV1_ttl_seconds_after_finished(t *testing.T) {
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ttl_seconds_after_finished", "60"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesJobV1_suspend(t *testing.T) {
+	var conf batchv1.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_job_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.24.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesJobV1Config_suspend(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "true"),
+				),
+			},
+			{
+				Config: testAccKubernetesJobV1Config_wait_for_completion(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// NOTE this is to check that Terraform actually waited for the Job to complete
+					// before considering the Job resource as created
+					testAccCheckJobV1Waited(time.Duration(10)*time.Second),
+					testAccCheckKubernetesJobV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_completion", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.suspend", "false"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesJobV1_suspendExpectErrors(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_job_v1.test"
+	wantError := waitForCompletionSuspendError
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.24.0")
+		},
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{ // Expect an error when both `wait_for_completion` and `suspend` are set to true.
+				Config:      testAccKubernetesJobV1Config_suspendExpectErrors(name, imageName),
+				ExpectError: regexp.MustCompile(wantError),
 			},
 		},
 	})
@@ -453,6 +520,60 @@ func testAccKubernetesJobV1Config_ttl_seconds_after_finished(name, imageName str
         }
       }
     }
+  }
+}`, name, imageName)
+}
+
+func testAccKubernetesJobV1Config_suspend(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    suspend = true
+    template {
+      metadata {
+        name = "wait-test"
+      }
+      spec {
+        container {
+          name    = "wait-test"
+          image   = "%s"
+          command = ["sleep", "10"]
+        }
+      }
+    }
+  }
+  wait_for_completion = false
+  timeouts {
+    create = "1m"
+  }
+}`, name, imageName)
+}
+
+func testAccKubernetesJobV1Config_suspendExpectErrors(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    suspend = true
+    template {
+      metadata {
+        name = "wait-test"
+      }
+      spec {
+        container {
+          name    = "wait-test"
+          image   = "%s"
+          command = ["sleep", "10"]
+        }
+      }
+    }
+  }
+  wait_for_completion = true
+  timeouts {
+    create = "1m"
   }
 }`, name, imageName)
 }

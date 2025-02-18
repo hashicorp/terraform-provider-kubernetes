@@ -108,3 +108,27 @@ func (s *RawProviderServer) MoveResourceState(ctx context.Context, req *tfprotov
 	resp := &tfprotov5.MoveResourceStateResponse{}
 	return resp, nil
 }
+
+func (s *RawProviderServer) OpenEphemeralResource(ctx context.Context, req *tfprotov5.OpenEphemeralResourceRequest) (*tfprotov5.OpenEphemeralResourceResponse, error) {
+	s.logger.Trace("[OpenEphemeralResource][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.OpenEphemeralResourceResponse{}
+	return resp, nil
+}
+
+func (s *RawProviderServer) CloseEphemeralResource(ctx context.Context, req *tfprotov5.CloseEphemeralResourceRequest) (*tfprotov5.CloseEphemeralResourceResponse, error) {
+	s.logger.Trace("[CloseEphemeralResource][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.CloseEphemeralResourceResponse{}
+	return resp, nil
+}
+
+func (s *RawProviderServer) RenewEphemeralResource(ctx context.Context, req *tfprotov5.RenewEphemeralResourceRequest) (*tfprotov5.RenewEphemeralResourceResponse, error) {
+	s.logger.Trace("[RenewEphemeralResource][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.RenewEphemeralResourceResponse{}
+	return resp, nil
+}
+
+func (s *RawProviderServer) ValidateEphemeralResourceConfig(ctx context.Context, req *tfprotov5.ValidateEphemeralResourceConfigRequest) (*tfprotov5.ValidateEphemeralResourceConfigResponse, error) {
+	s.logger.Trace("[ValidateEphemeralResourceConfig][Request]\n%s\n", dump(*req))
+	resp := &tfprotov5.ValidateEphemeralResourceConfigResponse{}
+	return resp, nil
+}

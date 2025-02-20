@@ -56,11 +56,11 @@ jobs:
           # include if reference is v3-major-release and base reference is not v3-major-release
           - isMajorReleaseBranch: true
             isBaseMajorRelease: false
-            kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9
+            kubernetes_version: v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30   
           # include if reference is not v3-major-release and base reference is v3-major-release
           - isMajorReleaseBranch: false
             isBaseMajorRelease: true
-            kubernetes_version: v1.31.2@sha256:33034c0a75dd82b2f2f22bdf0a30ea2a42b2c3547a6d56c52c7ea9c1b5fb89b9
+            kubernetes_version: v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30 
     steps:
       - name: Checkout repository
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4

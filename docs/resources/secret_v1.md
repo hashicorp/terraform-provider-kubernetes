@@ -24,6 +24,10 @@ The resource provides mechanisms to inject containers with sensitive information
 
 - `binary_data` (Map of String, Sensitive) A map of the secret data in base64 encoding. Use this for binary data.
 - `data` (Map of String, Sensitive) A map of the secret data.
+- `binary_data_wo` (Map of String, Write-Only) BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet. This field only accepts base64-encoded payloads that will be decoded/encoded before being sent/received to/from the apiserver.
+- `binary_data_wo_revision` (Number) The current revision of the write-only "binary_data_wo" attribute. Incrementing this integer value will cause Terraform to update the write-only value.`  
+- `data_wo` (Map of String, Write-Only) Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process.
+- `data_wo_revision` (Number) The current revision of the write-only "data_wo" attribute. Incrementing this integer value will cause Terraform to update the write-only value.`  
 - `immutable` (Boolean) Ensures that data stored in the Secret cannot be updated (only object metadata can be modified).
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `type` (String) Type of secret

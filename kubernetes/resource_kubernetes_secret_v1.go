@@ -431,3 +431,22 @@ func resourceKubernetesSecretV1Exists(ctx context.Context, d *schema.ResourceDat
 
 	return true, err
 }
+
+func expandCtyBase64MapToByteMap(m map[string]cty.Value) map[string][]byte {
+	r := map[string][]byte{}
+	for k, v := range m {
+		b, err := base64.StdEncoding.DecodeString(v.AsString())
+		if err == nil {
+			r[k] = b
+		}
+	}
+	return r
+}
+
+func expandCtyStringMap(m map[string]cty.Value) map[string]string {
+	r := map[string]string{}
+	for k, v := range m {
+		r[k] = v.AsString()
+	}
+	return r
+}

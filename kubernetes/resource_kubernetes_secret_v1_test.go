@@ -643,7 +643,7 @@ func testAccKubernetesSecretV1Config_data_wo(prefix string) string {
     }
   }
 
-	data_wo_revision = 1
+  data_wo_revision = 1
   data_wo = {
     one = "one"
   }
@@ -665,7 +665,7 @@ func testAccKubernetesSecretV1Config_data_wo2(prefix string) string {
     }
   }
 
-	data_wo_revision = 2
+  data_wo_revision = 2
   data_wo = {
     one = "one"
     two = "two"
@@ -688,7 +688,7 @@ func testAccKubernetesSecretV1Config_binaryData_wo(prefix string, bd string) str
     }
   }
 
-	binary_data_wo_revision = 1
+  binary_data_wo_revision = 1
   binary_data_wo = {
     one = filebase64("%s/test-fixtures/binary.data")
   }
@@ -710,7 +710,7 @@ func testAccKubernetesSecretV1Config_binaryData_wo2(prefix string, bd string) st
     }
   }
 
-	binary_data_wo_revision = 2
+  binary_data_wo_revision = 2
   binary_data_wo = {
     one = filebase64("%s/test-fixtures/binary.data")
     two = filebase64("%s/test-fixtures/binary2.data")

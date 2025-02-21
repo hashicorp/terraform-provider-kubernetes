@@ -84,7 +84,7 @@ func resourceKubernetesSecretV1() *schema.Resource {
 			},
 			"data_wo": {
 				Type:          schema.TypeMap,
-				Description:   "(Write-only) A map of the secret data.",
+				Description:   "A map write-only of the secret data.",
 				Optional:      true,
 				WriteOnly:     true,
 				ConflictsWith: []string{"data"},
@@ -97,7 +97,7 @@ func resourceKubernetesSecretV1() *schema.Resource {
 			},
 			"binary_data_wo": {
 				Type:          schema.TypeMap,
-				Description:   "(Write-only)A map of the secret data in base64 encoding. Use this for binary data.",
+				Description:   "A write-only map of the secret data in base64 encoding. Use this for binary data.",
 				Optional:      true,
 				ConflictsWith: []string{"binary_data"},
 				WriteOnly:     true,

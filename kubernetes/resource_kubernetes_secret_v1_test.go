@@ -634,12 +634,10 @@ func testAccKubernetesSecretV1Config_data_wo(prefix string) string {
   metadata {
     generate_name = "%s"
     annotations = {
-      TestAnnotationOne = "one"
-      Different         = "1234"
+      test = "writeonly"
     }
     labels = {
-      TestLabelOne   = "one"
-      TestLabelThree = "three"
+      test = "writeonly"
     }
   }
 
@@ -656,12 +654,10 @@ func testAccKubernetesSecretV1Config_data_wo2(prefix string) string {
   metadata {
     generate_name = "%s"
     annotations = {
-      TestAnnotationOne = "one"
-      Different         = "1234"
+      test = "writeonly"
     }
     labels = {
-      TestLabelOne   = "one"
-      TestLabelThree = "three"
+      test = "writeonly"
     }
   }
 
@@ -679,12 +675,10 @@ func testAccKubernetesSecretV1Config_binaryData_wo(prefix string, bd string) str
   metadata {
     generate_name = "%s"
     annotations = {
-      TestAnnotationOne = "one"
-      Different         = "1234"
+      test = "writeonly"
     }
     labels = {
-      TestLabelOne   = "one"
-      TestLabelThree = "three"
+      test = "writeonly"
     }
   }
 
@@ -701,12 +695,10 @@ func testAccKubernetesSecretV1Config_binaryData_wo2(prefix string, bd string) st
   metadata {
     generate_name = "%s"
     annotations = {
-      TestAnnotationOne = "one"
-      Different         = "1234"
+      test = "writeonly"
     }
     labels = {
-      TestLabelOne   = "one"
-      TestLabelThree = "three"
+      test = "writeonly"
     }
   }
 

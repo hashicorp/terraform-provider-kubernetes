@@ -1,3 +1,9 @@
+## 2.36.0 (Feb 26, 2025)
+
+ENHANCEMENTS:
+
+* `resource/kubernetes_secret_v1`: Add support for write only attributes for `data_wo` and `binary_data_wo`. [[GH-2692](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2692)]
+
 ## 2.35.1 (Dec 20, 2024)
 
 BUG FIXES:

@@ -571,6 +571,47 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_http_get(t *test
 	})
 }
 
+func TestAccKubernetesPodV1_with_container_liveness_probe_using_termination_grace_period_seconds(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigWithLivenessProbeUsingTerminationGracePeriod(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.args.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.http_get.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.http_get.0.path", "/healthz"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.http_get.0.port", "8080"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.http_get.0.http_header.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.http_get.0.http_header.0.name", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.http_get.0.http_header.0.value", "Awesome"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.initial_delay_seconds", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.termination_grace_period_seconds", "10"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPodV1_with_container_liveness_probe_using_tcp(t *testing.T) {
 	var conf api.Pod
 
@@ -1176,6 +1217,43 @@ func TestAccKubernetesPodV1_config_container_startup_probe(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.http_get.0.port", "80"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.initial_delay_seconds", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.timeout_seconds", "2"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPodV1_config_container_startup_probe_termination_grace_period_seconds(t *testing.T) {
+	var confPod api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ContainerStartupProbe(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &confPod),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.generation", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.http_get.0.path", "/index.html"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.http_get.0.port", "80"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.initial_delay_seconds", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.timeout_seconds", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.termination_grace_period_seconds", "10"),
 				),
 			},
 			{
@@ -2117,6 +2195,42 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingHTTPGet(podName, imageNam
 `, podName, imageName)
 }
 
+func testAccKubernetesPodV1ConfigWithLivenessProbeUsingTerminationGracePeriod(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+      args  = ["liveness"]
+
+      liveness_probe {
+        http_get {
+          path = "/healthz"
+          port = 8080
+
+          http_header {
+            name  = "X-Custom-Header"
+            value = "Awesome"
+          }
+        }
+        initial_delay_seconds            = 3
+        period_seconds                   = 1
+	    termination_grace_period_seconds = 10
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
 func testAccKubernetesPodV1ConfigWithLivenessProbeUsingTCP(podName, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
@@ -2939,6 +3053,33 @@ func testAccKubernetesPodV1ContainerStartupProbe(podName, imageName string) stri
 
         initial_delay_seconds = 1
         timeout_seconds       = 2
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1ContainerStartupProbe_termination_grace_period_seconds(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+
+      startup_probe {
+        http_get {
+          path = "/index.html"
+          port = 80
+        }
+
+        initial_delay_seconds 			 = 1
+        timeout_seconds       			 = 2
+		termination_grace_period_seconds = 10
       }
     }
   }

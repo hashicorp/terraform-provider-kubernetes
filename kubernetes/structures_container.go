@@ -767,7 +767,9 @@ func expandProbe(l []interface{}) *v1.Probe {
 	if v, ok := in["timeout_seconds"].(int); ok {
 		obj.TimeoutSeconds = int32(v)
 	}
-	if v, ok := in["termination_grace_period_seconds"].(int); ok {
+
+	// Set the `TerminationGracePeriodSeconds` field only if it is not set to the default (0)
+	if v, ok := in["termination_grace_period_seconds"].(int); ok && v != 0 {
 		obj.TerminationGracePeriodSeconds = ptr.To(int64(v))
 	}
 

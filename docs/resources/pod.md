@@ -594,7 +594,7 @@ Optional:
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--container--liveness_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
-- `termination_grace_period_seconds` (Number) Optional duration in seconds the pod needs to terminate gracefully upon probe failure. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process. If this value is nil, the pod's `terminationGracePeriodSeconds` will be used. Otherwise, this value overrides the value provided by the pod spec. Value must be non-negative integer. The value zero indicates stop immediately via the kill signal (no opportunity to shut down). Minimum value is 1. `spec.terminationGracePeriodSeconds` is used if unset.
+
 <a id="nestedblock--spec--container--liveness_probe--exec"></a>
 ### Nested Schema for `spec.container.liveness_probe.exec`
 
@@ -793,7 +793,6 @@ Optional:
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--container--startup_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
-- `termination_grace_period_seconds` (Number) Optional duration in seconds the pod needs to terminate gracefully upon probe failure. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process. If this value is nil, the pod's `terminationGracePeriodSeconds` will be used. Otherwise, this value overrides the value provided by the pod spec. Value must be non-negative integer. The value zero indicates stop immediately via the kill signal (no opportunity to shut down). Minimum value is 1. `spec.terminationGracePeriodSeconds` is used if unset.
 
 <a id="nestedblock--spec--container--startup_probe--exec"></a>
 ### Nested Schema for `spec.container.startup_probe.exec`
@@ -1156,6 +1155,7 @@ Optional:
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--init_container--liveness_probe--tcp_socket))
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+
 <a id="nestedblock--spec--init_container--liveness_probe--exec"></a>
 ### Nested Schema for `spec.init_container.liveness_probe.exec`
 

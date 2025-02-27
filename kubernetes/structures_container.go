@@ -177,6 +177,9 @@ func flattenProbe(in *v1.Probe) []interface{} {
 	if in.GRPC != nil {
 		att["grpc"] = flattenGRPC(in.GRPC)
 	}
+	if in.TerminationGracePeriodSeconds != nil {
+		att["termination_grace_period_seconds"] = *in.TerminationGracePeriodSeconds
+	}
 
 	return []interface{}{att}
 }

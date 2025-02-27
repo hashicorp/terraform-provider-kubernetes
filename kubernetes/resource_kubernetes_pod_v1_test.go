@@ -1245,7 +1245,7 @@ func TestAccKubernetesPodV1_config_container_startup_probe_termination_grace_per
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ContainerStartupProbe(podName, imageName),
+				Config: testAccKubernetesPodV1ContainerStartupProbe_termination_grace_period_seconds(podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &confPod),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generation", "0"),

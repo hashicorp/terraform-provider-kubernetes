@@ -303,6 +303,87 @@ func TestAccKubernetesSecretV1_binaryData(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesSecretV1_data_wo(t *testing.T) {
+	var conf corev1.Secret
+	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_secret_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretV1Config_data_wo(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "data_wo_revision", "1"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data_wo.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data_wo.%", "0"),
+				),
+			},
+			{
+				Config: testAccKubernetesSecretV1Config_data_wo2(prefix),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "data_wo_revision", "2"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data_wo.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data_wo.%", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesSecretV1_binaryData_wo(t *testing.T) {
+	var conf corev1.Secret
+	prefix := "tf-acc-test-gen-"
+	resourceName := "kubernetes_secret_v1.test"
+	baseDir := "."
+	cwd, _ := os.Getwd()
+	if filepath.Base(cwd) != "kubernetes" { // running from test binary
+		baseDir = "kubernetes"
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretV1Config_binaryData_wo(prefix, baseDir),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "binary_data_wo_revision", "1"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data_wo.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data_wo.%", "0"),
+				),
+			},
+			{
+				Config: testAccKubernetesSecretV1Config_binaryData_wo2(prefix, baseDir),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesSecretV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "binary_data_wo_revision", "2"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "binary_data_wo.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "data_wo.%", "0"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesSecretV1_service_account_token(t *testing.T) {
 	var conf corev1.Secret
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -360,7 +441,6 @@ func testAccCheckSecretV1NotRecreated(sec1, sec2 *corev1.Secret) resource.TestCh
 
 func testAccCheckKubernetesSecretV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -547,6 +627,88 @@ func testAccKubernetesSecretV1Config_binaryData(prefix string, bd string) string
   }
 }
 `, prefix, bd)
+}
+
+func testAccKubernetesSecretV1Config_data_wo(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+  metadata {
+    generate_name = "%s"
+    annotations = {
+      test = "writeonly"
+    }
+    labels = {
+      test = "writeonly"
+    }
+  }
+
+  data_wo_revision = 1
+  data_wo = {
+    one = "one"
+  }
+}
+`, prefix)
+}
+
+func testAccKubernetesSecretV1Config_data_wo2(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+  metadata {
+    generate_name = "%s"
+    annotations = {
+      test = "writeonly"
+    }
+    labels = {
+      test = "writeonly"
+    }
+  }
+
+  data_wo_revision = 2
+  data_wo = {
+    one = "one"
+    two = "two"
+  }
+}
+`, prefix)
+}
+
+func testAccKubernetesSecretV1Config_binaryData_wo(prefix string, bd string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+  metadata {
+    generate_name = "%s"
+    annotations = {
+      test = "writeonly"
+    }
+    labels = {
+      test = "writeonly"
+    }
+  }
+
+  binary_data_wo_revision = 1
+  binary_data_wo = {
+    one = filebase64("%s/test-fixtures/binary.data")
+  }
+}
+`, prefix, bd)
+}
+
+func testAccKubernetesSecretV1Config_binaryData_wo2(prefix string, bd string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+  metadata {
+    generate_name = "%s"
+    annotations = {
+      test = "writeonly"
+    }
+    labels = {
+      test = "writeonly"
+    }
+  }
+
+  binary_data_wo_revision = 2
+  binary_data_wo = {
+    one = filebase64("%s/test-fixtures/binary.data")
+    two = filebase64("%s/test-fixtures/binary2.data")
+  }
+}
+`, prefix, bd, bd)
 }
 
 func testAccKubernetesSecretV1Config_binaryData2(prefix string, bd string) string {

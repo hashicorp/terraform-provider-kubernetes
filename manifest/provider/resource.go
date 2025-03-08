@@ -202,67 +202,82 @@ func RemoveServerSideFields(in map[string]interface{}) map[string]interface{} {
 }
 
 func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.GroupVersionKind) (interface{}, error) {
-	c, err := ps.getDynamicClient()
-	if err != nil {
-		return nil, err
-	}
-	m, err := ps.getRestMapper()
+	// check CRD versions
+	crds, err := ps.fetchCRDs(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	crd := schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}
-	crms, err := m.RESTMappings(crd)
-	if err != nil {
-		return nil, fmt.Errorf("could not extract resource version mappings for apiextensions.k8s.io.CustomResourceDefinition: %s", err)
-	}
-	// check  CRD versions
-	for _, crm := range crms {
-		crdRes, err := c.Resource(crm.Resource).List(ctx, v1.ListOptions{})
-		if err != nil {
-			return nil, err
+	for _, r := range crds {
+		spec := r.Object["spec"].(map[string]interface{})
+		if spec == nil {
+			continue
 		}
-
-		for _, r := range crdRes.Items {
-			spec := r.Object["spec"].(map[string]interface{})
-			if spec == nil {
-				continue
-			}
-			grp := spec["group"].(string)
-			if grp != gvk.Group {
-				continue
-			}
-			names := spec["names"]
-			if names == nil {
-				continue
-			}
-			kind := names.(map[string]interface{})["kind"]
-			if kind != gvk.Kind {
-				continue
-			}
-			ver := spec["versions"]
+		grp := spec["group"].(string)
+		if grp != gvk.Group {
+			continue
+		}
+		names := spec["names"]
+		if names == nil {
+			continue
+		}
+		kind := names.(map[string]interface{})["kind"]
+		if kind != gvk.Kind {
+			continue
+		}
+		ver := spec["versions"]
+		if ver == nil {
+			ver = spec["version"]
 			if ver == nil {
-				ver = spec["version"]
-				if ver == nil {
-					continue
-				}
+				continue
 			}
-			for _, rv := range ver.([]interface{}) {
-				if rv == nil {
-					continue
+		}
+		for _, rv := range ver.([]interface{}) {
+			if rv == nil {
+				continue
+			}
+			v := rv.(map[string]interface{})
+			if v["name"] == gvk.Version {
+				s, ok := v["schema"].(map[string]interface{})
+				if !ok {
+					return nil, nil // non-structural CRD
 				}
-				v := rv.(map[string]interface{})
-				if v["name"] == gvk.Version {
-					s, ok := v["schema"].(map[string]interface{})
-					if !ok {
-						return nil, nil // non-structural CRD
-					}
-					return s["openAPIV3Schema"], nil
-				}
+				return s["openAPIV3Schema"], nil
 			}
 		}
 	}
 	return nil, nil
+}
+
+func (ps *RawProviderServer) fetchCRDs(ctx context.Context) ([]unstructured.Unstructured, error) {
+	return ps.crds.Get(func() ([]unstructured.Unstructured, error) {
+		c, err := ps.getDynamicClient()
+		if err != nil {
+			return nil, err
+		}
+		m, err := ps.getRestMapper()
+		if err != nil {
+			return nil, err
+		}
+
+		crd := schema.GroupKind{Group: "apiextensions.k8s.io", Kind: "CustomResourceDefinition"}
+		crms, err := m.RESTMappings(crd)
+		if err != nil {
+			return nil, fmt.Errorf("could not extract resource version mappings for apiextensions.k8s.io.CustomResourceDefinition: %s", err)
+		}
+
+		var crds []unstructured.Unstructured
+		for _, crm := range crms {
+			crdRes, err := c.Resource(crm.Resource).List(ctx, v1.ListOptions{})
+			if err != nil {
+				return nil, err
+			}
+
+			crds = append(crds, crdRes.Items...)
+		}
+
+		return crds, nil
+	})
 }
 
 // privateStateSchema describes the structure of the private state payload that

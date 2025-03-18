@@ -11,7 +11,7 @@ on:
         default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.11.0-rc1 # FIXME change this v1.11.0 is released
+        default: 1.11.2
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8
@@ -29,7 +29,7 @@ env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
   KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.25.0' }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.11.0-rc1' }} # FIXME change when v1.11.0 is released
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.11.2' }} 
   
 jobs:
   acceptance_tests_kind:

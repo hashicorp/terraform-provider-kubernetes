@@ -29,6 +29,6 @@ jobs:
         run: go mod verify
       - name: Run unit tests
         env:
-          TF_ACC_TERRAFORM_VERSION: 1.8.0
+          TF_ACC_TERRAFORM_VERSION: 1.11.2
         run: |
           make testfuncs

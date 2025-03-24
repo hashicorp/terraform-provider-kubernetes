@@ -50,6 +50,8 @@ jobs:
             isBaseMajorRelease: true
             kubernetes_version: v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30  
         terraform_version:
+          - 1.11.2
+          - 1.10.5
           - 1.9.8
           - 1.8.5
           - 1.6.6

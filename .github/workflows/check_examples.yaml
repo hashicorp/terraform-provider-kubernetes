@@ -26,13 +26,11 @@ jobs:
     strategy:
       matrix:
         terraform_version:
-          - "1.2.9"
-          - "1.3.9"
-          - "1.4.0"
           - "1.6.0"
           - "1.7.0"
           - "1.8.0"
           - "1.10.1"
+          - "1.11.2"
     env:
       TF_X_KUBERNETES_MANIFEST_RESOURCE: 1
       TERM: linux

@@ -13,7 +13,7 @@ on:
     inputs:
       terraformVersion:
         description: Terraform version
-        default: 1.10.0-alpha20240807
+        default: 1.11.2
 
 jobs:
   acceptance_tests:
@@ -29,6 +29,6 @@ jobs:
       - name: Run Tests
         env:
           TF_ACC: 1
-          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.9.0-alpha20240516' }}
+          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.11.2' }}
         run: |
           go test -v -run '^TestAccKubernetesDeferredActions' ./kubernetes/test-dfa

@@ -4,13 +4,12 @@
 
 # Kubernetes Provider for Terraform [![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/hashicorp/terraform-provider-kubernetes?label=release)](https://github.com/hashicorp/terraform-provider-kubernetes/releases) [![license](https://img.shields.io/github/license/hashicorp/terraform-provider-kubernetes.svg)]()
 
-- [Getting Started](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/getting-started)
-- [Interactive Tutorial](https://learn.hashicorp.com/tutorials/terraform/kubernetes-provider?in=terraform/kubernetes)
+- [Getting Started](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/getting-started.html)
+- [Interactive Tutorial](https://developer.hashicorp.com/terraform/tutorials/kubernetes/kubernetes-provider)
 - Usage
   - [Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs)
   - [Examples](https://github.com/hashicorp/terraform-provider-kubernetes/tree/main/_examples)
   - [Kubernetes Provider 2.0 Upgrade guide](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/guides/v2-upgrade-guide)
-- Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
 - Chat: [#terraform-providers in Kubernetes](https://kubernetes.slack.com/messages/CJY6ATQH4) ([Sign up here](http://slack.k8s.io/))
 
 The Kubernetes provider for Terraform is a plugin that enables full lifecycle management of Kubernetes resources. This provider is maintained internally by HashiCorp.
@@ -21,7 +20,7 @@ Please note: We take Terraform's security and our users' trust very seriously. I
 ## Requirements
 
 -	[Terraform](https://www.terraform.io/downloads.html) 0.12.x
--	[Go](https://golang.org/doc/install) 1.18+ (to build the provider plugin)
+-	[Go](https://golang.org/doc/install) 1.22+ (to build the provider plugin)
 
 
 ## Contributing to the provider

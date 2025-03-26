@@ -297,6 +297,7 @@ func flattenTolerations(tolerations []v1.Toleration, isTemplate bool) []interfac
 	att := []interface{}{}
 	for _, v := range tolerations {
 		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
+		// Keep all tolerations if we flatten the Pod spec template.
 		if _, ok := builtInTolerations[v.Key]; ok && !isTemplate {
 			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
 			continue

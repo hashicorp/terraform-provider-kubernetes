@@ -70,7 +70,7 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	// isTeamplate argument here is equal to 'true' because we want to keep all attributes that Kubernetes unchanged.
+	// isTemplate argument here is equal to 'true' because we want to keep all attributes that Kubernetes unchanged.
 	podSpec, err := flattenPodSpec(pod.Spec, true)
 	if err != nil {
 		return diag.FromErr(err)

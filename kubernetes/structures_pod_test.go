@@ -16,7 +16,7 @@ import (
 func TestFlattenTolerations(t *testing.T) {
 	cases := []struct {
 		Input          []corev1.Toleration
-		IsTeamplate    bool
+		isTemplate     bool
 		ExpectedOutput []interface{}
 	}{
 		{
@@ -116,7 +116,7 @@ func TestFlattenTolerations(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		output := flattenTolerations(tc.Input, tc.IsTeamplate)
+		output := flattenTolerations(tc.Input, tc.isTemplate)
 		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
 			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
 				tc.ExpectedOutput, output)

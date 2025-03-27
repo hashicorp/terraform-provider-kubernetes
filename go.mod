@@ -26,13 +26,13 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/stretchr/testify v1.8.3
 	golang.org/x/mod v0.22.0
-	k8s.io/api v0.28.6
-	k8s.io/apiextensions-apiserver v0.28.6
-	k8s.io/apimachinery v0.28.6
-	k8s.io/client-go v0.28.6
-	k8s.io/kube-aggregator v0.28.6
-	k8s.io/kubectl v0.28.6
-	k8s.io/kubernetes v1.28.6
+	k8s.io/api v0.28.15
+	k8s.io/apiextensions-apiserver v0.28.15
+	k8s.io/apimachinery v0.28.15
+	k8s.io/client-go v0.28.15
+	k8s.io/kube-aggregator v0.28.15
+	k8s.io/kubectl v0.28.15
+	k8s.io/kubernetes v1.28.15
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -139,8 +139,8 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/cli-runtime v0.28.6 // indirect
-	k8s.io/component-base v0.28.6 // indirect
+	k8s.io/cli-runtime v0.28.15 // indirect
+	k8s.io/component-base v0.28.15 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661

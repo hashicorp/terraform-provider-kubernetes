@@ -17,7 +17,7 @@ on:
         default: "1.27"
       terraformVersion:
         description: Terraform version
-        default: 1.7.5
+        default: 1.11.2
       runTests:
         description: The regex passed to the -run option of `go test`
         default: "^TestAcc"
@@ -29,7 +29,7 @@ on:
 
 env:
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/aks/kubeconfig
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.10.1' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.11.2' }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
   TF_VAR_location: ${{ github.event.inputs.location || 'canadaeast' }}
   TF_VAR_node_count: ${{ github.event.inputs.nodeCount || '2' }}

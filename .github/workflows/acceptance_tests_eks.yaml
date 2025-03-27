@@ -26,7 +26,7 @@ on:
         default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.7.5
+        default: 1.11.2
   schedule:
     - cron: '0 20 * * *'
 
@@ -34,7 +34,7 @@ env:
   AWS_REGION: ${{ github.event.inputs.region || 'ca-central-1' }}
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.10.1' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.11.2' }}
   TF_VAR_az_span: ${{ github.event.inputs.azSpan || '2' }}
   TF_VAR_capacity_type: ${{ 'SPOT' }}
   TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion || '1.29' }}

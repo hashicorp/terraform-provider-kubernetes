@@ -26,7 +26,7 @@ on:
         default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.7.5
+        default: 1.11.2
   schedule:
     - cron: '0 23 * * *'
 
@@ -37,7 +37,7 @@ env:
   USE_GKE_GCLOUD_AUTH_PLUGIN: True
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/gke/kubeconfig
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.10.1' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.11.2' }}
   TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion || '1.29' }}
   TF_VAR_node_count: ${{ github.event.inputs.nodeCount || '1' }}
   TF_VAR_instance_type: ${{ github.event.inputs.instanceType || 'e2-standard-2' }}

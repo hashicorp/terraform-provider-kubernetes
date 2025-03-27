@@ -1,6 +1,6 @@
 module github.com/hashicorp/k8s-manifest-hook
 
-go 1.21
+go 1.24.1
 
 require (
 	github.com/sirupsen/logrus v1.9.3

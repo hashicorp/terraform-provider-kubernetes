@@ -317,10 +317,8 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 												Computed: true,
 											},
 											"ip_mode": {
-												Type:         schema.TypeString,
-												Optional:     true,
-												Default:      "VIP",
-												ValidateFunc: validation.StringInSlice([]string{"VIP", "Proxy"}, false),
+												Type:     schema.TypeString,
+												Computed: true,
 											},
 											"hostname": {
 												Type:     schema.TypeString,

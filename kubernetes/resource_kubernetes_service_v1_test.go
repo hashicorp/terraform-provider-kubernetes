@@ -350,24 +350,13 @@ func TestAccKubernetesServiceV1_loadBalancer_ipMode(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfig_ignoreAnnotations() +
-					testAccKubernetesServiceV1Config_loadBalancer_defaultIPMode(name),
+					testAccKubernetesServiceV1Config_loadBalancer_ip(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
 					resource.TestCheckResourceAttr(resourceName, "status.0.load_balancer.0.ingress.0.ip_mode", "VIP"),
-				),
-			},
-			{
-				Config: testAccKubernetesConfig_ignoreAnnotations() +
-					testAccKubernetesServiceV1Config_loadBalancer_ipMode(name, "Proxy"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
-					resource.TestCheckResourceAttr(resourceName, "status.0.load_balancer.0.ingress.0.ip_mode", "Proxy"),
 				),
 			},
 		},
@@ -1050,6 +1039,28 @@ func testAccKubernetesServiceV1Config_loadBalancer(name string) string {
 `, name)
 }
 
+func testAccKubernetesServiceV1Config_loadBalancer_ip(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    type = "LoadBalancer"
+    selector = {
+      app = "test-app"
+    }
+
+    port {
+      port        = 80
+      target_port = 80
+    }
+  }
+}
+`, name)
+}
+
 func testAccKubernetesServiceV1Config_loadBalancer_modified(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
@@ -1140,39 +1151,6 @@ func testAccKubernetesServiceV1Config_loadBalancer_annotations_aws_modified(name
   }
 }
 `, name)
-}
-func testAccKubernetesServiceV1Config_loadBalancer_defaultIPMode(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
-  metadata {
-    name = "%s"
-  }
-  spec {
-    type = "LoadBalancer"
-    port {
-      port        = 80
-      target_port = 8080
-    }
-  }
-}
-`, name)
-}
-func testAccKubernetesServiceV1Config_loadBalancer_ipMode(name, ipMode string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
-  metadata {
-    name = "%s"
-  }
-  spec {
-    type = "LoadBalancer"
-    port {
-      port        = 80
-      target_port = 8080
-    }
-    ip_mode = "%s"
-  }
-}
-`, name, ipMode)
 }
 
 func testAccKubernetesServiceV1Config_headless(name string) string {

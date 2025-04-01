@@ -337,6 +337,32 @@ func TestAccKubernetesServiceV1_loadBalancer_healthcheck(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesServiceV1_loadBalancer_ipMode(t *testing.T) {
+	var conf corev1.Service
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_service_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesServiceV1Config_loadBalancer_ip(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "LoadBalancer"),
+					resource.TestCheckResourceAttr(resourceName, "status.0.load_balancer.0.ingress.0.ip_mode", "VIP"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesServiceV1_headless(t *testing.T) {
 	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
@@ -1041,6 +1067,28 @@ func testAccKubernetesServiceV1Config_loadBalancer(name string) string {
     }
 
     type = "LoadBalancer"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesServiceV1Config_loadBalancer_ip(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    type = "LoadBalancer"
+    selector = {
+      app = "test-app"
+    }
+
+    port {
+      port        = 80
+      target_port = 80
+    }
   }
 }
 `, name)

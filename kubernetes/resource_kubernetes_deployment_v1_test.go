@@ -462,6 +462,38 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_tcp(t *te
 	})
 }
 
+func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_termination_grace_period_seconds(t *testing.T) {
+	var conf appsv1.Deployment
+
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_deployment_v1.test"
+	imageName := agnhostImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingTerminationGracePeriodSeconds(deploymentName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.args.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.path", "/healthz"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.port", "8080"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.http_header.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.http_header.0.name", "X-Custom-Header"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.http_get.0.http_header.0.value", "Awesome"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.initial_delay_seconds", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.liveness_probe.0.termination_grace_period_seconds", "10"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDeploymentV1_with_container_lifecycle(t *testing.T) {
 	var conf appsv1.Deployment
 
@@ -2002,6 +2034,59 @@ func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingHTTPGet(deployment
             }
             initial_delay_seconds = 3
             period_seconds        = 1
+          }
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingTerminationGracePeriodSeconds(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image = "%s"
+          name  = "containername"
+          args  = ["liveness"]
+
+          liveness_probe {
+            http_get {
+              path = "/healthz"
+              port = 8080
+
+              http_header {
+                name  = "X-Custom-Header"
+                value = "Awesome"
+              }
+            }
+            initial_delay_seconds 			 = 3
+            period_seconds        			 = 1
+			termination_grace_period_seconds = 10
           }
         }
         termination_grace_period_seconds = 1

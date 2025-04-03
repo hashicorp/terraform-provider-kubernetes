@@ -271,6 +271,44 @@ func TestAccKubernetesServiceAccount_generatedName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesServiceAccount_imagePullSecret(t *testing.T) {
+	var conf corev1.ServiceAccount
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_service_account_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     "kubernetes_service_account.test",
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceAccountV1ConfigImagePullSecret(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceAccountV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttr(resourceName, "image_pull_secret.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "automount_service_account_token", "true"),
+					testAccCheckServiceAccountV1ImagePullSecrets(&conf, []*regexp.Regexp{
+						regexp.MustCompile("^$"),
+						regexp.MustCompile("^secret$"),
+					}),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "automount_service_account_token"},
+			},
+		},
+	})
+}
+
 func testAccCheckServiceAccountV1ImagePullSecrets(m *corev1.ServiceAccount, expected []*regexp.Regexp) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.ImagePullSecrets) == 0 {
@@ -590,4 +628,20 @@ resource "kubernetes_secret_v1" "four" {
   }
 }
 `, name, name, name, name, name)
+}
+
+func testAccKubernetesServiceAccountV1ConfigImagePullSecret(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  image_pull_secret {
+    name = ""
+  }
+
+  image_pull_secret {
+    name = "secret"
+  }
+}
+`, name)
 }

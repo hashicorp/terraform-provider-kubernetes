@@ -42,13 +42,19 @@ func expandRBACSubjects(in []interface{}) []api.Subject {
 			subject.APIGroup = v.(string)
 		}
 		if v, ok := m["kind"].(string); ok {
-			subject.Kind = string(v)
+			subject.Kind = v
 		}
 		if v, ok := m["name"]; ok {
 			subject.Name = v.(string)
 		}
-		if v, ok := m["namespace"]; ok {
-			subject.Namespace = v.(string)
+
+		// Handle namespace logic
+		if subject.Kind != "Group" && subject.Kind != "User" {
+			if v, ok := m["namespace"]; ok && v != "" {
+				subject.Namespace = v.(string)
+			} else {
+				subject.Namespace = "default"
+			}
 		}
 		subjects = append(subjects, subject)
 	}
@@ -121,8 +127,13 @@ func flattenRBACSubjects(in []api.Subject) []interface{} {
 		}
 		m["kind"] = n.Kind
 		m["name"] = n.Name
-		if n.Namespace != "" {
-			m["namespace"] = n.Namespace
+
+		if n.Kind != "Group" && n.Kind != "User" {
+			if n.Namespace == "" {
+				m["namespace"] = "default"
+			} else {
+				m["namespace"] = n.Namespace
+			}
 		}
 		att = append(att, m)
 	}

@@ -1,6 +1,6 @@
 schema = "2"
 
-project "terraform-provider-crt-example" {
+project "terraform-provider-kubernetes" {
   team = "terraform"
 
   slack {

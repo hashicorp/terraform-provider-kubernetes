@@ -1,4 +1,4 @@
-# GKE (Google Container Engine) and Google Filestore (NFS)
+# GKE (Google Kubernetes Engine) and Google Filestore (NFS)
 
 This example demonstrates building a Google GKE cluster and Google Filestore (NFS) to create persistent volumes for use in applications in Kubernetes. There is an example application Deployment included to demonstrate mounting the NFS volume using a Persistent Volume Claim.
 

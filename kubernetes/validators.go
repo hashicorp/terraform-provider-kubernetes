@@ -296,7 +296,7 @@ func validateCronExpression(v interface{}, k string) ([]string, []error) {
 
 	_, err := cron.ParseStandard(v.(string))
 	if err != nil {
-		errors = append(errors, fmt.Errorf("%q should be an valid Cron expression", k))
+		errors = append(errors, fmt.Errorf("%q should be a valid Cron expression", k))
 	}
 
 	return []string{}, errors

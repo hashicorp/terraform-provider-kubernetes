@@ -1,0 +1,3 @@
+```release-note:bug
+`data_source_kubernetes_pod_v1` : Fixed name required problem and label selection issue
+```

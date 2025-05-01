@@ -55,6 +55,10 @@ func flattenJobV1Spec(in batchv1.JobSpec, d *schema.ResourceData, meta interface
 		att["selector"] = flattenLabelSelector(in.Selector)
 	}
 
+	if in.Suspend != nil {
+		att["suspend"] = *in.Suspend
+	}
+
 	removeGeneratedLabels(in.Template.ObjectMeta.Labels)
 
 	podSpec, err := flattenPodTemplateSpec(in.Template)
@@ -118,6 +122,10 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 
 	if v, ok := in["selector"].([]interface{}); ok && len(v) > 0 {
 		obj.Selector = expandLabelSelector(v)
+	}
+
+	if v, ok := in["suspend"].(bool); ok {
+		obj.Suspend = ptr.To(v)
 	}
 
 	template, err := expandPodTemplate(in["template"].([]interface{}))
@@ -327,6 +335,14 @@ func patchJobV1Spec(pathPrefix, prefix string, d *schema.ResourceData) PatchOper
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/podFailurePolicy",
 			Value: expandPodFailurePolicy(d.Get(prefix + "pod_failure_policy").([]interface{})),
+		})
+	}
+
+	if d.HasChange(prefix + "suspend") {
+		v := d.Get(prefix + "suspend").(bool)
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/suspend",
+			Value: v,
 		})
 	}
 

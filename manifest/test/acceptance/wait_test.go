@@ -78,6 +78,51 @@ func TestKubernetesManifest_WaitFields_Pod(t *testing.T) {
 	})
 }
 
+func TestKubernetesManifest_WaitFields_PodInvalid(t *testing.T) {
+	ctx := context.Background()
+
+	name := randName()
+	namespace := randName()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
+	defer func() {
+		tf.Destroy(ctx)
+		tf.Close()
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "v1", "pods", namespace, name)
+	}()
+
+	k8shelper.CreateNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
+
+	tfvars := TFVARS{
+		"namespace": namespace,
+		"name":      name,
+	}
+	tfconfig := loadTerraformConfig(t, "Wait/wait_for_fields_pod_invalid.tf", tfvars)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+
+	err = tf.Apply(ctx)
+	if err == nil || !strings.Contains(err.Error(), "timed out waiting on") {
+		t.Fatalf("Waiter should have timed out")
+	}
+
+	st, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(st)
+	if !tfstate.ResourceExists(t, "kubernetes_manifest.test") {
+		t.Fatalf("Expected resource to exist in state")
+	}
+}
+
 func TestKubernetesManifest_WaitRollout_Deployment(t *testing.T) {
 	ctx := context.Background()
 
@@ -129,6 +174,51 @@ func TestKubernetesManifest_WaitRollout_Deployment(t *testing.T) {
 	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
 		"kubernetes_manifest.wait_for_rollout.wait.0.rollout": true,
 	})
+}
+
+func TestKubernetesManifest_WaitRollout_FailingDeployment(t *testing.T) {
+	ctx := context.Background()
+
+	name := randName()
+	namespace := randName()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	tf := tfhelper.RequireNewWorkingDir(ctx, t)
+	tf.SetReattachInfo(ctx, reattachInfo)
+	defer func() {
+		tf.Destroy(ctx)
+		tf.Close()
+		k8shelper.AssertNamespacedResourceDoesNotExist(t, "apps/v1", "deployments", namespace, name)
+	}()
+
+	k8shelper.CreateNamespace(t, namespace)
+	defer k8shelper.DeleteResource(t, namespace, kubernetes.NewGroupVersionResource("v1", "namespaces"))
+
+	tfvars := TFVARS{
+		"namespace": namespace,
+		"name":      name,
+	}
+	tfconfig := loadTerraformConfig(t, "Wait/wait_for_rollout_invalid.tf", tfvars)
+	tf.SetConfig(ctx, tfconfig)
+	tf.Init(ctx)
+
+	err = tf.Apply(ctx)
+	if err == nil || !strings.Contains(err.Error(), "timed out waiting on") {
+		t.Fatalf("Waiter should have timed out")
+	}
+
+	st, err := tf.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(st)
+	if !tfstate.ResourceExists(t, "kubernetes_manifest.wait_for_rollout") {
+		t.Fatalf("Expected resource to exist in state")
+	}
 }
 
 func TestKubernetesManifest_WaitCondition_Pod(t *testing.T) {

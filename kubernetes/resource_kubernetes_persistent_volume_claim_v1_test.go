@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	corev1 "k8s.io/api/core/v1"
 	storageapi "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -590,7 +590,6 @@ func testAccCheckKubernetesPersistentVolumeClaimV1Destroy(s *terraform.State) er
 			}
 			return retry.NonRetryableError(err)
 		})
-
 		if err != nil {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("Persistent Volume still exists: %s", rs.Primary.ID)

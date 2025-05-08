@@ -50,7 +50,29 @@ func resourceKubernetesConfigMapV1() *schema.Resource {
 
 			return nil
 		},
-
+		Identity: &schema.ResourceIdentity{
+			Version: 1,
+			SchemaFunc: func() map[string]*schema.Schema {
+				return map[string]*schema.Schema{
+					"namespace": {
+						Type:              schema.TypeString,
+						OptionalForImport: true,
+					},
+					"name": {
+						Type:              schema.TypeString,
+						RequiredForImport: true,
+					},
+					"api_version": {
+						Type:              schema.TypeString,
+						RequiredForImport: true,
+					},
+					"kind": {
+						Type:              schema.TypeString,
+						RequiredForImport: true,
+					},
+				}
+			},
+		},
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("config map", true),
 			"binary_data": {
@@ -131,6 +153,16 @@ func resourceKubernetesConfigMapV1Read(ctx context.Context, d *schema.ResourceDa
 	d.Set("binary_data", flattenByteMapToBase64Map(cfgMap.BinaryData))
 	d.Set("data", cfgMap.Data)
 	d.Set("immutable", cfgMap.Immutable)
+
+	rid, err := d.Identity()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	rid.Set("api_version", "v1")
+	rid.Set("kind", "ConfigMap")
+	rid.Set("namespace", cfgMap.GetNamespace())
+	rid.Set("name", cfgMap.GetName())
 
 	return nil
 }

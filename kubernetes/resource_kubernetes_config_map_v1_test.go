@@ -30,8 +30,6 @@ func TestAccKubernetesConfigMapV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -132,8 +130,6 @@ func TestAccKubernetesConfigMapV1_binaryData(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -167,8 +163,6 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -202,7 +196,6 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -248,12 +241,10 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 
 func TestAccKubernetesConfigMap_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_config_map_v1.identity_test"
+	resourceName := "kubernetes_config_map_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -371,7 +362,7 @@ func testAccKubernetesConfigMapV1Config_nodata(name string) string {
 }
 
 func testAccKubernetesConfigMapV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "identity_test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"

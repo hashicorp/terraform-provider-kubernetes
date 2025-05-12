@@ -26,7 +26,6 @@ func TestAccKubernetesServiceV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -136,7 +135,6 @@ func TestAccKubernetesServiceV1_loadBalancer(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -231,7 +229,6 @@ func TestAccKubernetesServiceV1_loadBalancer_internal_traffic_policy(t *testing.
 			// internalTrafficPolicy is availabe in version 1.22+
 			skipIfClusterVersionLessThan(t, "1.21.0")
 		},
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -272,7 +269,6 @@ func TestAccKubernetesServiceV1_loadBalancer_class(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -303,7 +299,6 @@ func TestAccKubernetesServiceV1_loadBalancer_healthcheck(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -344,7 +339,6 @@ func TestAccKubernetesServiceV1_headless(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -373,7 +367,6 @@ func TestAccKubernetesServiceV1_loadBalancer_annotations_aws(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -468,7 +461,6 @@ func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -569,7 +561,6 @@ func TestAccKubernetesServiceV1_noTargetPort(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -630,7 +621,6 @@ func TestAccKubernetesServiceV1_stringTargetPort(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -665,7 +655,6 @@ func TestAccKubernetesServiceV1_externalName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -704,7 +693,6 @@ func TestAccKubernetesServiceV1_externalName_toClusterIp(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -756,7 +744,6 @@ func TestAccKubernetesServiceV1_generatedName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{
@@ -791,7 +778,6 @@ func TestAccKubernetesServiceV1_ipFamilies(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
 		Steps: []resource.TestStep{

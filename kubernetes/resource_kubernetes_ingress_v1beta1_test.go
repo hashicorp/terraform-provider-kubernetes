@@ -25,8 +25,7 @@ func TestAccKubernetesIngressV1Beta1_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
 		Steps: []resource.TestStep{
@@ -81,8 +80,7 @@ func TestAccKubernetesIngressV1Beta1_TLS(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
 		Steps: []resource.TestStep{
@@ -129,8 +127,7 @@ func TestAccKubernetesIngressV1Beta1_emptyTLS(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
 		Steps: []resource.TestStep{
@@ -162,8 +159,7 @@ func TestAccKubernetesIngressV1Beta1_InternalKey(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
 		Steps: []resource.TestStep{
@@ -209,8 +205,7 @@ func TestAccKubernetesIngressV1Beta1_WaitForLoadBalancerGoogleCloud(t *testing.T
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 			skipIfNotRunningInGke(t)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
 		Steps: []resource.TestStep{

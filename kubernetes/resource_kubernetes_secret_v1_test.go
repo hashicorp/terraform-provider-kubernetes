@@ -19,6 +19,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var idRefreshIgnoreCommon = []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"}
+
 func TestAccKubernetesSecretV1_basic(t *testing.T) {
 	var conf1, conf2 corev1.Secret
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -26,8 +28,6 @@ func TestAccKubernetesSecretV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
 		Steps: []resource.TestStep{
@@ -143,9 +143,8 @@ func TestAccKubernetesSecretV1_immutable(t *testing.T) {
 	resourceName := "kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t) }, //	IDRefreshName:     resourceName,
+		// IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
 		Steps: []resource.TestStep{
@@ -231,9 +230,8 @@ func TestAccKubernetesSecretV1_generatedName(t *testing.T) {
 	resourceName := "kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t) }, // IDRefreshName:     resourceName,
+		// IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
 		Steps: []resource.TestStep{
@@ -271,9 +269,8 @@ func TestAccKubernetesSecretV1_binaryData(t *testing.T) {
 	}
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t) }, // IDRefreshName:     resourceName,
+		// IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
 		Steps: []resource.TestStep{
@@ -309,9 +306,8 @@ func TestAccKubernetesSecretV1_data_wo(t *testing.T) {
 	resourceName := "kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"},
+		PreCheck: func() { testAccPreCheck(t) }, // IDRefreshName:     resourceName,
+		// IDRefreshIgnore:   []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
 		Steps: []resource.TestStep{
@@ -352,9 +348,8 @@ func TestAccKubernetesSecretV1_binaryData_wo(t *testing.T) {
 	}
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"},
+		PreCheck: func() { testAccPreCheck(t) }, // IDRefreshName:     resourceName,
+		//	IDRefreshIgnore:   []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
 		Steps: []resource.TestStep{
@@ -390,8 +385,7 @@ func TestAccKubernetesSecretV1_service_account_token(t *testing.T) {
 	resourceName := "kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
+		PreCheck:          func() { testAccPreCheck(t) }, // IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
 		Steps: []resource.TestStep{

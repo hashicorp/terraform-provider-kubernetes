@@ -24,8 +24,6 @@ func TestAccKubernetesStatefulSetV1_minimal(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -53,12 +51,6 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfRunningInEks(t)
-		},
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"metadata.0.resource_version",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
@@ -137,12 +129,6 @@ func TestAccKubernetesStatefulSetV1_basic_idempotency(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfRunningInEks(t)
 		},
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"metadata.0.resource_version",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
-		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -175,12 +161,6 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfRunningInEks(t)
-		},
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"metadata.0.resource_version",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
@@ -325,13 +305,7 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	resourceName := "kubernetes_stateful_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfRunningInEks(t) },
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
-			"metadata.0.resource_version",
-		},
+		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInEks(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -363,8 +337,6 @@ func TestAccKubernetesStatefulSetV1_minimalWithTemplateNamespace(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{

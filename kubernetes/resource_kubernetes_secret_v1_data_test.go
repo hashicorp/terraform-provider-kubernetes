@@ -26,8 +26,7 @@ func TestAccKubernetesSecretV1Data_empty(t *testing.T) {
 			testAccPreCheck(t)
 			createEmptySecret(name, namespace)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			return destroySecret(name, namespace)
@@ -73,8 +72,7 @@ func TestAccKubernetesSecretV1Data_basic_data(t *testing.T) {
 			testAccPreCheck(t)
 			createSecretWithData(name, namespace)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			return destroySecret(name, namespace)
@@ -127,8 +125,7 @@ func TestAccKubernetesSecretV1Data_modified(t *testing.T) {
 			testAccPreCheck(t)
 			createModifiedSecret(name, namespace)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			return destroySecret(name, namespace)
@@ -184,12 +181,9 @@ func destroySecret(name, namespace string) error {
 // Handling the case where it attempts to read a secret that doesnt exist in the cluster
 func TestAcctKubernetesSecretV1Data_validation(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_secret_v1_data.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{

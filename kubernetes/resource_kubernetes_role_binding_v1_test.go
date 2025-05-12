@@ -23,8 +23,6 @@ func TestAccKubernetesRoleBindingV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
@@ -138,8 +136,6 @@ func TestAccKubernetesRoleBindingV1_generatedName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
@@ -172,8 +168,6 @@ func TestAccKubernetesRoleBindingV1_sa_subject(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
@@ -206,8 +200,6 @@ func TestAccKubernetesRoleBindingV1_group_subject(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
@@ -240,8 +232,6 @@ func TestAccKubernetesRoleBindingV1_Bug(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesRoleBindingV1Destroy,
 		Steps: []resource.TestStep{

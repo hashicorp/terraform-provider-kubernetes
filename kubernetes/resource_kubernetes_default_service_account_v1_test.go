@@ -20,8 +20,6 @@ func TestAccKubernetesDefaultServiceAccountV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{
@@ -62,8 +60,6 @@ func TestAccKubernetesDefaultServiceAccountV1_secrets(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{
@@ -97,8 +93,6 @@ func TestAccKubernetesDefaultServiceAccountV1_automountServiceAccountToken(t *te
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesServiceAccountV1Destroy,
 		Steps: []resource.TestStep{

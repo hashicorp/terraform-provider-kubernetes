@@ -20,7 +20,6 @@ func TestAccKubernetesDataSourceEndpointsV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesEndpointV1Destroy,
 		Steps: []resource.TestStep{

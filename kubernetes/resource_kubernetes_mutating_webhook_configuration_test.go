@@ -26,8 +26,7 @@ func TestAccKubernetesMutatingWebhookConfiguration_basic(t *testing.T) {
 			// AKS sets up some namespaceSelectors and thus we have to skip these tests
 			skipIfRunningInAks(t)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesMutatingWebhookConfigurationDestroy,
 		Steps: []resource.TestStep{

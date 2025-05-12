@@ -24,8 +24,6 @@ func TestAccKubernetesStorageClassV1_minikube(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
@@ -92,7 +90,6 @@ func TestAccKubernetesStorageClassV1_volumeExpansion(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
@@ -133,9 +130,8 @@ func TestAccKubernetesStorageClassV1_basic(t *testing.T) {
 	resourceName := "kubernetes_storage_class_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
@@ -226,9 +222,8 @@ func TestAccKubernetesStorageClassV1_allowedTopologies_minikube(t *testing.T) {
 	resourceName := "kubernetes_storage_class_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{
@@ -255,9 +250,8 @@ func TestAccKubernetesStorageClassV1_generatedName(t *testing.T) {
 	resourceName := "kubernetes_storage_class_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
 		Steps: []resource.TestStep{

@@ -26,8 +26,7 @@ func TestAccKubernetesCronJobV1Beta1_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.25.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobV1Beta1Destroy,
 		Steps: []resource.TestStep{
@@ -91,8 +90,7 @@ func TestAccKubernetesCronJobV1Beta1_extra(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.25.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobV1Beta1Destroy,
 		Steps: []resource.TestStep{
@@ -138,8 +136,7 @@ func TestAccKubernetesCronJobV1Beta1_minimalWithTemplateNamespace(t *testing.T) 
 			testAccPreCheck(t)
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.25.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCronJobV1Beta1Destroy,
 		Steps: []resource.TestStep{

@@ -30,7 +30,6 @@ func TestAccKubernetesResourceNodeTaint_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccKubernetesNodeTaintDestroy,
 		Steps: []resource.TestStep{
@@ -54,7 +53,6 @@ func TestAccKubernetesResourceNodeTaint_MultipleBasic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccKubernetesNodeTaintDestroy,
 		Steps: []resource.TestStep{

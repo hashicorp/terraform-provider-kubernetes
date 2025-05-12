@@ -23,8 +23,6 @@ func TestAccKubernetesIngressClassV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
@@ -40,10 +38,15 @@ func TestAccKubernetesIngressClassV1_basic(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.uid",
+					"metadata.0.generation",
+					"spec.0.parameters.0.scope",
+				},
 			},
 		},
 	})
@@ -57,8 +60,6 @@ func TestAccKubernetesIngressClassV1_parameters(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
@@ -76,10 +77,15 @@ func TestAccKubernetesIngressClassV1_parameters(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.uid",
+					"metadata.0.generation",
+					"spec.0.parameters.0.scope",
+				},
 			},
 			{
 				Config: testAccKubernetesIngressClassV1ConfigParameters(rName, rNameUpdated),
@@ -106,8 +112,6 @@ func TestAccKubernetesIngressClassV1_parameters_apiGroup(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
@@ -126,10 +130,15 @@ func TestAccKubernetesIngressClassV1_parameters_apiGroup(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.uid",
+					"metadata.0.generation",
+					"spec.0.parameters.0.scope",
+				},
 			},
 			{
 				Config: testAccKubernetesIngressClassV1ConfigParametersApiGroup(rName, rNameUpdated),

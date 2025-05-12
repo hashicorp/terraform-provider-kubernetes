@@ -32,7 +32,6 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 				t.Fatal(err)
 			}
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingEnvs(name, namespace)
@@ -90,7 +89,6 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 			testAccPreCheck(t)
 			createCronJobEnv(t, name, namespace)
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingCronJobEnvs(name, namespace)
@@ -148,7 +146,6 @@ func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
 			testAccPreCheck(t)
 			createInitContainerEnv(t, name, namespace)
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingEnvs(name, namespace)
@@ -206,7 +203,6 @@ func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
 			testAccPreCheck(t)
 			createCronJobInitContainerEnv(t, name, namespace)
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingCronJobEnvs(name, namespace)

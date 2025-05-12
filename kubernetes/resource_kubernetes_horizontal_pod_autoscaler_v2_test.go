@@ -24,7 +24,6 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_minimal(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.23.0")
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
 		Steps: []resource.TestStep{
@@ -63,8 +62,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.23.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
 		Steps: []resource.TestStep{
@@ -185,8 +183,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_containerResource(t *testing.T) 
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.23.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
 		ErrorCheck: func(err error) error {

@@ -22,10 +22,8 @@ func TestAccKubernetesResourceQuotaV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaV1Destroy,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaV1Config_basic(name),
@@ -103,10 +101,8 @@ func TestAccKubernetesResourceQuotaV1_generatedName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaV1Destroy,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaV1Config_generatedName(ns, prefix),
@@ -140,10 +136,8 @@ func TestAccKubernetesResourceQuotaV1_withScopes(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaV1Destroy,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaV1Config_withScopes(name),
@@ -194,10 +188,8 @@ func TestAccKubernetesResourceQuotaV1_scopeSelector(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesResourceQuotaV1Destroy,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesResourceQuotaV1ConfigScopeSelector(name),

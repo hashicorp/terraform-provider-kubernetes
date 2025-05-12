@@ -23,8 +23,6 @@ func TestAccKubernetesClusterRoleV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
@@ -77,8 +75,6 @@ func TestAccKubernetesClusterRoleV1_generatedName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
@@ -105,8 +101,6 @@ func TestAccKubernetesClusterRoleV1_UpdatePatchOperationsOrderWithRemovals(t *te
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
@@ -181,8 +175,6 @@ func TestAccKubernetesClusterRoleV1_aggregationRuleBasic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
@@ -227,8 +219,6 @@ func TestAccKubernetesClusterRoleV1_aggregationRuleMultiple(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{
@@ -269,8 +259,6 @@ func TestAccKubernetesClusterRoleV1_aggregationRuleRuleAggregation(t *testing.T)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
 		Steps: []resource.TestStep{

@@ -27,8 +27,6 @@ func TestAccKubernetesPersistentVolumeClaimV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
 		Steps: []resource.TestStep{
@@ -142,9 +140,8 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_volumeMatch(t *testing
 	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
@@ -286,9 +283,8 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_volumeUpdate(t *testin
 	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
@@ -347,9 +343,8 @@ func TestAccKubernetesPersistentVolumeClaimV1_googleCloud_storageClass(t *testin
 	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
 		Steps: []resource.TestStep{
@@ -411,9 +406,8 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionGoogleCloud(t *testing.T)
 	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
@@ -453,9 +447,8 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionMinikube(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_claim_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInMinikube(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
 		Steps: []resource.TestStep{
@@ -520,8 +513,6 @@ func TestAccKubernetesPersistentVolumeClaimV1_volumeMode(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
 		Steps: []resource.TestStep{

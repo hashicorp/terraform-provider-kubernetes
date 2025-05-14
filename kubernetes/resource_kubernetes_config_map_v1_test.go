@@ -239,7 +239,7 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesConfigMap_identity(t *testing.T) {
+func TestAccKubernetesConfigMapV1_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_config_map_v1.test"
 

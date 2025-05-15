@@ -448,6 +448,9 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		}
 		updatedObj, err := tftypes.Transform(completePropMan, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
 			_, isComputed := computedFields[ap.String()]
+			if isComputed {
+				return tftypes.NewValue(v.Type(), tftypes.UnknownValue), nil
+			}
 			if v.IsKnown() { // this is a value from current configuration - include it in the plan
 				hasChanged := false
 				wasCfg, restPath, err := tftypes.WalkAttributePath(priorMan, ap)
@@ -464,15 +467,6 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 							Summary:  fmt.Sprintf("The attribute path %v value's type is an x-kubernetes-preserve-unknown-field", morph.ValueToTypePath(ap).String()),
 							Detail:   "Changes to the type may cause some unexpected behavior.",
 						})
-					}
-				}
-				if isComputed {
-					if hasChanged {
-						return tftypes.NewValue(v.Type(), tftypes.UnknownValue), nil
-					}
-					nowVal, restPath, err := tftypes.WalkAttributePath(proposedVal["object"], ap)
-					if err == nil && len(restPath.Steps()) == 0 {
-						return nowVal.(tftypes.Value), nil
 					}
 				}
 				return v, nil

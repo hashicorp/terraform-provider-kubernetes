@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,8 +23,6 @@ func TestAccKubernetesNamespaceV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceV1Destroy,
 		Steps: []resource.TestStep{
@@ -117,7 +115,6 @@ func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceV1Destroy,
 		Steps: []resource.TestStep{
@@ -145,8 +142,6 @@ func TestAccKubernetesNamespaceV1_generatedName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceV1Destroy,
 		Steps: []resource.TestStep{
@@ -180,8 +175,6 @@ func TestAccKubernetesNamespaceV1_withSpecialCharacters(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceV1Destroy,
 		Steps: []resource.TestStep{
@@ -212,8 +205,6 @@ func TestAccKubernetesNamespaceV1_deleteTimeout(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesNamespaceV1Destroy,
 		Steps: []resource.TestStep{

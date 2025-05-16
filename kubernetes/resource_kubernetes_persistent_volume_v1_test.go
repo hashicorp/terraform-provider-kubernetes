@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,8 +27,6 @@ func TestAccKubernetesPersistentVolumeV1_minimal(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -54,7 +52,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
@@ -120,7 +117,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_blobStorageDisk(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
@@ -177,7 +173,6 @@ func TestAccKubernetesPersistentVolumeV1_azure_file(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInAks(t) },
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
@@ -222,9 +217,8 @@ func TestAccKubernetesPersistentVolumeV1_googleCloud_basic(t *testing.T) {
 	zone := os.Getenv("GOOGLE_ZONE")
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
@@ -304,9 +298,8 @@ func TestAccKubernetesPersistentVolumeV1_aws_basic(t *testing.T) {
 	zone := region + "a"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInEks(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
@@ -381,9 +374,8 @@ func TestAccKubernetesPersistentVolumeV1_googleCloud_volumeSource(t *testing.T) 
 	resourceName := "kubernetes_persistent_volume_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
@@ -443,8 +435,6 @@ func TestAccKubernetesPersistentVolumeV1_hostPath_volumeSource(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -501,8 +491,6 @@ func TestAccKubernetesPersistentVolumeV1_local_volumeSource(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -552,8 +540,6 @@ func TestAccKubernetesPersistentVolumeV1_cephFsSecretRef(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -595,9 +581,8 @@ func TestAccKubernetesPersistentVolumeV1_storageClass(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
+
 		ProviderFactories: testAccProviderFactories,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
@@ -649,8 +634,6 @@ func TestAccKubernetesPersistentVolumeV1_hostPath_nodeAffinity(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -717,8 +700,6 @@ func TestAccKubernetesPersistentVolumeV1_hostPath_mountOptions(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -745,8 +726,7 @@ func TestAccKubernetesPersistentVolumeV1_accessMode_ReadWriteOncePod(t *testing.
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -768,8 +748,6 @@ func TestAccKubernetesPersistentVolumeV1_csi_basic(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -841,8 +819,6 @@ func TestAccKubernetesPersistentVolumeV1_csi_secrets(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -890,8 +866,6 @@ func TestAccKubernetesPersistentVolumeV1_volumeMode(t *testing.T) {
 	resourceName := "kubernetes_persistent_volume_v1.test"
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -930,8 +904,6 @@ func TestAccKubernetesPersistentVolumeV1_hostpath_claimRef(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPersistentVolumeV1Destroy,
 		Steps: []resource.TestStep{
@@ -984,7 +956,6 @@ func testAccCheckKubernetesPersistentVolumeV1ForceNew(old, new *api.PersistentVo
 
 func waitForPersistentVolumeDeleted(pvName string, poll, timeout time.Duration) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -1001,7 +972,6 @@ func waitForPersistentVolumeDeleted(pvName string, poll, timeout time.Duration) 
 
 func testAccCheckKubernetesPersistentVolumeV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

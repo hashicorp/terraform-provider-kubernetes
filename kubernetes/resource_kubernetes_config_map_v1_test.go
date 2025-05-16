@@ -12,11 +12,15 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesConfigMapV1_basic(t *testing.T) {
@@ -26,8 +30,6 @@ func TestAccKubernetesConfigMapV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -115,6 +117,7 @@ func TestAccKubernetesConfigMapV1_basic(t *testing.T) {
 		},
 	})
 }
+
 func TestAccKubernetesConfigMapV1_binaryData(t *testing.T) {
 	var conf corev1.ConfigMap
 	prefix := "tf-acc-test-gen-"
@@ -127,8 +130,6 @@ func TestAccKubernetesConfigMapV1_binaryData(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -162,8 +163,6 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -197,7 +196,6 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
 		Steps: []resource.TestStep{
@@ -241,6 +239,40 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesConfigMapV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_config_map_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesConfigMapV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesConfigMapV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("v1"),
+							"kind":        knownvalue.StringExact("ConfigMap"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
 func testAccCheckConfigMapV1Data(m *corev1.ConfigMap, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.Data) == 0 {
@@ -256,7 +288,6 @@ func testAccCheckConfigMapV1Data(m *corev1.ConfigMap, expected map[string]string
 
 func testAccCheckKubernetesConfigMapV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

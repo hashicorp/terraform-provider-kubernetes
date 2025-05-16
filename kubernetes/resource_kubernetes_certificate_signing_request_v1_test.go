@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,8 +27,7 @@ func TestAccKubernetesCertificateSigningRequestV1_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 			skipIfNotRunningInKind(t)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
 		Steps: []resource.TestStep{
@@ -56,8 +55,7 @@ func TestAccKubernetesCertificateSigningRequestV1_generateName(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 			skipIfNotRunningInKind(t)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
 		Steps: []resource.TestStep{
@@ -87,8 +85,7 @@ func TestAccKubernetesCertificateSigningRequestV1_awsBasic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 			skipIfNotRunningInEks(t)
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesCertificateSigningRequestV1Destroy,
 		Steps: []resource.TestStep{

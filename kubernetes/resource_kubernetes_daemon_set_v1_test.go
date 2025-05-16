@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,8 +23,6 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -50,8 +48,6 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -128,9 +124,8 @@ func TestAccKubernetesDaemonSetV1_with_template_metadata(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+
+		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithTemplateMetadata(depName, imageName),
@@ -168,8 +163,6 @@ func TestAccKubernetesDaemonSetV1_initContainer(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -191,8 +184,6 @@ func TestAccKubernetesDaemonSetV1_noTopLevelLabels(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -219,9 +210,8 @@ func TestAccKubernetesDaemonSetV1_with_tolerations(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+
+		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithTolerations(rcName, imageName, &tolerationSeconds, operator, nil),
@@ -250,9 +240,8 @@ func TestAccKubernetesDaemonSetV1_with_tolerations_unset_toleration_seconds(t *t
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+
+		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithTolerations(rcName, imageName, nil, operator, &value),
@@ -277,8 +266,6 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_profil
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -309,9 +296,8 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_localh
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -400,8 +386,6 @@ func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -440,8 +424,6 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{

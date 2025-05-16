@@ -34,10 +34,10 @@ func flattenNetworkPolicyV1Ingress(in []networkingv1.NetworkPolicyIngressRule) [
 	att := make([]interface{}, len(in))
 	for i, ingress := range in {
 		m := make(map[string]interface{})
-		if ingress.Ports != nil && len(ingress.Ports) > 0 {
+		if len(ingress.Ports) > 0 {
 			m["ports"] = flattenNetworkPolicyV1Ports(ingress.Ports)
 		}
-		if ingress.From != nil && len(ingress.From) > 0 {
+		if len(ingress.From) > 0 {
 			m["from"] = flattenNetworkPolicyV1Peer(ingress.From)
 		}
 		att[i] = m
@@ -49,10 +49,10 @@ func flattenNetworkPolicyV1Egress(in []networkingv1.NetworkPolicyEgressRule) []i
 	att := make([]interface{}, len(in))
 	for i, egress := range in {
 		m := make(map[string]interface{})
-		if egress.Ports != nil && len(egress.Ports) > 0 {
+		if len(egress.Ports) > 0 {
 			m["ports"] = flattenNetworkPolicyV1Ports(egress.Ports)
 		}
-		if egress.To != nil && len(egress.To) > 0 {
+		if len(egress.To) > 0 {
 			m["to"] = flattenNetworkPolicyV1Peer(egress.To)
 		}
 		att[i] = m

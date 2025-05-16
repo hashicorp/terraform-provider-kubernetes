@@ -427,7 +427,7 @@ func flattenResourceQuotaScopeSelectorMatchExpressions(in []api.ScopedResourceSe
 		m["operator"] = string(l.Operator)
 		m["scope_name"] = string(l.ScopeName)
 
-		if l.Values != nil && len(l.Values) > 0 {
+		if len(l.Values) > 0 {
 			m["values"] = newStringSet(schema.HashString, l.Values)
 		}
 

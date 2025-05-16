@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,7 +25,6 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_minimal(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.23.0")
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.26.0")
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Beta2Destroy,
 		Steps: []resource.TestStep{
@@ -65,8 +64,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.23.0")
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.26.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Beta2Destroy,
 		Steps: []resource.TestStep{
@@ -188,8 +186,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_containerResource(t *testin
 			skipIfClusterVersionLessThan(t, "1.23.0")
 			skipIfClusterVersionGreaterThanOrEqual(t, "1.26.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Beta2Destroy,
 		ErrorCheck: func(err error) error {

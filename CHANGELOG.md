@@ -1,3 +1,10 @@
+## 2.37.0 (May 20, 2025)
+
+ENHANCEMENTS:
+
+* `kubernetes_config_map_v1`: Add support for ResourceIdentity [[GH-2721](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2721)]
+
+
 ## 2.36.0 (Feb 26, 2025)
 
 ENHANCEMENTS:

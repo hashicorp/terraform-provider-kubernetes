@@ -202,8 +202,8 @@ func testAccKubernetesConfigMapV1Data_binaryDataUpdated(name string, baseDir str
   }
 
   binary_data = {
-    "binary1" = "${filebase64("%s/test-fixtures/binary.data")}"
-    "binary2" = "${filebase64("%s/test-fixtures/binary2.data")}"
+    "binary1"       = "${filebase64("%s/test-fixtures/binary.data")}"
+    "binary2"       = "${filebase64("%s/test-fixtures/binary2.data")}"
     "inline_binary" = "${base64encode("Raw inline data")}"
   }
 

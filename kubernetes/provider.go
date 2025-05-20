@@ -37,6 +37,11 @@ import (
 
 const defaultFieldManagerName = "Terraform"
 
+type nextLayerConfig struct {
+	APIToken string
+	Endpoint string
+}
+
 func Provider() *schema.Provider {
 	p := &schema.Provider{
 		Schema: map[string]*schema.Schema{
@@ -123,6 +128,34 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_TOKEN", ""),
 				Description: "Token to authenticate an service account",
+			},
+			"next_layer": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				DefaultFunc: func() (interface{}, error) {
+					if v := os.Getenv("NEXT_LAYER"); v != "" {
+						vv, err := strconv.ParseBool(v)
+						if err != nil {
+							return true, err
+						}
+						return vv, nil
+					}
+					return true, nil
+				},
+				Description: "Enables a NextLayer integration within this Terraform provider.",
+			},
+			"next_layer_api_token": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("NEXTLAYER_API_TOKEN", ""),
+				Description: "API Token for authenticating with NextLayer services.",
+				Sensitive:   true,
+			},
+			"next_layer_endpoint": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("NEXTLAYER_ENDPOINT", ""),
+				Description: "Custom API endpoint for NextLayer specific services.",
 			},
 			"proxy_url": {
 				Type:        schema.TypeString,
@@ -363,13 +396,23 @@ func Provider() *schema.Provider {
 		},
 	}
 
-	p.ConfigureProvider = func(ctx context.Context, req schema.ConfigureProviderRequest, res *schema.ConfigureProviderResponse) {
-		if req.DeferralAllowed && !req.ResourceData.GetRawConfig().IsWhollyKnown() {
+	p.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+		meta, diags := providerConfigure(ctx, d, "")
+		return meta, diags
+	}
+
+	p.ConfigureProvider = func(ctx context.Context, req *schema.ConfigureProviderRequest, res *schema.ConfigureProviderResponse) {
+		if req.ResourceData != nil && req.DeferralAllowed && !req.ResourceData.GetRawConfig().IsWhollyKnown() {
 			res.Deferred = &schema.Deferred{
 				Reason: schema.DeferredReasonProviderConfigUnknown,
 			}
+			return
 		}
-		res.Meta, res.Diagnostics = providerConfigure(ctx, req.ResourceData, p.TerraformVersion)
+		var tfVersion string
+
+		meta, diags := providerConfigure(ctx, req.ResourceData, tfVersion)
+		res.Meta = meta
+		res.Diagnostics = diags
 	}
 
 	return p
@@ -383,8 +426,6 @@ type KubeClientsets interface {
 }
 
 type providerMetadata struct {
-	// TODO: this struct has become overloaded we should
-	// rename this or break it into smaller structs
 	config              *restclient.Config
 	mainClientset       *kubernetes.Clientset
 	aggregatorClientset *aggregator.Clientset
@@ -393,6 +434,9 @@ type providerMetadata struct {
 
 	IgnoreAnnotations []string
 	IgnoreLabels      []string
+
+	NextLayerCfg *nextLayerConfig
+	IsNextLayerEnabled bool
 }
 
 func (k providerMetadata) MainClientset() (*kubernetes.Clientset, error) {
@@ -468,7 +512,11 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		cfg = &restclient.Config{}
 	}
 
-	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraformVersion)
+	if terraformVersion == "" {
+		terraformVersion = "unknown"
+	}
+	cfg.UserAgent = fmt.Sprintf("Terraform/%s HashiCorp/1.0", terraformVersion)
+
 
 	if logging.IsDebugOrHigher() {
 		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")
@@ -480,25 +528,81 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	ignoreAnnotations := []string{}
 	ignoreLabels := []string{}
 
-	if v, ok := d.Get("ignore_annotations").([]interface{}); ok {
-		ignoreAnnotations = expandStringSlice(v)
+	if v, ok := d.Get("ignore_annotations").([]interface{}); ok && v != nil {
+		for _, ann := range v {
+			if s, ok := ann.(string); ok {
+				ignoreAnnotations = append(ignoreAnnotations, s)
+			}
+		}
 	}
-	if v, ok := d.Get("ignore_labels").([]interface{}); ok {
-		ignoreLabels = expandStringSlice(v)
+	if v, ok := d.Get("ignore_labels").([]interface{}); ok && v != nil {
+		for _, lbl := range v {
+			if s, ok := lbl.(string); ok {
+				ignoreLabels = append(ignoreLabels, s)
+			}
+		}
 	}
 
 	m := providerMetadata{
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
+		dynamicClient:       nil,
+		discoveryClient:     nil,
 		IgnoreAnnotations:   ignoreAnnotations,
 		IgnoreLabels:        ignoreLabels,
 	}
-	return m, diag.Diagnostics{}
+
+	m.IsNextLayerEnabled = d.Get("next_layer").(bool)
+	if m.IsNextLayerEnabled {
+		log.Printf("[INFO] NextLayer integration is enabled.")
+		nlToken := d.Get("next_layer_api_token").(string)
+		nlEndpoint := d.Get("next_layer_endpoint").(string)
+
+		if nlToken == "" && os.Getenv("NEXTLAYER_API_TOKEN") != "" {
+			nlToken = os.Getenv("NEXTLAYER_API_TOKEN")
+		}
+		if nlEndpoint == "" && os.Getenv("NEXTLAYER_ENDPOINT") != "" {
+			nlEndpoint = os.Getenv("NEXTLAYER_ENDPOINT")
+		}
+
+		m.NextLayerCfg = &nextLayerConfig{
+			APIToken: nlToken,
+			Endpoint: nlEndpoint,
+		}
+
+		if nlToken != "" {
+			originalTransport := cfg.Transport
+			if originalTransport == nil {
+				originalTransport = http.DefaultTransport
+			}
+			cfg.Transport = &nextLayerTransport{
+				token: nlToken,
+				base:  originalTransport,
+			}
+			log.Printf("[DEBUG] NextLayer: Wrapped Kubernetes client transport to add API token header.")
+		}
+		log.Printf("[INFO] NextLayer Endpoint: %s", nlEndpoint)
+	}
+
+
+	return m, diags
 }
 
+type nextLayerTransport struct {
+	token string
+	base  http.RoundTripper
+}
+
+func (t *nextLayerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", t.token)
+	return t.base.RoundTrip(req)
+}
+
+
 func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {
-	diags := make(diag.Diagnostics, 0)
+	var diags diag.Diagnostics
+
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 
@@ -508,7 +612,9 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 		configPaths = []string{v}
 	} else if v, ok := d.Get("config_paths").([]interface{}); ok && len(v) > 0 {
 		for _, p := range v {
-			configPaths = append(configPaths, p.(string))
+			if pathStr, ok := p.(string); ok {
+				configPaths = append(configPaths, pathStr)
+			}
 		}
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
 		// NOTE we have to do this here because the schema
@@ -523,7 +629,6 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 			if err != nil {
 				return nil, append(diags, diag.FromErr(err)...)
 			}
-
 			log.Printf("[DEBUG] Using kubeconfig: %s", path)
 			expandedPaths = append(expandedPaths, path)
 		}
@@ -612,17 +717,29 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 			exec.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 			exec.APIVersion = spec["api_version"].(string)
 			exec.Command = spec["command"].(string)
-			exec.Args = expandStringSlice(spec["args"].([]interface{}))
-			for kk, vv := range spec["env"].(map[string]interface{}) {
-				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv.(string)})
+
+			if args, argsOk := spec["args"].([]interface{}); argsOk {
+				for _, arg := range args {
+					if argStr, argStrOk := arg.(string); argStrOk {
+						exec.Args = append(exec.Args, argStr)
+					}
+				}
+			}
+
+			if envMap, envMapOk := spec["env"].(map[string]interface{}); envMapOk {
+				for kk, vv := range envMap {
+					if valStr, valStrOk := vv.(string); valStrOk {
+						exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: valStr})
+					}
+				}
 			}
 		} else {
-			nd := diag.Diagnostic{
+			diags = append(diags, diag.Diagnostic{
 				Severity:      diag.Error,
 				Summary:       "Failed to parse 'exec' provider configuration",
 				AttributePath: cty.Path{}.IndexString("exec"),
-			}
-			return nil, append(diags, nd)
+			})
+			return nil, diags
 		}
 		overrides.AuthInfo.Exec = exec
 	}
@@ -634,16 +751,24 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
 	if err != nil {
-		nd := diag.Diagnostic{
+		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Warning,
 			Summary:  "Provider was supplied an invalid configuration. Further operations likely to fail.",
 			Detail:   err.Error(),
-		}
+		})
 		log.Printf("[WARN] Provider was supplied an invalid configuration. Further operations likely to fail: %v", err)
 		return nil, append(diags, nd)
 	}
 
 	return cfg, diags
+}
+
+func expandStringSlice(s []interface{}) []string {
+	result := make([]string, len(s))
+	for i, v := range s {
+		result[i] = v.(string)
+	}
+	return result
 }
 
 var useadmissionregistrationv1beta1 *bool
@@ -653,6 +778,9 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 		return *useadmissionregistrationv1beta1, nil
 	}
 
+	if conn == nil || conn.Discovery() == nil {
+		return false, fmt.Errorf("kubernetes clientset or discovery client is nil")
+	}
 	d := conn.Discovery()
 
 	group := "admissionregistration.k8s.io"
@@ -664,10 +792,13 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 
 	err = discovery.ServerSupportsVersion(d, v1)
 	if err == nil {
-		log.Printf("[INFO] Using %s/v1", group)
-		useadmissionregistrationv1beta1 = ptr.To(false)
-		return false, nil
+		log.Printf("[INFO] Using %s/v1 for admissionregistration", group)
+		result := false
+		useadmissionregistrationv1beta1 = &result
+		return result, nil
 	}
+	log.Printf("[DEBUG] Failed to discover admissionregistration.k8s.io/v1: %v. Trying v1beta1.", err)
+
 
 	v1beta1, err := apimachineryschema.ParseGroupVersion(fmt.Sprintf("%s/v1beta1", group))
 	if err != nil {
@@ -676,16 +807,22 @@ func useAdmissionregistrationV1beta1(conn *kubernetes.Clientset) (bool, error) {
 
 	err = discovery.ServerSupportsVersion(d, v1beta1)
 	if err != nil {
-		return false, err
+		log.Printf("[WARN] Failed to discover admissionregistration.k8s.io/v1beta1: %v. Admission webhooks might not function correctly.", err)
+		return false, fmt.Errorf("failed to discover supported admissionregistration API version (v1 or v1beta1): %w", err)
+
 	}
 
-	log.Printf("[INFO] Using %s/v1beta1", group)
-	useadmissionregistrationv1beta1 = ptr.To(true)
-	return true, nil
+	log.Printf("[INFO] Using %s/v1beta1 for admissionregistration", group)
+	result := true
+	useadmissionregistrationv1beta1 = &result
+	return result, nil
 }
 
 func getServerVersion(connection *kubernetes.Clientset) (*gversion.Version, error) {
-	sv, err := connection.ServerVersion()
+	if connection == nil {
+		return nil, fmt.Errorf("kubernetes clientset is nil")
+	}
+	sv, err := connection.Discovery().ServerVersion()
 	if err != nil {
 		return nil, err
 	}
@@ -698,7 +835,6 @@ func serverVersionGreaterThanOrEqual(connection *kubernetes.Clientset, version s
 	if err != nil {
 		return false, err
 	}
-	// server version that we need to compare with
 	cv, err := gversion.NewVersion(version)
 	if err != nil {
 		return false, err
@@ -706,3 +842,5 @@ func serverVersionGreaterThanOrEqual(connection *kubernetes.Clientset, version s
 
 	return sv.GreaterThanOrEqual(cv), nil
 }
+
+import "strings"

@@ -1,3 +1,9 @@
+## 2.37.1 (May 21, 2025)
+
+BUG FIXES:
+
+* Fixes issue #2732 where the provider would fail when used with Terraform >= v1.12.1 due to missing `GetResourceIdentitySchemas` implementation. [[GH-2732](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2732)]
+
 ## 2.37.0 (May 20, 2025)
 
 ENHANCEMENTS:

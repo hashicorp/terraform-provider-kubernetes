@@ -193,7 +193,7 @@ func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
 	template := make(map[string]interface{})
 
 	template["metadata"] = flattenMetadataFields(t.ObjectMeta)
-	spec, err := flattenPodSpec(t.Spec)
+	spec, err := flattenPodSpec(t.Spec, true)
 	if err != nil {
 		return []interface{}{template}, err
 	}

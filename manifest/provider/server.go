@@ -24,6 +24,8 @@ func init() {
 }
 
 var _ tfprotov5.ProviderServer = &RawProviderServer{}
+var _ tfprotov5.ResourceServer = &RawProviderServer{}
+var _ tfprotov5.DataSourceServer = &RawProviderServer{}
 
 // RawProviderServer implements the ProviderServer interface as exported from ProtoBuf.
 type RawProviderServer struct {

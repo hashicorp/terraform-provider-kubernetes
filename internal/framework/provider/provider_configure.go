@@ -23,7 +23,37 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
 )
+
+type simpleClientGetter struct {
+	config            *restclient.Config
+	ignoreLabels      []string
+	ignoreAnnotations []string
+}
+
+func (s *simpleClientGetter) DynamicClient() (dynamic.Interface, error) {
+	return dynamic.NewForConfig(s.config)
+}
+
+func (s *simpleClientGetter) DiscoveryClient() (discovery.DiscoveryInterface, error) {
+	dc, err := discovery.NewDiscoveryClientForConfig(s.config)
+	if err != nil {
+		return nil, err
+	}
+	return memory.NewMemCacheClient(dc), nil
+}
+
+func (s *simpleClientGetter) IgnoreLabels() []string {
+	return s.ignoreLabels
+}
+
+func (s *simpleClientGetter) IgnoreAnnotations() []string {
+	return s.ignoreAnnotations
+}
 
 func (p *KubernetesProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	var data KubernetesProviderModel
@@ -32,10 +62,27 @@ func (p *KubernetesProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	_, err := newKubernetesClientConfig(ctx, data)
+	cfg, err := newKubernetesClientConfig(ctx, data)
 	if err != nil {
-		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to initilize Kubernetes client configuration", err.Error()))
+		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to initialize Kubernetes client configuration", err.Error()))
+		return
 	}
+
+	var ignoreLabels []types.String
+	if data.IgnoreLabels.ElementsAs(ctx, &ignoreLabels, false) != nil {
+		ignoreLabels = nil
+	}
+	var ignoreAnnotations []types.String
+	if data.IgnoreAnnotations.ElementsAs(ctx, &ignoreAnnotations, false) != nil {
+		ignoreAnnotations = nil
+	}
+
+	clientGetter := &simpleClientGetter{
+		config:            cfg,
+		ignoreLabels:      expandStringSlice(ignoreLabels),
+		ignoreAnnotations: expandStringSlice(ignoreAnnotations),
+	}
+	resp.ResourceData = clientGetter
 }
 
 func newKubernetesClientConfig(ctx context.Context, data KubernetesProviderModel) (*restclient.Config, error) {

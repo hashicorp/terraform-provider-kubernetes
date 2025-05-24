@@ -16,7 +16,7 @@ var _ resource.ResourceWithConfigure = &ValidatingAdmissionPolicy{}
 func NewValidatingAdmissionPolicy() resource.Resource {
 	return &ValidatingAdmissionPolicy{
 		Kind:       "ValidatingAdmissionPolicy",
-		APIVersion: "apps/v1",
+		APIVersion: "admissionregistration.k8s.io/v1",
 	}
 }
 

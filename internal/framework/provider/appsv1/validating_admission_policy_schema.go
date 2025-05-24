@@ -119,7 +119,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 							Attributes: validationFields(),
 						},
 					},
-					"variable": schema.ListNestedAttribute{
+					"variables": schema.ListNestedAttribute{
 						MarkdownDescription: "Variables contain definitions of variables that can be used in composition of other expressions.",
 						Optional:            true,
 						NestedObject: schema.NestedAttributeObject{
@@ -131,6 +131,7 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 			"status": schema.SingleNestedAttribute{
 				MarkdownDescription: `The status of the ValidatingAdmissionPolicy, including warnings that are useful to determine if the policy behaves in the expected way.`,
 				Optional:            true,
+				Computed:            true,
 				Attributes: map[string]schema.Attribute{
 					"conditions": schema.ListNestedAttribute{
 						MarkdownDescription: `The conditions represent the latest available observations of a policy's current state.`,
@@ -138,26 +139,32 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 						NestedObject: schema.NestedAttributeObject{
 							Attributes: map[string]schema.Attribute{
 								"last_transition_time": schema.StringAttribute{
+									Computed:            true,
 									MarkdownDescription: `Last time the condition transitioned from one status to another.`,
 									Optional:            true,
 								},
 								"message": schema.StringAttribute{
+									Computed:            true,
 									MarkdownDescription: `A human readable message indicating details about the transition.`,
 									Optional:            true,
 								},
 								"observed_generation": schema.Int64Attribute{
+									Computed:            true,
 									MarkdownDescription: `The generation observed by the deployment controller.`,
 									Optional:            true,
 								},
 								"reason": schema.StringAttribute{
+									Computed:            true,
 									MarkdownDescription: `The reason for the condition's last transition.`,
 									Optional:            true,
 								},
 								"status": schema.StringAttribute{
+									Computed:            true,
 									MarkdownDescription: `Status of the condition, one of True, False, Unknown.`,
 									Optional:            true,
 								},
 								"type": schema.StringAttribute{
+									Computed:            true,
 									MarkdownDescription: `Type of deployment condition.`,
 									Optional:            true,
 								},
@@ -165,25 +172,30 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 						},
 					},
 					"observed_generation": schema.Int64Attribute{
+						Computed:            true,
 						MarkdownDescription: `The generation observed by the deployment controller.`,
 						Optional:            true,
 					},
 					"type_checking": schema.SingleNestedAttribute{
+						Computed:            true,
 						MarkdownDescription: `The results of type checking for each expression. Presence of this field indicates the completion of the type checking.`,
 						Optional:            true,
 						Attributes: map[string]schema.Attribute{
 							"expression_warning": schema.ListNestedAttribute{
 								MarkdownDescription: `The type checking warnings for each expression.`,
 								Optional:            true,
+								Computed:            true,
 								NestedObject: schema.NestedAttributeObject{
 									Attributes: map[string]schema.Attribute{
 										"field_ref": schema.StringAttribute{
 											Description: "The path to the field that refers the expression. For example, the reference to the expression of the first item of validations is \"spec.validations[0].expression\"",
 											Optional:    true,
+											Computed:    true,
 										},
 										"warning": schema.StringAttribute{
 											MarkdownDescription: `The content of type checking information in a human-readable form. Each line of the warning contains the type that the expression is checked against, followed by the type check error from the compiler.`,
 											Optional:            true,
+											Computed:            true,
 										},
 									},
 								},
@@ -202,7 +214,7 @@ func auditAnnotationsFields() map[string]schema.Attribute {
 			Description: "key specifies the audit annotation key.",
 			Required:    true,
 		},
-		"value_expressions": schema.StringAttribute{
+		"value_expression": schema.StringAttribute{
 			Description: "valueExpression represents the expression which is evaluated by CEL to produce an audit annotation value.",
 			Required:    true,
 		},
@@ -241,7 +253,7 @@ func matchConstraintsFields() map[string]schema.Attribute {
 		"namespace_selector": schema.SingleNestedAttribute{
 			Description: "NamespaceSelector decides whether to run the admission control policy on an object based on whether the namespace for that object matches the selector.",
 			Optional:    true,
-			Attributes:  namedRuleWithOperationsFields(),
+			Attributes:  labelSelectorFields(),
 		},
 		"object_selector": schema.SingleNestedAttribute{
 			Description: "ObjectSelector decides whether to run the validation based on if the object has matching labels.",

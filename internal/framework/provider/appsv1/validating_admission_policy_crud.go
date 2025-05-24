@@ -66,7 +66,8 @@ func (r *ValidatingAdmissionPolicy) Read(ctx context.Context, req resource.ReadR
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, req, &validatingAdmissionPolicyModel)
+	id := validatingAdmissionPolicyModel.ID.ValueString()
+	err = autocrud.Read(ctx, r.clientGetter, r.Kind, r.APIVersion, id, &validatingAdmissionPolicyModel)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading resource", err.Error())
 		return

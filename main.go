@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
@@ -76,4 +77,20 @@ func printReattachConfig(config *plugin.ReattachConfig) {
 	reattachStr, err := json.Marshal(map[string]tfexec.ReattachConfig{
 		"kubernetes": convertReattachConfig(config),
 	})
+	if err != nil {
+		fmt.Printf("Error building reattach string: %s", err)
+		return
+	}
+	fmt.Printf("# Provider server started\nexport TF_REATTACH_PROVIDERS='%s'\n", string(reattachStr))
+}
+
+// waitForReattachConfig blocks until a ReattachConfig is recieved on the
+// supplied channel or times out after 2 seconds.
+func waitForReattachConfig(ch chan *plugin.ReattachConfig) (*plugin.ReattachConfig, error) {
+	select {
+	case config := <-ch:
+		return config, nil
+	case <-time.After(2 * time.Second):
+		return nil, fmt.Errorf("timeout while waiting for reattach configuration")
+	}
 }

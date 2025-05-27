@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -32,7 +32,6 @@ func TestAccKubernetesEnv_DeploymentBasic(t *testing.T) {
 				t.Fatal(err)
 			}
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingEnvs(name, namespace)
@@ -90,7 +89,6 @@ func TestAccKubernetesEnv_CronJobBasic(t *testing.T) {
 			testAccPreCheck(t)
 			createCronJobEnv(t, name, namespace)
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingCronJobEnvs(name, namespace)
@@ -148,7 +146,6 @@ func TestAccKubernetesEnv_Deployment_initContainer(t *testing.T) {
 			testAccPreCheck(t)
 			createInitContainerEnv(t, name, namespace)
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingEnvs(name, namespace)
@@ -206,7 +203,6 @@ func TestAccKubernetesEnv_CronJob_initContainer(t *testing.T) {
 			testAccPreCheck(t)
 			createCronJobInitContainerEnv(t, name, namespace)
 		},
-		IDRefreshName:     resourceName,
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy: func(s *terraform.State) error {
 			err := confirmExistingCronJobEnvs(name, namespace)

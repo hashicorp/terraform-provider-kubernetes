@@ -13,11 +13,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	gversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+
+	//"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,13 +30,15 @@ const (
 	agnhostImage = "registry.k8s.io/e2e-test-images/agnhost:2.43"
 )
 
-var testAccProvider *schema.Provider
-var testAccExternalProviders map[string]resource.ExternalProvider
-var testAccProviderFactories = map[string]func() (*schema.Provider, error){
-	"kubernetes": func() (*schema.Provider, error) {
-		return Provider(), nil
-	},
-}
+var (
+	testAccProvider          *schema.Provider
+	testAccExternalProviders map[string]resource.ExternalProvider
+	testAccProviderFactories = map[string]func() (*schema.Provider, error){
+		"kubernetes": func() (*schema.Provider, error) {
+			return Provider(), nil
+		},
+	}
+)
 
 func init() {
 	testAccProvider = Provider()
@@ -208,7 +212,6 @@ func getClusterVersion() (*gversion.Version, error) {
 		return nil, err
 	}
 	serverVersion, err := conn.ServerVersion()
-
 	if err != nil {
 		return nil, err
 	}

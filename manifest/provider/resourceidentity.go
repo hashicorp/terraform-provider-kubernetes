@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func (s *RawProviderServer) GetResourceIdentitySchemas(ctx context.Context, req *tfprotov5.GetResourceIdentitySchemasRequest) (*tfprotov5.GetResourceIdentitySchemasResponse, error) {
@@ -18,7 +20,7 @@ func (s *RawProviderServer) GetResourceIdentitySchemas(ctx context.Context, req 
 					{Name: "api_version", RequiredForImport: true, Type: tftypes.String},
 					{Name: "kind", RequiredForImport: true, Type: tftypes.String},
 					{Name: "name", RequiredForImport: true, Type: tftypes.String},
-					{Name: "namespace", RequiredForImport: true, Type: tftypes.String},
+					{Name: "namespace", OptionalForImport: true, Type: tftypes.String},
 				},
 			},
 		},
@@ -30,6 +32,28 @@ func (s *RawProviderServer) UpgradeResourceIdentity(ctx context.Context, req *tf
 	s.logger.Trace("[UpgradeResourceIdentity][Request]\n%s\n", dump(*req))
 	resp := &tfprotov5.UpgradeResourceIdentityResponse{}
 	return resp, nil
+}
+
+func parseResourceIdentityData(rid *tfprotov5.ResourceIdentityData) (schema.GroupVersionKind, string, string, error) {
+	namespace := "default"
+	var apiVersion, kind, name string
+
+	iddata, err := rid.IdentityData.Unmarshal(getIdentityType())
+	if err != nil {
+		return schema.GroupVersionKind{}, "", "",
+			fmt.Errorf("could not unmarshal identity data: %v", err.Error())
+	}
+
+	var idvals map[string]tftypes.Value
+	iddata.As(&idvals)
+
+	idvals["api_version"].As(&apiVersion)
+	idvals["kind"].As(&kind)
+	idvals["namespace"].As(&namespace)
+	idvals["name"].As(&name)
+
+	gvk := schema.FromAPIVersionAndKind(apiVersion, kind)
+	return gvk, name, namespace, nil
 }
 
 func getIdentityType() tftypes.Type {

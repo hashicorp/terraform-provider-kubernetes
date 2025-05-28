@@ -145,7 +145,7 @@ func (s *Helper) GetIdentityValue(t *testing.T, address string, identitykey stri
 
 	val, ok := identityvals[identitykey]
 	if !ok {
-		t.Fatalf("resource identity value %q does note exist for %q", identitykey, address)
+		t.Fatalf("resource identity value %q does not exist for %q", identitykey, address)
 	}
 	return val
 }

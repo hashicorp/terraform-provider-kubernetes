@@ -87,4 +87,9 @@ func TestKubernetesManifest_ConfigMap(t *testing.T) {
 	tfstate.AssertAttributeNotEmpty(t, "kubernetes_manifest.test.object.metadata.labels.test")
 
 	tfstate.AssertAttributeDoesNotExist(t, "kubernetes_manifest.test.spec")
+
+	tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "api_version", "v1")
+	tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "kind", "ConfigMap")
+	tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "name", name)
+	tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "namespace", namespace)
 }

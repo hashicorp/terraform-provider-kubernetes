@@ -23,9 +23,11 @@ func init() {
 	install.Install(scheme.Scheme)
 }
 
-var _ tfprotov5.ProviderServer = &RawProviderServer{}
-var _ tfprotov5.ResourceServer = &RawProviderServer{}
-var _ tfprotov5.DataSourceServer = &RawProviderServer{}
+var (
+	_ tfprotov5.ProviderServer   = &RawProviderServer{}
+	_ tfprotov5.ResourceServer   = &RawProviderServer{}
+	_ tfprotov5.DataSourceServer = &RawProviderServer{}
+)
 
 // RawProviderServer implements the ProviderServer interface as exported from ProtoBuf.
 type RawProviderServer struct {
@@ -134,17 +136,5 @@ func (s *RawProviderServer) RenewEphemeralResource(ctx context.Context, req *tfp
 func (s *RawProviderServer) ValidateEphemeralResourceConfig(ctx context.Context, req *tfprotov5.ValidateEphemeralResourceConfigRequest) (*tfprotov5.ValidateEphemeralResourceConfigResponse, error) {
 	s.logger.Trace("[ValidateEphemeralResourceConfig][Request]\n%s\n", dump(*req))
 	resp := &tfprotov5.ValidateEphemeralResourceConfigResponse{}
-	return resp, nil
-}
-
-func (s *RawProviderServer) GetResourceIdentitySchemas(ctx context.Context, req *tfprotov5.GetResourceIdentitySchemasRequest) (*tfprotov5.GetResourceIdentitySchemasResponse, error) {
-	s.logger.Trace("[GetResourceIdentitySchemas][Request]\n%s\n", dump(*req))
-	resp := &tfprotov5.GetResourceIdentitySchemasResponse{}
-	return resp, nil
-}
-
-func (s *RawProviderServer) UpgradeResourceIdentity(ctx context.Context, req *tfprotov5.UpgradeResourceIdentityRequest) (*tfprotov5.UpgradeResourceIdentityResponse, error) {
-	s.logger.Trace("[UpgradeResourceIdentity][Request]\n%s\n", dump(*req))
-	resp := &tfprotov5.UpgradeResourceIdentityResponse{}
 	return resp, nil
 }

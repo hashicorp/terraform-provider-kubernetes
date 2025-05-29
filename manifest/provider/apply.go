@@ -20,9 +20,11 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-var defaultCreateTimeout = "10m"
-var defaultUpdateTimeout = "10m"
-var defaultDeleteTimeout = "10m"
+var (
+	defaultCreateTimeout = "10m"
+	defaultUpdateTimeout = "10m"
+	defaultDeleteTimeout = "10m"
+)
 
 // ApplyResourceChange function
 func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprotov5.ApplyResourceChangeRequest) (*tfprotov5.ApplyResourceChangeResponse, error) {
@@ -482,6 +484,15 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, err
 		}
 		resp.NewState = &newResState
+
+		// set resource identity data
+		idData, err := createIdentityData(result)
+		if err != nil {
+			return resp, err
+		}
+		resp.NewIdentity = &tfprotov5.ResourceIdentityData{
+			IdentityData: &idData,
+		}
 	case applyPlannedState.IsNull():
 		// Delete the resource
 		priorStateVal := make(map[string]tftypes.Value)

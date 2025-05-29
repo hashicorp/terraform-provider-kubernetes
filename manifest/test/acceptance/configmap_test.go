@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
+	version "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/kubernetes"
 	tfstatehelper "github.com/hashicorp/terraform-provider-kubernetes/manifest/test/helper/state"
@@ -87,4 +88,18 @@ func TestKubernetesManifest_ConfigMap(t *testing.T) {
 	tfstate.AssertAttributeNotEmpty(t, "kubernetes_manifest.test.object.metadata.labels.test")
 
 	tfstate.AssertAttributeDoesNotExist(t, "kubernetes_manifest.test.spec")
+
+	tfversion, err := tf.Version(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform version: %v", err)
+	}
+	constraint, _ := version.NewConstraint(">= 1.12.0")
+	if constraint.Check(tfversion) {
+		tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "api_version", "v1")
+		tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "kind", "ConfigMap")
+		tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "name", name)
+		tfstate.AssertIdentityValueEqual(t, "kubernetes_manifest.test", "namespace", namespace)
+	} else {
+		t.Logf("Skipping identity assertions because terraform version %s is less than 1.12.0", tfversion)
+	}
 }

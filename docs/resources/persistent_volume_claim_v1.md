@@ -53,7 +53,7 @@ Required:
 - `resources` (Block List, Min: 1, Max: 1) A list of the minimum resources the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources (see [below for nested schema](#nestedblock--spec--resources))
 
 Optional:
-
+- `data_source` (Block List, Max: 1) Specifies the data source for the PersistentVolumeClaim. Allows creating a PersistentVolumeClaim from another PVC, a VolumeSnapshot, or a VolumePopulator. (see [below for nested schema](#nestedblock--spec--data_source))
 - `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--spec--selector))
 - `storage_class_name` (String) Name of the storage class requested by the claim
 - `volume_mode` (String) Defines what type of volume is required by the claim.
@@ -67,6 +67,11 @@ Optional:
 - `limits` (Map of String) Map describing the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 - `requests` (Map of String) Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 
+<a id="nestedblock--spec--data_source"></a>
+### Nested Schema for `spec.data_source`
+
+Optional:
+- `name` (String) The name of the source PersistentVolumeClaim.
 
 <a id="nestedblock--spec--selector"></a>
 ### Nested Schema for `spec.selector`
@@ -132,6 +137,24 @@ resource "kubernetes_persistent_volume_v1" "example" {
     }
   }
 }
+
+resource "kubernetes_persistent_volume_claim_v1" "example_clone" {
+  metadata {
+    name = "example-clone-pvc"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+    data_source {
+      name = "example-source-pvc"
+    }
+  }
+}
+
 ```
 
 ## Import

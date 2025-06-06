@@ -56,11 +56,11 @@ func (f *foapiv3) GetTypeByGVK(_ schema.GroupVersionKind) (tftypes.Type, map[str
 
 	sref := f.doc.Components.Schemas[""]
 
-	sch, err := resolveSchemaRef(sref, f.doc.Components.Schemas)
+	sch, err := resolveSchemaRef3(sref, f.doc.Components.Schemas)
 	if err != nil {
 		return nil, hints, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	tftype, err := getTypeFromSchema(sch, 50, &(f.typeCache), f.doc.Components.Schemas, ap, hints)
+	tftype, err := getTypeFromSchema3(sch, 50, &(f.typeCache), f.doc.Components.Schemas, ap, hints)
 	return tftype, hints, err
 }

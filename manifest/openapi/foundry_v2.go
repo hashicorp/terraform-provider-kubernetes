@@ -4,7 +4,6 @@
 package openapi
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -120,13 +119,13 @@ func (f *foapiv2) buildGvkIndex() error {
 		if !ok {
 			continue
 		}
-		gvk := []schema.GroupVersionKind{}
-		err = json.Unmarshal(([]byte)(ex.(json.RawMessage)), &gvk)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshall GVK from OpenAPI schema extention: %v", err)
-		}
-		for i := range gvk {
-			f.gkvIndex.Store(gvk[i], did)
+		for _, v := range ex.([]interface{}) {
+			mv := v.(map[string]interface{})
+			f.gkvIndex.Store(schema.GroupVersionKind{
+				Group:   mv["group"].(string),
+				Version: mv["version"].(string),
+				Kind:    mv["kind"].(string),
+			}, did)
 		}
 	}
 	return nil

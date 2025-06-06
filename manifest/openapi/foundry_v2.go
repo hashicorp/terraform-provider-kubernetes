@@ -100,19 +100,19 @@ func (f *foapiv2) getTypeByID(id string, h map[string]string, ap tftypes.Attribu
 		return nil, errors.New("invalid type reference (nil)")
 	}
 
-	sch, err := resolveSchemaRef(swd, f.swagger.Definitions)
+	sch, err := resolveSchemaRef2(swd, f.swagger.Definitions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
+	return getTypeFromSchema2(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
 }
 
 // buildGvkIndex builds the reverse lookup index that associates each GVK
 // to its corresponding string key in the swagger.Definitions map
 func (f *foapiv2) buildGvkIndex() error {
 	for did, dRef := range f.swagger.Definitions {
-		def, err := resolveSchemaRef(dRef, f.swagger.Definitions)
+		def, err := resolveSchemaRef2(dRef, f.swagger.Definitions)
 		if err != nil {
 			return err
 		}

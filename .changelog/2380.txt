@@ -35,14 +35,6 @@ We have updated the logic of resources that use the Pod specification template, 
 ```
 
 ```release-note:bug
-`resource/kubernetes_deployment: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior.
-```
-
-```release-note:bug
-`resource/kubernetes_deployment_v1: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior.
-```
-
-```release-note:bug
 `resource/kubernetes_cron_job: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior.
 ```
 
@@ -52,10 +44,6 @@ We have updated the logic of resources that use the Pod specification template, 
 
 ```release-note:bug
 `resource/kubernetes_job: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior.
-```
-
-```release-note:bug
-`resource/kubernetes_job_v1: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior.
 ```
 
 ```release-note:bug

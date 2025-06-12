@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -23,12 +23,6 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfNotRunningInEks(t)
-		},
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"metadata.0.resource_version",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
@@ -117,12 +111,6 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic_idempotency(t *testing
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfNotRunningInEks(t)
 		},
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"metadata.0.resource_version",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
-		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -155,12 +143,6 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfNotRunningInEks(t)
-		},
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"metadata.0.resource_version",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
@@ -308,12 +290,6 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_waitForRollout(t *testing.T)
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfNotRunningInEks(t)
-		},
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"spec.0.template.0.spec.0.container.0.resources.0.limits",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests",
-			"metadata.0.resource_version",
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,

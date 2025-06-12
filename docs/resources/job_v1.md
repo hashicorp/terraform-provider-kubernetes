@@ -904,6 +904,7 @@ Optional:
 - `mount_propagation` (String) Mount propagation mode. mount_propagation determines how mounts are propagated from the host to container and the other way around. Valid values are None (default), HostToContainer and Bidirectional.
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
+- `sub_path_expr` (String) Expanded path within the volume from which the container's volume should be mounted. Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment. Defaults to "" (volume's root).
 
 <a id="nestedblock--spec--template--spec--container--volume_device"></a>
 ### Nested Schema for `spec.template.spec.container.volume_device`
@@ -1464,6 +1465,7 @@ Optional:
 - `mount_propagation` (String) Mount propagation mode. mount_propagation determines how mounts are propagated from the host to container and the other way around. Valid values are None (default), HostToContainer and Bidirectional.
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
+- `sub_path_expr` (String) Expanded path within the volume from which the container's volume should be mounted. Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment. Defaults to "" (volume's root).
 
 <a id="nestedblock--spec--template--spec--init_container--volume_device"></a>
 ### Nested Schema for `spec.template.spec.init_container.volume_device`

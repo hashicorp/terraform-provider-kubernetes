@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,14 +23,7 @@ func TestAccKubernetesJobV1_wait_for_completion(t *testing.T) {
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t) },
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"metadata.0.resource_version",
-			"spec.0.selector.0.match_expressions.#",
-			"spec.0.template.0.spec.0.container.0.resources.0.limits.#",
-			"spec.0.template.0.spec.0.container.0.resources.0.requests.#",
-		},
+		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
@@ -59,8 +52,7 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.26.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
@@ -129,8 +121,7 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.26.0")
 		},
-		IDRefreshName:     resourceName,
-		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
@@ -218,11 +209,7 @@ func TestAccKubernetesJobV1_ttl_seconds_after_finished(t *testing.T) {
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:      func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
-		IDRefreshName: resourceName,
-		IDRefreshIgnore: []string{
-			"spec.0.selector.0.match_expressions.#",
-		},
+		PreCheck:          func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{

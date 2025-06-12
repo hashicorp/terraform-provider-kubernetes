@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -23,19 +24,27 @@ func init() {
 	install.Install(scheme.Scheme)
 }
 
+var (
+	_ tfprotov5.ProviderServer   = &RawProviderServer{}
+	_ tfprotov5.ResourceServer   = &RawProviderServer{}
+	_ tfprotov5.DataSourceServer = &RawProviderServer{}
+)
+
 // RawProviderServer implements the ProviderServer interface as exported from ProtoBuf.
 type RawProviderServer struct {
 	// Since the provider is essentially a gRPC server, the execution flow is dictated by the order of the client (Terraform) request calls.
 	// Thus it needs a way to persist state between the gRPC calls. These attributes store values that need to be persisted between gRPC calls,
 	// such as instances of the Kubernetes clients, configuration options needed at runtime.
-	logger              hclog.Logger
-	clientConfig        *rest.Config
-	clientConfigUnknown bool
-	dynamicClient       dynamic.Interface
-	discoveryClient     discovery.DiscoveryInterface
-	restMapper          meta.RESTMapper
-	restClient          rest.Interface
-	OAPIFoundry         openapi.Foundry
+	logger                      hclog.Logger
+	clientConfig                *rest.Config
+	clientConfigUnknown         bool
+	dynamicClient               cache[dynamic.Interface]
+	discoveryClient             cache[discovery.DiscoveryInterface]
+	restMapper                  cache[meta.RESTMapper]
+	restClient                  cache[rest.Interface]
+	OAPIFoundry                 cache[openapi.Foundry]
+	crds                        cache[[]unstructured.Unstructured]
+	checkValidCredentialsResult cache[[]*tfprotov5.Diagnostic]
 
 	hostTFVersion string
 }

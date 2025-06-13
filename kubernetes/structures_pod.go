@@ -38,7 +38,7 @@ func flattenOS(in v1.PodOS) []interface{} {
 	return []interface{}{att}
 }
 
-func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
+func flattenPodSpec(in v1.PodSpec, isTemplate bool) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	if in.ActiveDeadlineSeconds != nil {
 		att["active_deadline_seconds"] = *in.ActiveDeadlineSeconds
@@ -141,7 +141,7 @@ func flattenPodSpec(in v1.PodSpec) ([]interface{}, error) {
 	}
 
 	if len(in.Tolerations) > 0 {
-		att["toleration"] = flattenTolerations(in.Tolerations)
+		att["toleration"] = flattenTolerations(in.Tolerations, isTemplate)
 	}
 
 	if len(in.TopologySpreadConstraints) > 0 {
@@ -293,11 +293,12 @@ func flattenSysctls(sysctls []v1.Sysctl) []interface{} {
 	return att
 }
 
-func flattenTolerations(tolerations []v1.Toleration) []interface{} {
+func flattenTolerations(tolerations []v1.Toleration, isTemplate bool) []interface{} {
 	att := []interface{}{}
 	for _, v := range tolerations {
 		// The API Server may automatically add several Tolerations to pods, strip these to avoid TF diff.
-		if _, ok := builtInTolerations[v.Key]; ok {
+		// Keep all tolerations if we flatten the Pod spec template.
+		if _, ok := builtInTolerations[v.Key]; ok && !isTemplate {
 			log.Printf("[INFO] ignoring toleration with key: %s", v.Key)
 			continue
 		}

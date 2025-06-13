@@ -4,7 +4,6 @@
 package openapi
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -100,19 +99,19 @@ func (f *foapiv2) getTypeByID(id string, h map[string]string, ap tftypes.Attribu
 		return nil, errors.New("invalid type reference (nil)")
 	}
 
-	sch, err := resolveSchemaRef(swd, f.swagger.Definitions)
+	sch, err := resolveSchemaRef2(swd, f.swagger.Definitions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
+	return getTypeFromSchema2(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
 }
 
 // buildGvkIndex builds the reverse lookup index that associates each GVK
 // to its corresponding string key in the swagger.Definitions map
 func (f *foapiv2) buildGvkIndex() error {
 	for did, dRef := range f.swagger.Definitions {
-		def, err := resolveSchemaRef(dRef, f.swagger.Definitions)
+		def, err := resolveSchemaRef2(dRef, f.swagger.Definitions)
 		if err != nil {
 			return err
 		}
@@ -120,13 +119,13 @@ func (f *foapiv2) buildGvkIndex() error {
 		if !ok {
 			continue
 		}
-		gvk := []schema.GroupVersionKind{}
-		err = json.Unmarshal(([]byte)(ex.(json.RawMessage)), &gvk)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshall GVK from OpenAPI schema extention: %v", err)
-		}
-		for i := range gvk {
-			f.gkvIndex.Store(gvk[i], did)
+		for _, v := range ex.([]interface{}) {
+			mv := v.(map[string]interface{})
+			f.gkvIndex.Store(schema.GroupVersionKind{
+				Group:   mv["group"].(string),
+				Version: mv["version"].(string),
+				Kind:    mv["kind"].(string),
+			}, did)
 		}
 	}
 	return nil

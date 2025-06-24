@@ -1,0 +1,3 @@
+```release-note:bug
+Fixed goroutine-safety in the CRD and metadata cache, resulting in far fewer provider metadata requests.
+```

@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hashicorp/go-version"
+
 	"github.com/hashicorp/terraform-exec/tfexec"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/test/logging"
@@ -84,7 +86,7 @@ func (wd *WorkingDir) SetConfig(ctx context.Context, cfg string) error {
 	if err := os.Remove(rmFilename); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("unable to remove %q: %w", rmFilename, err)
 	}
-	err := os.WriteFile(outFilename, bCfg, 0700)
+	err := os.WriteFile(outFilename, bCfg, 0o700)
 	if err != nil {
 		return err
 	}
@@ -325,4 +327,17 @@ func (wd *WorkingDir) Schemas(ctx context.Context) (*tfjson.ProviderSchemas, err
 	logging.HelperResourceTrace(ctx, "Called Terraform CLI providers schema command")
 
 	return providerSchemas, err
+}
+
+// Version returns the current version of Terraform
+//
+// If the version cannot be read, Version returns an error.
+func (wd *WorkingDir) Version(ctx context.Context) (*version.Version, error) {
+	logging.HelperResourceTrace(ctx, "Calling Terraform CLI providers version command")
+
+	version, _, err := wd.tf.Version(context.Background(), false)
+
+	logging.HelperResourceTrace(ctx, "Called Terraform CLI providers version command")
+
+	return version, err
 }

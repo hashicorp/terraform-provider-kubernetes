@@ -15,6 +15,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ImportResourceState function
@@ -49,7 +50,14 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		return resp, nil
 	}
 
-	gvk, name, namespace, err := util.ParseResourceID(req.ID)
+	var gvk schema.GroupVersionKind
+	var name, namespace string
+	var err error
+	if req.Identity != nil {
+		gvk, name, namespace, err = parseResourceIdentityData(req.Identity)
+	} else {
+		gvk, name, namespace, err = util.ParseResourceID(req.ID)
+	}
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -58,6 +66,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		})
 	}
 	s.logger.Trace("[ImportResourceState]", "[ID]", gvk, name, namespace)
+
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -196,10 +205,17 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 			Detail:   err.Error(),
 		})
 	}
+	idData, err := createIdentityData(ro)
+	if err != nil {
+		return resp, err
+	}
 	nr := &tfprotov5.ImportedResource{
 		TypeName: req.TypeName,
 		State:    &impState,
 		Private:  fb,
+		Identity: &tfprotov5.ResourceIdentityData{
+			IdentityData: &idData,
+		},
 	}
 	resp.ImportedResources = append(resp.ImportedResources, nr)
 	resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
@@ -207,5 +223,6 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		Summary:  "Apply needed after 'import'",
 		Detail:   "Please run apply after a successful import to realign the resource state to the configuration in Terraform.",
 	})
+
 	return resp, nil
 }

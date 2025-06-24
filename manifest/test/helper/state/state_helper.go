@@ -26,6 +26,7 @@ type Helper struct {
 func NewHelper(tfstate *tfjson.State) *Helper {
 	return &Helper{tfstate}
 }
+
 func (s *Helper) ResourceExists(t *testing.T, resourceAddress string) bool {
 	t.Helper()
 	_, err := getAttributesValuesFromResource(s, resourceAddress)
@@ -37,6 +38,16 @@ func getAttributesValuesFromResource(state *Helper, address string) (interface{}
 	for _, r := range state.Values.RootModule.Resources {
 		if r.Address == address {
 			return r.AttributeValues, nil
+		}
+	}
+	return nil, fmt.Errorf("Could not find resource %q in state", address)
+}
+
+// getIdentityValues pulls out the getIdentityValues field from the resource at the given address
+func getIdentityValuesFromResource(state *Helper, address string) (map[string]any, error) {
+	for _, r := range state.Values.RootModule.Resources {
+		if r.Address == address {
+			return r.IdentityValues, nil
 		}
 	}
 	return nil, fmt.Errorf("Could not find resource %q in state", address)
@@ -95,10 +106,10 @@ func parseStateAddress(address string) (string, string) {
 	switch parts[0] {
 	case "data":
 		resourceAddress = strings.Join(parts[0:3], ".")
-		attributeAddress = strings.Join(parts[3:len(parts)], ".")
+		attributeAddress = strings.Join(parts[3:], ".")
 	default:
 		resourceAddress = strings.Join(parts[0:2], ".")
-		attributeAddress = strings.Join(parts[2:len(parts)], ".")
+		attributeAddress = strings.Join(parts[2:], ".")
 	}
 
 	return resourceAddress, attributeAddress
@@ -121,6 +132,22 @@ func (s *Helper) GetAttributeValue(t *testing.T, address string) interface{} {
 	}
 
 	return value
+}
+
+// GetIdentityValue will get the identity value at the given resource address from the state
+func (s *Helper) GetIdentityValue(t *testing.T, address string, identitykey string) interface{} {
+	t.Helper()
+
+	identityvals, err := getIdentityValuesFromResource(s, address)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	val, ok := identityvals[identitykey]
+	if !ok {
+		t.Fatalf("resource identity value %q does not exist for %q", identitykey, address)
+	}
+	return val
 }
 
 // GetOutputValue gets the given output name value from the state
@@ -155,6 +182,14 @@ func (s *Helper) AssertAttributeEqual(t *testing.T, address string, expectedValu
 
 	assert.EqualValues(t, expectedValue, s.GetAttributeValue(t, address),
 		fmt.Sprintf("Address: %q", address))
+}
+
+// AssertIdentityValueEqual will fail the test if the identity value does not equal expectedValue
+func (s *Helper) AssertIdentityValueEqual(t *testing.T, address string, identitykey string, expectedValue interface{}) {
+	t.Helper()
+
+	assert.EqualValues(t, expectedValue, s.GetIdentityValue(t, address, identitykey),
+		fmt.Sprintf("Resource: %q, Identity key: %q", address, identitykey))
 }
 
 // AssertAttributeNotEqual will fail the test if the attribute is equal to expectedValue

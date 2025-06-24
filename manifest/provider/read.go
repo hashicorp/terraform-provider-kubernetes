@@ -194,5 +194,15 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		return resp, err
 	}
 	resp.NewState = &newState
+
+	// set resource identity data
+	idData, err := createIdentityData(ro)
+	if err != nil {
+		return resp, err
+	}
+	resp.NewIdentity = &tfprotov5.ResourceIdentityData{
+		IdentityData: &idData,
+	}
+
 	return resp, nil
 }

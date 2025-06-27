@@ -31,8 +31,9 @@ func resourceKubernetesStatefulSetV1() *schema.Resource {
 		UpdateContext: resourceKubernetesStatefulSetV1Update,
 		DeleteContext: resourceKubernetesStatefulSetV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -91,7 +92,6 @@ func resourceKubernetesStatefulSetV1Create(ctx context.Context, d *schema.Resour
 	log.Printf("[INFO] Creating new StatefulSet: %#v", statefulSet)
 
 	out, err := conn.AppsV1().StatefulSets(metadata.Namespace).Create(ctx, &statefulSet, metav1.CreateOptions{})
-
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -181,6 +181,11 @@ func resourceKubernetesStatefulSetV1Read(ctx context.Context, d *schema.Resource
 	err = d.Set("spec", sss)
 	if err != nil {
 		return diag.Errorf("Error setting `spec`: %+v", err)
+	}
+
+	err = setResourceIdentityNamespaced(d, "apps/v1", "StatefulSet", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 	return nil
 }

@@ -14,6 +14,10 @@ import (
 
 	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesIngressV1_serviceBackend(t *testing.T) {
@@ -371,9 +375,46 @@ func TestAccKubernetesIngressV1_defaultIngressClass(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngressV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	ingressClass := "default-ingress-class"
+	resourceName := "kubernetes_ingress_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_identity(ingressClass, name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("networking/v1"),
+							"kind":        knownvalue.StringExact("Ingress"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesIngressV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -792,6 +833,48 @@ func testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name string) s
 }
 
 func testAccKubernetesIngressV1Config_defaultIngressClass(ingressClass, name string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_class_v1" "test" {
+  metadata {
+    name = "%s"
+    labels = {
+      "app.kubernetes.io/component" = "controller"
+    }
+    annotations = {
+      "ingressclass.kubernetes.io/is-default-class" = "true"
+    }
+  }
+  spec {
+    controller = "k8s.io/ingress-nginx"
+  }
+}
+
+resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    rule {
+      host = "server.domain.com"
+      http {
+        path {
+          backend {
+            service {
+              name = "app1"
+              port {
+                number = 8080
+              }
+            }
+          }
+          path = "/app1/*"
+        }
+      }
+    }
+  }
+  depends_on = ["kubernetes_ingress_class_v1.test"]
+}`, ingressClass, name)
+}
+
+func testAccKubernetesIngressV1Config_identity(ingressClass, name string) string {
 	return fmt.Sprintf(`resource "kubernetes_ingress_class_v1" "test" {
   metadata {
     name = "%s"

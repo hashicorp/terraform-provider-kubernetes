@@ -14,6 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesServiceAccountV1_basic(t *testing.T) {
@@ -60,6 +64,40 @@ func TestAccKubernetesServiceAccountV1_basic(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "automount_service_account_token"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesServiceAccountV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_service_account_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		CheckDestroy: testAccCheckKubernetesServiceAccountV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceAccountV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("v1"),
+							"kind":        knownvalue.StringExact("ServiceAccount"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})

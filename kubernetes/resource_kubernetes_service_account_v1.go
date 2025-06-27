@@ -30,13 +30,12 @@ func resourceKubernetesServiceAccountV1() *schema.Resource {
 		UpdateContext: resourceKubernetesServiceAccountV1Update,
 		DeleteContext: resourceKubernetesServiceAccountV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: resourceKubernetesServiceAccountV1ImportState,
+			StateContext: resourceIdentityImportNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNamespaced(),
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(30 * time.Second),
 		},
-
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", true),
 			"image_pull_secret": {
@@ -303,6 +302,11 @@ func resourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Resou
 	secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
 	log.Printf("[DEBUG] Flattened secrets: %#v", secrets)
 	err = d.Set("secret", secrets)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setResourceIdentityNamespaced(d, "v1", "ServiceAccount", namespace, name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

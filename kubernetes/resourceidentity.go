@@ -7,23 +7,50 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceIdentitySchema() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"namespace": {
-			Type:              schema.TypeString,
-			OptionalForImport: true,
+func resourceIdentitySchemaNamespaced() *schema.ResourceIdentity {
+	return &schema.ResourceIdentity{
+		Version: 1,
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				"namespace": {
+					Type:              schema.TypeString,
+					OptionalForImport: true,
+				},
+				"name": {
+					Type:              schema.TypeString,
+					RequiredForImport: true,
+				},
+				"api_version": {
+					Type:              schema.TypeString,
+					RequiredForImport: true,
+				},
+				"kind": {
+					Type:              schema.TypeString,
+					RequiredForImport: true,
+				},
+			}
 		},
-		"name": {
-			Type:              schema.TypeString,
-			RequiredForImport: true,
-		},
-		"api_version": {
-			Type:              schema.TypeString,
-			RequiredForImport: true,
-		},
-		"kind": {
-			Type:              schema.TypeString,
-			RequiredForImport: true,
+	}
+}
+
+func resourceIdentitySchemaNonNamespaced() *schema.ResourceIdentity {
+	return &schema.ResourceIdentity{
+		Version: 1,
+		SchemaFunc: func() map[string]*schema.Schema {
+			return map[string]*schema.Schema{
+				"name": {
+					Type:              schema.TypeString,
+					RequiredForImport: true,
+				},
+				"api_version": {
+					Type:              schema.TypeString,
+					RequiredForImport: true,
+				},
+				"kind": {
+					Type:              schema.TypeString,
+					RequiredForImport: true,
+				},
+			}
 		},
 	}
 }

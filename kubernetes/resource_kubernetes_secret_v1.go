@@ -33,10 +33,7 @@ func resourceKubernetesSecretV1() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},
-		Identity: &schema.ResourceIdentity{
-			Version:    1,
-			SchemaFunc: resourceIdentitySchema,
-		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 			if diff.Id() == "" {
 				return nil

@@ -377,7 +377,7 @@ func TestAccKubernetesIngressV1_defaultIngressClass(t *testing.T) {
 
 func TestAccKubernetesIngressV1_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	ingressClass := "default-ingress-class"
+	ingressClass := "identity-ingress-class"
 	resourceName := "kubernetes_ingress_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{

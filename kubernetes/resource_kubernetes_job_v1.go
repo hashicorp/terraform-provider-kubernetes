@@ -96,6 +96,10 @@ func resourceKubernetesJobV1Create(ctx context.Context, d *schema.ResourceData, 
 	log.Printf("[INFO] Submitted new job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
+	err = setResourceIdentityNamespaced(d, "batch/v1", "Job", out.GetNamespace(), out.GetName())
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {

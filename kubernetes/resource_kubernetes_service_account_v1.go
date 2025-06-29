@@ -30,7 +30,7 @@ func resourceKubernetesServiceAccountV1() *schema.Resource {
 		UpdateContext: resourceKubernetesServiceAccountV1Update,
 		DeleteContext: resourceKubernetesServiceAccountV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: resourceIdentityImportNamespaced,
+			StateContext: resourceKubernetesServiceAccountV1ImportState,
 		},
 		Identity: resourceIdentitySchemaNamespaced(),
 		Timeouts: &schema.ResourceTimeout{
@@ -418,9 +418,27 @@ func resourceKubernetesServiceAccountV1ImportState(ctx context.Context, d *schem
 		return nil, err
 	}
 
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
+	var namespace, name string
+	if d.Id() != "" {
+		namespace, name, err = idParts(d.Id())
+		if err != nil {
+			return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
+		}
+	} else {
+		rid, err := d.Identity()
+		if err != nil {
+			return nil, err
+		}
+		var ok bool
+		namespace, ok = rid.Get("namespace").(string)
+		if !ok {
+			return nil, fmt.Errorf("could not get namespace from resource identity")
+		}
+		name, ok = rid.Get("name").(string)
+		if !ok {
+			return nil, fmt.Errorf("could not get name from resource identity")
+		}
+
 	}
 
 	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})

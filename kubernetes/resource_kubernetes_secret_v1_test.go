@@ -587,7 +587,7 @@ func testAccKubernetesSecretV1Config_identity(name string) string {
   metadata {
     name = "%s"
   }
-  data = {}
+  data                           = {}
   wait_for_service_account_token = false
 }
 `, name)

@@ -27,8 +27,9 @@ func resourceKubernetesCronJobV1() *schema.Resource {
 		UpdateContext: resourceKubernetesCronJobV1Update,
 		DeleteContext: resourceKubernetesCronJobV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		Timeouts: &schema.ResourceTimeout{
 			Delete: schema.DefaultTimeout(1 * time.Minute),
 		},
@@ -160,6 +161,10 @@ func resourceKubernetesCronJobV1Read(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
+	err = setResourceIdentityNamespaced(d, "batch/v1", "CronJob", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

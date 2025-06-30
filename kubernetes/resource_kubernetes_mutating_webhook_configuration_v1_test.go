@@ -14,6 +14,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesMutatingWebhookConfigurationV1_basic(t *testing.T) {
@@ -144,9 +148,45 @@ func TestAccKubernetesMutatingWebhookConfigurationV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesMutatingWebhookConfigurationV1_identity(t *testing.T) {
+	name := fmt.Sprintf("acc-test-%v.terraform.io", acctest.RandString(10))
+	resourceName := "kubernetes_mutating_webhook_configuration_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// AKS sets up some namespaceSelectors and thus we have to skip these tests
+			skipIfRunningInAks(t)
+		},
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesMutatingWebhookConfigurationV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesMutatingWebhookConfigurationV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("admissionregistration/v1"),
+							"kind":        knownvalue.StringExact("MutatingWebhookConfiguration"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesMutatingWebhookConfigurationV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

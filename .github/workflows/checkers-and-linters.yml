@@ -21,7 +21,7 @@ jobs:
         go-version-file: 'go.mod'
     # Secrets are not available on pull requests.
     - name: Login to Docker Hub
-      if: github.ref == 'refs/heads/main'
+      if: ${{ github.event_name != 'pull_request' }}
       uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
       with:
         username: ${{ secrets.RO_DOCKERHUB_USER }}

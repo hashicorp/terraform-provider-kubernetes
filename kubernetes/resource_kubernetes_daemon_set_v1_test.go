@@ -13,6 +13,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
@@ -34,6 +38,43 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDaemonSetV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_daemon_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetV1Config_identity(name, imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("apps/v1"),
+							"kind":        knownvalue.StringExact("DaemonSet"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -176,6 +217,7 @@ func TestAccKubernetesDaemonSetV1_initContainer(t *testing.T) {
 		},
 	})
 }
+
 func TestAccKubernetesDaemonSetV1_noTopLevelLabels(t *testing.T) {
 	var conf appsv1.DaemonSet
 	resourceName := "kubernetes_daemon_set_v1.test"
@@ -482,7 +524,6 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 
 func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -665,6 +706,41 @@ func testAccKubernetesDaemonSetV1Config_minimal(name, imageName string) string {
       }
     }
   }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesDaemonSetV1Config_identity(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        foo = "bar"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          foo = "bar"
+        }
+      }
+
+      spec {
+        container {
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+  wait_for_rollout = false
 }
 `, name, imageName)
 }

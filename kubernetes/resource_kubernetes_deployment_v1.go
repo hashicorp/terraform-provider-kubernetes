@@ -36,8 +36,9 @@ func resourceKubernetesDeploymentV1() *schema.Resource {
 		UpdateContext: resourceKubernetesDeploymentV1Update,
 		DeleteContext: resourceKubernetesDeploymentV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
@@ -365,6 +366,11 @@ func resourceKubernetesDeploymentV1Read(ctx context.Context, d *schema.ResourceD
 	}
 
 	err = d.Set("spec", spec)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setResourceIdentityNamespaced(d, "apps/v1", "Deployment", namespace, name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -13,6 +13,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesHorizontalPodAutoscalerV2_minimal(t *testing.T) {
@@ -48,6 +52,43 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_minimal(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scale_target_ref.0.name", "TerraformAccTest"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.#", "1"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesHorizontalPodAutoscalerV2_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_horizontal_pod_autoscaler_v2.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesHorizontalPodAutoscalerV2Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("autoscaling/v2"),
+							"kind":        knownvalue.StringExact("HorizontalPodAutoscaler"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -225,7 +266,6 @@ func TestAccKubernetesHorizontalPodAutoscalerV2_containerResource(t *testing.T) 
 
 func testAccCheckKubernetesHorizontalPodAutoscalerV2Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

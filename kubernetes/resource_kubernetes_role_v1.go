@@ -24,9 +24,9 @@ func resourceKubernetesRoleV1() *schema.Resource {
 		UpdateContext: resourceKubernetesRoleV1Update,
 		DeleteContext: resourceKubernetesRoleV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNamespaced(),
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchemaRBAC("role", true, true),
 			"rule": {
@@ -131,7 +131,10 @@ func resourceKubernetesRoleV1Read(ctx context.Context, d *schema.ResourceData, m
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
+	err = setResourceIdentityNamespaced(d, "rbac.authorization.k8s.io/v1", "Role", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

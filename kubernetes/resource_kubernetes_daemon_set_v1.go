@@ -30,8 +30,9 @@ func resourceKubernetesDaemonSetV1() *schema.Resource {
 		UpdateContext: resourceKubernetesDaemonSetV1Update,
 		DeleteContext: resourceKubernetesDaemonSetV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -277,6 +278,10 @@ func resourceKubernetesDaemonSetV1Read(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
+	err = setResourceIdentityNamespaced(d, "apps/v1", "DaemonSet", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

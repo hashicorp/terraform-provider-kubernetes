@@ -29,8 +29,9 @@ func resourceKubernetesJobV1() *schema.Resource {
 		UpdateContext: resourceKubernetesJobV1Update,
 		DeleteContext: resourceKubernetesJobV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -95,6 +96,10 @@ func resourceKubernetesJobV1Create(ctx context.Context, d *schema.ResourceData, 
 	log.Printf("[INFO] Submitted new job: %#v", out)
 
 	d.SetId(buildId(out.ObjectMeta))
+	err = setResourceIdentityNamespaced(d, "batch/v1", "Job", out.GetNamespace(), out.GetName())
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	namespace, name, err := idParts(d.Id())
 	if err != nil {
@@ -156,6 +161,11 @@ func resourceKubernetesJobV1Read(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	err = d.Set("spec", jobSpec)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setResourceIdentityNamespaced(d, "batch/v1", "Job", namespace, name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

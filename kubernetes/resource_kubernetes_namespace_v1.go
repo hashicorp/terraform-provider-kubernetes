@@ -27,9 +27,9 @@ func resourceKubernetesNamespaceV1() *schema.Resource {
 		UpdateContext: resourceKubernetesNamespaceV1Update,
 		DeleteContext: resourceKubernetesNamespaceV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNonNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNonNamespaced(),
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", true),
 			"wait_for_default_service_account": {
@@ -109,6 +109,11 @@ func resourceKubernetesNamespaceV1Read(ctx context.Context, d *schema.ResourceDa
 	}
 	log.Printf("[INFO] Received namespace: %#v", namespace)
 	err = d.Set("metadata", flattenMetadata(namespace.ObjectMeta, d, meta))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setResourceIdentityNonNamespaced(d, "v1", "Namespace", name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

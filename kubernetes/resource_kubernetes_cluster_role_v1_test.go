@@ -14,6 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesClusterRoleV1_basic(t *testing.T) {
@@ -63,6 +67,39 @@ func TestAccKubernetesClusterRoleV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "rule.2.verbs.0", "get"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesClusterRoleV1_identity(t *testing.T) {
+	resourceName := "kubernetes_cluster_role_v1.test"
+	name := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleConfigV1_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
+							"kind":        knownvalue.StringExact("ClusterRole"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -287,7 +324,6 @@ func TestAccKubernetesClusterRoleV1_aggregationRuleRuleAggregation(t *testing.T)
 
 func testAccCheckKubernetesClusterRoleV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

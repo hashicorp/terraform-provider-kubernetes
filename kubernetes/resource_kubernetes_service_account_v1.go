@@ -32,11 +32,10 @@ func resourceKubernetesServiceAccountV1() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKubernetesServiceAccountV1ImportState,
 		},
-
+		Identity: resourceIdentitySchemaNamespaced(),
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(30 * time.Second),
 		},
-
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", true),
 			"image_pull_secret": {
@@ -307,6 +306,11 @@ func resourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
+	err = setResourceIdentityNamespaced(d, "v1", "ServiceAccount", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	return nil
 }
 
@@ -414,9 +418,27 @@ func resourceKubernetesServiceAccountV1ImportState(ctx context.Context, d *schem
 		return nil, err
 	}
 
-	namespace, name, err := idParts(d.Id())
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
+	var namespace, name string
+	if d.Id() != "" {
+		namespace, name, err = idParts(d.Id())
+		if err != nil {
+			return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
+		}
+	} else {
+		rid, err := d.Identity()
+		if err != nil {
+			return nil, err
+		}
+		var ok bool
+		namespace, ok = rid.Get("namespace").(string)
+		if !ok {
+			return nil, fmt.Errorf("could not get namespace from resource identity")
+		}
+		name, ok = rid.Get("name").(string)
+		if !ok {
+			return nil, fmt.Errorf("could not get name from resource identity")
+		}
+
 	}
 
 	sa, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})

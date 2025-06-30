@@ -17,6 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesServiceV1_basic(t *testing.T) {
@@ -123,6 +127,40 @@ func TestAccKubernetesServiceV1_basic(t *testing.T) {
 						},
 					}),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesServiceV1_identity(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_service_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		CheckDestroy: testAccCheckKubernetesServiceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceV1Config_identity(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("v1"),
+							"kind":        knownvalue.StringExact("Service"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -854,7 +892,6 @@ func testAccCheckloadBalancerIngressCheck(resourceName string) resource.TestChec
 
 func testAccCheckKubernetesServiceV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -941,6 +978,24 @@ func testAccKubernetesServiceV1Config_basic(name string) string {
       target_port = 80
     }
   }
+}
+`, name)
+}
+
+func testAccKubernetesServiceV1Config_identity(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    port {
+      port        = 8080
+      target_port = 80
+    }
+  }
+
+  wait_for_load_balancer = false
 }
 `, name)
 }

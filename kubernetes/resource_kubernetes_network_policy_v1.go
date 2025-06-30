@@ -44,9 +44,9 @@ func resourceKubernetesNetworkPolicyV1() *schema.Resource {
 		UpdateContext: resourceKubernetesNetworkPolicyV1Update,
 		DeleteContext: resourceKubernetesNetworkPolicyV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNamespaced(),
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("network policy", true),
 			"spec": {
@@ -313,7 +313,10 @@ func resourceKubernetesNetworkPolicyV1Read(ctx context.Context, d *schema.Resour
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
+	err = setResourceIdentityNamespaced(d, "networking/v1", "NetworkPolicy", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

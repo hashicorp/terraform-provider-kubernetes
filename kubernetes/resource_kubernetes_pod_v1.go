@@ -28,8 +28,9 @@ func resourceKubernetesPodV1() *schema.Resource {
 		UpdateContext: resourceKubernetesPodV1Update,
 		DeleteContext: resourceKubernetesPodV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -96,7 +97,6 @@ func resourceKubernetesPodV1Create(ctx context.Context, d *schema.ResourceData, 
 
 	log.Printf("[INFO] Creating new pod: %#v", pod)
 	out, err := conn.CoreV1().Pods(metadata.Namespace).Create(ctx, &pod, metav1.CreateOptions{})
-
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -210,8 +210,12 @@ func resourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, me
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	return nil
 
+	err = setResourceIdentityNamespaced(d, "v1", "Pod", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }
 
 func resourceKubernetesPodV1Delete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

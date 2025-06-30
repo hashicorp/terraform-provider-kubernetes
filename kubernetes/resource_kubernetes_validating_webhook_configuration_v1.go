@@ -30,9 +30,9 @@ func resourceKubernetesValidatingWebhookConfigurationV1() *schema.Resource {
 		UpdateContext: resourceKubernetesValidatingWebhookConfigurationV1Update,
 		DeleteContext: resourceKubernetesValidatingWebhookConfigurationV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNonNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNonNamespaced(),
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("validating webhook configuration", true),
 			"webhook": {
@@ -215,6 +215,11 @@ func resourceKubernetesValidatingWebhookConfigurationV1Read(ctx context.Context,
 	log.Printf("[DEBUG] Setting webhook to: %#v", cfg.Webhooks)
 
 	err = d.Set("webhook", flattenValidatingWebhooks(cfg.Webhooks))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setResourceIdentityNonNamespaced(d, "admissionregistration/v1", "ValidatingWebhookConfiguration", name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

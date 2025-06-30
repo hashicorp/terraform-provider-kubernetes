@@ -23,9 +23,9 @@ func resourceKubernetesRoleBindingV1() *schema.Resource {
 		UpdateContext: resourceKubernetesRoleBindingV1Update,
 		DeleteContext: resourceKubernetesRoleBindingV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNamespaced(),
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchemaRBAC("roleBinding", true, true),
 			"role_ref": {
@@ -65,7 +65,6 @@ func resourceKubernetesRoleBindingV1Create(ctx context.Context, d *schema.Resour
 	}
 	log.Printf("[INFO] Creating new RoleBinding: %#v", binding)
 	out, err := conn.RbacV1().RoleBindings(metadata.Namespace).Create(ctx, binding, metav1.CreateOptions{})
-
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -120,7 +119,10 @@ func resourceKubernetesRoleBindingV1Read(ctx context.Context, d *schema.Resource
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
+	err = setResourceIdentityNamespaced(d, "rbac.authorization.k8s.io/v1", "RoleBinding", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

@@ -14,6 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesRoleV1_basic(t *testing.T) {
@@ -78,6 +82,40 @@ func TestAccKubernetesRoleV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "rule.0.verbs.0", "watch"),
 					resource.TestCheckResourceAttr(resourceName, "rule.0.resource_names.#", "0"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesRoleV1_identity(t *testing.T) {
+	resourceName := "kubernetes_role_v1.test"
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesRoleV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesRoleV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
+							"kind":        knownvalue.StringExact("Role"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -241,6 +279,7 @@ func testAccKubernetesRoleV1Config_modified(name string) string {
 }
 `, name)
 }
+
 func testAccKubernetesRoleV1Config_generatedName(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_role_v1" "test" {
   metadata {
@@ -286,7 +325,6 @@ func testAccCheckKubernetesRoleV1Exists(n string, obj *rbacv1.Role) resource.Tes
 
 func testAccCheckKubernetesRoleV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

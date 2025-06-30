@@ -15,6 +15,10 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesDeploymentV1_minimal(t *testing.T) {
@@ -40,6 +44,41 @@ func TestAccKubernetesDeploymentV1_minimal(t *testing.T) {
 			{
 				Config:   testAccKubernetesDeploymentV1Config_minimal(name, imageName),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeploymentV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_deployment_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentV1Config_identity(name, imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("apps/v1"),
+							"kind":        knownvalue.StringExact("Deployment"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -1296,7 +1335,6 @@ func testAccCheckKubernetesDeploymentForceNew(old, new *appsv1.Deployment, wantN
 
 func testAccCheckKubernetesDeploymentV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -1330,7 +1368,6 @@ func getDeploymentFromResourceName(s *terraform.State, n string) (*appsv1.Deploy
 	}
 
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return nil, err
 	}
@@ -1388,6 +1425,39 @@ func testAccKubernetesDeploymentV1Config_minimal(name, imageName string) string 
       }
     }
   }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesDeploymentV1Config_identity(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        TestLabelOne = "one"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          TestLabelOne = "one"
+        }
+      }
+      spec {
+        container {
+          image   = "%s"
+          name    = "tf-acc-test"
+          command = ["sleep", "300"]
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+  wait_for_rollout = false
 }
 `, name, imageName)
 }

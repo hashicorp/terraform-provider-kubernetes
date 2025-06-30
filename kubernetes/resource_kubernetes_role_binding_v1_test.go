@@ -14,6 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesRoleBindingV1_basic(t *testing.T) {
@@ -124,6 +128,40 @@ func TestAccKubernetesRoleBindingV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subject.2.name", "system:masters"),
 					resource.TestCheckResourceAttr(resourceName, "subject.2.kind", "Group"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesRoleBindingV1_identity(t *testing.T) {
+	resourceName := "kubernetes_role_binding_v1.test"
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesRoleBindingV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesRoleBindingConfigV1_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
+							"kind":        knownvalue.StringExact("RoleBinding"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -313,7 +351,6 @@ func TestAccKubernetesRoleBindingV1_Bug(t *testing.T) {
 
 func testAccCheckKubernetesRoleBindingV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

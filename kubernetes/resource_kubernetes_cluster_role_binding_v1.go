@@ -23,9 +23,9 @@ func resourceKubernetesClusterRoleBindingV1() *schema.Resource {
 		UpdateContext: resourceKubernetesClusterRoleBindingV1Update,
 		DeleteContext: resourceKubernetesClusterRoleBindingV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNonNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNonNamespaced(),
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchemaRBAC("clusterRoleBinding", true, false),
 			"role_ref": {
@@ -65,7 +65,6 @@ func resourceKubernetesClusterRoleBindingV1Create(ctx context.Context, d *schema
 	}
 	log.Printf("[INFO] Creating new ClusterRoleBinding: %#v", binding)
 	binding, err = conn.RbacV1().ClusterRoleBindings().Create(ctx, binding, metav1.CreateOptions{})
-
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -113,6 +112,11 @@ func resourceKubernetesClusterRoleBindingV1Read(ctx context.Context, d *schema.R
 	flattenedSubjects := flattenRBACSubjects(binding.Subjects)
 	log.Printf("[DEBUG] Flattened ClusterRoleBinding subjects: %#v", flattenedSubjects)
 	err = d.Set("subject", flattenedSubjects)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setResourceIdentityNonNamespaced(d, "rbac.authorization.k8s.io/v1", "ClusterRoleBinding", name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

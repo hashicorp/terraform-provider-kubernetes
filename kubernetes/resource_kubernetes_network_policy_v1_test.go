@@ -13,6 +13,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
@@ -363,9 +367,42 @@ func TestAccKubernetesNetworkPolicyV1_withEgressAtCreation(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesNetworkPolicyV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_network_policy_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesNetworkPolicyV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNetworkPolicyV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("networking/v1"),
+							"kind":        knownvalue.StringExact("NetworkPolicy"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesNetworkPolicyV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -623,6 +660,7 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_deny_other_namespaces(n
 }
 `, name)
 }
+
 func testAccKubernetesNetworkPolicyV1Config_specModified_pod_selector(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_network_policy_v1" "test" {
   metadata {

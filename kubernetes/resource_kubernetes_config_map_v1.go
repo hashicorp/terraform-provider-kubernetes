@@ -5,7 +5,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -26,29 +25,7 @@ func resourceKubernetesConfigMapV1() *schema.Resource {
 		UpdateContext: resourceKubernetesConfigMapV1Update,
 		DeleteContext: resourceKubernetesConfigMapV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) ([]*schema.ResourceData, error) {
-				if rd.Id() != "" {
-					return []*schema.ResourceData{rd}, nil
-				}
-
-				rid, err := rd.Identity()
-				if err != nil {
-					return nil, err
-				}
-
-				namespace, ok := rid.Get("namespace").(string)
-				if !ok {
-					return nil, fmt.Errorf("could not get namespace from resource identity")
-				}
-				name, ok := rid.Get("name").(string)
-				if !ok {
-					return nil, fmt.Errorf("could not get name from resource identity")
-				}
-
-				rd.SetId(fmt.Sprintf("%s/%s", namespace, name))
-
-				return []*schema.ResourceData{rd}, nil
-			},
+			StateContext: resourceIdentityImportNamespaced,
 		},
 		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 			if diff.Id() == "" {
@@ -73,29 +50,7 @@ func resourceKubernetesConfigMapV1() *schema.Resource {
 
 			return nil
 		},
-		Identity: &schema.ResourceIdentity{
-			Version: 1,
-			SchemaFunc: func() map[string]*schema.Schema {
-				return map[string]*schema.Schema{
-					"namespace": {
-						Type:              schema.TypeString,
-						OptionalForImport: true,
-					},
-					"name": {
-						Type:              schema.TypeString,
-						RequiredForImport: true,
-					},
-					"api_version": {
-						Type:              schema.TypeString,
-						RequiredForImport: true,
-					},
-					"kind": {
-						Type:              schema.TypeString,
-						RequiredForImport: true,
-					},
-				}
-			},
-		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("config map", true),
 			"binary_data": {

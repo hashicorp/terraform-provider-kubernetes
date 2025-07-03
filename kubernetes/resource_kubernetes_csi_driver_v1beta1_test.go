@@ -37,6 +37,7 @@ func TestAccKubernetesCSIDriverV1Beta1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.attach_required", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_info_on_mount", "true"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_lifecycle_modes.0", "Ephemeral"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.fs_group_policy", "File"),
 				),
 			},
 			{
@@ -107,6 +108,7 @@ func testAccKubernetesCSIDriverBasicV1Beta1Config(name string, attached bool) st
     attach_required        = %[2]t
     pod_info_on_mount      = %[2]t
     volume_lifecycle_modes = ["Ephemeral"]
+    fs_group_policy        = "File"
   }
 }
 `, name, attached)

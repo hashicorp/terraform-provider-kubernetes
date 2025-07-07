@@ -24,10 +24,11 @@ func resourceKubernetesHorizontalPodAutoscalerV2() *schema.Resource {
 		ReadContext:   resourceKubernetesHorizontalPodAutoscalerV2Read,
 		UpdateContext: resourceKubernetesHorizontalPodAutoscalerV2Update,
 		DeleteContext: resourceKubernetesHorizontalPodAutoscalerV2Delete,
+		Schema:        horizontalPodAutoscalerSchemaV2(),
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
-		Schema: horizontalPodAutoscalerSchemaV2(),
+		Identity: resourceIdentitySchemaNamespaced(),
 	}
 }
 
@@ -95,7 +96,10 @@ func resourceKubernetesHorizontalPodAutoscalerV2Read(ctx context.Context, d *sch
 	if err != nil {
 		return diag.FromErr(err)
 	}
-
+	err = setResourceIdentityNamespaced(d, "autoscaling/v2", "HorizontalPodAutoscaler", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

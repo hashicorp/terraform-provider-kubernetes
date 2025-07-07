@@ -14,6 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccKubernetesNamespaceV1_basic(t *testing.T) {
@@ -102,6 +106,39 @@ func TestAccKubernetesNamespaceV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesNamespaceV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_namespace_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		CheckDestroy: testAccCheckKubernetesNamespaceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesNamespaceV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("v1"),
+							"kind":        knownvalue.StringExact("Namespace"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -226,7 +263,6 @@ func TestAccKubernetesNamespaceV1_deleteTimeout(t *testing.T) {
 
 func testAccCheckKubernetesNamespaceV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}
@@ -292,6 +328,7 @@ func testAccKubernetesNamespaceV1Config_addAnnotations(nsName string) string {
 }
 `, nsName)
 }
+
 func testAccKubernetesNamespaceV1Config_addLabels(nsName string) string {
 	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
   metadata {
@@ -391,7 +428,8 @@ func testAccKubernetesNamespaceV1Config_wait_for_default_service_acccount(nsName
 }
 
 func testAccCheckKubernetesDefaultServiceAccountExists(n string,
-	obj *corev1.ServiceAccount) resource.TestCheckFunc {
+	obj *corev1.ServiceAccount,
+) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {

@@ -31,8 +31,9 @@ func resourceKubernetesSecretV1() *schema.Resource {
 		UpdateContext: resourceKubernetesSecretV1Update,
 		DeleteContext: resourceKubernetesSecretV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
+		Identity: resourceIdentitySchemaNamespaced(),
 		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 			if diff.Id() == "" {
 				return nil
@@ -283,6 +284,10 @@ func resourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData,
 	}
 	d.Set("data", flattenByteMapToStringMap(secret.Data))
 
+	err = setResourceIdentityNamespaced(d, "v1", "Secret", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

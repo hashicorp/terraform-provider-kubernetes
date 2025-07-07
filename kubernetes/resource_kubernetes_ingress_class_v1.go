@@ -25,10 +25,11 @@ func resourceKubernetesIngressClassV1() *schema.Resource {
 		ReadContext:   resourceKubernetesIngressClassV1Read,
 		UpdateContext: resourceKubernetesIngressClassV1Update,
 		DeleteContext: resourceKubernetesIngressClassV1Delete,
+		Schema:        resourceKubernetesIngressClassV1Schema(),
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNonNamespaced,
 		},
-		Schema: resourceKubernetesIngressClassV1Schema(),
+		Identity: resourceIdentitySchemaNonNamespaced(),
 	}
 }
 
@@ -112,6 +113,11 @@ func resourceKubernetesIngressClassV1Create(ctx context.Context, d *schema.Resou
 	log.Printf("[INFO] Submitted new IngressClass: %#v", out)
 	d.SetId(out.ObjectMeta.GetName())
 
+	err = setResourceIdentityNonNamespaced(d, "networking/v1", "IngressClass", out.GetName())
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diag.Diagnostics{}
 }
 
@@ -146,6 +152,11 @@ func resourceKubernetesIngressClassV1Read(ctx context.Context, d *schema.Resourc
 	flattened := flattenIngressClassV1Spec(ing.Spec)
 	log.Printf("[DEBUG] Flattened Ingress Class spec: %#v", flattened)
 	err = d.Set("spec", flattened)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = setResourceIdentityNonNamespaced(d, "networking/v1", "IngressClass", ing.GetName())
 	if err != nil {
 		return diag.FromErr(err)
 	}

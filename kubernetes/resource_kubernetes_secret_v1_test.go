@@ -17,6 +17,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 var idRefreshIgnoreCommon = []string{"metadata.0.resource_version", "metadata.0.labels", "metadata.0.annotations"}
@@ -400,6 +404,40 @@ func TestAccKubernetesSecretV1_service_account_token(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesSecretV1_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_secret_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesSecretV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesSecretV1Config_identity(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"namespace":   knownvalue.StringExact("default"),
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("v1"),
+							"kind":        knownvalue.StringExact("Secret"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
 func testAccCheckSecretV1Data(m *corev1.Secret, expected map[string]string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(expected) == 0 && len(m.Data) == 0 {
@@ -540,6 +578,17 @@ func testAccKubernetesSecretV1Config_basic(name string) string {
     one = "first"
     two = "second"
   }
+}
+`, name)
+}
+
+func testAccKubernetesSecretV1Config_identity(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  data                           = {}
+  wait_for_service_account_token = false
 }
 `, name)
 }

@@ -28,9 +28,9 @@ func resourceKubernetesServiceV1() *schema.Resource {
 		UpdateContext: resourceKubernetesServiceV1Update,
 		DeleteContext: resourceKubernetesServiceV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNamespaced,
 		},
-
+		Identity: resourceIdentitySchemaNamespaced(),
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 		},
@@ -430,6 +430,10 @@ func resourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
+	err = setResourceIdentityNamespaced(d, "v1", "Service", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 

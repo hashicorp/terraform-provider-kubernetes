@@ -113,7 +113,7 @@ func resourceKubernetesIngressClassV1Create(ctx context.Context, d *schema.Resou
 	log.Printf("[INFO] Submitted new IngressClass: %#v", out)
 	d.SetId(out.ObjectMeta.GetName())
 
-	err = setResourceIdentityNonNamespaced(d, "networking/v1", "IngressClass", out.GetName())
+	err = setResourceIdentityNonNamespaced(d, "networking.k8s.io/v1", "IngressClass", out.GetName())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -156,7 +156,7 @@ func resourceKubernetesIngressClassV1Read(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	err = setResourceIdentityNonNamespaced(d, "networking/v1", "IngressClass", ing.GetName())
+	err = setResourceIdentityNonNamespaced(d, "networking.k8s.io/v1", "IngressClass", ing.GetName())
 	if err != nil {
 		return diag.FromErr(err)
 	}

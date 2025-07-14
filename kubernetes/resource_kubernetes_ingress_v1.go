@@ -275,7 +275,7 @@ func resourceKubernetesIngressV1Read(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	err = setResourceIdentityNamespaced(d, "networking/v1", "Ingress", namespace, name)
+	err = setResourceIdentityNamespaced(d, "networking.k8s.io/v1", "Ingress", namespace, name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

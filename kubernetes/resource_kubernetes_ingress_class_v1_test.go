@@ -75,7 +75,7 @@ func TestAccKubernetesIngressClassV1_identity(t *testing.T) {
 					statecheck.ExpectIdentity(
 						resourceName, map[string]knownvalue.Check{
 							"name":        knownvalue.StringExact(name),
-							"api_version": knownvalue.StringExact("networking/v1"),
+							"api_version": knownvalue.StringExact("networking.k8s.io/v1"),
 							"kind":        knownvalue.StringExact("IngressClass"),
 						},
 					),

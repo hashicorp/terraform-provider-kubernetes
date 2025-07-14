@@ -313,7 +313,7 @@ func resourceKubernetesNetworkPolicyV1Read(ctx context.Context, d *schema.Resour
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	err = setResourceIdentityNamespaced(d, "networking/v1", "NetworkPolicy", namespace, name)
+	err = setResourceIdentityNamespaced(d, "networking.k8s.io/v1", "NetworkPolicy", namespace, name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

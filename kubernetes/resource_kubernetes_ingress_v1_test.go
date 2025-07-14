@@ -398,7 +398,7 @@ func TestAccKubernetesIngressV1_identity(t *testing.T) {
 						resourceName, map[string]knownvalue.Check{
 							"namespace":   knownvalue.StringExact("default"),
 							"name":        knownvalue.StringExact(name),
-							"api_version": knownvalue.StringExact("networking/v1"),
+							"api_version": knownvalue.StringExact("networking.k8s.io/v1"),
 							"kind":        knownvalue.StringExact("Ingress"),
 						},
 					),

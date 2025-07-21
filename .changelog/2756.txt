@@ -1,0 +1,7 @@
+```release-note:note
+Bump Kubernetes dependencies from v0.28.6 to v0.33.2.
+```
+
+```release-note:breaking-change
+kubernetes_pod_security_policy_v1beta1 was deleted.
+```

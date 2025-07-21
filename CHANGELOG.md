@@ -1,3 +1,33 @@
+## 2.38.0 (Jul 21, 2025)
+
+ENHANCEMENTS:
+
+* Add ResourceIdentity support to kubernetes_manifest [[GH-2737](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2737)]
+* Add `sub_path_expr` to volume mount options pod spec [[GH-2622](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2622)]
+* Add support for ResourceIdentity to SDKv2 resources [[GH-2751](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2751)]
+
+BUG FIXES:
+
+* Fixed goroutine-safety in the CRD and metadata cache, resulting in far fewer provider metadata requests. [[GH-2699](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2699)]
+* `data_source/kubernetes_pod_v1`: fix an issue when the provider cuts out toleration under pod spec(`spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `data_source/kubernetes_pod`: fix an issue when the provider cuts out toleration under pod spec(`spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_cron_job: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_cron_job_v1: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_daemon_set_v1: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_daemonset: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_deployment: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_deployment_v1: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_job: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_job_v1: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_replication_controller_v1`: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_replication_controller`: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_stateful_set: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+* `resource/kubernetes_stateful_set_v1: fix an issue when the provider cuts out toleration under pod spec template(`*.template.spec.toleration`) if it uses a well-known [taint](https://kubernetes.io/docs/reference/labels-annotations-taints/). That could lead to a perpetual diff behavior. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+
+NOTES:
+
+* We have updated the logic of resources that use the Pod specification template, such as `kubernetes_deployment_v1`, `kubernetes_stateful_set_v1`, etc, and now the provider will keep all tolerations(`spec.toleration`) returned by Kubernetes. The same is applicable for the data sources `kubernetes_pod_v1` and `kubernetes_pod`. The behavior of resources `kubernetes_pod_v1` and `kubernetes_pod` remains unchanged, i.e. the provider will keep removing tolerations with well-known [taints](https://kubernetes.io/docs/reference/labels-annotations-taints/) since they might be attached to the object by Kubernetes controller and could lead to a perpetual diff. [[GH-2380](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2380)]
+
 ## 2.37.1 (May 21, 2025)
 
 BUG FIXES:

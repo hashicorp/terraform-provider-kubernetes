@@ -45,7 +45,7 @@ func TestNewFoundryFromSpecV3(t *testing.T) {
 	if crd == nil || crd.Value == nil {
 		t.Fail()
 	}
-	if crd.Value.Type != "object" {
+	if !crd.Value.Type.Is("object") {
 		t.Fail()
 	}
 	if crd.Value.Properties == nil {
@@ -55,14 +55,14 @@ func TestNewFoundryFromSpecV3(t *testing.T) {
 	if !ok {
 		t.Fail()
 	}
-	if foo.Value.Type != "string" {
+	if !foo.Value.Type.Is("string") {
 		t.Fail()
 	}
 	bar, ok := crd.Value.Properties["bar"]
 	if !ok {
 		t.Fail()
 	}
-	if bar.Value.Type != "number" {
+	if !bar.Value.Type.Is("number") {
 		t.Fail()
 	}
 }

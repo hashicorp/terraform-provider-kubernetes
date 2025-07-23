@@ -16,7 +16,7 @@ import (
 	"github.com/mitchellh/hashstructure"
 )
 
-func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaRef) (*openapi3.Schema, error) {
+func resolveSchemaRef3(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaRef) (*openapi3.Schema, error) {
 	if ref.Value != nil {
 		return ref.Value, nil
 	}
@@ -37,20 +37,20 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 	switch sid {
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps":
 		t := openapi3.Schema{
-			Type: "",
+			Type: &openapi3.Types{""},
 		}
 		return &t, nil
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1beta1.JSONSchemaProps":
 		t := openapi3.Schema{
-			Type: "",
+			Type: &openapi3.Types{""},
 		}
 		return &t, nil
 	}
 
-	return resolveSchemaRef(nref, defs)
+	return resolveSchemaRef3(nref, defs)
 }
 
-func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync.Map, defs map[string]*openapi3.SchemaRef, ap tftypes.AttributePath, th map[string]string) (tftypes.Type, error) {
+func getTypeFromSchema3(elem *openapi3.Schema, stackdepth uint64, typeCache *sync.Map, defs map[string]*openapi3.SchemaRef, ap tftypes.AttributePath, th map[string]string) (tftypes.Type, error) {
 	if stackdepth == 0 {
 		// this is a hack to overcome the inability to express recursion in tftypes
 		return nil, errors.New("recursion runaway while generating type from OpenAPI spec")
@@ -85,23 +85,23 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	// 		return t.(tftypes.Type), nil
 	// 	}
 	// }
-	switch elem.Type {
-	case "string":
+	switch {
+	case elem.Type.Is("string"):
 		if elem.Format == "int-or-string" {
 			th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
 		}
 		return tftypes.String, nil
 
-	case "boolean":
+	case elem.Type.Is("boolean"):
 		return tftypes.Bool, nil
 
-	case "number":
+	case elem.Type.Is("number"):
 		return tftypes.Number, nil
 
-	case "integer":
+	case elem.Type.Is("integer"):
 		return tftypes.Number, nil
 
-	case "":
+	case elem.Type.Is(""):
 		if xv, ok := elem.Extensions["x-kubernetes-int-or-string"]; ok {
 			xb, err := xv.(json.RawMessage).MarshalJSON()
 			if err != nil {
@@ -116,15 +116,15 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 		}
 		return tftypes.DynamicPseudoType, nil // this is where DynamicType is set for when an attribute is tagged as 'x-kubernetes-preserve-unknown-fields'
 
-	case "array":
+	case elem.Type.Is("array"):
 		switch {
-		case elem.Items != nil && elem.AdditionalProperties == nil: // normal array - translates to a tftypes.List
-			it, err := resolveSchemaRef(elem.Items, defs)
+		case elem.Items != nil && elem.AdditionalProperties.Has == nil: // normal array - translates to a tftypes.List
+			it, err := resolveSchemaRef3(elem.Items, defs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema for items: %s", err)
 			}
 			aap := ap.WithElementKeyInt(-1)
-			et, err := getTypeFromSchema(it, stackdepth-1, typeCache, defs, *aap, th)
+			et, err := getTypeFromSchema3(it, stackdepth-1, typeCache, defs, *aap, th)
 			if err != nil {
 				return nil, err
 			}
@@ -137,13 +137,13 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 				typeCache.Store(h, t)
 			}
 			return t, nil
-		case elem.AdditionalProperties != nil && elem.Items == nil: // "overriden" array - translates to a tftypes.Tuple
-			it, err := resolveSchemaRef(elem.AdditionalProperties, defs)
+		case elem.AdditionalProperties.Has != nil && *elem.AdditionalProperties.Has && elem.Items == nil: // "overriden" array - translates to a tftypes.Tuple
+			it, err := resolveSchemaRef3(elem.AdditionalProperties.Schema, defs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema for items: %s", err)
 			}
 			aap := ap.WithElementKeyInt(-1)
-			et, err := getTypeFromSchema(it, stackdepth-1, typeCache, defs, *aap, th)
+			et, err := getTypeFromSchema3(it, stackdepth-1, typeCache, defs, *aap, th)
 			if err != nil {
 				return nil, err
 			}
@@ -151,19 +151,19 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			return t, nil
 		}
 
-	case "object":
+	case elem.Type.Is("object"):
 
 		switch {
-		case elem.Properties != nil && elem.AdditionalProperties == nil:
+		case elem.Properties != nil && (elem.AdditionalProperties.Has == nil || !*elem.AdditionalProperties.Has):
 			// this is a standard OpenAPI object
 			atts := make(map[string]tftypes.Type, len(elem.Properties))
 			for p, v := range elem.Properties {
-				schema, err := resolveSchemaRef(v, defs)
+				schema, err := resolveSchemaRef3(v, defs)
 				if err != nil {
 					return nil, fmt.Errorf("failed to resolve schema: %s", err)
 				}
 				aap := ap.WithAttributeName(p)
-				pType, err := getTypeFromSchema(schema, stackdepth-1, typeCache, defs, *aap, th)
+				pType, err := getTypeFromSchema3(schema, stackdepth-1, typeCache, defs, *aap, th)
 				if err != nil {
 					return nil, err
 				}
@@ -175,14 +175,14 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			}
 			return t, nil
 
-		case elem.Properties == nil && elem.AdditionalProperties != nil:
+		case elem.Properties == nil && (elem.AdditionalProperties.Has != nil && *elem.AdditionalProperties.Has):
 			// this is how OpenAPI defines associative arrays
-			s, err := resolveSchemaRef(elem.AdditionalProperties, defs)
+			s, err := resolveSchemaRef3(elem.AdditionalProperties.Schema, defs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema: %s", err)
 			}
 			aap := ap.WithElementKeyString("#")
-			pt, err := getTypeFromSchema(s, stackdepth-1, typeCache, defs, *aap, th)
+			pt, err := getTypeFromSchema3(s, stackdepth-1, typeCache, defs, *aap, th)
 			if err != nil {
 				return nil, err
 			}
@@ -192,7 +192,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			}
 			return t, nil
 
-		case elem.Properties == nil && elem.AdditionalProperties == nil:
+		case elem.Properties == nil && (elem.AdditionalProperties.Has == nil || !*elem.AdditionalProperties.Has):
 			// this is a strange case, encountered with io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1 and also io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceSubresourceStatus
 			t = tftypes.DynamicPseudoType
 			if herr == nil {
@@ -204,31 +204,4 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	}
 
 	return nil, fmt.Errorf("unknown type: %s", elem.Type)
-}
-
-func isTypeFullyKnown(t tftypes.Type) bool {
-	if t.Is(tftypes.DynamicPseudoType) {
-		return false
-	}
-	switch {
-	case t.Is(tftypes.Object{}):
-		for _, att := range t.(tftypes.Object).AttributeTypes {
-			if !isTypeFullyKnown(att) {
-				return false
-			}
-		}
-	case t.Is(tftypes.Tuple{}):
-		for _, ett := range t.(tftypes.Tuple).ElementTypes {
-			if !isTypeFullyKnown(ett) {
-				return false
-			}
-		}
-	case t.Is(tftypes.List{}):
-		return isTypeFullyKnown(t.(tftypes.List).ElementType)
-	case t.Is(tftypes.Set{}):
-		return isTypeFullyKnown(t.(tftypes.Set).ElementType)
-	case t.Is(tftypes.Map{}):
-		return isTypeFullyKnown(t.(tftypes.Map).ElementType)
-	}
-	return true
 }

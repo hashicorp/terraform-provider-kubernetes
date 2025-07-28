@@ -220,6 +220,12 @@ func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
 				},
 			},
 		},
+		"suspend": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			ForceNew:    false,
+			Description: "Tells the controller to suspend subsequent executions, and terminate all active executions. Defaults to false. More info: https://kubernetes.io/docs/concepts/workloads/controllers/job/#suspending-a-job",
+		},
 		// PodTemplate fields are immutable in Jobs.
 		"template": {
 			Type:        schema.TypeList,

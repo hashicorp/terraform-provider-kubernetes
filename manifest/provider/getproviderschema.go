@@ -14,10 +14,12 @@ func (s *RawProviderServer) GetProviderSchema(ctx context.Context, req *tfprotov
 	cfgSchema := GetProviderConfigSchema()
 	resSchema := GetProviderResourceSchema()
 	dsSchema := GetProviderDataSourceSchema()
+	listSchema := GetProviderListSchema()
 
 	return &tfprotov5.GetProviderSchemaResponse{
-		Provider:          cfgSchema,
-		ResourceSchemas:   resSchema,
-		DataSourceSchemas: dsSchema,
+		Provider:            cfgSchema,
+		ResourceSchemas:     resSchema,
+		DataSourceSchemas:   dsSchema,
+		ListResourceSchemas: listSchema,
 	}, nil
 }

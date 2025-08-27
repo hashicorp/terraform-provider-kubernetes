@@ -25,9 +25,10 @@ func init() {
 }
 
 var (
-	_ tfprotov5.ProviderServer   = &RawProviderServer{}
-	_ tfprotov5.ResourceServer   = &RawProviderServer{}
-	_ tfprotov5.DataSourceServer = &RawProviderServer{}
+	_ tfprotov5.ProviderServer     = &RawProviderServer{}
+	_ tfprotov5.ResourceServer     = &RawProviderServer{}
+	_ tfprotov5.DataSourceServer   = &RawProviderServer{}
+	_ tfprotov5.ListResourceServer = &RawProviderServer{}
 )
 
 // RawProviderServer implements the ProviderServer interface as exported from ProtoBuf.
@@ -76,9 +77,16 @@ func (s *RawProviderServer) GetMetadata(ctx context.Context, req *tfprotov5.GetM
 		ds = append(ds, tfprotov5.DataSourceMetadata{TypeName: k})
 	}
 
+	sch = GetProviderListSchema()
+	lss := make([]tfprotov5.ListResourceMetadata, 0, len(sch))
+	for k := range sch {
+		lss = append(lss, tfprotov5.ListResourceMetadata{TypeName: k})
+	}
+
 	resp := &tfprotov5.GetMetadataResponse{
-		Resources:   rs,
-		DataSources: ds,
+		Resources:     rs,
+		DataSources:   ds,
+		ListResources: lss,
 	}
 	return resp, nil
 }

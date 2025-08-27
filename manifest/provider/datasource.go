@@ -37,7 +37,6 @@ func (s *RawProviderServer) ReadDataSource(ctx context.Context, req *tfprotov5.R
 }
 
 func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfprotov5.ReadDataSourceRequest) (*tfprotov5.ReadDataSourceResponse, error) {
-
 	s.logger.Trace("[ReadDataSource][Request]\n%s\n", dump(*req))
 
 	resp := &tfprotov5.ReadDataSourceResponse{}
@@ -49,7 +48,6 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	}
 
 	rt, err := GetDataSourceType(req.TypeName)
-
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -244,7 +242,6 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 	}
 
 	rt, err := GetDataSourceType(req.TypeName)
-
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

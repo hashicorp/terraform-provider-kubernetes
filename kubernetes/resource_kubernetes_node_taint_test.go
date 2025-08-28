@@ -165,6 +165,7 @@ resource "kubernetes_node_taint" "test" {
     effect = %q
   }
   field_manager = %q
+  force = true
 }
 `, taintKey, taintValue, taintEffect, fieldManager)
 }
@@ -192,6 +193,7 @@ resource "kubernetes_node_taint" "test" {
     effect = %q
   }
   field_manager = %q
+  force = true
 }
 `, taintKey+"-1", taintValue, taintEffect, taintKey+"-2", taintValue, taintEffect, taintKey+"-3", taintValue, taintEffect, fieldManager)
 }

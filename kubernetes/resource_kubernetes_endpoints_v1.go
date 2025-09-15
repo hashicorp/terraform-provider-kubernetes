@@ -18,11 +18,12 @@ import (
 
 func resourceKubernetesEndpointsV1() *schema.Resource {
 	return &schema.Resource{
-		Description:   "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
-		CreateContext: resourceKubernetesEndpointsV1Create,
-		ReadContext:   resourceKubernetesEndpointsV1Read,
-		UpdateContext: resourceKubernetesEndpointsV1Update,
-		DeleteContext: resourceKubernetesEndpointsV1Delete,
+		Description:        "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
+		DeprecationMessage: "The v1.Endpoints API has been deprecated as of Kubernetes v1.33. Please move to using the `kubernetes_endpoint_slice_v1` resource.",
+		CreateContext:      resourceKubernetesEndpointsV1Create,
+		ReadContext:        resourceKubernetesEndpointsV1Read,
+		UpdateContext:      resourceKubernetesEndpointsV1Update,
+		DeleteContext:      resourceKubernetesEndpointsV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

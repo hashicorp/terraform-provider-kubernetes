@@ -1,6 +1,10 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
+// NOTE this API has been deprecated and the resource should be removed
+// in the next major provider version.
+//
+//nolint:all
 package kubernetes
 
 import (
@@ -11,12 +15,9 @@ import (
 	api "k8s.io/api/core/v1"
 )
 
-var (
-	testNodeName = "test-nodename"
-)
+var testNodeName = "test-nodename"
 
 func TestFlattenEndpointsAddresses(t *testing.T) {
-
 	cases := []struct {
 		Input          []api.EndpointAddress
 		ExpectedOutput *schema.Set
@@ -54,7 +55,6 @@ func TestFlattenEndpointsAddresses(t *testing.T) {
 }
 
 func TestFlattenEndpointsPorts(t *testing.T) {
-
 	cases := []struct {
 		Input          []api.EndpointPort
 		ExpectedOutput *schema.Set
@@ -103,7 +103,6 @@ func TestFlattenEndpointsPorts(t *testing.T) {
 }
 
 func TestFlattenEndpointsSubsets(t *testing.T) {
-
 	cases := []struct {
 		Input          []api.EndpointSubset
 		ExpectedOutput *schema.Set
@@ -187,7 +186,6 @@ func TestFlattenEndpointsSubsets(t *testing.T) {
 }
 
 func TestExpandEndpointsAddresses(t *testing.T) {
-
 	cases := []struct {
 		Input          *schema.Set
 		ExpectedOutput []api.EndpointAddress
@@ -223,7 +221,6 @@ func TestExpandEndpointsAddresses(t *testing.T) {
 }
 
 func TestExpandEndpointsPorts(t *testing.T) {
-
 	cases := []struct {
 		Input          []interface{}
 		ExpectedOutput []api.EndpointPort
@@ -273,7 +270,6 @@ func TestExpandEndpointsPorts(t *testing.T) {
 }
 
 func TestExpandEndpointsSubsets(t *testing.T) {
-
 	cases := []struct {
 		Input          *schema.Set
 		ExpectedOutput []api.EndpointSubset

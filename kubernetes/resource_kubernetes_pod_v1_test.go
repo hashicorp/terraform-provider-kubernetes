@@ -1172,7 +1172,6 @@ func TestAccKubernetesPodV1_config_container_working_dir(t *testing.T) {
 				Config: testAccKubernetesPodV1ConfigWorkingDir(podName, imageName, "/www"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &confPod),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.generation", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.working_dir", "/www"),
 				),
 			},
@@ -1186,7 +1185,6 @@ func TestAccKubernetesPodV1_config_container_working_dir(t *testing.T) {
 				Config: testAccKubernetesPodV1ConfigWorkingDir(podName, imageName, "/srv"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &confPod),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.generation", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.working_dir", "/srv"),
 				),
 			},

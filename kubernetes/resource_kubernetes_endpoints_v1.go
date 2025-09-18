@@ -16,13 +16,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesEndpointsV1() *schema.Resource {
+func resourceKubernetesEndpointsV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
-		CreateContext: resourceKubernetesEndpointsV1Create,
-		ReadContext:   resourceKubernetesEndpointsV1Read,
-		UpdateContext: resourceKubernetesEndpointsV1Update,
-		DeleteContext: resourceKubernetesEndpointsV1Delete,
+		Description:        "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
+		CreateContext:      resourceKubernetesEndpointsV1Create,
+		ReadContext:        resourceKubernetesEndpointsV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesEndpointsV1Update,
+		DeleteContext:      resourceKubernetesEndpointsV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

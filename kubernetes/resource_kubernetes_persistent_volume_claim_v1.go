@@ -20,7 +20,7 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
+func resourceKubernetesPersistentVolumeClaimV1(deprecationMessage string) *schema.Resource {
 	fields := persistentVolumeClaimFields()
 	// The 'wait_until_bound' control attribute only makes sense in stand-alone PVCs,
 	// so adding it on top of the standard PVC fields which are re-usable for other resources.
@@ -31,11 +31,12 @@ func resourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
 		Default:     true,
 	}
 	return &schema.Resource{
-		Description:   "This resource allows the user to request for and claim to a persistent volume.",
-		CreateContext: resourceKubernetesPersistentVolumeClaimV1Create,
-		ReadContext:   resourceKubernetesPersistentVolumeClaimV1Read,
-		UpdateContext: resourceKubernetesPersistentVolumeClaimV1Update,
-		DeleteContext: resourceKubernetesPersistentVolumeClaimV1Delete,
+		Description:        "This resource allows the user to request for and claim to a persistent volume.",
+		CreateContext:      resourceKubernetesPersistentVolumeClaimV1Create,
+		ReadContext:        resourceKubernetesPersistentVolumeClaimV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesPersistentVolumeClaimV1Update,
+		DeleteContext:      resourceKubernetesPersistentVolumeClaimV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
 				d.Set("wait_until_bound", true)

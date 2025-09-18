@@ -20,14 +20,15 @@ import (
 	copier "github.com/jinzhu/copier"
 )
 
-func resourceKubernetesValidatingWebhookConfigurationV1Beta1() *schema.Resource {
+func resourceKubernetesValidatingWebhookConfigurationV1Beta1(deprecationMessage string) *schema.Resource {
 	apiDoc := admissionregistrationv1.ValidatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.ValidatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		CreateContext: resourceKubernetesValidatingWebhookConfigurationV1Beta1Create,
-		ReadContext:   resourceKubernetesValidatingWebhookConfigurationV1Beta1Read,
-		UpdateContext: resourceKubernetesValidatingWebhookConfigurationV1Beta1Update,
-		DeleteContext: resourceKubernetesValidatingWebhookConfigurationV1Beta1Delete,
+		CreateContext:      resourceKubernetesValidatingWebhookConfigurationV1Beta1Create,
+		ReadContext:        resourceKubernetesValidatingWebhookConfigurationV1Beta1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesValidatingWebhookConfigurationV1Beta1Update,
+		DeleteContext:      resourceKubernetesValidatingWebhookConfigurationV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

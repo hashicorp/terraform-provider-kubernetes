@@ -15,13 +15,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesClusterRoleBindingV1() *schema.Resource {
+func resourceKubernetesClusterRoleBindingV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "A ClusterRoleBinding may be used to grant permission at the cluster level and in all namespaces",
-		CreateContext: resourceKubernetesClusterRoleBindingV1Create,
-		ReadContext:   resourceKubernetesClusterRoleBindingV1Read,
-		UpdateContext: resourceKubernetesClusterRoleBindingV1Update,
-		DeleteContext: resourceKubernetesClusterRoleBindingV1Delete,
+		Description:        "A ClusterRoleBinding may be used to grant permission at the cluster level and in all namespaces",
+		CreateContext:      resourceKubernetesClusterRoleBindingV1Create,
+		ReadContext:        resourceKubernetesClusterRoleBindingV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesClusterRoleBindingV1Update,
+		DeleteContext:      resourceKubernetesClusterRoleBindingV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNonNamespaced,
 		},

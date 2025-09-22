@@ -27,14 +27,14 @@ on:
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.25.0' }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.30.0' }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.12.0' }} 
   
 jobs:
   acceptance_tests_kind:
     if: ${{ github.repository_owner == 'hashicorp' }}
-    runs-on: custom-linux-medium
+    runs-on: custom-linux-large
     strategy:
       # Don't cancel all in-progress and queued jobs in the matrix if any job in the matrix fails.
       # That will be helpful to catch any issues related to a particular Kubernetes version.
@@ -42,12 +42,10 @@ jobs:
       matrix:
         kubernetes_version:
           # kind images: https://github.com/kubernetes-sigs/kind/releases (note the images are kind release specific)
-          - v1.30.6@sha256:b6d08db72079ba5ae1f4a88a09025c0a904af3b52387643c285442afb05ab994
-          - v1.29.10@sha256:3b2d8c31753e6c8069d4fc4517264cd20e86fd36220671fb7d0a5855103aa84b
-          - v1.28.15@sha256:a7c05c7ae043a0b8c818f5a06188bc2c4098f6cb59ca7d1856df00375d839251
-          - v1.27.16@sha256:2d21a61643eafc439905e18705b8186f3296384750a835ad7a005dceb9546d20
-          - v1.26.6@sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
-          - v1.26.15@sha256:c79602a44b4056d7e48dc20f7504350f1e87530fe953428b792def00bc1076dd
+          - v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a 
+          - v1.33.4@sha256:25a6018e48dfcaee478f4a59af81157a437f15e6e140bf103f85a2e7cd0cbbf2
+          - v1.32.8@sha256:abd489f042d2b644e2d033f5c2d900bc707798d075e8186cb65e3f1367a9d5a1 
+          - v1.31.12@sha256:0f5cc49c5e73c0c2bb6e2df56e7df189240d83cf94edfa30946482eb08ec57d2 
         isMajorReleaseBranch:
           - ${{ contains(github.ref, 'v3-major-release') }}
         isBaseMajorRelease:
@@ -74,7 +72,7 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
       - name: Setup kind
-        uses: helm/kind-action@99576bfa6ddf9a8e612d83b513da5a75875caced # v1.9.0
+        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
         with:
           wait: 2m
           version: v${{ env.KIND_VERSION }}

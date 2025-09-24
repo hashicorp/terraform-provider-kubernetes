@@ -101,6 +101,14 @@ func Provider() *schema.Provider {
 				Description:   "Path to the kube config file. Can be set with KUBE_CONFIG_PATH.",
 				ConflictsWith: []string{"config_paths"},
 			},
+			"config_data": {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				DefaultFunc:   schema.EnvDefaultFunc("KUBE_CONFIG_DATA", nil),
+				Description:   "Raw Kubernetes config data. Can be set with KUBE_CONFIG_DATA. Takes precidence over all over configutaion. No overrides allowed.",
+				ConflictsWith: []string{"config_path", "config_paths"},
+			},
 			"config_context": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -495,8 +503,23 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	return m, diag.Diagnostics{}
 }
 
-func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {
-	diags := make(diag.Diagnostics, 0)
+func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error) {
+
+	configData, configDataOk := d.GetOk("config_data")
+	if configDataOk {
+		cc, err := clientcmd.NewClientConfigFromBytes([]byte(configData.(string)))
+		if err != nil {
+			log.Printf("[ERROR] Invalid config_data was provided. Provider operations likely to fail: %v", err)
+			return nil, nil
+		}
+		cfg, err := cc.ClientConfig()
+		if err != nil {
+			log.Printf("[ERROR] Invalid config_data was provided. Provider operations likely to fail: %v", err)
+			return nil, nil
+		}
+		return cfg, nil
+	}
+
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
 

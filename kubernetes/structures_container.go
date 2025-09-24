@@ -53,7 +53,6 @@ func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
 	}
 	return []interface{}{att}
-
 }
 
 func flattenSecurityCapabilities(in *v1.Capabilities) []interface{} {
@@ -289,11 +288,9 @@ func flattenContainerVolumeMounts(in []v1.VolumeMount) []interface{} {
 
 		if v.MountPath != "" {
 			m["mount_path"] = v.MountPath
-
 		}
 		if v.Name != "" {
 			m["name"] = v.Name
-
 		}
 		if v.SubPath != "" {
 			m["sub_path"] = v.SubPath
@@ -428,7 +425,6 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 		if v.Lifecycle != nil {
 			c["lifecycle"] = flattenLifeCycle(v.Lifecycle)
 		}
-
 		if v.SecurityContext != nil {
 			c["security_context"] = flattenContainerSecurityContext(v.SecurityContext)
 		}
@@ -440,6 +436,9 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 		}
 		if len(v.EnvFrom) > 0 {
 			c["env_from"] = flattenContainerEnvFroms(v.EnvFrom)
+		}
+		if v.RestartPolicy != nil {
+			c["restart_policy"] = string(*v.RestartPolicy)
 		}
 
 		if len(v.VolumeMounts) > 0 {
@@ -581,6 +580,11 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		if v, ok := ctr["working_dir"].(string); ok && v != "" {
 			cs[i].WorkingDir = v
 		}
+
+		if v, ok := ctr["restart_policy"].(string); ok && v != "" {
+			policy := v1.ContainerRestartPolicy(v)
+			cs[i].RestartPolicy = &policy
+		}
 	}
 	return cs, nil
 }
@@ -613,6 +617,7 @@ func expandHTTPHeaders(l []interface{}) []v1.HTTPHeader {
 	}
 	return headers
 }
+
 func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error) {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.SecurityContext{}, nil
@@ -787,8 +792,8 @@ func expandLifecycleHandlers(l []interface{}) *v1.LifecycleHandler {
 		obj.TCPSocket = expandTCPSocket(v)
 	}
 	return &obj
-
 }
+
 func expandLifeCycle(l []interface{}) *v1.Lifecycle {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.Lifecycle{}
@@ -945,8 +950,8 @@ func expandConfigMapKeyRef(r []interface{}) *v1.ConfigMapKeySelector {
 		obj.Optional = ptr.To(v.(bool))
 	}
 	return obj
-
 }
+
 func expandFieldRef(r []interface{}) *v1.ObjectFieldSelector {
 	if len(r) == 0 || r[0] == nil {
 		return &v1.ObjectFieldSelector{}
@@ -962,6 +967,7 @@ func expandFieldRef(r []interface{}) *v1.ObjectFieldSelector {
 	}
 	return obj
 }
+
 func expandResourceFieldRef(r []interface{}) (*v1.ResourceFieldSelector, error) {
 	if len(r) == 0 || r[0] == nil {
 		return &v1.ResourceFieldSelector{}, nil
@@ -1045,7 +1051,6 @@ func expandEnvValueFrom(r []interface{}) (*v1.EnvVarSource, error) {
 		}
 	}
 	return obj, nil
-
 }
 
 func expandConfigMapRef(r []interface{}) *v1.ConfigMapEnvSource {

@@ -615,6 +615,18 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			Description: "Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/",
 			Elem:        securityContextSchema(isUpdatable),
 		},
+		"restart_policy": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			ForceNew:    !isUpdatable,
+			Description: "Restart policy for init container. One of Always, OnFailure, Never. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy.",
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.RestartPolicyAlways),
+				string(api.RestartPolicyOnFailure),
+				string(api.RestartPolicyNever),
+			}, false),
+		},
 		"startup_probe": {
 			Type:        schema.TypeList,
 			Optional:    true,
@@ -749,7 +761,6 @@ func probeSchema() *schema.Resource {
 	return &schema.Resource{
 		Schema: h,
 	}
-
 }
 
 func securityContextSchema(isUpdatable bool) *schema.Resource {

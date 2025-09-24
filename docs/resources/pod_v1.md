@@ -375,6 +375,7 @@ Optional:
 - `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
 
+
 <a id="nestedblock--spec--container--env"></a>
 ### Nested Schema for `spec.container.env`
 
@@ -936,6 +937,7 @@ Optional:
 - `volume_mount` (Block List) Pod volumes to mount into the container's filesystem. Cannot be updated. (see [below for nested schema](#nestedblock--spec--init_container--volume_mount))
 - `volume_device` (Block List) Raw volume devices to attach into the container's filesystem as raw block devices. Cannot be updated. More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1 (see [below for nested schema](#nestedblock--spec--init_container--volume_device))
 - `working_dir` (String) Container's working directory. If not specified, the container runtime's default will be used, which might be configured in the container image. Cannot be updated.
+- `restart_policy` (String) Restart policy for init container. One of Always, OnFailure, Never. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy. 
 
 <a id="nestedblock--spec--init_container--env"></a>
 ### Nested Schema for `spec.init_container.env`

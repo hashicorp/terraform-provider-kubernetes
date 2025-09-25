@@ -19,14 +19,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func resourceKubernetesIngressV1() *schema.Resource {
+func resourceKubernetesIngressV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.",
-		CreateContext: resourceKubernetesIngressV1Create,
-		ReadContext:   resourceKubernetesIngressV1Read,
-		UpdateContext: resourceKubernetesIngressV1Update,
-		DeleteContext: resourceKubernetesIngressV1Delete,
-		Schema:        resourceKubernetesIngressV1Schema(),
+		Description:        "Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.",
+		CreateContext:      resourceKubernetesIngressV1Create,
+		ReadContext:        resourceKubernetesIngressV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesIngressV1Update,
+		DeleteContext:      resourceKubernetesIngressV1Delete,
+		Schema:             resourceKubernetesIngressV1Schema(),
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},

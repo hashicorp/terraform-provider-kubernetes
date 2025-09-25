@@ -19,11 +19,13 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesNamespaceV1() *schema.Resource {
+func resourceKubernetesNamespaceV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "Kubernetes supports multiple virtual clusters backed by the same physical cluster. These virtual clusters are called namespaces. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/.",
-		CreateContext: resourceKubernetesNamespaceV1Create,
-		ReadContext:   resourceKubernetesNamespaceV1Read,
+		Description:        "Kubernetes supports multiple virtual clusters backed by the same physical cluster. These virtual clusters are called namespaces. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/.",
+		CreateContext:      resourceKubernetesNamespaceV1Create,
+		ReadContext:        resourceKubernetesNamespaceV1Read,
+		DeprecationMessage: deprecationMessage,
+
 		UpdateContext: resourceKubernetesNamespaceV1Update,
 		DeleteContext: resourceKubernetesNamespaceV1Delete,
 		Importer: &schema.ResourceImporter{

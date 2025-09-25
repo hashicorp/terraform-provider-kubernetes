@@ -23,8 +23,9 @@ func dataSourceKubernetesIngress() *schema.Resource {
 	docIngressSpec := networking.IngressSpec{}.SwaggerDoc()
 
 	return &schema.Resource{
-		Description: "Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc. This data source allows you to pull data about such ingress.",
-		ReadContext: dataSourceKubernetesIngressRead,
+		DeprecationMessage: "Deprecated: this data source will be removed in the next major version of the provider. Use kubernetes_ingress_v1 instead.",
+		Description:        "Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc. This data source allows you to pull data about such ingress.",
+		ReadContext:        dataSourceKubernetesIngressRead,
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("ingress", false),
 			"spec": {

@@ -20,15 +20,16 @@ import (
 	copier "github.com/jinzhu/copier"
 )
 
-func resourceKubernetesValidatingWebhookConfigurationV1() *schema.Resource {
+func resourceKubernetesValidatingWebhookConfigurationV1(deprecationMessage string) *schema.Resource {
 	apiDoc := admissionregistrationv1.ValidatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.ValidatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		Description:   "Validating Webhook Configuration configures a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).",
-		CreateContext: resourceKubernetesValidatingWebhookConfigurationV1Create,
-		ReadContext:   resourceKubernetesValidatingWebhookConfigurationV1Read,
-		UpdateContext: resourceKubernetesValidatingWebhookConfigurationV1Update,
-		DeleteContext: resourceKubernetesValidatingWebhookConfigurationV1Delete,
+		Description:        "Validating Webhook Configuration configures a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).",
+		CreateContext:      resourceKubernetesValidatingWebhookConfigurationV1Create,
+		ReadContext:        resourceKubernetesValidatingWebhookConfigurationV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesValidatingWebhookConfigurationV1Update,
+		DeleteContext:      resourceKubernetesValidatingWebhookConfigurationV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNonNamespaced,
 		},

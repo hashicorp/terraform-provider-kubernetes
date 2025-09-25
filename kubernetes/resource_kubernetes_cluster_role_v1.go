@@ -15,13 +15,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesClusterRoleV1() *schema.Resource {
+func resourceKubernetesClusterRoleV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "A ClusterRole creates a role at the cluster level and in all namespaces.",
-		CreateContext: resourceKubernetesClusterRoleV1Create,
-		ReadContext:   resourceKubernetesClusterRoleV1Read,
-		UpdateContext: resourceKubernetesClusterRoleV1Update,
-		DeleteContext: resourceKubernetesClusterRoleV1Delete,
+		Description:        "A ClusterRole creates a role at the cluster level and in all namespaces.",
+		CreateContext:      resourceKubernetesClusterRoleV1Create,
+		ReadContext:        resourceKubernetesClusterRoleV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesClusterRoleV1Update,
+		DeleteContext:      resourceKubernetesClusterRoleV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNonNamespaced,
 		},

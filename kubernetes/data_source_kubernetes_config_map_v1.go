@@ -13,10 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesConfigMapV1() *schema.Resource {
+func dataSourceKubernetesConfigMapV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description: "Config Maps are key-value pairs containing configuration data. The Config Map data source provides a mechanism for extracting these key-value pairs.",
-		ReadContext: dataSourceKubernetesConfigMapV1Read,
+		Description:        "Config Maps are key-value pairs containing configuration data. The Config Map data source provides a mechanism for extracting these key-value pairs.",
+		ReadContext:        dataSourceKubernetesConfigMapV1Read,
+		DeprecationMessage: deprecationMessage,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("config_map", false),

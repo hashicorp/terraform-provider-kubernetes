@@ -16,13 +16,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesLimitRangeV1() *schema.Resource {
+func resourceKubernetesLimitRangeV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "Limit Range sets resource usage limits (e.g. memory, cpu, storage) for supported kinds of resources in a namespace. Read more in [the official docs](https://kubernetes.io/docs/concepts/policy/limit-range/).",
-		CreateContext: resourceKubernetesLimitRangeV1Create,
-		ReadContext:   resourceKubernetesLimitRangeV1Read,
-		UpdateContext: resourceKubernetesLimitRangeV1Update,
-		DeleteContext: resourceKubernetesLimitRangeV1Delete,
+		Description:        "Limit Range sets resource usage limits (e.g. memory, cpu, storage) for supported kinds of resources in a namespace. Read more in [the official docs](https://kubernetes.io/docs/concepts/policy/limit-range/).",
+		CreateContext:      resourceKubernetesLimitRangeV1Create,
+		ReadContext:        resourceKubernetesLimitRangeV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesLimitRangeV1Update,
+		DeleteContext:      resourceKubernetesLimitRangeV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

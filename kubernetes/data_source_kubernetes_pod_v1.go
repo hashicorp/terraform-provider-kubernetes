@@ -13,14 +13,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesPodV1() *schema.Resource {
+func dataSourceKubernetesPodV1(deprecationMessage string) *schema.Resource {
 	podSpecFields := podSpecFields(false, false)
 	// Setting this default to false prevents a perpetual diff caused by volume_mounts
 	// being mutated on the server side as Kubernetes automatically adds a mount
 	// for the service account token
 	return &schema.Resource{
-		Description: "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod/.",
-		ReadContext: dataSourceKubernetesPodV1Read,
+		Description:        "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod/.",
+		ReadContext:        dataSourceKubernetesPodV1Read,
+		DeprecationMessage: deprecationMessage,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("pod", true),

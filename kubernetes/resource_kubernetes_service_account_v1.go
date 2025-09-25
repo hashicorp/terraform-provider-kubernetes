@@ -22,13 +22,14 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func resourceKubernetesServiceAccountV1() *schema.Resource {
+func resourceKubernetesServiceAccountV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "A service account provides an identity for processes that run in a Pod. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/.",
-		CreateContext: resourceKubernetesServiceAccountV1Create,
-		ReadContext:   resourceKubernetesServiceAccountV1Read,
-		UpdateContext: resourceKubernetesServiceAccountV1Update,
-		DeleteContext: resourceKubernetesServiceAccountV1Delete,
+		Description:        "A service account provides an identity for processes that run in a Pod. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/.",
+		CreateContext:      resourceKubernetesServiceAccountV1Create,
+		ReadContext:        resourceKubernetesServiceAccountV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesServiceAccountV1Update,
+		DeleteContext:      resourceKubernetesServiceAccountV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceKubernetesServiceAccountV1ImportState,
 		},

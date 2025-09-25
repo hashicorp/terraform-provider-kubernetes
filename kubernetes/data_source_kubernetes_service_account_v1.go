@@ -13,10 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesServiceAccountV1() *schema.Resource {
+func dataSourceKubernetesServiceAccountV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description: "A service account provides an identity for processes that run in a Pod. This data source reads the service account and makes specific attributes available to Terraform. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/.",
-		ReadContext: dataSourceKubernetesServiceAccountV1Read,
+		Description:        "A service account provides an identity for processes that run in a Pod. This data source reads the service account and makes specific attributes available to Terraform. More info: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/.",
+		ReadContext:        dataSourceKubernetesServiceAccountV1Read,
+		DeprecationMessage: deprecationMessage,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service account", false),

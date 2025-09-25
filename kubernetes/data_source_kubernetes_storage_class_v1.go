@@ -13,10 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesStorageClassV1() *schema.Resource {
+func dataSourceKubernetesStorageClassV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description: "Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform.Read more at https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/",
-		ReadContext: dataSourceKubernetesStorageClassV1Read,
+		Description:        "Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform.Read more at https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/",
+		ReadContext:        dataSourceKubernetesStorageClassV1Read,
+		DeprecationMessage: deprecationMessage,
+
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("storage class", false),
 			"parameters": {

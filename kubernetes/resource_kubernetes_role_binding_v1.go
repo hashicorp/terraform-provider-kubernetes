@@ -15,13 +15,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesRoleBindingV1() *schema.Resource {
+func resourceKubernetesRoleBindingV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "A RoleBinding may be used to grant permission at the namespace level",
-		CreateContext: resourceKubernetesRoleBindingV1Create,
-		ReadContext:   resourceKubernetesRoleBindingV1Read,
-		UpdateContext: resourceKubernetesRoleBindingV1Update,
-		DeleteContext: resourceKubernetesRoleBindingV1Delete,
+		Description:        "A RoleBinding may be used to grant permission at the namespace level",
+		CreateContext:      resourceKubernetesRoleBindingV1Create,
+		ReadContext:        resourceKubernetesRoleBindingV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesRoleBindingV1Update,
+		DeleteContext:      resourceKubernetesRoleBindingV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},

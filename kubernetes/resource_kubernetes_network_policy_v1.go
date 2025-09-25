@@ -36,13 +36,14 @@ var (
 	networkPolicyV1SpecPolicyTypesDoc       = networking.NetworkPolicySpec{}.SwaggerDoc()["policyTypes"]
 )
 
-func resourceKubernetesNetworkPolicyV1() *schema.Resource {
+func resourceKubernetesNetworkPolicyV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints. NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods. Read more about network policies at https://kubernetes.io/docs/concepts/services-networking/network-policies/",
-		CreateContext: resourceKubernetesNetworkPolicyV1Create,
-		ReadContext:   resourceKubernetesNetworkPolicyV1Read,
-		UpdateContext: resourceKubernetesNetworkPolicyV1Update,
-		DeleteContext: resourceKubernetesNetworkPolicyV1Delete,
+		Description:        "Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints. NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods. Read more about network policies at https://kubernetes.io/docs/concepts/services-networking/network-policies/",
+		CreateContext:      resourceKubernetesNetworkPolicyV1Create,
+		ReadContext:        resourceKubernetesNetworkPolicyV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesNetworkPolicyV1Update,
+		DeleteContext:      resourceKubernetesNetworkPolicyV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},

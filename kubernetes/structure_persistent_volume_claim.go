@@ -32,7 +32,7 @@ func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []int
 	return []interface{}{att}
 }
 
-func flattenResourceRequirements(in corev1.ResourceRequirements) []interface{} {
+func flattenResourceRequirements(in corev1.VolumeResourceRequirements) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.Limits) > 0 {
 		att["limits"] = flattenResourceList(in.Limits)
@@ -94,8 +94,8 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 	return obj, nil
 }
 
-func expandResourceRequirements(l []interface{}) (*corev1.ResourceRequirements, error) {
-	obj := &corev1.ResourceRequirements{}
+func expandResourceRequirements(l []interface{}) (*corev1.VolumeResourceRequirements, error) {
+	obj := &corev1.VolumeResourceRequirements{}
 	if len(l) == 0 || l[0] == nil {
 		return obj, nil
 	}

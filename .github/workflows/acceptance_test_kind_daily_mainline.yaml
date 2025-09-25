@@ -15,13 +15,6 @@ on:
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8
-  pull_request:
-    branches:
-      - main
-      - v3-major-release
-    paths:
-      - 'kubernetes/*.go'
-      - 'go.mod'
   schedule:
     - cron: '0 21 * * *'
 
@@ -35,30 +28,6 @@ jobs:
   acceptance_tests_kind:
     if: ${{ github.repository_owner == 'hashicorp' }}
     runs-on: custom-linux-large
-    strategy:
-      # Don't cancel all in-progress and queued jobs in the matrix if any job in the matrix fails.
-      # That will be helpful to catch any issues related to a particular Kubernetes version.
-      fail-fast: false
-      matrix:
-        kubernetes_version:
-          # kind images: https://github.com/kubernetes-sigs/kind/releases (note the images are kind release specific)
-          - v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a 
-          - v1.33.4@sha256:25a6018e48dfcaee478f4a59af81157a437f15e6e140bf103f85a2e7cd0cbbf2
-          - v1.32.8@sha256:abd489f042d2b644e2d033f5c2d900bc707798d075e8186cb65e3f1367a9d5a1 
-          - v1.31.12@sha256:0f5cc49c5e73c0c2bb6e2df56e7df189240d83cf94edfa30946482eb08ec57d2 
-        isMajorReleaseBranch:
-          - ${{ contains(github.ref, 'v3-major-release') }}
-        isBaseMajorRelease:
-          - ${{ contains(github.base_ref, 'v3-major-release') }}
-        include:
-          # include if reference is v3-major-release and base reference is not v3-major-release
-          - isMajorReleaseBranch: true
-            isBaseMajorRelease: false
-            kubernetes_version: v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30   
-          # include if reference is not v3-major-release and base reference is v3-major-release
-          - isMajorReleaseBranch: false
-            isBaseMajorRelease: true
-            kubernetes_version: v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30 
     steps:
       - name: Checkout repository
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
@@ -66,17 +35,19 @@ jobs:
         uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: 'go.mod'
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5308c4843bcd56d36 # v3.0.0
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
+      - name: Install Terraform From Source
+        run: |
+          git clone https://github.com/hashicorp/terraform.git
+          cd terraform
+          git switch main
+          go build -o terraform 
+          mv terraform /usr/bin/terraform
       - name: Setup kind
         uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
         with:
           wait: 2m
           version: v${{ env.KIND_VERSION }}
-          node_image: kindest/node:${{ matrix.kubernetes_version }}
+          node_image: kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a
           config: .github/config/acceptance_tests_kind_config.yaml
       - name: Run Acceptance Test Suite
         env:

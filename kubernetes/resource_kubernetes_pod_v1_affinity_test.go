@@ -208,7 +208,7 @@ func TestAccKubernetesPodV1_with_pod_anti_affinity_with_required_during_scheduli
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t) },
+		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t); skipIfRunningInKind(t) },
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{

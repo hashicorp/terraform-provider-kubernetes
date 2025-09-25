@@ -317,6 +317,10 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 												Type:     schema.TypeString,
 												Computed: true,
 											},
+											"ip_mode": {
+												Type:     schema.TypeString,
+												Computed: true,
+											},
 											"hostname": {
 												Type:     schema.TypeString,
 												Computed: true,

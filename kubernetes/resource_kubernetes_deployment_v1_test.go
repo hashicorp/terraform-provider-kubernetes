@@ -146,10 +146,12 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.0.requests.memory", "64Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.env.2.value", "testvar"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.restart_policy", "Always"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.name", "initcontainer2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.image", imageName1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.command.2", initCommand),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.image_pull_policy", "IfNotPresent"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.restart_policy", ""),
 				),
 			},
 			{ // Test for non-empty plans. No modification.
@@ -1615,10 +1617,11 @@ resource "kubernetes_deployment_v1" "test" {
           name              = "initcontainer1"
           image             = "%s"
           image_pull_policy = "IfNotPresent"
+          restart_policy    = "Always"
           command = [
             "sh",
             "-c",
-            "printenv SECRETENV CONFIGENV LIMITS_CPU CUSTOM",
+            "tail -F /dev/null",
           ]
           env {
             name = "SECRETENV"

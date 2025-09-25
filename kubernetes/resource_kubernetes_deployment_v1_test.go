@@ -1617,7 +1617,7 @@ resource "kubernetes_deployment_v1" "test" {
           name              = "initcontainer1"
           image             = "%s"
           image_pull_policy = "IfNotPresent"
-    			restart_policy    = "Always"
+          restart_policy    = "Always"
           command = [
             "sh",
             "-c",

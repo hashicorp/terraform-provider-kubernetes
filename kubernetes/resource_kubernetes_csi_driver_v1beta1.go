@@ -13,8 +13,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	storage "k8s.io/api/storage/v1beta1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
+
+	storage "k8s.io/api/storage/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
@@ -59,6 +61,17 @@ func resourceKubernetesCSIDriverV1Beta1() *schema.Resource {
 									"Ephemeral",
 								}, false),
 							},
+						},
+						"fs_group_policy": {
+							Type:        schema.TypeString,
+							Description: "Defines if the underlying volume supports changing ownership and permission of the volume before being mounted. Defaults to `ReadWriteOnceWithFSType`. Valid options are `File`, `None`, and `ReadWriteOnceWithFSType`.",
+							Optional:    true,
+							Default:     "ReadWriteOnceWithFSType",
+							ValidateFunc: validation.StringInSlice([]string{
+								string(storage.ReadWriteOnceWithFSTypeFSGroupPolicy),
+								string(storage.NoneFSGroupPolicy),
+								string(storage.FileFSGroupPolicy),
+							}, false),
 						},
 					},
 				},

@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
-	arv1 "k8s.io/api/admissionregistration/v1beta1"
+	arv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,7 +47,7 @@ func (r *ValidatingAdmissionPolicy) Create(ctx context.Context, req resource.Cre
 		Spec: expandVAPSpec(plan.Spec),
 	}
 
-	out, err := conn.AdmissionregistrationV1beta1().ValidatingAdmissionPolicies().Create(ctx, obj, metav1.CreateOptions{})
+	out, err := conn.AdmissionregistrationV1().ValidatingAdmissionPolicies().Create(ctx, obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error creating ValidatingAdmissionPolicy",
@@ -85,7 +85,7 @@ func (r *ValidatingAdmissionPolicy) Read(ctx context.Context, req resource.ReadR
 	}
 
 	name := state.Metadata.Name.ValueString()
-	out, err := conn.AdmissionregistrationV1beta1().ValidatingAdmissionPolicies().Get(ctx, name, metav1.GetOptions{})
+	out, err := conn.AdmissionregistrationV1().ValidatingAdmissionPolicies().Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -125,7 +125,7 @@ func (r *ValidatingAdmissionPolicy) Update(ctx context.Context, req resource.Upd
 	}
 
 	name := plan.Metadata.Name.ValueString()
-	cur, err := conn.AdmissionregistrationV1beta1().ValidatingAdmissionPolicies().Get(ctx, name, metav1.GetOptions{})
+	cur, err := conn.AdmissionregistrationV1().ValidatingAdmissionPolicies().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"read before update failed",
@@ -145,7 +145,7 @@ func (r *ValidatingAdmissionPolicy) Update(ctx context.Context, req resource.Upd
 	cur.ObjectMeta.Labels = expandStringMap(plan.Metadata.Labels)
 	cur.ObjectMeta.Annotations = expandStringMap(plan.Metadata.Annotations)
 
-	out, err := conn.AdmissionregistrationV1beta1().ValidatingAdmissionPolicies().Update(ctx, cur, metav1.UpdateOptions{})
+	out, err := conn.AdmissionregistrationV1().ValidatingAdmissionPolicies().Update(ctx, cur, metav1.UpdateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error updating ValidatingAdmissionPolicy",
@@ -181,7 +181,7 @@ func (r *ValidatingAdmissionPolicy) Delete(ctx context.Context, req resource.Del
 	}
 
 	name := state.Metadata.Name.ValueString()
-	err = conn.AdmissionregistrationV1beta1().ValidatingAdmissionPolicies().Delete(ctx, name, metav1.DeleteOptions{})
+	err = conn.AdmissionregistrationV1().ValidatingAdmissionPolicies().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		resp.Diagnostics.AddError(
 			"error deleting ValidatingAdmissionPolicy",

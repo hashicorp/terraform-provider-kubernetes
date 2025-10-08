@@ -219,7 +219,7 @@ func resourceKubernetesValidatingWebhookConfigurationV1Read(ctx context.Context,
 		return diag.FromErr(err)
 	}
 
-	err = setResourceIdentityNonNamespaced(d, "admissionregistration/v1", "ValidatingWebhookConfiguration", name)
+	err = setResourceIdentityNonNamespaced(d, "admissionregistration.k8s.io/v1", "ValidatingWebhookConfiguration", name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

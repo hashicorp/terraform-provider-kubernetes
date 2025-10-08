@@ -170,7 +170,7 @@ func TestAccKubernetesMutatingWebhookConfigurationV1_identity(t *testing.T) {
 					statecheck.ExpectIdentity(
 						resourceName, map[string]knownvalue.Check{
 							"name":        knownvalue.StringExact(name),
-							"api_version": knownvalue.StringExact("admissionregistration/v1"),
+							"api_version": knownvalue.StringExact("admissionregistration.k8s.io/v1"),
 							"kind":        knownvalue.StringExact("MutatingWebhookConfiguration"),
 						},
 					),

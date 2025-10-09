@@ -1,3 +1,4 @@
+// Copyright (c) HashiCorp, Inc.
 package admissionregistrationv1
 
 import (
@@ -123,82 +124,6 @@ Populated by the system. Read-only. More info: https://kubernetes.io/docs/concep
 					},
 				},
 			},
-			"status": schema.SingleNestedAttribute{
-				MarkdownDescription: `The status of the ValidatingAdmissionPolicy, including warnings that are useful to determine if the policy behaves in the expected way.`,
-				Optional:            true,
-				Computed:            true,
-				Attributes: map[string]schema.Attribute{
-					"conditions": schema.ListNestedAttribute{
-						MarkdownDescription: `The conditions represent the latest available observations of a policy's current state.`,
-						Optional:            true,
-						NestedObject: schema.NestedAttributeObject{
-							Attributes: map[string]schema.Attribute{
-								"last_transition_time": schema.StringAttribute{
-									Computed:            true,
-									MarkdownDescription: `Last time the condition transitioned from one status to another.`,
-									Optional:            true,
-								},
-								"message": schema.StringAttribute{
-									Computed:            true,
-									MarkdownDescription: `A human readable message indicating details about the transition.`,
-									Optional:            true,
-								},
-								"observed_generation": schema.Int64Attribute{
-									Computed:            true,
-									MarkdownDescription: `The generation observed by the deployment controller.`,
-									Optional:            true,
-								},
-								"reason": schema.StringAttribute{
-									Computed:            true,
-									MarkdownDescription: `The reason for the condition's last transition.`,
-									Optional:            true,
-								},
-								"status": schema.StringAttribute{
-									Computed:            true,
-									MarkdownDescription: `Status of the condition, one of True, False, Unknown.`,
-									Optional:            true,
-								},
-								"type": schema.StringAttribute{
-									Computed:            true,
-									MarkdownDescription: `Type of deployment condition.`,
-									Optional:            true,
-								},
-							},
-						},
-					},
-					"observed_generation": schema.Int64Attribute{
-						Computed:            true,
-						MarkdownDescription: `The generation observed by the deployment controller.`,
-						Optional:            true,
-					},
-					"type_checking": schema.SingleNestedAttribute{
-						Computed:            true,
-						MarkdownDescription: `The results of type checking for each expression. Presence of this field indicates the completion of the type checking.`,
-						Optional:            true,
-						Attributes: map[string]schema.Attribute{
-							"expression_warning": schema.ListNestedAttribute{
-								MarkdownDescription: `The type checking warnings for each expression.`,
-								Optional:            true,
-								Computed:            true,
-								NestedObject: schema.NestedAttributeObject{
-									Attributes: map[string]schema.Attribute{
-										"field_ref": schema.StringAttribute{
-											Description: "The path to the field that refers the expression. For example, the reference to the expression of the first item of validations is \"spec.validations[0].expression\"",
-											Optional:    true,
-											Computed:    true,
-										},
-										"warning": schema.StringAttribute{
-											MarkdownDescription: `The content of type checking information in a human-readable form. Each line of the warning contains the type that the expression is checked against, followed by the type check error from the compiler.`,
-											Optional:            true,
-											Computed:            true,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
 		},
 	}
 }
@@ -253,7 +178,13 @@ func matchConstraintsFields() map[string]schema.Attribute {
 		"object_selector": schema.SingleNestedAttribute{
 			Description: "ObjectSelector decides whether to run the validation based on if the object has matching labels.",
 			Optional:    true,
-			Attributes:  labelSelectorFields(),
+			Attributes: map[string]schema.Attribute{
+				"label_selector": schema.SingleNestedAttribute{
+					MarkdownDescription: `A label query over a set of resources`,
+					Optional:            true,
+					Attributes:          labelSelectorFields(),
+				},
+			},
 		},
 		"resource_rules": schema.ListNestedAttribute{
 			Description: "ResourceRules describes what operations on what resources/subresources the ValidatingAdmissionPolicy matches.",
@@ -348,38 +279,31 @@ func namedRuleWithOperationsFields() map[string]schema.Attribute {
 
 func labelSelectorFields() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"label_selector": schema.SingleNestedAttribute{
-			MarkdownDescription: `A label query over a set of resources, in this case pods.`,
+		"match_expressions": schema.ListNestedAttribute{
+			MarkdownDescription: `matchExpressions is a list of label selector requirements. The requirements are ANDed.`,
 			Optional:            true,
-			Attributes: map[string]schema.Attribute{
-				"match_expressions": schema.ListNestedAttribute{
-					MarkdownDescription: `matchExpressions is a list of label selector requirements. The requirements are ANDed.`,
-					Optional:            true,
-					NestedObject: schema.NestedAttributeObject{
-						Attributes: map[string]schema.Attribute{
-							"key": schema.StringAttribute{
-								MarkdownDescription: `key is the label key that the selector applies to.`,
-								Optional:            true,
-							},
-							"operator": schema.StringAttribute{
-								MarkdownDescription: `operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.`,
-								Optional:            true,
-							},
-							"values": schema.ListAttribute{
-								MarkdownDescription: `values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.`,
-								ElementType:         types.StringType,
-								Optional:            true,
-							},
-						},
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: map[string]schema.Attribute{
+					"key": schema.StringAttribute{
+						MarkdownDescription: `key is the label key that the selector applies to.`,
+						Optional:            true,
 					},
-				},
-				"match_labels": schema.MapAttribute{
-					MarkdownDescription: `matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.`,
-					ElementType:         types.StringType,
-					Optional:            true,
+					"operator": schema.StringAttribute{
+						MarkdownDescription: `operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.`,
+						Optional:            true,
+					},
+					"values": schema.ListAttribute{
+						MarkdownDescription: `values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.`,
+						ElementType:         types.StringType,
+						Optional:            true,
+					},
 				},
 			},
 		},
+		"match_labels": schema.MapAttribute{
+			MarkdownDescription: `matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.`,
+			ElementType:         types.StringType,
+			Optional:            true,
+		},
 	}
-
 }

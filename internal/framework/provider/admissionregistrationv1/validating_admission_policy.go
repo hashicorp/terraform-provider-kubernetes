@@ -6,12 +6,14 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 )
 
 var (
 	_ resource.Resource                = (*ValidatingAdmissionPolicy)(nil)
 	_ resource.ResourceWithConfigure   = (*ValidatingAdmissionPolicy)(nil)
 	_ resource.ResourceWithImportState = (*ValidatingAdmissionPolicy)(nil)
+	_ resource.ResourceWithIdentity    = (*ValidatingAdmissionPolicy)(nil)
 )
 
 type ValidatingAdmissionPolicy struct {
@@ -31,4 +33,14 @@ func (r *ValidatingAdmissionPolicy) Configure(_ context.Context, req resource.Co
 		return
 	}
 	r.SDKv2Meta = req.ProviderData.(func() any)
+}
+
+func (r *ValidatingAdmissionPolicy) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = identityschema.Schema{
+		Attributes: map[string]identityschema.Attribute{
+			"name": identityschema.StringAttribute{
+				RequiredForImport: true,
+			},
+		},
+	}
 }

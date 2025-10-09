@@ -6,11 +6,10 @@ import (
 )
 
 type ValidatingAdmissionPolicyModel struct {
-	Timeouts timeouts.Value  `tfsdk:"timeouts"`
-	ID       types.String    `tfsdk:"id" manifest:""`
-	Metadata MetadataModel   `tfsdk:"metadata" manifest:"metadata"`
-	Spec     VAPSpecModel    `tfsdk:"spec" manifest:"spec"`
-	Status   *VAPStatusModel `tfsdk:"status" manifest:"status"`
+	Timeouts timeouts.Value                     `tfsdk:"timeouts"`
+	ID       types.String                       `tfsdk:"id" manifest:""`
+	Metadata MetadataModel                      `tfsdk:"metadata" manifest:"metadata"`
+	Spec     ValidatingAdmissionPolicySpecModel `tfsdk:"spec" manifest:"spec"`
 }
 
 type MetadataModel struct {
@@ -24,7 +23,7 @@ type MetadataModel struct {
 	UID             types.String            `tfsdk:"uid" manifest:"uid"`
 }
 
-type VAPSpecModel struct {
+type ValidatingAdmissionPolicySpecModel struct {
 	AuditAnnotations []AuditAnnotationModel `tfsdk:"audit_annotations" manifest:"auditAnnotations"`
 	FailurePolicy    types.String           `tfsdk:"failure_policy" manifest:"failurePolicy"`
 	MatchConditions  []MatchConditionModel  `tfsdk:"match_conditions" manifest:"matchConditions"`
@@ -93,26 +92,6 @@ type VariableModel struct {
 	Name       types.String `tfsdk:"name" manifest:"name"`
 }
 
-type VAPStatusModel struct {
-	Conditions         []ConditionModel   `tfsdk:"conditions" manifest:"conditions"`
-	ObservedGeneration types.Int64        `tfsdk:"observed_generation" manifest:"observedGeneration"`
-	TypeChecking       *TypeCheckingModel `tfsdk:"type_checking" manifest:"typeChecking"`
-}
-
-type ConditionModel struct {
-	LastTransitionTime types.String `tfsdk:"last_transition_time" manifest:"lastTransitionTime"`
-	Message            types.String `tfsdk:"message" manifest:"message"`
-	ObservedGeneration types.Int64  `tfsdk:"observed_generation" manifest:"observedGeneration"`
-	Reason             types.String `tfsdk:"reason" manifest:"reason"`
-	Status             types.String `tfsdk:"status" manifest:"status"`
-	Type               types.String `tfsdk:"type" manifest:"type"`
-}
-
-type TypeCheckingModel struct {
-	ExpressionWarning []ExpressionWarningModel `tfsdk:"expression_warning" manifest:"expressionWarning"`
-}
-
-type ExpressionWarningModel struct {
-	FieldRef types.String `tfsdk:"field_ref" manifest:"fieldRef"`
-	Warning  types.String `tfsdk:"warning" manifest:"warning"`
+type ValidatingAdmissionPolicyIdentityModel struct {
+	Name types.String `tfsdk:"name"`
 }

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -44,7 +45,7 @@ func (r *ValidatingAdmissionPolicy) Create(ctx context.Context, req resource.Cre
 			Labels:      expandStringMap(plan.Metadata.Labels),
 			Annotations: expandStringMap(plan.Metadata.Annotations),
 		},
-		Spec: expandVAPSpec(plan.Spec),
+		Spec: expandValidatingAdmissionPolicySpec(plan.Spec),
 	}
 
 	out, err := conn.AdmissionregistrationV1().ValidatingAdmissionPolicies().Create(ctx, obj, metav1.CreateOptions{})
@@ -57,9 +58,16 @@ func (r *ValidatingAdmissionPolicy) Create(ctx context.Context, req resource.Cre
 	}
 
 	plan.ID = types.StringValue(out.Name)
-	flattenVAP(out, &plan)
+	plan.Metadata.UID = types.StringValue(string(out.UID))
+	plan.Metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata.Generation = types.Int64Value(out.Generation)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+
+	identity := ValidatingAdmissionPolicyIdentityModel{
+		Name: types.StringValue(out.Name),
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
 func (r *ValidatingAdmissionPolicy) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -98,8 +106,23 @@ func (r *ValidatingAdmissionPolicy) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	flattenVAP(out, &state)
+	state.Metadata.UID = types.StringValue(string(out.UID))
+	state.Metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
+	state.Metadata.Generation = types.Int64Value(out.Generation)
+
+	if len(out.Labels) > 0 {
+		state.Metadata.Labels = flattenStringMap(out.Labels)
+	}
+	if len(out.Annotations) > 0 {
+		state.Metadata.Annotations = flattenStringMap(out.Annotations)
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+
+	identity := ValidatingAdmissionPolicyIdentityModel{
+		Name: types.StringValue(out.Name),
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
 func (r *ValidatingAdmissionPolicy) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -134,7 +157,7 @@ func (r *ValidatingAdmissionPolicy) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	cur.Spec = expandVAPSpec(plan.Spec)
+	cur.Spec = expandValidatingAdmissionPolicySpec(plan.Spec)
 
 	if cur.ObjectMeta.Labels == nil {
 		cur.ObjectMeta.Labels = make(map[string]string)
@@ -154,8 +177,17 @@ func (r *ValidatingAdmissionPolicy) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	flattenVAP(out, &plan)
+	plan.ID = types.StringValue(out.Name)
+	plan.Metadata.UID = types.StringValue(string(out.UID))
+	plan.Metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata.Generation = types.Int64Value(out.Generation)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+
+	identity := ValidatingAdmissionPolicyIdentityModel{
+		Name: types.StringValue(out.Name),
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
 func (r *ValidatingAdmissionPolicy) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -192,5 +224,53 @@ func (r *ValidatingAdmissionPolicy) Delete(ctx context.Context, req resource.Del
 }
 
 func (r *ValidatingAdmissionPolicy) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("metadata").AtName("name"), req, resp)
+	var name string
+
+	if req.ID != "" {
+		name = req.ID
+	} else {
+		var identityData ValidatingAdmissionPolicyIdentityModel
+		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		name = identityData.Name.ValueString()
+	}
+
+	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("kubernetes client error", err.Error())
+		return
+	}
+
+	out, err := conn.AdmissionregistrationV1().ValidatingAdmissionPolicies().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"error importing ValidatingAdmissionPolicy",
+			fmt.Sprintf("Failed to import policy %q: %s", name, err.Error()),
+		)
+		return
+	}
+
+	var state ValidatingAdmissionPolicyModel
+	state.ID = types.StringValue(out.Name)
+
+	timeoutsObj := types.ObjectNull(map[string]attr.Type{
+		"create": types.StringType,
+		"delete": types.StringType,
+		"read":   types.StringType,
+		"update": types.StringType,
+	})
+	state.Timeouts = timeouts.Value{
+		Object: timeoutsObj,
+	}
+
+	flattenValidatingAdmissionPolicy(out, &state)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+
+	identity := ValidatingAdmissionPolicyIdentityModel{
+		Name: types.StringValue(out.Name),
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }

@@ -55,7 +55,7 @@ func flattenStringSlice(s []string) []types.String {
 	return result
 }
 
-func expandVAPSpec(spec VAPSpecModel) arv1.ValidatingAdmissionPolicySpec {
+func expandValidatingAdmissionPolicySpec(spec ValidatingAdmissionPolicySpecModel) arv1.ValidatingAdmissionPolicySpec {
 	result := arv1.ValidatingAdmissionPolicySpec{}
 
 	if len(spec.AuditAnnotations) > 0 {
@@ -212,25 +212,31 @@ func expandLabelSelector(ls LabelSelectorModel) *metav1.LabelSelector {
 	return result
 }
 
-func flattenVAP(obj *arv1.ValidatingAdmissionPolicy, model *ValidatingAdmissionPolicyModel) {
+func flattenValidatingAdmissionPolicy(obj *arv1.ValidatingAdmissionPolicy, model *ValidatingAdmissionPolicyModel) {
 	model.Metadata.Name = types.StringValue(obj.Name)
-	model.Metadata.GenerateName = types.StringValue(obj.GenerateName)
-	model.Metadata.Namespace = types.StringValue(obj.Namespace)
+
+	if obj.GenerateName != "" {
+		model.Metadata.GenerateName = types.StringValue(obj.GenerateName)
+	}
+	if obj.Namespace != "" {
+		model.Metadata.Namespace = types.StringValue(obj.Namespace)
+	}
+
 	model.Metadata.UID = types.StringValue(string(obj.UID))
 	model.Metadata.ResourceVersion = types.StringValue(obj.ResourceVersion)
 	model.Metadata.Generation = types.Int64Value(obj.Generation)
-	model.Metadata.Labels = flattenStringMap(obj.Labels)
-	model.Metadata.Annotations = flattenStringMap(obj.Annotations)
 
-	flattenVAPSpec(&obj.Spec, &model.Spec)
-
-	if model.Status == nil {
-		model.Status = &VAPStatusModel{}
+	if len(obj.Labels) > 0 {
+		model.Metadata.Labels = flattenStringMap(obj.Labels)
 	}
-	flattenVAPStatus(&obj.Status, model.Status)
+	if len(obj.Annotations) > 0 {
+		model.Metadata.Annotations = flattenStringMap(obj.Annotations)
+	}
+
+	flattenValidatingAdmissionPolicySpec(&obj.Spec, &model.Spec)
 }
 
-func flattenVAPSpec(spec *arv1.ValidatingAdmissionPolicySpec, model *VAPSpecModel) {
+func flattenValidatingAdmissionPolicySpec(spec *arv1.ValidatingAdmissionPolicySpec, model *ValidatingAdmissionPolicySpecModel) {
 	if len(spec.AuditAnnotations) > 0 {
 		model.AuditAnnotations = make([]AuditAnnotationModel, len(spec.AuditAnnotations))
 		for i, aa := range spec.AuditAnnotations {
@@ -304,12 +310,12 @@ func flattenMatchConstraints(mc *arv1.MatchResources, model *MatchConstraintsMod
 		model.MatchPolicy = types.StringValue(string(*mc.MatchPolicy))
 	}
 
-	if mc.NamespaceSelector != nil {
+	if mc.NamespaceSelector != nil && (len(mc.NamespaceSelector.MatchLabels) > 0 || len(mc.NamespaceSelector.MatchExpressions) > 0) {
 		selector := flattenLabelSelector(mc.NamespaceSelector)
 		model.NamespaceSelector = &selector
 	}
 
-	if mc.ObjectSelector != nil {
+	if mc.ObjectSelector != nil && (len(mc.ObjectSelector.MatchLabels) > 0 || len(mc.ObjectSelector.MatchExpressions) > 0) {
 		selector := flattenLabelSelector(mc.ObjectSelector)
 		model.ObjectSelector = &ObjectSelectorModel{
 			LabelSelector: selector,
@@ -333,7 +339,7 @@ func flattenNamedRuleWithOperations(rule arv1.NamedRuleWithOperations) RuleWithO
 		Operations:    flattenOperations(rule.RuleWithOperations.Operations),
 	}
 
-	if rule.RuleWithOperations.Rule.Scope != nil {
+	if rule.RuleWithOperations.Rule.Scope != nil && string(*rule.RuleWithOperations.Rule.Scope) != "*" {
 		result.Scope = types.StringValue(string(*rule.RuleWithOperations.Rule.Scope))
 	}
 
@@ -355,11 +361,13 @@ func flattenLabelSelector(ls *metav1.LabelSelector) LabelSelectorModel {
 	result := LabelSelectorModel{}
 
 	if len(ls.MatchLabels) > 0 {
-		attrMap := make(map[string]attr.Value)
+		matchLabels := make(map[string]attr.Value, len(ls.MatchLabels))
 		for k, v := range ls.MatchLabels {
-			attrMap[k] = types.StringValue(v)
+			matchLabels[k] = types.StringValue(v)
 		}
-		result.MatchLabels = types.MapValueMust(types.StringType, attrMap)
+		result.MatchLabels, _ = types.MapValue(types.StringType, matchLabels)
+	} else {
+		result.MatchLabels = types.MapNull(types.StringType)
 	}
 
 	if len(ls.MatchExpressions) > 0 {
@@ -374,39 +382,4 @@ func flattenLabelSelector(ls *metav1.LabelSelector) LabelSelectorModel {
 	}
 
 	return result
-}
-
-func flattenVAPStatus(status *arv1.ValidatingAdmissionPolicyStatus, model *VAPStatusModel) {
-	if status.ObservedGeneration != 0 {
-		model.ObservedGeneration = types.Int64Value(status.ObservedGeneration)
-	}
-
-	if len(status.Conditions) > 0 {
-		model.Conditions = make([]ConditionModel, len(status.Conditions))
-		for i, cond := range status.Conditions {
-			model.Conditions[i] = ConditionModel{
-				Type:               types.StringValue(string(cond.Type)),
-				Status:             types.StringValue(string(cond.Status)),
-				LastTransitionTime: types.StringValue(cond.LastTransitionTime.Time.Format("2006-01-02T15:04:05Z")),
-				Reason:             types.StringValue(cond.Reason),
-				Message:            types.StringValue(cond.Message),
-				ObservedGeneration: types.Int64Value(cond.ObservedGeneration),
-			}
-		}
-	}
-
-	if status.TypeChecking != nil {
-		if model.TypeChecking == nil {
-			model.TypeChecking = &TypeCheckingModel{}
-		}
-		if len(status.TypeChecking.ExpressionWarnings) > 0 {
-			model.TypeChecking.ExpressionWarning = make([]ExpressionWarningModel, len(status.TypeChecking.ExpressionWarnings))
-			for i, warn := range status.TypeChecking.ExpressionWarnings {
-				model.TypeChecking.ExpressionWarning[i] = ExpressionWarningModel{
-					FieldRef: types.StringValue(warn.FieldRef),
-					Warning:  types.StringValue(warn.Warning),
-				}
-			}
-		}
-	}
 }

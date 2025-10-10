@@ -38,6 +38,12 @@ func (r *ValidatingAdmissionPolicy) Configure(_ context.Context, req resource.Co
 func (r *ValidatingAdmissionPolicy) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = identityschema.Schema{
 		Attributes: map[string]identityschema.Attribute{
+			"api_version": identityschema.StringAttribute{
+				RequiredForImport: true,
+			},
+			"kind": identityschema.StringAttribute{
+				RequiredForImport: true,
+			},
 			"name": identityschema.StringAttribute{
 				RequiredForImport: true,
 			},

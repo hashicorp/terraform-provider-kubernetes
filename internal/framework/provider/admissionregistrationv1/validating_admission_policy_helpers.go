@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package admissionregistrationv1
 
 import (
+	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	arv1 "k8s.io/api/admissionregistration/v1"
@@ -194,7 +199,7 @@ func expandLabelSelector(ls LabelSelectorModel) *metav1.LabelSelector {
 
 	if !ls.MatchLabels.IsNull() && !ls.MatchLabels.IsUnknown() {
 		matchLabels := make(map[string]string)
-		ls.MatchLabels.ElementsAs(nil, &matchLabels, false)
+		ls.MatchLabels.ElementsAs(context.Background(), &matchLabels, false)
 		result.MatchLabels = matchLabels
 	}
 

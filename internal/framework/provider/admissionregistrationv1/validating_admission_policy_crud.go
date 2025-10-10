@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package admissionregistrationv1
 
 import (
@@ -65,7 +68,9 @@ func (r *ValidatingAdmissionPolicy) Create(ctx context.Context, req resource.Cre
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
 	identity := ValidatingAdmissionPolicyIdentityModel{
-		Name: types.StringValue(out.Name),
+		APIVersion: types.StringValue("admissionregistration.k8s.io/v1"),
+		Kind:       types.StringValue("ValidatingAdmissionPolicy"),
+		Name:       types.StringValue(out.Name),
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
@@ -120,7 +125,9 @@ func (r *ValidatingAdmissionPolicy) Read(ctx context.Context, req resource.ReadR
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
 	identity := ValidatingAdmissionPolicyIdentityModel{
-		Name: types.StringValue(out.Name),
+		APIVersion: types.StringValue("admissionregistration.k8s.io/v1"),
+		Kind:       types.StringValue("ValidatingAdmissionPolicy"),
+		Name:       types.StringValue(out.Name),
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
@@ -185,7 +192,9 @@ func (r *ValidatingAdmissionPolicy) Update(ctx context.Context, req resource.Upd
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
 	identity := ValidatingAdmissionPolicyIdentityModel{
-		Name: types.StringValue(out.Name),
+		APIVersion: types.StringValue("admissionregistration.k8s.io/v1"),
+		Kind:       types.StringValue("ValidatingAdmissionPolicy"),
+		Name:       types.StringValue(out.Name),
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
@@ -270,7 +279,9 @@ func (r *ValidatingAdmissionPolicy) ImportState(ctx context.Context, req resourc
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
 	identity := ValidatingAdmissionPolicyIdentityModel{
-		Name: types.StringValue(out.Name),
+		APIVersion: types.StringValue("admissionregistration.k8s.io/v1"),
+		Kind:       types.StringValue("ValidatingAdmissionPolicy"),
+		Name:       types.StringValue(out.Name),
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }

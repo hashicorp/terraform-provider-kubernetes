@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package admissionregistrationv1
 
 import (
@@ -7,91 +10,93 @@ import (
 
 type ValidatingAdmissionPolicyModel struct {
 	Timeouts timeouts.Value                     `tfsdk:"timeouts"`
-	ID       types.String                       `tfsdk:"id" manifest:""`
-	Metadata MetadataModel                      `tfsdk:"metadata" manifest:"metadata"`
-	Spec     ValidatingAdmissionPolicySpecModel `tfsdk:"spec" manifest:"spec"`
+	ID       types.String                       `tfsdk:"id"`
+	Metadata MetadataModel                      `tfsdk:"metadata"`
+	Spec     ValidatingAdmissionPolicySpecModel `tfsdk:"spec"`
 }
 
 type MetadataModel struct {
-	Annotations     map[string]types.String `tfsdk:"annotations" manifest:"annotations"`
-	GenerateName    types.String            `tfsdk:"generate_name" manifest:"generateName"`
-	Generation      types.Int64             `tfsdk:"generation" manifest:"generation"`
-	Labels          map[string]types.String `tfsdk:"labels" manifest:"labels"`
-	Name            types.String            `tfsdk:"name" manifest:"name"`
-	Namespace       types.String            `tfsdk:"namespace" manifest:"namespace"`
-	ResourceVersion types.String            `tfsdk:"resource_version" manifest:"resourceVersion"`
-	UID             types.String            `tfsdk:"uid" manifest:"uid"`
+	Annotations     map[string]types.String `tfsdk:"annotations"`
+	GenerateName    types.String            `tfsdk:"generate_name"`
+	Generation      types.Int64             `tfsdk:"generation"`
+	Labels          map[string]types.String `tfsdk:"labels"`
+	Name            types.String            `tfsdk:"name"`
+	Namespace       types.String            `tfsdk:"namespace"`
+	ResourceVersion types.String            `tfsdk:"resource_version"`
+	UID             types.String            `tfsdk:"uid"`
 }
 
 type ValidatingAdmissionPolicySpecModel struct {
-	AuditAnnotations []AuditAnnotationModel `tfsdk:"audit_annotations" manifest:"auditAnnotations"`
-	FailurePolicy    types.String           `tfsdk:"failure_policy" manifest:"failurePolicy"`
-	MatchConditions  []MatchConditionModel  `tfsdk:"match_conditions" manifest:"matchConditions"`
-	MatchConstraints MatchConstraintsModel  `tfsdk:"match_constraints" manifest:"matchConstraints"`
-	ParamKind        *ParamKindModel        `tfsdk:"param_kind" manifest:"paramKind"`
-	Validations      []ValidationModel      `tfsdk:"validations" manifest:"validations"`
-	Variables        []VariableModel        `tfsdk:"variables" manifest:"variables"`
+	AuditAnnotations []AuditAnnotationModel `tfsdk:"audit_annotations"`
+	FailurePolicy    types.String           `tfsdk:"failure_policy"`
+	MatchConditions  []MatchConditionModel  `tfsdk:"match_conditions"`
+	MatchConstraints MatchConstraintsModel  `tfsdk:"match_constraints"`
+	ParamKind        *ParamKindModel        `tfsdk:"param_kind"`
+	Validations      []ValidationModel      `tfsdk:"validations"`
+	Variables        []VariableModel        `tfsdk:"variables"`
 }
 
 type AuditAnnotationModel struct {
-	Key             types.String `tfsdk:"key" manifest:"key"`
-	ValueExpression types.String `tfsdk:"value_expression" manifest:"valueExpression"`
+	Key             types.String `tfsdk:"key"`
+	ValueExpression types.String `tfsdk:"value_expression"`
 }
 
 type MatchConditionModel struct {
-	Expression types.String `tfsdk:"expression" manifest:"expression"`
-	Name       types.String `tfsdk:"name" manifest:"name"`
+	Expression types.String `tfsdk:"expression"`
+	Name       types.String `tfsdk:"name"`
 }
 
 type MatchConstraintsModel struct {
-	ExcludeResourceRules []RuleWithOperationsModel `tfsdk:"exclude_resource_rules" manifest:"excludeResourceRules"`
-	MatchPolicy          types.String              `tfsdk:"match_policy" manifest:"matchPolicy"`
-	NamespaceSelector    *LabelSelectorModel       `tfsdk:"namespace_selector" manifest:"namespaceSelector"`
-	ObjectSelector       *ObjectSelectorModel      `tfsdk:"object_selector" manifest:"objectSelector"`
-	ResourceRules        []RuleWithOperationsModel `tfsdk:"resource_rules" manifest:"resourceRules"`
+	ExcludeResourceRules []RuleWithOperationsModel `tfsdk:"exclude_resource_rules"`
+	MatchPolicy          types.String              `tfsdk:"match_policy"`
+	NamespaceSelector    *LabelSelectorModel       `tfsdk:"namespace_selector"`
+	ObjectSelector       *ObjectSelectorModel      `tfsdk:"object_selector"`
+	ResourceRules        []RuleWithOperationsModel `tfsdk:"resource_rules"`
 }
 
 type RuleWithOperationsModel struct {
-	APIGroups     []types.String `tfsdk:"api_groups" manifest:"apiGroups"`
-	APIVersions   []types.String `tfsdk:"api_versions" manifest:"apiVersions"`
-	Operations    []types.String `tfsdk:"operations" manifest:"operations"`
-	ResourceNames []types.String `tfsdk:"resource_names" manifest:"resourceNames"`
-	Resources     []types.String `tfsdk:"resources" manifest:"resources"`
-	Scope         types.String   `tfsdk:"scope" manifest:"scope"`
+	APIGroups     []types.String `tfsdk:"api_groups"`
+	APIVersions   []types.String `tfsdk:"api_versions"`
+	Operations    []types.String `tfsdk:"operations"`
+	ResourceNames []types.String `tfsdk:"resource_names"`
+	Resources     []types.String `tfsdk:"resources"`
+	Scope         types.String   `tfsdk:"scope"`
 }
 
 type LabelSelectorModel struct {
-	MatchLabels      types.Map                       `tfsdk:"match_labels" manifest:"matchLabels"`
-	MatchExpressions []LabelSelectorRequirementModel `tfsdk:"match_expressions" manifest:"matchExpressions"`
+	MatchLabels      types.Map                       `tfsdk:"match_labels"`
+	MatchExpressions []LabelSelectorRequirementModel `tfsdk:"match_expressions"`
 }
 
 type LabelSelectorRequirementModel struct {
-	Key      types.String   `tfsdk:"key" manifest:"key"`
-	Operator types.String   `tfsdk:"operator" manifest:"operator"`
-	Values   []types.String `tfsdk:"values" manifest:"values"`
+	Key      types.String   `tfsdk:"key"`
+	Operator types.String   `tfsdk:"operator"`
+	Values   []types.String `tfsdk:"values"`
 }
 
 type ObjectSelectorModel struct {
-	LabelSelector LabelSelectorModel `tfsdk:"label_selector" manifest:"labelSelector"`
+	LabelSelector LabelSelectorModel `tfsdk:"label_selector"`
 }
 
 type ParamKindModel struct {
-	APIVersion types.String `tfsdk:"api_version" manifest:"apiVersion"`
-	Kind       types.String `tfsdk:"kind" manifest:"kind"`
+	APIVersion types.String `tfsdk:"api_version"`
+	Kind       types.String `tfsdk:"kind"`
 }
 
 type ValidationModel struct {
-	Expression        types.String `tfsdk:"expression" manifest:"expression"`
-	Message           types.String `tfsdk:"message" manifest:"message"`
-	MessageExpression types.String `tfsdk:"message_expression" manifest:"messageExpression"`
-	Reason            types.String `tfsdk:"reason" manifest:"reason"`
+	Expression        types.String `tfsdk:"expression"`
+	Message           types.String `tfsdk:"message"`
+	MessageExpression types.String `tfsdk:"message_expression"`
+	Reason            types.String `tfsdk:"reason"`
 }
 
 type VariableModel struct {
-	Expression types.String `tfsdk:"expression" manifest:"expression"`
-	Name       types.String `tfsdk:"name" manifest:"name"`
+	Expression types.String `tfsdk:"expression"`
+	Name       types.String `tfsdk:"name"`
 }
 
 type ValidatingAdmissionPolicyIdentityModel struct {
-	Name types.String `tfsdk:"name"`
+	APIVersion types.String `tfsdk:"api_version"`
+	Kind       types.String `tfsdk:"kind"`
+	Name       types.String `tfsdk:"name"`
 }

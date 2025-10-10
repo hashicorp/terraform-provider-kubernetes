@@ -25,7 +25,7 @@ func NewValidatingAdmissionPolicy() resource.Resource {
 }
 
 func (r *ValidatingAdmissionPolicy) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_validating_admission_policy"
+	resp.TypeName = req.ProviderTypeName + "_validating_admission_policy_v1"
 }
 
 func (r *ValidatingAdmissionPolicy) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

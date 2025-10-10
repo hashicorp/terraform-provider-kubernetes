@@ -18,13 +18,13 @@ func TestAccValidatingAdmissionPolicy_basic(t *testing.T) {
 			{
 				Config: testValidatingAdmissionPolicyConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "metadata.name", name),
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "spec.validations.0.expression", "object.spec.replicas <= 5"),
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "spec.validations.0.message", "Replica count must not exceed 5"),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "metadata.name", name),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "spec.validations.0.expression", "object.spec.replicas <= 5"),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "spec.validations.0.message", "Replica count must not exceed 5"),
 				),
 			},
 			{
-				ResourceName:      "kubernetes_validating_admission_policy.test",
+				ResourceName:      "kubernetes_validating_admission_policy_v1.test",
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -46,9 +46,9 @@ func TestAccValidatingAdmissionPolicy_withMatchConstraints(t *testing.T) {
 			{
 				Config: testValidatingAdmissionPolicyConfig_withMatchConstraints(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "metadata.name", name),
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "spec.match_constraints.resource_rules.0.api_groups.0", "apps"),
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "spec.match_constraints.resource_rules.0.resources.0", "deployments"),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "metadata.name", name),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "spec.match_constraints.resource_rules.0.api_groups.0", "apps"),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "spec.match_constraints.resource_rules.0.resources.0", "deployments"),
 				),
 			},
 		},
@@ -64,13 +64,13 @@ func TestAccValidatingAdmissionPolicy_update(t *testing.T) {
 			{
 				Config: testValidatingAdmissionPolicyConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "spec.validations.0.message", "Replica count must not exceed 5"),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "spec.validations.0.message", "Replica count must not exceed 5"),
 				),
 			},
 			{
 				Config: testValidatingAdmissionPolicyConfig_updated(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy.test", "spec.validations.0.message", "Replica count must not exceed 10"),
+					resource.TestCheckResourceAttr("kubernetes_validating_admission_policy_v1.test", "spec.validations.0.message", "Replica count must not exceed 10"),
 				),
 			},
 		},
@@ -79,7 +79,7 @@ func TestAccValidatingAdmissionPolicy_update(t *testing.T) {
 
 func testValidatingAdmissionPolicyConfig_basic(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_validating_admission_policy" "test" {
+resource "kubernetes_validating_admission_policy_v1" "test" {
   metadata = {
     name = %q
   }
@@ -112,7 +112,7 @@ resource "kubernetes_validating_admission_policy" "test" {
 
 func testValidatingAdmissionPolicyConfig_withMatchConstraints(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_validating_admission_policy" "test" {
+resource "kubernetes_validating_admission_policy_v1" "test" {
   metadata = {
     name = %q
   }
@@ -145,7 +145,7 @@ resource "kubernetes_validating_admission_policy" "test" {
 
 func testValidatingAdmissionPolicyConfig_updated(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_validating_admission_policy" "test" {
+resource "kubernetes_validating_admission_policy_v1" "test" {
   metadata = {
     name = %q
   }

@@ -1,11 +1,11 @@
 ---
 subcategory: "admissionregistration/v1"
-page_title: "Kubernetes: kubernetes_validating_admission_policy"
+page_title: "Kubernetes: kubernetes_validating_admission_policy_v1"
 description: |-
   A Validating Admission Policy describes the definition of an admission validation policy that accepts or rejects an object without changing it.
 ---
 
-# kubernetes_validating_admission_policy
+# kubernetes_validating_admission_policy_v1
 
 A Validating Admission Policy describes the definition of an admission validation policy that accepts or rejects an object without changing it.
 

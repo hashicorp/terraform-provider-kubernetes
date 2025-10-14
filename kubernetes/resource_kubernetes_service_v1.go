@@ -20,13 +20,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesServiceV1() *schema.Resource {
+func resourceKubernetesServiceV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.",
-		CreateContext: resourceKubernetesServiceV1Create,
-		ReadContext:   resourceKubernetesServiceV1Read,
-		UpdateContext: resourceKubernetesServiceV1Update,
-		DeleteContext: resourceKubernetesServiceV1Delete,
+		Description:        "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.",
+		CreateContext:      resourceKubernetesServiceV1Create,
+		ReadContext:        resourceKubernetesServiceV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesServiceV1Update,
+		DeleteContext:      resourceKubernetesServiceV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},

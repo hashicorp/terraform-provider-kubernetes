@@ -18,12 +18,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func resourceKubernetesIngressV1Beta1() *schema.Resource {
+func resourceKubernetesIngressV1Beta1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesIngressV1Beta1Create,
-		ReadContext:   resourceKubernetesIngressV1Beta1Read,
-		UpdateContext: resourceKubernetesIngressV1Beta1Update,
-		DeleteContext: resourceKubernetesIngressV1Beta1Delete,
+		CreateContext:      resourceKubernetesIngressV1Beta1Create,
+		ReadContext:        resourceKubernetesIngressV1Beta1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesIngressV1Beta1Update,
+		DeleteContext:      resourceKubernetesIngressV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

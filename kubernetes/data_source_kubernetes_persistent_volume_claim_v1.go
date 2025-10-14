@@ -13,10 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesPersistentVolumeClaimV1() *schema.Resource {
+func dataSourceKubernetesPersistentVolumeClaimV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description: "A PersistentVolumeClaim (PVC) is a request for storage by a user. This data source retrieves information about the specified PVC.",
-		ReadContext: dataSourceKubernetesPersistentVolumeClaimV1Read,
+		Description:        "A PersistentVolumeClaim (PVC) is a request for storage by a user. This data source retrieves information about the specified PVC.",
+		ReadContext:        dataSourceKubernetesPersistentVolumeClaimV1Read,
+		DeprecationMessage: deprecationMessage,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("persistent volume claim", true),

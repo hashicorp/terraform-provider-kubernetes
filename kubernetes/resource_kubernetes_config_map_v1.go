@@ -17,13 +17,14 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func resourceKubernetesConfigMapV1() *schema.Resource {
+func resourceKubernetesConfigMapV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "The resource provides mechanisms to inject containers with configuration data while keeping containers agnostic of Kubernetes. Config Map can be used to store fine-grained information like individual properties or coarse-grained information like entire config files or JSON blobs.",
-		CreateContext: resourceKubernetesConfigMapV1Create,
-		ReadContext:   resourceKubernetesConfigMapV1Read,
-		UpdateContext: resourceKubernetesConfigMapV1Update,
-		DeleteContext: resourceKubernetesConfigMapV1Delete,
+		Description:        "The resource provides mechanisms to inject containers with configuration data while keeping containers agnostic of Kubernetes. Config Map can be used to store fine-grained information like individual properties or coarse-grained information like entire config files or JSON blobs.",
+		CreateContext:      resourceKubernetesConfigMapV1Create,
+		ReadContext:        resourceKubernetesConfigMapV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesConfigMapV1Update,
+		DeleteContext:      resourceKubernetesConfigMapV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},

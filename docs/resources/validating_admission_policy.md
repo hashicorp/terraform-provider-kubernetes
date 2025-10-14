@@ -29,7 +29,7 @@ spec (Block, Min: 1, Max: 1) Specification of the desired behavior of the Valida
 <a id="nestedblock--metadata"></a>
 Nested Schema for `metadata`
 
-### Optional:
+### Optional
 
 - `annotations` (Map of String) An unstructured key value map stored with the resource that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 - `generate_name` (String) GenerateName is an optional prefix, used by the server, to generate a unique name ONLY IF the Name field has not been provided. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency
@@ -37,7 +37,7 @@ labels (Map of String) Map of string keys and values that can be used to organiz
 - `name` (String) Name of the ValidatingAdmissionPolicy, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 - `namespace` (String) Namespace defines the space within which the resource name must be unique. Note: ValidatingAdmissionPolicy is a cluster-scoped resource, so namespace should typically not be set.
 
-### Read-Only:
+### Read-Only
 
 - `generation` (Number) A sequence number representing a specific generation of the desired state.
 - `resource_version` (String) An opaque value that represents the internal version of this object that can be used by clients to determine when the object has changed. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
@@ -46,13 +46,13 @@ uid (String) The unique in time and space value for this object. More info: http
 <a id="nestedblock--spec"></a>
 Nested Schema for `spec`
 
-### Required:
+### Required
 
 - `audit_annotations` (Block List, Min: 1) AuditAnnotations contains CEL expressions which are used to produce audit annotations for the audit event of the API request. (see below for nested schema)
 - `failure_policy` (String) FailurePolicy defines how to handle failures for the admission policy. Failures can occur from CEL expression parse errors, type check errors, runtime errors and invalid or misconfigured policy definitions or bindings. Allowed values are Fail or Ignore. Defaults to Fail.
 - `match_constraints` (Block, Min: 1, Max: 1) MatchConstraints specifies what resources this policy is designed to validate. The policy cares about a request if it matches all Constraints. (see below for nested schema)
 
-### Optional:
+### Optional
 
 - `match_conditions` (Block List) MatchConditions is a list of conditions that must be met for a request to be validated. Match conditions filter requests that have already been matched by the rules. An empty list of matchConditions matches all requests. (see below for nested schema)
 - `param_kind` (Block, Max: 1) ParamKind specifies the kind of resources used to parameterize this policy. If absent, there are no parameters for this policy. (see below for nested schema)
@@ -62,7 +62,7 @@ Nested Schema for `spec`
 <a id="nestedblock--spec--audit_annotations"></a>
 Nested Schema for `spec.audit_annotations`
 
-### Required:
+### Required
 
 - `key` (String) Key specifies the audit annotation key. The audit annotation keys of a ValidatingAdmissionPolicy must be unique. The key must be a qualified name no more than 63 bytes in length.
 - `value_expression` (String) ValueExpression represents the expression which is evaluated by CEL to produce an audit annotation value. The expression must evaluate to either a string or null value.
@@ -70,7 +70,7 @@ Nested Schema for `spec.audit_annotations`
 <a id="nestedblock--spec--match_conditions"></a>
 Nested Schema for `spec.match_conditions`
 
-### Required:
+### Required
 
 - `expression` (String) Expression represents the expression which will be evaluated by CEL. Must evaluate to bool. CEL expressions have access to the contents of the AdmissionRequest and Authorizer.
 - `name` (String) Name is an identifier for this match condition, used for strategic merging of MatchConditions, as well as providing an identifier for logging purposes.
@@ -78,7 +78,7 @@ Nested Schema for `spec.match_conditions`
 <a id="nestedblock--spec--match_constraints"></a>
 Nested Schema for `spec.match_constraints`
 
-### Optional:
+### Optional
 
 - `exclude_resource_rules` (Block List) ExcludeResourceRules describes what operations on what resources/subresources the ValidatingAdmissionPolicy should not care about. The exclude rules take precedence over include rules. (see below for nested schema)
 - `match_policy` (String) MatchPolicy defines how the "MatchResources" list is used to match incoming requests. Allowed values are Exact or Equivalent. Defaults to Equivalent.
@@ -89,14 +89,14 @@ Nested Schema for `spec.match_constraints`
 <a id="nestedblock--spec--match_constraints--exclude_resource_rules"></a>
 Nested Schema for `spec.match_constraints.exclude_resource_rules`
 
-### Required:
+### Required
 
 - `api_groups` (List of String) APIGroups is the API groups the resources belong to. * is all groups. If * is present, the length of the slice must be one.
 - `api_versions` (List of String) APIVersions is the API versions the resources belong to. * is all versions. If * is present, the length of the slice must be one.
 - `operations` (List of String) Operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or * for all operations.
 - `resources` (List of String) Resources is a list of resources this rule applies to. For example: pods means pods. pods/log means the log subresource of pods. * means all resources.
 
-### Optional:
+### Optional
 
 - `resource_names` (List of String) ResourceNames is an optional allowlist of names that the rule applies to. An empty set means that everything is allowed.
 - `scope` (String) Scope specifies the scope of this rule. Valid values are Cluster, Namespaced, and *. Default is *.
@@ -104,7 +104,7 @@ Nested Schema for `spec.match_constraints.exclude_resource_rules`
 <a id="nestedblock--spec--match_constraints--namespace_selector"></a>
 Nested Schema for `spec.match_constraints.namespace_selector`
 
-### Optional:
+### Optional
 
 - `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see below for nested schema)
 - `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is "key", the operator is "In", and the values array contains only "value".
@@ -112,7 +112,7 @@ Nested Schema for `spec.match_constraints.namespace_selector`
 <a id="nestedblock--spec--match_constraints--namespace_selector--match_expressions"></a>
 Nested Schema for `spec.match_constraints.namespace_selector.match_expressions`
 
-### Optional:
+### Optional
 
 - `key` (String) The label key that the selector applies to.
 - `operator` (String) Operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
@@ -121,14 +121,14 @@ Nested Schema for `spec.match_constraints.namespace_selector.match_expressions`
 <a id="nestedblock--spec--match_constraints--object_selector"></a>
 Nested Schema for `spec.match_constraints.object_selector`
 
-### Optional:
+### Optional
 
 - `label_selector` (Block, Max: 1) A label query over a set of resources. (see below for nested schema)
 
 <a id="nestedblock--spec--match_constraints--object_selector--label_selector"></a>
 Nested Schema for `spec.match_constraints.object_selector.label_selector`
 
-### Optional:
+### Optional
 
 - `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see below for nested schema)
 - `match_labels` (Map of String) A map of {key,value} pairs.
@@ -136,7 +136,7 @@ Nested Schema for `spec.match_constraints.object_selector.label_selector`
 <a id="nestedblock--spec--match_constraints--object_selector--label_selector--match_expressions"></a>
 Nested Schema for `spec.match_constraints.object_selector.label_selector.match_expressions`
 
-### Optional:
+### Optional
 
 - `key` (String) The label key that the selector applies to.
 - `operator` (String) Operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.
@@ -145,14 +145,14 @@ Nested Schema for `spec.match_constraints.object_selector.label_selector.match_e
 <a id="nestedblock--spec--match_constraints--resource_rules"></a>
 Nested Schema for `spec.match_constraints.resource_rules`
 
-### Required:
+### Required
 
 - `api_groups` (List of String) APIGroups is the API groups the resources belong to. * is all groups.
 - `api_versions` (List of String) APIVersions is the API versions the resources belong to. * is all versions.
 - `operations` (List of String) Operations is the operations the admission hook cares about - CREATE, UPDATE, DELETE, CONNECT or * for all operations.
 - `resources` (List of String) Resources is a list of resources this rule applies to.
 
-### Optional:
+### Optional
 
 - `resource_names` (List of String) ResourceNames is an optional allowlist of names that the rule applies to.
 - `scope` (String) Scope specifies the scope of this rule. Valid values are Cluster, Namespaced, and *.
@@ -160,7 +160,7 @@ Nested Schema for `spec.match_constraints.resource_rules`
 <a id="nestedblock--spec--param_kind"></a>
 Nested Schema for `spec.param_kind`
 
-### Required:
+### Required
 
 - `api_version` (String) APIVersion is the API group version the resources belong to. In format of "group/version".
 - `kind` (String) Kind is the API kind the resources belong to.
@@ -168,12 +168,12 @@ Nested Schema for `spec.param_kind`
 <a id="nestedblock--spec--validations"></a>
 Nested Schema for `spec.validations`
 
-### Required:
+### Required
 
 - `expression` (String) Expression represents the CEL expression which is evaluated to validate the resource. Must evaluate to bool.
 - `message` (String) Message represents the message displayed when validation fails. The message is required if the Expression contains line breaks.
 
-### Optional:
+### Optional
 
 - `message_expression` (String) MessageExpression declares a CEL expression that evaluates to the validation failure message that is returned when this rule fails.
 - `reason` (String) Reason represents a machine-readable description of why this validation failed. Valid values are: Unauthorized, Forbidden, Invalid, RequestEntityTooLarge. If not set, Invalid is used.
@@ -181,7 +181,7 @@ Nested Schema for `spec.validations`
 <a id="nestedblock--spec--variables"></a>
 Nested Schema for `spec.variables`
 
-### Optional:
+### Optional
 
 - `expression` (String) Expression is the expression that will be evaluated as the value of the variable.
 - `name` (String) Name is the name of the variable. The variable can be accessed in other expressions through variables.<name>.
@@ -189,7 +189,7 @@ Nested Schema for `spec.variables`
 <a id="nestedblock--timeouts"></a>
 Nested Schema for `timeouts`
 
-### Optional:
+### Optional
 
 - `create` (String) Timeout for creating the resource. Default is 20 minutes.
 - `delete` (String) Timeout for deleting the resource. Default is 20 minutes.

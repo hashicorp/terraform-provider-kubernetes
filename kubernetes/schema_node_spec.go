@@ -110,8 +110,9 @@ func nodeStatusFields() map[string]*schema.Schema {
 						Computed: true,
 					},
 					"kube_proxy_version": {
-						Type:     schema.TypeString,
-						Computed: true,
+						Type:       schema.TypeString,
+						Computed:   true,
+						Deprecated: "This field has been deprecated in Kubernetes v1.31 and will be removed.",
 					},
 					"operating_system": {
 						Type:     schema.TypeString,

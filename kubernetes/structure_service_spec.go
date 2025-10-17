@@ -128,6 +128,9 @@ func flattenLoadBalancerStatus(in v1.LoadBalancerStatus) []interface{} {
 		att := make(map[string]interface{})
 
 		att["ip"] = ingress.IP
+		if ingress.IPMode != nil {
+			att["ip_mode"] = string(*ingress.IPMode)
+		}
 		att["hostname"] = ingress.Hostname
 
 		out[i] = att

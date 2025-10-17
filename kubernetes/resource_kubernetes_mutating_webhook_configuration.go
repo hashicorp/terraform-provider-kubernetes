@@ -24,11 +24,12 @@ func resourceKubernetesMutatingWebhookConfiguration() *schema.Resource {
 	apiDoc := admissionregistrationv1.MutatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.MutatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		Description:   "Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).",
-		CreateContext: resourceKubernetesMutatingWebhookConfigurationCreate,
-		ReadContext:   resourceKubernetesMutatingWebhookConfigurationRead,
-		UpdateContext: resourceKubernetesMutatingWebhookConfigurationUpdate,
-		DeleteContext: resourceKubernetesMutatingWebhookConfigurationDelete,
+		DeprecationMessage: "Deprecated: this resource will be removed in the next major version of the provider. Use kubernetes_mutating_webhook_configuration_v1 instead.",
+		Description:        "Mutating Webhook Configuration configures a [mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).",
+		CreateContext:      resourceKubernetesMutatingWebhookConfigurationCreate,
+		ReadContext:        resourceKubernetesMutatingWebhookConfigurationRead,
+		UpdateContext:      resourceKubernetesMutatingWebhookConfigurationUpdate,
+		DeleteContext:      resourceKubernetesMutatingWebhookConfigurationDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

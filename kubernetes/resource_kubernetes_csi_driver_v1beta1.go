@@ -19,12 +19,13 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesCSIDriverV1Beta1() *schema.Resource {
+func resourceKubernetesCSIDriverV1Beta1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesCSIDriverV1Beta1Create,
-		ReadContext:   resourceKubernetesCSIDriverV1Beta1Read,
-		UpdateContext: resourceKubernetesCSIDriverV1Beta1Update,
-		DeleteContext: resourceKubernetesCSIDriverV1Beta1Delete,
+		CreateContext:      resourceKubernetesCSIDriverV1Beta1Create,
+		ReadContext:        resourceKubernetesCSIDriverV1Beta1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesCSIDriverV1Beta1Update,
+		DeleteContext:      resourceKubernetesCSIDriverV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

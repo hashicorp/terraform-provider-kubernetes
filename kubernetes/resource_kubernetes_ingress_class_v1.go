@@ -18,14 +18,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func resourceKubernetesIngressClassV1() *schema.Resource {
+func resourceKubernetesIngressClassV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "Ingresses can be implemented by different controllers, often with different configuration. Each Ingress should specify a class, a reference to an IngressClass resource that contains additional configuration including the name of the controller that should implement the class.",
-		CreateContext: resourceKubernetesIngressClassV1Create,
-		ReadContext:   resourceKubernetesIngressClassV1Read,
-		UpdateContext: resourceKubernetesIngressClassV1Update,
-		DeleteContext: resourceKubernetesIngressClassV1Delete,
-		Schema:        resourceKubernetesIngressClassV1Schema(),
+		Description:        "Ingresses can be implemented by different controllers, often with different configuration. Each Ingress should specify a class, a reference to an IngressClass resource that contains additional configuration including the name of the controller that should implement the class.",
+		CreateContext:      resourceKubernetesIngressClassV1Create,
+		ReadContext:        resourceKubernetesIngressClassV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesIngressClassV1Update,
+		DeleteContext:      resourceKubernetesIngressClassV1Delete,
+		Schema:             resourceKubernetesIngressClassV1Schema(),
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNonNamespaced,
 		},

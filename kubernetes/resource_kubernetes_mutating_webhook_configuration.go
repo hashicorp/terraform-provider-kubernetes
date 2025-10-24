@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -167,7 +167,7 @@ func resourceKubernetesMutatingWebhookConfigurationCreate(ctx context.Context, d
 		requestv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
 		responsev1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
 		copier.Copy(requestv1beta1, cfg)
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Create(ctx, requestv1beta1, metav1.CreateOptions{})
+		responsev1beta1, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(ctx, requestv1beta1, metav1.CreateOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
 		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Create(ctx, &cfg, metav1.CreateOptions{})
@@ -209,7 +209,7 @@ func resourceKubernetesMutatingWebhookConfigurationRead(ctx context.Context, d *
 	}
 	if useadmissionregistrationv1beta1 {
 		cfgv1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
+		cfgv1beta1, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		copier.Copy(cfg, cfgv1beta1)
 	} else {
 		cfg, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
@@ -279,7 +279,7 @@ func resourceKubernetesMutatingWebhookConfigurationUpdate(ctx context.Context, d
 	}
 	if useadmissionregistrationv1beta1 {
 		responsev1beta1 := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
+		responsev1beta1, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
 		res, err = conn.AdmissionregistrationV1().MutatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})

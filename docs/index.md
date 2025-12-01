@@ -25,13 +25,13 @@ resource "kubernetes_namespace" "example" {
 }
 ```
 
+## Terraform version
+
+This provider requires Terraform version `v1.0.0` or above. 
+
 ## Kubernetes versions
 
-Both backward and forward compatibility with Kubernetes API is mostly defined by the [official K8S Go library](https://github.com/kubernetes/kubernetes) (prior to `1.1` release) and [client Go library](https://github.com/kubernetes/client-go) which we ship with Terraform. Below are versions of the library bundled with given versions of Terraform.
-
-* Terraform `<= 0.9.6` (prior to provider split) - Kubernetes `1.5.4`
-* Terraform `0.9.7` (prior to provider split) `< 1.1` (provider version) - Kubernetes `1.6.1`
-* `1.1+` - Kubernetes `1.7`
+Both backward and forward compatibility with Kubernetes API is mostly defined by the [official K8S Go library](https://github.com/kubernetes/kubernetes) and [client Go library](https://github.com/kubernetes/client-go) which we ship with Terraform. Below are versions of the library bundled with given versions of Terraform.
 
 ## Stacking with managed Kubernetes cluster resources
 

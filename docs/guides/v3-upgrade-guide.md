@@ -47,7 +47,7 @@ $ terraform plan
 
 Using the output from `terraform plan`, you can make modifications to your existing Terraform config, to avoid any unwanted resource changes. 
 
-### Rolling back to version 2.x.x.
+### Rolling back to version 2.x.x
 
 If you've run the above upgrade and plan, but you don't want to proceed with the 3.0 upgrade, you can roll back using the following steps. NOTE: this will only work if you haven't run `terraform apply` or `terraform refresh` while testing version 3 of the provider.
 

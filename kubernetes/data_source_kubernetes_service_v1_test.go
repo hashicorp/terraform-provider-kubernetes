@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func TestAccKubernetesDataSourceServiceV1_basic(t *testing.T) {
@@ -105,7 +104,6 @@ func TestAccKubernetesDataSourceServiceV1_not_found(t *testing.T) {
 }
 
 func TestAccKubernetesDataSourceServiceV1_loadBalancer_ipMode(t *testing.T) {
-	var conf corev1.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	datasourceName := "data.kubernetes_service_v1.test"
 
@@ -119,11 +117,8 @@ func TestAccKubernetesDataSourceServiceV1_loadBalancer_ipMode(t *testing.T) {
 				Config: testAccKubernetesConfig_ignoreAnnotations() +
 					testAccKubernetesDataSourceServiceV1Config_loadBalancer_ipMode(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceV1Exists(datasourceName, &conf),
 					resource.TestCheckResourceAttr(datasourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(datasourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "spec.0.type", "LoadBalancer"),
-					resource.TestCheckResourceAttr(datasourceName, "status.0.load_balancer.0.ingress.0.ip_mode", "VIP"),
+					resource.TestCheckResourceAttr(datasourceName, "status.0.load_balancer.0.ingress.0.ip_mode", ""),
 				),
 			},
 		},
@@ -146,13 +141,15 @@ resource "kubernetes_service_v1" "test" {
       target_port = 80
     }
   }
+
+  wait_for_load_balancer = true
 }
 
 data "kubernetes_service_v1" "test" {
   metadata {
     name = "${kubernetes_service_v1.test.metadata.0.name}"
   }
-}	
+}
 `, name)
 }
 

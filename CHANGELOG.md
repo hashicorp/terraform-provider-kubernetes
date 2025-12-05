@@ -1,3 +1,10 @@
+## 3.0.1 (Dec 5, 2025)
+
+HOTFIX:
+
+* Fix missing `ip_mode` attribute in `kubernetes_service_v1` data source. [[GH-2807](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2807)]
+ 
+
 ## 3.0.0 (Dec 3, 2025)
 
 ENHANCEMENTS:

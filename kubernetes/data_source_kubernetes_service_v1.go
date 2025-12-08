@@ -227,6 +227,10 @@ func dataSourceKubernetesServiceV1(deprecationMessage string) *schema.Resource {
 													Type:     schema.TypeString,
 													Computed: true,
 												},
+												"ip_mode": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
 												"hostname": {
 													Type:     schema.TypeString,
 													Computed: true,

@@ -104,6 +104,15 @@ func resourceKubernetesPersistentVolumeClaimV1Create(ctx context.Context, d *sch
 	if err != nil {
 		return diag.FromErr(err)
 	}
+	if claim.Spec.DataSource != nil {
+		_, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Get(ctx, claim.Spec.DataSource.Name, metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				return diag.Errorf("data source PersistentVolumeClaim '%s' not found", claim.Spec.DataSource.Name)
+			}
+			return diag.FromErr(err)
+		}
+	}
 	log.Printf("[INFO] Creating new persistent volume claim: %#v", claim)
 	out, err := conn.CoreV1().PersistentVolumeClaims(claim.Namespace).Create(ctx, claim, metav1.CreateOptions{})
 	if err != nil {

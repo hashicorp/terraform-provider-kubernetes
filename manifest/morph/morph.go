@@ -298,10 +298,12 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 	}
 	switch {
 	case t.Is(tftypes.Tuple{}):
-		var eltypes []tftypes.Type = make([]tftypes.Type, len(tvals))
+		schemaTypes := t.(tftypes.Tuple).ElementTypes
 		var lvals []tftypes.Value = make([]tftypes.Value, len(tvals))
-		if len(tvals) != len(t.(tftypes.Tuple).ElementTypes) {
-			if len(t.(tftypes.Tuple).ElementTypes) > 1 {
+		outputTypes := make([]tftypes.Type, len(tvals))
+		// Handle case where schema has 1 element type but data has multiple elements
+		if len(tvals) != len(schemaTypes) {
+			if len(schemaTypes) > 1 {
 				diags = append(diags, &tfprotov5.Diagnostic{
 					Attribute: p,
 					Severity:  tfprotov5.DiagnosticSeverityError,
@@ -311,17 +313,14 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 				return tftypes.Value{}, diags
 			}
 			// this is the special case workaround for non-uniform lists in OpenAPI (e.g. for CustomResourceDefinitionSpec.versions)
+			schemaTypes = make([]tftypes.Type, len(tvals))
 			for i := range tvals {
-				eltypes[i] = t.(tftypes.Tuple).ElementTypes[0]
-			}
-		} else {
-			for i := range tvals {
-				eltypes[i] = t.(tftypes.Tuple).ElementTypes[i]
+				schemaTypes[i] = t.(tftypes.Tuple).ElementTypes[0]
 			}
 		}
 		for i, v := range tvals {
 			elp := p.WithElementKeyInt(i)
-			nv, d := ValueToType(v, eltypes[i], elp)
+			nv, d := ValueToType(v, schemaTypes[i], elp)
 			if len(d) > 0 {
 				diags = append(diags, d...)
 				for i := range d {
@@ -337,9 +336,15 @@ func morphTupleIntoType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePat
 				}
 			}
 			lvals[i] = nv
-			eltypes[i] = nv.Type()
+			// Preserve DynamicPseudoType from schema, otherwise use actual morphed type
+			// (which may be expanded from nested tuple morphing)
+			if schemaTypes[i].Is(tftypes.DynamicPseudoType) {
+				outputTypes[i] = tftypes.DynamicPseudoType
+			} else {
+				outputTypes[i] = nv.Type()
+			}
 		}
-		return newValue(tftypes.Tuple{ElementTypes: eltypes}, lvals, p)
+		return newValue(tftypes.Tuple{ElementTypes: outputTypes}, lvals, p)
 	case t.Is(tftypes.List{}):
 		var lvals []tftypes.Value = make([]tftypes.Value, len(tvals))
 		for i, v := range tvals {
@@ -634,9 +639,18 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 				ovals[k] = nv
 			}
 		}
+		// Build output type preserving DynamicPseudoType from schema while allowing
+		// type expansion for tuples (e.g., when schema has 1 element but data has many)
 		otypes := make(map[string]tftypes.Type, len(ovals))
 		for k, v := range ovals {
-			otypes[k] = v.Type()
+			schemaType := t.(tftypes.Object).AttributeTypes[k]
+			if schemaType.Is(tftypes.DynamicPseudoType) {
+				// Preserve DynamicPseudoType to ensure type consistency between plan and apply
+				otypes[k] = tftypes.DynamicPseudoType
+			} else {
+				// Use actual type to allow expansion (e.g., tuples with variable length)
+				otypes[k] = v.Type()
+			}
 		}
 		return tftypes.NewValue(tftypes.Object{AttributeTypes: otypes}, ovals), diags
 	case t.Is(tftypes.Map{}):
@@ -738,4 +752,172 @@ func newValue(t tftypes.Type, val interface{}, p *tftypes.AttributePath) (tftype
 		return tftypes.Value{}, diags
 	}
 	return tftypes.NewValue(t, val), nil
+}
+
+// MorphTypeStructure converts a value to have a different type structure while preserving
+// the underlying data. This is needed when plan and apply produce values with different
+// type structures due to DynamicPseudoType being converted to concrete types during
+// serialization/deserialization.
+//
+// For example, if the source has type Object{masquerade: DynamicPseudoType} and the target
+// has type Object{masquerade: Object{}}, this function will re-wrap the nested values
+// to match the target type structure.
+func MorphTypeStructure(source tftypes.Value, targetType tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, error) {
+	if source.IsNull() {
+		return tftypes.NewValue(targetType, nil), nil
+	}
+	if !source.IsKnown() {
+		return tftypes.NewValue(targetType, tftypes.UnknownValue), nil
+	}
+
+	// If source type equals target type, return as-is
+	if source.Type().Equal(targetType) {
+		return source, nil
+	}
+
+	// Handle Objects
+	if targetType.Is(tftypes.Object{}) {
+		var vals map[string]tftypes.Value
+		// Try to extract as object - works for both Object and DynamicPseudoType containing object
+		if err := source.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+
+		targetAttrs := targetType.(tftypes.Object).AttributeTypes
+		newVals := make(map[string]tftypes.Value, len(targetAttrs))
+
+		// Process each target attribute
+		for k, targetAttrType := range targetAttrs {
+			np := p.WithAttributeName(k)
+			if sourceVal, ok := vals[k]; ok {
+				newVal, err := MorphTypeStructure(sourceVal, targetAttrType, np)
+				if err != nil {
+					return tftypes.Value{}, err
+				}
+				newVals[k] = newVal
+			} else {
+				// Missing in source - add as null
+				newVals[k] = tftypes.NewValue(targetAttrType, nil)
+			}
+		}
+
+		return tftypes.NewValue(targetType, newVals), nil
+	}
+
+	// Handle Lists
+	if targetType.Is(tftypes.List{}) {
+		var vals []tftypes.Value
+		if err := source.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+
+		elemType := targetType.(tftypes.List).ElementType
+		newVals := make([]tftypes.Value, len(vals))
+		for i, v := range vals {
+			np := p.WithElementKeyInt(i)
+			newVal, err := MorphTypeStructure(v, elemType, np)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+			newVals[i] = newVal
+		}
+
+		return tftypes.NewValue(targetType, newVals), nil
+	}
+
+	// Handle Tuples
+	if targetType.Is(tftypes.Tuple{}) {
+		var vals []tftypes.Value
+		if err := source.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+
+		elemTypes := targetType.(tftypes.Tuple).ElementTypes
+		if len(vals) != len(elemTypes) {
+			return tftypes.Value{}, p.NewErrorf("tuple length mismatch: source has %d elements, target expects %d", len(vals), len(elemTypes))
+		}
+
+		newVals := make([]tftypes.Value, len(vals))
+		for i, v := range vals {
+			np := p.WithElementKeyInt(i)
+			newVal, err := MorphTypeStructure(v, elemTypes[i], np)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+			newVals[i] = newVal
+		}
+
+		return tftypes.NewValue(targetType, newVals), nil
+	}
+
+	// Handle Maps
+	if targetType.Is(tftypes.Map{}) {
+		var vals map[string]tftypes.Value
+		if err := source.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+
+		elemType := targetType.(tftypes.Map).ElementType
+		newVals := make(map[string]tftypes.Value, len(vals))
+		for k, v := range vals {
+			np := p.WithElementKeyString(k)
+			newVal, err := MorphTypeStructure(v, elemType, np)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+			newVals[k] = newVal
+		}
+
+		return tftypes.NewValue(targetType, newVals), nil
+	}
+
+	// Handle Sets
+	if targetType.Is(tftypes.Set{}) {
+		var vals []tftypes.Value
+		if err := source.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+
+		elemType := targetType.(tftypes.Set).ElementType
+		newVals := make([]tftypes.Value, len(vals))
+		for i, v := range vals {
+			newVal, err := MorphTypeStructure(v, elemType, p)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+			newVals[i] = newVal
+		}
+
+		return tftypes.NewValue(targetType, newVals), nil
+	}
+
+	// Handle DynamicPseudoType target - return source as-is
+	if targetType.Is(tftypes.DynamicPseudoType) {
+		return source, nil
+	}
+
+	// For primitives (String, Number, Bool), extract and re-wrap
+	switch {
+	case targetType.Is(tftypes.String):
+		var s string
+		if err := source.As(&s); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+		return tftypes.NewValue(targetType, s), nil
+	case targetType.Is(tftypes.Number):
+		var n *big.Float
+		if err := source.As(&n); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+		return tftypes.NewValue(targetType, n), nil
+	case targetType.Is(tftypes.Bool):
+		var b bool
+		if err := source.As(&b); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+		return tftypes.NewValue(targetType, b), nil
+	}
+
+	// Fallback - return error for unsupported conversions
+	return tftypes.Value{}, p.NewErrorf("cannot morph type %s to %s", source.Type().String(), targetType.String())
 }

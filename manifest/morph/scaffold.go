@@ -20,22 +20,28 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 	}
 	switch {
 	case t.Is(tftypes.Object{}):
-		atts := t.(tftypes.Object).AttributeTypes
+		schemaTypes := t.(tftypes.Object).AttributeTypes
 		var vals map[string]tftypes.Value
-		ovals := make(map[string]tftypes.Value, len(atts))
-		otypes := make(map[string]tftypes.Type, len(atts))
+		ovals := make(map[string]tftypes.Value, len(schemaTypes))
+		otypes := make(map[string]tftypes.Type, len(schemaTypes))
 		err := v.As(&vals)
 		if err != nil {
 			return tftypes.Value{}, p.NewError(err)
 		}
-		for name, att := range atts {
+		for name, att := range schemaTypes {
 			np := p.WithAttributeName(name)
 			nv, err := DeepUnknown(att, vals[name], np)
 			if err != nil {
 				return tftypes.Value{}, np.NewError(err)
 			}
 			ovals[name] = nv
-			otypes[name] = nv.Type()
+			// Preserve DynamicPseudoType from schema, otherwise use actual type
+			// to allow for tuple expansion
+			if att.Is(tftypes.DynamicPseudoType) {
+				otypes[name] = tftypes.DynamicPseudoType
+			} else {
+				otypes[name] = nv.Type()
+			}
 		}
 		return tftypes.NewValue(tftypes.Object{AttributeTypes: otypes}, ovals), nil
 	case t.Is(tftypes.Map{}):
@@ -65,9 +71,15 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			if len(atts) != 1 {
 				return tftypes.Value{}, p.NewErrorf("[%s] incompatible tuple types", p.String())
 			}
+			// Preserve DynamicPseudoType when expanding tuples
+			originalType := t.(tftypes.Tuple).ElementTypes[0]
 			atts = make([]tftypes.Type, len(v.Type().(tftypes.Tuple).ElementTypes))
 			for i := range v.Type().(tftypes.Tuple).ElementTypes {
-				atts[i] = v.Type().(tftypes.Tuple).ElementTypes[i]
+				if originalType.Is(tftypes.DynamicPseudoType) {
+					atts[i] = tftypes.DynamicPseudoType
+				} else {
+					atts[i] = v.Type().(tftypes.Tuple).ElementTypes[i]
+				}
 			}
 		}
 		var vals []tftypes.Value

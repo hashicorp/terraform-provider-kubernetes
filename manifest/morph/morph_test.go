@@ -136,6 +136,7 @@ func TestMorphValueToType(t *testing.T) {
 		},
 		// This covers the case were we need to represent lists that contain dynamicPseudoType sub-elements
 		// because the dynamicPseudoType might hold heterogenous types
+		// Output preserves DynamicPseudoType in type structure to ensure consistency between plan and apply
 		"tuple(single)->tuple": {
 			In: sampleInType{
 				V: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String, tftypes.String}}, []tftypes.Value{
@@ -145,7 +146,7 @@ func TestMorphValueToType(t *testing.T) {
 				}),
 				T: tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType}},
 			},
-			Out: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String, tftypes.String}}, []tftypes.Value{
+			Out: tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType, tftypes.DynamicPseudoType, tftypes.DynamicPseudoType}}, []tftypes.Value{
 				tftypes.NewValue(tftypes.String, "foo"),
 				tftypes.NewValue(tftypes.String, "bar"),
 				tftypes.NewValue(tftypes.String, "baz"),
@@ -484,6 +485,7 @@ func TestMorphValueToType(t *testing.T) {
 			}),
 		},
 		// morphing to tuple attributes to "template tuples" (containing dynamic) should result in the same number of elements as the input
+		// Output preserves DynamicPseudoType in type structure to ensure consistency between plan and apply
 		"object(dynamic) -> object": {
 			In: sampleInType{
 				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
@@ -500,13 +502,32 @@ func TestMorphValueToType(t *testing.T) {
 				}},
 			},
 			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-				"one": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String}},
+				"one": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType, tftypes.DynamicPseudoType}},
 			}}, map[string]tftypes.Value{
-				"one": tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String, tftypes.String}},
+				"one": tftypes.NewValue(tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.DynamicPseudoType, tftypes.DynamicPseudoType}},
 					[]tftypes.Value{
 						tftypes.NewValue(tftypes.String, "bar"),
 						tftypes.NewValue(tftypes.String, "baz"),
 					}),
+			}),
+		},
+		// Regression test: morphObjectToType with empty object and DynamicPseudoType schema
+		// Without fix, output type would be Object{data: Object{}} instead of Object{data: DynamicPseudoType}
+		"object(empty-dynamic) -> object": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"data": tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+				}}, map[string]tftypes.Value{
+					"data": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{}}, map[string]tftypes.Value{}),
+				}),
+				T: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"data": tftypes.DynamicPseudoType,
+				}},
+			},
+			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"data": tftypes.DynamicPseudoType, // Must preserve DynamicPseudoType
+			}}, map[string]tftypes.Value{
+				"data": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{}}, map[string]tftypes.Value{}),
 			}),
 		},
 	}
@@ -715,4 +736,170 @@ func formatDiagnostics(diags []*tfprotov5.Diagnostic) string {
 		b.WriteString(fmt.Sprintf("<Severity> [%s] <Summary> [%s] <Detail> [%s] <Attribute> [%s]\n", d.Severity, d.Summary, d.Detail, d.Attribute))
 	}
 	return b.String()
+}
+
+func TestMorphTypeStructure(t *testing.T) {
+	type sampleInType struct {
+		Source     tftypes.Value
+		TargetType tftypes.Type
+	}
+	samples := map[string]struct {
+		In       sampleInType
+		Expected tftypes.Value
+		HasError bool
+	}{
+		"dynamic-to-concrete-empty-object": {
+			// Simulates the KubeVirt masquerade case: source has DynamicPseudoType, target has Object{}
+			In: sampleInType{
+				Source: tftypes.NewValue(
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"masquerade": tftypes.DynamicPseudoType,
+					}},
+					map[string]tftypes.Value{
+						"masquerade": tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+							map[string]tftypes.Value{},
+						),
+					},
+				),
+				TargetType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"masquerade": tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+				}},
+			},
+			Expected: tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"masquerade": tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+				}},
+				map[string]tftypes.Value{
+					"masquerade": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+						map[string]tftypes.Value{},
+					),
+				},
+			),
+		},
+		"nested-dynamic-to-concrete": {
+			// Deeply nested DynamicPseudoType to concrete
+			In: sampleInType{
+				Source: tftypes.NewValue(
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"spec": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"data": tftypes.DynamicPseudoType,
+						}},
+					}},
+					map[string]tftypes.Value{
+						"spec": tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"data": tftypes.DynamicPseudoType,
+							}},
+							map[string]tftypes.Value{
+								"data": tftypes.NewValue(tftypes.String, "test"),
+							},
+						),
+					},
+				),
+				TargetType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"spec": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"data": tftypes.String,
+					}},
+				}},
+			},
+			Expected: tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"spec": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"data": tftypes.String,
+					}},
+				}},
+				map[string]tftypes.Value{
+					"spec": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"data": tftypes.String,
+						}},
+						map[string]tftypes.Value{
+							"data": tftypes.NewValue(tftypes.String, "test"),
+						},
+					),
+				},
+			),
+		},
+		"list-with-dynamic-elements": {
+			In: sampleInType{
+				Source: tftypes.NewValue(
+					tftypes.List{ElementType: tftypes.DynamicPseudoType},
+					[]tftypes.Value{
+						tftypes.NewValue(tftypes.String, "a"),
+						tftypes.NewValue(tftypes.String, "b"),
+					},
+				),
+				TargetType: tftypes.List{ElementType: tftypes.String},
+			},
+			Expected: tftypes.NewValue(
+				tftypes.List{ElementType: tftypes.String},
+				[]tftypes.Value{
+					tftypes.NewValue(tftypes.String, "a"),
+					tftypes.NewValue(tftypes.String, "b"),
+				},
+			),
+		},
+		"same-type-passthrough": {
+			In: sampleInType{
+				Source: tftypes.NewValue(
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"name": tftypes.String,
+					}},
+					map[string]tftypes.Value{
+						"name": tftypes.NewValue(tftypes.String, "test"),
+					},
+				),
+				TargetType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"name": tftypes.String,
+				}},
+			},
+			Expected: tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"name": tftypes.String,
+				}},
+				map[string]tftypes.Value{
+					"name": tftypes.NewValue(tftypes.String, "test"),
+				},
+			),
+		},
+		"null-value": {
+			In: sampleInType{
+				Source:     tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+				TargetType: tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+			},
+			Expected: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{}}, nil),
+		},
+		"unknown-value": {
+			In: sampleInType{
+				Source:     tftypes.NewValue(tftypes.DynamicPseudoType, tftypes.UnknownValue),
+				TargetType: tftypes.String,
+			},
+			Expected: tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+		},
+	}
+
+	for name, sample := range samples {
+		t.Run(name, func(t *testing.T) {
+			result, err := MorphTypeStructure(sample.In.Source, sample.In.TargetType, tftypes.NewAttributePath())
+			if sample.HasError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+			if !result.Equal(sample.Expected) {
+				t.Errorf("Result mismatch:\n  Expected: %s\n  Got:      %s", sample.Expected, result)
+			}
+			// Also verify the type structure matches
+			if !result.Type().Equal(sample.Expected.Type()) {
+				t.Errorf("Type mismatch:\n  Expected: %s\n  Got:      %s", sample.Expected.Type(), result.Type())
+			}
+		})
+	}
 }

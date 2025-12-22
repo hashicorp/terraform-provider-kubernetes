@@ -299,6 +299,74 @@ func TestDeepUnknown(t *testing.T) {
 				},
 			),
 		},
+		// Regression test: DeepUnknown with DynamicPseudoType in Object schema
+		// Without fix, output type would have "preserve": Object{key: String} instead of DynamicPseudoType
+		"object-dynamic-pseudotype": {
+			In: deepUnknownTestSampleInput{
+				T: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"name":     tftypes.String,
+					"preserve": tftypes.DynamicPseudoType,
+				}},
+				V: tftypes.NewValue(
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"name":     tftypes.String,
+						"preserve": tftypes.Object{AttributeTypes: map[string]tftypes.Type{"key": tftypes.String}},
+					}},
+					map[string]tftypes.Value{
+						"name": tftypes.NewValue(tftypes.String, "test"),
+						"preserve": tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{"key": tftypes.String}},
+							map[string]tftypes.Value{"key": tftypes.NewValue(tftypes.String, "value")}),
+					}),
+			},
+			Out: tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"name":     tftypes.String,
+					"preserve": tftypes.DynamicPseudoType, // Must preserve DynamicPseudoType
+				}},
+				map[string]tftypes.Value{
+					"name": tftypes.NewValue(tftypes.String, "test"),
+					"preserve": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"key": tftypes.String}},
+						map[string]tftypes.Value{"key": tftypes.NewValue(tftypes.String, "value")}),
+				}),
+		},
+		// Regression test: DeepUnknown Tuple expansion with DynamicPseudoType
+		// Schema has 1 DynamicPseudoType element, value has 2 elements
+		// Without fix, expanded types would be concrete Object types instead of DynamicPseudoType
+		"tuple-dynamic-expansion": {
+			In: deepUnknownTestSampleInput{
+				T: tftypes.Tuple{ElementTypes: []tftypes.Type{
+					tftypes.DynamicPseudoType, // Schema element is DynamicPseudoType
+				}},
+				V: tftypes.NewValue(
+					tftypes.Tuple{ElementTypes: []tftypes.Type{
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+					}},
+					[]tftypes.Value{
+						tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+							map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "bar")}),
+						tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+							map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "baz")}),
+					}),
+			},
+			Out: tftypes.NewValue(
+				tftypes.Tuple{ElementTypes: []tftypes.Type{
+					tftypes.DynamicPseudoType, // Must preserve DynamicPseudoType
+					tftypes.DynamicPseudoType, // Must preserve DynamicPseudoType
+				}},
+				[]tftypes.Value{
+					tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+						map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "bar")}),
+					tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+						map[string]tftypes.Value{"foo": tftypes.NewValue(tftypes.String, "baz")}),
+				}),
+		},
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {

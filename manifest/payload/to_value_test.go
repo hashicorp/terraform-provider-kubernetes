@@ -187,14 +187,72 @@ func TestToTFValue(t *testing.T) {
 					"image": tftypes.DynamicPseudoType,
 				}},
 			},
+			// Output preserves DynamicPseudoType in the type structure to ensure type consistency
+			// between planned and actual state when handling CRDs with x-kubernetes-preserve-unknown-fields
 			Out: tftypes.NewValue(
 				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
-					"count": tftypes.Number,
-					"image": tftypes.String,
+					"count": tftypes.DynamicPseudoType,
+					"image": tftypes.DynamicPseudoType,
 				}},
 				map[string]tftypes.Value{
 					"count": tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(42)),
 					"image": tftypes.NewValue(tftypes.String, "25%"),
+				}),
+			Err: nil,
+		},
+		// Regression test: empty object with DynamicPseudoType schema (KubeVirt scenario)
+		// Without fix, output type would be Object{spec: Object{}} instead of Object{spec: DynamicPseudoType}
+		"empty-object-dynamic-pseudotype": {
+			In: sampleInType{
+				v: map[string]interface{}{
+					"spec": map[string]interface{}{}, // Empty object from K8s API
+				},
+				t: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"spec": tftypes.DynamicPseudoType, // Schema says DynamicPseudoType
+				}},
+			},
+			Out: tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"spec": tftypes.DynamicPseudoType, // OUTPUT TYPE must be DynamicPseudoType
+				}},
+				map[string]tftypes.Value{
+					"spec": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+						map[string]tftypes.Value{}),
+				}),
+			Err: nil,
+		},
+		// Regression test: nested DynamicPseudoType at leaf level
+		// Verifies DynamicPseudoType preserved through nested object structures
+		"nested-dynamic-pseudotype-leaf": {
+			In: sampleInType{
+				v: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"firmware": map[string]interface{}{"bootloader": "efi"},
+					},
+				},
+				t: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"spec": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"firmware": tftypes.DynamicPseudoType,
+					}},
+				}},
+			},
+			Out: tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"spec": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"firmware": tftypes.DynamicPseudoType, // Must preserve DynamicPseudoType
+					}},
+				}},
+				map[string]tftypes.Value{
+					"spec": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"firmware": tftypes.DynamicPseudoType,
+						}},
+						map[string]tftypes.Value{
+							"firmware": tftypes.NewValue(
+								tftypes.Object{AttributeTypes: map[string]tftypes.Type{"bootloader": tftypes.String}},
+								map[string]tftypes.Value{"bootloader": tftypes.NewValue(tftypes.String, "efi")}),
+						}),
 				}),
 			Err: nil,
 		},

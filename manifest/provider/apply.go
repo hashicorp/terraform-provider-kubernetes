@@ -474,7 +474,23 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		if err != nil {
 			return resp, err
 		}
-		plannedStateVal["object"] = morph.UnknownToNull(compObj)
+
+		// Morph the computed object's type structure to match the planned state's type.
+		// This is necessary because DynamicPseudoType in the schema gets converted to concrete
+		// types during serialization/deserialization. The planned state (after deserialization)
+		// has concrete types, so our output must match.
+		plannedObjectType := plannedStateVal["object"].Type()
+		morphedObj, err := morph.MorphTypeStructure(compObj, plannedObjectType, tftypes.NewAttributePath())
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to morph object type structure to match planned state",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
+		plannedStateVal["object"] = morph.UnknownToNull(morphedObj)
 
 		newStateVal := tftypes.NewValue(applyPlannedState.Type(), plannedStateVal)
 		s.logger.Trace("[ApplyResourceChange][Apply]", "new state value", dump(newStateVal))

@@ -155,102 +155,77 @@ func sliceToTFDynamicValue(in []interface{}, st tftypes.Type, th map[string]stri
 
 func sliceToTFListValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	il := make([]tftypes.Value, 0, len(in))
-	var oType tftypes.Type = tftypes.Type(nil)
+	schemaElementType := st.(tftypes.List).ElementType
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
-		iv, err := ToTFValue(v, st.(tftypes.List).ElementType, th, at.WithElementKeyInt(k))
+		iv, err := ToTFValue(v, schemaElementType, th, at.WithElementKeyInt(k))
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert list element value: %s", eap, err)
 		}
 		il = append(il, iv)
-		if oType == tftypes.Type(nil) {
-			oType = iv.Type()
-		}
-		if !oType.Is(iv.Type()) {
-			return tftypes.Value{}, eap.NewErrorf("[%s] conflicting list element type: %s", eap.String(), iv.Type())
-		}
 	}
-	// fallback for empty list, just use the requested type
-	if oType == tftypes.Type(nil) {
-		oType = st.(tftypes.List).ElementType
-	}
-	return tftypes.NewValue(tftypes.List{ElementType: oType}, il), nil
+	// Use the schema type directly to preserve DynamicPseudoType and other schema-defined types
+	return tftypes.NewValue(st, il), nil
 }
 
 func sliceToTFTupleValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	il := make([]tftypes.Value, len(in))
-	oTypes := make([]tftypes.Type, len(in))
-	ttypes := st.(tftypes.Tuple).ElementTypes
-	if len(ttypes) == 1 && len(il) > 1 {
-		ttypes = make([]tftypes.Type, len(in))
+	schemaTypes := st.(tftypes.Tuple).ElementTypes
+	// Handle case where schema has one element type but data has multiple elements
+	if len(schemaTypes) == 1 && len(il) > 1 {
+		schemaTypes = make([]tftypes.Type, len(in))
 		for i := range il {
-			ttypes[i] = st.(tftypes.Tuple).ElementTypes[0]
+			schemaTypes[i] = st.(tftypes.Tuple).ElementTypes[0]
 		}
 	}
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
-		et := ttypes[k]
+		et := schemaTypes[k]
 		iv, err := ToTFValue(v, et, th, at.WithElementKeyInt(k))
 		if err != nil {
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert list element [%d] to '%s': %s", eap.String(), k, et.String(), err)
 		}
 		il[k] = iv
-		oTypes[k] = iv.Type()
 	}
-	return tftypes.NewValue(tftypes.Tuple{ElementTypes: oTypes}, il), nil
+	// Use the schema types to preserve DynamicPseudoType and other schema-defined types
+	return tftypes.NewValue(tftypes.Tuple{ElementTypes: schemaTypes}, il), nil
 }
 
 func sliceToTFSetValue(in []interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	il := make([]tftypes.Value, len(in))
-	var oType tftypes.Type = tftypes.Type(nil)
+	schemaElementType := st.(tftypes.Set).ElementType
 	for k, v := range in {
 		eap := at.WithElementKeyInt(k)
-		iv, err := ToTFValue(v, st.(tftypes.Set).ElementType, th, at.WithElementKeyInt(k))
+		iv, err := ToTFValue(v, schemaElementType, th, at.WithElementKeyInt(k))
 		if err != nil {
-			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert list element [%d] to '%s': %s", eap, k, st.(tftypes.Set).ElementType.String(), err)
+			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert set element [%d] to '%s': %s", eap, k, schemaElementType.String(), err)
 		}
 		il[k] = iv
-		if oType == tftypes.Type(nil) {
-			oType = iv.Type()
-		}
-		if !oType.Is(iv.Type()) {
-			return tftypes.Value{}, eap.NewErrorf("[%s] conflicting list element type: %s", eap.String(), iv.Type())
-		}
 	}
-	// fallback for empty list, just use the requested type
-	if oType == tftypes.Type(nil) {
-		oType = st.(tftypes.Set).ElementType
-	}
-	return tftypes.NewValue(tftypes.Set{ElementType: oType}, il), nil
+	// Use the schema type directly to preserve DynamicPseudoType and other schema-defined types
+	return tftypes.NewValue(st, il), nil
 }
 
 func mapToTFMapValue(in map[string]interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	im := make(map[string]tftypes.Value)
-	var oType tftypes.Type
+	schemaElementType := st.(tftypes.Map).ElementType
 	for k, v := range in {
 		eap := at.WithElementKeyString(k)
-		mv, err := ToTFValue(v, st.(tftypes.Map).ElementType, th, eap)
+		mv, err := ToTFValue(v, schemaElementType, th, eap)
 		if err != nil {
-			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element '%s' to '%s': err", eap, st.(tftypes.Map).ElementType.String(), err)
+			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element '%s' to '%s': err", eap, schemaElementType.String(), err)
 		}
 		im[k] = mv
-		if oType == tftypes.Type(nil) {
-			oType = mv.Type()
-		}
-		if !oType.Is(im[k].Type()) {
-			return tftypes.Value{}, eap.NewErrorf("[%s] conflicting map element type: %s", eap.String(), mv.Type())
-		}
 	}
-	if oType == tftypes.Type(nil) {
-		oType = st.(tftypes.Map).ElementType
-	}
-	return tftypes.NewValue(tftypes.Map{ElementType: oType}, im), nil
+	// Use the schema type directly to preserve DynamicPseudoType and other schema-defined types
+	return tftypes.NewValue(st, im), nil
 }
 
 func mapToTFObjectValue(in map[string]interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
 	im := make(map[string]tftypes.Value)
-	oTypes := make(map[string]tftypes.Type)
-	for k, kt := range st.(tftypes.Object).AttributeTypes {
+	schemaTypes := st.(tftypes.Object).AttributeTypes
+	oTypes := make(map[string]tftypes.Type, len(schemaTypes))
+	for k, kt := range schemaTypes {
 		eap := at.WithAttributeName(k)
 		v, ok := in[k]
 		if !ok {
@@ -261,7 +236,13 @@ func mapToTFObjectValue(in map[string]interface{}, st tftypes.Type, th map[strin
 			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element value: %s", eap, err)
 		}
 		im[k] = nv
-		oTypes[k] = nv.Type()
+		// Preserve DynamicPseudoType from schema, otherwise use actual type
+		// to allow for tuple expansion
+		if kt.Is(tftypes.DynamicPseudoType) {
+			oTypes[k] = tftypes.DynamicPseudoType
+		} else {
+			oTypes[k] = nv.Type()
+		}
 	}
 	return tftypes.NewValue(tftypes.Object{AttributeTypes: oTypes}, im), nil
 }

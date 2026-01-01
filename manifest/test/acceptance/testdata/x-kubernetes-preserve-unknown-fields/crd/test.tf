@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2017, 2025
 # SPDX-License-Identifier: MPL-2.0
 
 resource "kubernetes_manifest" "customresourcedefinition_cephrbdmirrors_ceph_rook_io" {

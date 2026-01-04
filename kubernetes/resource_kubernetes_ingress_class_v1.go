@@ -52,6 +52,7 @@ func resourceKubernetesIngressClassV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: docIngressClassSpec["controller"],
 						Optional:    true,
+						ForceNew:    true,
 					},
 					"parameters": {
 						Type:        schema.TypeList,

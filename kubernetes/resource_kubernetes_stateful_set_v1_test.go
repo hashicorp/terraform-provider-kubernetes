@@ -336,6 +336,35 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStatefulSetV1_host_users(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_stateful_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0") // User namespaces is beta in 1.25
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigHostUsers(name, imageName, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.host_users", "true"),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigHostUsers(name, imageName, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.host_users", "false"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	var conf1, conf2 appsv1.StatefulSet
 	imageName := busyboxImage
@@ -1477,4 +1506,37 @@ func testAccKubernetesStatefulSetV1ConfigMinimalWithTemplateNamespace(name, imag
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesStatefulSetV1ConfigHostUsers(name, image string, hostUsers bool) string {
+	return fmt.Sprintf(`
+resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    replicas = 1
+    selector {
+      match_labels = {
+        app = "tf-acc-test"
+      }
+    }
+	service_name = "nginx"
+    template {
+      metadata {
+        labels = {
+          app = "tf-acc-test"
+        }
+      }
+      spec {
+        host_users = %t
+        container {
+          image = "%s"
+          name  = "test"
+        }
+      }
+    }
+  }
+}
+`, name, hostUsers, image)
 }

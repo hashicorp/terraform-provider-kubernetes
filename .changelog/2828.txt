@@ -1,0 +1,7 @@
+```release-note:enhancement
+Add User Namespaces support to following resources:
+* `kubernetes_pod_v1`
+* `kubernetes_daemonset_v1`
+* `kubernetes_deployment_v1`
+* `kubernetes_stateful_set_v1`
+```

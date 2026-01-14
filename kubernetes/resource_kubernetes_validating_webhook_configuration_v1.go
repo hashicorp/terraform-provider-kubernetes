@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -20,15 +20,16 @@ import (
 	copier "github.com/jinzhu/copier"
 )
 
-func resourceKubernetesValidatingWebhookConfigurationV1() *schema.Resource {
+func resourceKubernetesValidatingWebhookConfigurationV1(deprecationMessage string) *schema.Resource {
 	apiDoc := admissionregistrationv1.ValidatingWebhookConfiguration{}.SwaggerDoc()
 	webhookDoc := admissionregistrationv1.ValidatingWebhook{}.SwaggerDoc()
 	return &schema.Resource{
-		Description:   "Validating Webhook Configuration configures a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).",
-		CreateContext: resourceKubernetesValidatingWebhookConfigurationV1Create,
-		ReadContext:   resourceKubernetesValidatingWebhookConfigurationV1Read,
-		UpdateContext: resourceKubernetesValidatingWebhookConfigurationV1Update,
-		DeleteContext: resourceKubernetesValidatingWebhookConfigurationV1Delete,
+		Description:        "Validating Webhook Configuration configures a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#what-are-admission-webhooks).",
+		CreateContext:      resourceKubernetesValidatingWebhookConfigurationV1Create,
+		ReadContext:        resourceKubernetesValidatingWebhookConfigurationV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesValidatingWebhookConfigurationV1Update,
+		DeleteContext:      resourceKubernetesValidatingWebhookConfigurationV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNonNamespaced,
 		},
@@ -156,7 +157,7 @@ func resourceKubernetesValidatingWebhookConfigurationV1Create(ctx context.Contex
 		requestv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
 		responsev1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
 		copier.Copy(requestv1beta1, cfg)
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Create(ctx, requestv1beta1, metav1.CreateOptions{})
+		responsev1beta1, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx, requestv1beta1, metav1.CreateOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
 		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(ctx, &cfg, metav1.CreateOptions{})
@@ -198,7 +199,7 @@ func resourceKubernetesValidatingWebhookConfigurationV1Read(ctx context.Context,
 	}
 	if useadmissionregistrationv1beta1 {
 		cfgv1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-		cfgv1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
+		cfgv1beta1, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 		copier.Copy(cfg, cfgv1beta1)
 	} else {
 		cfg, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
@@ -273,7 +274,7 @@ func resourceKubernetesValidatingWebhookConfigurationV1Update(ctx context.Contex
 	}
 	if useadmissionregistrationv1beta1 {
 		responsev1beta1 := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
-		responsev1beta1, err = conn.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
+		responsev1beta1, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
 		copier.Copy(res, responsev1beta1)
 	} else {
 		res, err = conn.AdmissionregistrationV1().ValidatingWebhookConfigurations().Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})

@@ -16,13 +16,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesRoleV1() *schema.Resource {
+func resourceKubernetesRoleV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "A role contains rules that represent a set of permissions. Permissions are purely additive (there are no “deny” rules).",
-		CreateContext: resourceKubernetesRoleV1Create,
-		ReadContext:   resourceKubernetesRoleV1Read,
-		UpdateContext: resourceKubernetesRoleV1Update,
-		DeleteContext: resourceKubernetesRoleV1Delete,
+		Description:        "A role contains rules that represent a set of permissions. Permissions are purely additive (there are no “deny” rules).",
+		CreateContext:      resourceKubernetesRoleV1Create,
+		ReadContext:        resourceKubernetesRoleV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesRoleV1Update,
+		DeleteContext:      resourceKubernetesRoleV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},

@@ -14,8 +14,8 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
-	tf5server "github.com/hashicorp/terraform-plugin-go/tfprotov5/tf5server"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 )
 
@@ -33,14 +33,13 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-
 	muxer, err := mux.MuxServer(ctx, Version)
 	if err != nil {
 		log.Println(err.Error())
 		os.Exit(1)
 	}
 
-	opts := []tf5server.ServeOpt{}
+	opts := []tf6server.ServeOpt{}
 	if *debugFlag {
 		reattachConfigCh := make(chan *plugin.ReattachConfig)
 		go func() {
@@ -51,10 +50,10 @@ func main() {
 			}
 			printReattachConfig(reattachConfig)
 		}()
-		opts = append(opts, tf5server.WithDebug(ctx, reattachConfigCh, nil))
+		opts = append(opts, tf6server.WithDebug(ctx, reattachConfigCh, nil))
 	}
 
-	tf5server.Serve(providerName, func() tfprotov5.ProviderServer { return muxer }, opts...)
+	tf6server.Serve(providerName, func() tfprotov6.ProviderServer { return muxer }, opts...)
 }
 
 // convertReattachConfig converts plugin.ReattachConfig to tfexec.ReattachConfig

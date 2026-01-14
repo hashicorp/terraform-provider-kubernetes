@@ -15,10 +15,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesServiceV1() *schema.Resource {
+func dataSourceKubernetesServiceV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description: "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service. This data source allows you to pull data about such service.",
-		ReadContext: dataSourceKubernetesServiceV1Read,
+		Description:        "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service. This data source allows you to pull data about such service.",
+		ReadContext:        dataSourceKubernetesServiceV1Read,
+		DeprecationMessage: deprecationMessage,
+
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service", false),
 			"spec": {
@@ -222,6 +224,10 @@ func dataSourceKubernetesServiceV1() *schema.Resource {
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
 												"ip": {
+													Type:     schema.TypeString,
+													Computed: true,
+												},
+												"ip_mode": {
 													Type:     schema.TypeString,
 													Computed: true,
 												},

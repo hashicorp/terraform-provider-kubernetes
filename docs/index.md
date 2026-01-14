@@ -25,13 +25,13 @@ resource "kubernetes_namespace" "example" {
 }
 ```
 
+## Terraform version
+
+This provider requires Terraform version `v1.0.0` or above.
+
 ## Kubernetes versions
 
-Both backward and forward compatibility with Kubernetes API is mostly defined by the [official K8S Go library](https://github.com/kubernetes/kubernetes) (prior to `1.1` release) and [client Go library](https://github.com/kubernetes/client-go) which we ship with Terraform. Below are versions of the library bundled with given versions of Terraform.
-
-* Terraform `<= 0.9.6` (prior to provider split) - Kubernetes `1.5.4`
-* Terraform `0.9.7` (prior to provider split) `< 1.1` (provider version) - Kubernetes `1.6.1`
-* `1.1+` - Kubernetes `1.7`
+Both backward and forward compatibility with Kubernetes API is mostly defined by the [official K8S Go library](https://github.com/kubernetes/kubernetes) and [client Go library](https://github.com/kubernetes/client-go) which we ship with Terraform. Below are versions of the library bundled with given versions of Terraform.
 
 ## Stacking with managed Kubernetes cluster resources
 
@@ -116,7 +116,7 @@ provider "kubernetes" {
   host                   = var.cluster_endpoint
   cluster_ca_certificate = base64decode(var.cluster_ca_cert)
   exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
+    api_version = "client.authentication.k8s.io/v1"
     args        = ["eks", "get-token", "--cluster-name", var.cluster_name]
     command     = "aws"
   }
@@ -195,7 +195,7 @@ The following arguments are supported:
 * `token` - (Optional) Token of your service account. Can be sourced from `KUBE_TOKEN`.
 * `proxy_url` - (Optional) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported. Can be sourced from `KUBE_PROXY_URL`.
 * `exec` - (Optional) Configuration block to use an [exec-based credential plugin] (https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins), e.g. call an external command to receive user credentials.
-* `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1beta1`.
+* `api_version` - (Required) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1`.
 * `command` - (Required) Command to execute.
 * `args` - (Optional) List of arguments to pass when executing the plugin.
 * `env` - (Optional) Map of environment variables to set when executing the plugin.

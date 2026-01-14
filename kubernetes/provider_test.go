@@ -347,6 +347,16 @@ func skipIfNotRunningInKind(t *testing.T) {
 	}
 }
 
+func skipIfRunningInKind(t *testing.T) {
+	isRunningInKind, err := isRunningInKind()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isRunningInKind {
+		t.Skip("This test can't run in Kind - skipping")
+	}
+}
+
 func skipIfRunningInMinikube(t *testing.T) {
 	isInMinikube, err := isRunningInMinikube()
 	if err != nil {

@@ -1,3 +1,74 @@
+## 3.0.1 (Dec 5, 2025)
+
+HOTFIX:
+
+* Fix missing `ip_mode` attribute in `kubernetes_service_v1` data source. [[GH-2807](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2807)]
+ 
+
+## 3.0.0 (Dec 3, 2025)
+
+ENHANCEMENTS:
+
+* * Add support for sidecar containers via restart_policy field in init_container spec [[GH-2786](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2786)]
+* Add `ip_mode` attribute to service status [[GH-2784](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2784)]
+* Add support for ValidatingAdmissionPolicy [[GH-2794](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2794)]
+* Bump Kubernetes dependencies to v1.33 [[GH-2774](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2774)]
+
+DEPRECATIONS:
+
+* **Data Sources**
+- `kubernetes_config_map` → use `kubernetes_config_map_v1`
+- `kubernetes_namespace` → use `kubernetes_namespace_v1`
+- `kubernetes_secret` → use `kubernetes_secret_v1`
+- `kubernetes_service` → use `kubernetes_service_v1`
+- `kubernetes_pod` → use `kubernetes_pod_v1`
+- `kubernetes_service_account` → use `kubernetes_service_account_v1`
+- `kubernetes_persistent_volume_claim` → use `kubernetes_persistent_volume_claim_v1`
+- `kubernetes_storage_class` → use `kubernetes_storage_class_v1`
+- `kubernetes_ingress` → use `kubernetes_ingress_v1`
+
+**Resources**
+- `kubernetes_namespace` → use `kubernetes_namespace_v1`
+- `kubernetes_service` → use `kubernetes_service_v1`
+- `kubernetes_service_account` → use `kubernetes_service_account_v1`
+- `kubernetes_default_service_account` → use `kubernetes_default_service_account_v1`
+- `kubernetes_config_map` → use `kubernetes_config_map_v1`
+- `kubernetes_secret` → use `kubernetes_secret_v1`
+- `kubernetes_pod` → use `kubernetes_pod_v1`
+- `kubernetes_endpoints` → use `kubernetes_endpoints_v1`
+- `kubernetes_limit_range` → use `kubernetes_limit_range_v1`
+- `kubernetes_persistent_volume` → use `kubernetes_persistent_volume_v1`
+- `kubernetes_persistent_volume_claim` → use `kubernetes_persistent_volume_claim_v1`
+- `kubernetes_replication_controller` → use `kubernetes_replication_controller_v1`
+- `kubernetes_resource_quota` → use `kubernetes_resource_quota_v1`
+- `kubernetes_api_service` → use `kubernetes_api_service_v1`
+- `kubernetes_deployment` → use `kubernetes_deployment_v1`
+- `kubernetes_daemonset` → use `kubernetes_daemon_set_v1`
+- `kubernetes_stateful_set` → use `kubernetes_stateful_set_v1`
+- `kubernetes_job` → use `kubernetes_job_v1`
+- `kubernetes_cron_job` → use `kubernetes_cron_job_v1`
+- `kubernetes_horizontal_pod_autoscaler` → use `kubernetes_horizontal_pod_autoscaler_v1` or `kubernetes_horizontal_pod_autoscaler_v2`
+- `kubernetes_certificate_signing_request` → use `kubernetes_certificate_signing_request_v1`
+- `kubernetes_role` → use `kubernetes_role_v1`
+- `kubernetes_role_binding` → use `kubernetes_role_binding_v1`
+- `kubernetes_cluster_role` → use `kubernetes_cluster_role_v1`
+- `kubernetes_cluster_role_binding` → use `kubernetes_cluster_role_binding_v1`
+- `kubernetes_ingress` → use `kubernetes_ingress_v1`
+- `kubernetes_ingress_class` → use `kubernetes_ingress_class_v1`
+- `kubernetes_network_policy` → use `kubernetes_network_policy_v1`
+- `kubernetes_pod_disruption_budget` → use `kubernetes_pod_disruption_budget_v1`
+- `kubernetes_pod_security_policy` → removed upstream; use Pod Security Admission instead
+- `kubernetes_priority_class` → use `kubernetes_priority_class_v1`
+- `kubernetes_validating_webhook_configuration` → use `kubernetes_validating_webhook_configuration_v1`
+- `kubernetes_mutating_webhook_configuration` → use `kubernetes_mutating_webhook_configuration_v1`
+- `kubernetes_storage_class` → use `kubernetes_storage_class_v1`
+- `kubernetes_csi_driver` → use `kubernetes_csi_driver_v1` [[GH-2770](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2770)]
+
+BUG FIXES:
+
+* Environment variables should not override configuration when using `kubernetes_manifest`. [[GH-2788](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2788)]
+* `resource/kubernetes_daemon_set_v1`: fix an issue with the provider not waiting for rollout with `wait_for_rollout = true`. [[GH-2789](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2789)]
+
 ## 2.38.0 (Jul 21, 2025)
 
 ENHANCEMENTS:

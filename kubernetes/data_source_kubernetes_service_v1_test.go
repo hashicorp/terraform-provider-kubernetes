@@ -103,6 +103,56 @@ func TestAccKubernetesDataSourceServiceV1_not_found(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceServiceV1_loadBalancer_ipMode(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	datasourceName := "data.kubernetes_service_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNoLoadBalancersAvailable(t) },
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesServiceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesConfig_ignoreAnnotations() +
+					testAccKubernetesDataSourceServiceV1Config_loadBalancer_ipMode(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(datasourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(datasourceName, "status.0.load_balancer.0.ingress.0.ip_mode", ""),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesDataSourceServiceV1Config_loadBalancer_ipMode(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    type = "LoadBalancer"
+    selector = {
+      app = "test-app"
+    }
+    port {
+      port        = 80
+      target_port = 80
+    }
+  }
+
+  wait_for_load_balancer = true
+}
+
+data "kubernetes_service_v1" "test" {
+  metadata {
+    name = "${kubernetes_service_v1.test.metadata.0.name}"
+  }
+}
+`, name)
+}
+
 func testAccKubernetesDataSourceServiceV1_basic(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {

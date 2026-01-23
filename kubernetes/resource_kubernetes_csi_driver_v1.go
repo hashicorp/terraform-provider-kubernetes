@@ -21,13 +21,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesCSIDriverV1() *schema.Resource {
+func resourceKubernetesCSIDriverV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "The [Container Storage Interface](https://kubernetes-csi.github.io/docs/introduction.html) (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container Orchestration Systems (COs) like Kubernetes.",
-		CreateContext: resourceKubernetesCSIDriverV1Create,
-		ReadContext:   resourceKubernetesCSIDriverV1Read,
-		UpdateContext: resourceKubernetesCSIDriverV1Update,
-		DeleteContext: resourceKubernetesCSIDriverV1Delete,
+		Description:        "The [Container Storage Interface](https://kubernetes-csi.github.io/docs/introduction.html) (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container Orchestration Systems (COs) like Kubernetes.",
+		CreateContext:      resourceKubernetesCSIDriverV1Create,
+		ReadContext:        resourceKubernetesCSIDriverV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesCSIDriverV1Update,
+		DeleteContext:      resourceKubernetesCSIDriverV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

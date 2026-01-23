@@ -11,7 +11,7 @@ on:
         default: 2
       clusterVersion:
         description: The EKS cluster version
-        default: 1.27
+        default: 1.34
       nodesPerAz:
         description: The number of cluster nodes in each AZ
         default: 1
@@ -26,7 +26,7 @@ on:
         default: "^TestAcc"
       terraformVersion:
         description: Terraform version
-        default: 1.12.0
+        default: 1.14.0
   schedule:
     - cron: '0 20 * * *'
 
@@ -34,10 +34,10 @@ env:
   AWS_REGION: ${{ github.event.inputs.region || 'ca-central-1' }}
   KUBE_CONFIG_PATH: ${{ github.workspace }}/kubernetes/test-infra/eks/kubeconfig
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.12.0' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.14.0' }}
   TF_VAR_az_span: ${{ github.event.inputs.azSpan || '2' }}
   TF_VAR_capacity_type: ${{ 'SPOT' }}
-  TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion || '1.29' }}
+  TF_VAR_cluster_version: ${{ github.event.inputs.clusterVersion || '1.34' }}
   TF_VAR_nodes_per_az: ${{ github.event.inputs.nodesPerAz || '1' }}
   TF_VAR_instance_type: ${{ github.event.inputs.instanceType || 'm7g.large' }}
 

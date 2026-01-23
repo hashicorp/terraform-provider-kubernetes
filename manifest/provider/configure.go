@@ -84,9 +84,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			})
 			return response, nil
 		}
-	}
-	// check environment - this overrides any value found in provider configuration
-	if configPathEnv, ok := os.LookupEnv("KUBE_CONFIG_PATH"); ok && configPathEnv != "" {
+	} else if configPathEnv, ok := os.LookupEnv("KUBE_CONFIG_PATH"); ok && configPathEnv != "" {
 		configPath = configPathEnv
 	}
 	if len(configPath) > 0 {
@@ -122,12 +120,10 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			p.As(&pp)
 			precedence = append(precedence, pp)
 		}
-	}
-	//
-	// check environment for KUBE_CONFIG_PATHS
-	if configPathsEnv, ok := os.LookupEnv("KUBE_CONFIG_PATHS"); ok && configPathsEnv != "" {
+	} else if configPathsEnv, ok := os.LookupEnv("KUBE_CONFIG_PATHS"); ok && configPathsEnv != "" {
 		precedence = filepath.SplitList(configPathsEnv)
 	}
+
 	if len(precedence) > 0 {
 		for i, p := range precedence {
 			absPath, err := homedir.Expand(p)
@@ -159,8 +155,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			})
 			return response, nil
 		}
-	}
-	if clientCrtEnv, ok := os.LookupEnv("KUBE_CLIENT_CERT_DATA"); ok && clientCrtEnv != "" {
+	} else if clientCrtEnv, ok := os.LookupEnv("KUBE_CLIENT_CERT_DATA"); ok && clientCrtEnv != "" {
 		clientCertificate = clientCrtEnv
 	}
 	if len(clientCertificate) > 0 {
@@ -189,8 +184,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			})
 			return response, nil
 		}
-	}
-	if clusterCAEnv, ok := os.LookupEnv("KUBE_CLUSTER_CA_CERT_DATA"); ok && clusterCAEnv != "" {
+	} else if clusterCAEnv, ok := os.LookupEnv("KUBE_CLUSTER_CA_CERT_DATA"); ok && clusterCAEnv != "" {
 		clusterCaCertificate = clusterCAEnv
 	}
 	if len(clusterCaCertificate) > 0 {
@@ -219,8 +213,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			})
 			return response, nil
 		}
-	}
-	if insecureEnv, ok := os.LookupEnv("KUBE_INSECURE"); ok && insecureEnv != "" {
+	} else if insecureEnv, ok := os.LookupEnv("KUBE_INSECURE"); ok && insecureEnv != "" {
 		iv, err := strconv.ParseBool(insecureEnv)
 		if err != nil {
 			diags = append(diags, &tfprotov5.Diagnostic{
@@ -249,8 +242,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		overrides.ClusterInfo.TLSServerName = tlsServerName
-	}
-	if tlsServerName, ok := os.LookupEnv("KUBE_TLS_SERVER_NAME"); ok && tlsServerName != "" {
+	} else if tlsServerName, ok := os.LookupEnv("KUBE_TLS_SERVER_NAME"); ok && tlsServerName != "" {
 		overrides.ClusterInfo.TLSServerName = tlsServerName
 	}
 
@@ -272,9 +264,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			})
 			return response, nil
 		}
-	}
-	// check environment - this overrides any value found in provider configuration
-	if hostEnv, ok := os.LookupEnv("KUBE_HOST"); ok && hostEnv != "" {
+	} else if hostEnv, ok := os.LookupEnv("KUBE_HOST"); ok && hostEnv != "" {
 		host = hostEnv
 	}
 	if len(host) > 0 {
@@ -316,9 +306,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			})
 			return response, nil
 		}
-	}
-	// check environment - this overrides any value found in provider configuration
-	if clientKeyEnv, ok := os.LookupEnv("KUBE_CLIENT_KEY_DATA"); ok && clientKeyEnv != "" {
+	} else if clientKeyEnv, ok := os.LookupEnv("KUBE_CLIENT_KEY_DATA"); ok && clientKeyEnv != "" {
 		clientKey = clientKeyEnv
 	}
 	if len(clientKey) > 0 {
@@ -353,8 +341,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		overrides.CurrentContext = cfgContext
-	}
-	if cfgContext, ok := os.LookupEnv("KUBE_CTX"); ok && cfgContext != "" {
+	} else if cfgContext, ok := os.LookupEnv("KUBE_CTX"); ok && cfgContext != "" {
 		overrides.CurrentContext = cfgContext
 	}
 
@@ -375,8 +362,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		overrides.Context.Cluster = cfgCtxCluster
-	}
-	if cfgCtxCluster, ok := os.LookupEnv("KUBE_CTX_CLUSTER"); ok && cfgCtxCluster != "" {
+	} else if cfgCtxCluster, ok := os.LookupEnv("KUBE_CTX_CLUSTER"); ok && cfgCtxCluster != "" {
 		overrides.Context.Cluster = cfgCtxCluster
 	}
 
@@ -397,8 +383,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		if cfgContextAuthInfo != nil {
 			overrides.Context.AuthInfo = *cfgContextAuthInfo
 		}
-	}
-	if cfgContextAuthInfoEnv, ok := os.LookupEnv("KUBE_CTX_AUTH_INFO"); ok && cfgContextAuthInfoEnv != "" {
+	} else if cfgContextAuthInfoEnv, ok := os.LookupEnv("KUBE_CTX_AUTH_INFO"); ok && cfgContextAuthInfoEnv != "" {
 		overrides.Context.AuthInfo = cfgContextAuthInfoEnv
 	}
 
@@ -415,8 +400,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		overrides.AuthInfo.Username = username
-	}
-	if username, ok := os.LookupEnv("KUBE_USERNAME"); ok && username != "" {
+	} else if username, ok := os.LookupEnv("KUBE_USERNAME"); ok && username != "" {
 		overrides.AuthInfo.Username = username
 	}
 
@@ -433,8 +417,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		overrides.AuthInfo.Password = password
-	}
-	if password, ok := os.LookupEnv("KUBE_PASSWORD"); ok && password != "" {
+	} else if password, ok := os.LookupEnv("KUBE_PASSWORD"); ok && password != "" {
 		overrides.AuthInfo.Password = password
 	}
 
@@ -451,8 +434,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		overrides.AuthInfo.Token = token
-	}
-	if token, ok := os.LookupEnv("KUBE_TOKEN"); ok && token != "" {
+	} else if token, ok := os.LookupEnv("KUBE_TOKEN"); ok && token != "" {
 		overrides.AuthInfo.Token = token
 	}
 
@@ -469,8 +451,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			return response, nil
 		}
 		overrides.ClusterDefaults.ProxyURL = proxyURL
-	}
-	if proxyURL, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyURL != "" {
+	} else if proxyURL, ok := os.LookupEnv("KUBE_PROXY_URL"); ok && proxyURL != "" {
 		overrides.ClusterDefaults.ProxyURL = proxyURL
 	}
 

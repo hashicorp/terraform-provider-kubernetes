@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -18,8 +18,8 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 )
 
-var muxFactory = map[string]func() (tfprotov5.ProviderServer, error){
-	"kubernetes": func() (tfprotov5.ProviderServer, error) {
+var muxFactory = map[string]func() (tfprotov6.ProviderServer, error){
+	"kubernetes": func() (tfprotov6.ProviderServer, error) {
 		return mux.MuxServer(context.Background(), "Test")
 	},
 }
@@ -35,7 +35,7 @@ func TestAccKubernetesDeferredActions_2_step(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				ProtoV5ProviderFactories: muxFactory,
+				ProtoV6ProviderFactories: muxFactory,
 				ConfigDirectory: func(tscr config.TestStepConfigRequest) string {
 					return "./config-basic"
 				},
@@ -60,7 +60,7 @@ func TestAccKubernetesDeferredActions_2_step(t *testing.T) {
 				},
 			},
 			{
-				ProtoV5ProviderFactories: muxFactory,
+				ProtoV6ProviderFactories: muxFactory,
 				ConfigDirectory: func(tscr config.TestStepConfigRequest) string {
 					return "./config-basic"
 				},
@@ -85,7 +85,7 @@ func TestAccKubernetesDeferredActions_2_step(t *testing.T) {
 				},
 			},
 			{
-				ProtoV5ProviderFactories: muxFactory,
+				ProtoV6ProviderFactories: muxFactory,
 				ConfigDirectory: func(tscr config.TestStepConfigRequest) string {
 					return "./config-basic"
 				},

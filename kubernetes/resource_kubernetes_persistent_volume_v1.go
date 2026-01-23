@@ -27,13 +27,14 @@ const (
 	persistentVolumeAzureBlobError    = `Unable to apply Azure Disk configuration. Blob storage disks require configuration: kind = "Shared" or kind = "Dedicated"`
 )
 
-func resourceKubernetesPersistentVolumeV1() *schema.Resource {
+func resourceKubernetesPersistentVolumeV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "The resource provides a piece of networked storage in the cluster provisioned by an administrator. It is a resource in the cluster just like a node is a cluster resource. Persistent Volumes have a lifecycle independent of any individual pod that uses the PV. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/.",
-		CreateContext: resourceKubernetesPersistentVolumeV1Create,
-		ReadContext:   resourceKubernetesPersistentVolumeV1Read,
-		UpdateContext: resourceKubernetesPersistentVolumeV1Update,
-		DeleteContext: resourceKubernetesPersistentVolumeV1Delete,
+		Description:        "The resource provides a piece of networked storage in the cluster provisioned by an administrator. It is a resource in the cluster just like a node is a cluster resource. Persistent Volumes have a lifecycle independent of any individual pod that uses the PV. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/.",
+		CreateContext:      resourceKubernetesPersistentVolumeV1Create,
+		ReadContext:        resourceKubernetesPersistentVolumeV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesPersistentVolumeV1Update,
+		DeleteContext:      resourceKubernetesPersistentVolumeV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

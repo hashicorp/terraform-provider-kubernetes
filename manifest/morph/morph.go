@@ -6,6 +6,7 @@ package morph
 import (
 	"fmt"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -569,6 +570,18 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			nmvals[k] = nv
 		}
+		if t.(tftypes.Map).ElementType.Is(tftypes.DynamicPseudoType) {
+			nmvals, err = NormalizeDynamicMapElements(nmvals, p)
+			if err != nil {
+				diags = append(diags, &tfprotov5.Diagnostic{
+					Attribute: p,
+					Severity:  tfprotov5.DiagnosticSeverityError,
+					Summary:   "Failed to normalize map(dynamic) element types",
+					Detail:    err.Error(),
+				})
+				return tftypes.Value{}, diags
+			}
+		}
 		return newValue(t, nmvals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
@@ -674,6 +687,18 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			}
 			mvals[k] = nv
 		}
+		if t.(tftypes.Map).ElementType.Is(tftypes.DynamicPseudoType) {
+			mvals, err = NormalizeDynamicMapElements(mvals, p)
+			if err != nil {
+				diags = append(diags, &tfprotov5.Diagnostic{
+					Attribute: p,
+					Severity:  tfprotov5.DiagnosticSeverityError,
+					Summary:   "Failed to normalize map(dynamic) element types",
+					Detail:    err.Error(),
+				})
+				return tftypes.Value{}, diags
+			}
+		}
 		return newValue(t, mvals, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
@@ -752,6 +777,217 @@ func newValue(t tftypes.Type, val interface{}, p *tftypes.AttributePath) (tftype
 		return tftypes.Value{}, diags
 	}
 	return tftypes.NewValue(t, val), nil
+}
+
+// NormalizeDynamicMapElements normalizes the value set for a map(dynamic) so all
+// elements have a coherent type shape before serialization.
+//
+// If all element types already match, values are returned unchanged.
+// If elements are all objects with differing attribute sets/types, element
+// object types are merged by attribute name and missing/incompatible attributes
+// are represented as DynamicPseudoType.
+// If elements are not all objects and have differing types, an error is
+// returned rather than coercing values.
+func NormalizeDynamicMapElements(vals map[string]tftypes.Value, p *tftypes.AttributePath) (map[string]tftypes.Value, error) {
+	if p == nil {
+		p = tftypes.NewAttributePath()
+	}
+	if len(vals) == 0 {
+		return vals, nil
+	}
+
+	var firstType tftypes.Type
+	allSameType := true
+	allObjectTypes := true
+	for _, v := range vals {
+		if firstType == nil {
+			firstType = v.Type()
+		} else if !firstType.Equal(v.Type()) {
+			allSameType = false
+		}
+		if !v.Type().Is(tftypes.Object{}) {
+			allObjectTypes = false
+		}
+	}
+	if allSameType {
+		return vals, nil
+	}
+	if !allObjectTypes {
+		return nil, p.NewErrorf(
+			"[%s] cannot normalize map(dynamic) with incompatible element types: %s",
+			attributePathSummary(p),
+			describeMapElementTypes(vals),
+		)
+	}
+
+	mergedObjectType := mergeDynamicMapObjectType(vals)
+	mergedAttrTypes := mergedObjectType.AttributeTypes
+	normalized := make(map[string]tftypes.Value, len(vals))
+
+	for key, v := range vals {
+		ep := p.WithElementKeyString(key)
+		var objVals map[string]tftypes.Value
+		if err := v.As(&objVals); err != nil {
+			return nil, ep.NewError(err)
+		}
+
+		outVals := make(map[string]tftypes.Value, len(mergedAttrTypes))
+		for attrName, targetType := range mergedAttrTypes {
+			ap := ep.WithAttributeName(attrName)
+			if av, ok := objVals[attrName]; ok {
+				nv, err := normalizeMapObjectAttributeValue(av, targetType, ap)
+				if err != nil {
+					return nil, err
+				}
+				outVals[attrName] = nv
+				continue
+			}
+			outVals[attrName] = tftypes.NewValue(targetType, nil)
+		}
+		normalized[key] = tftypes.NewValue(mergedObjectType, outVals)
+	}
+
+	return normalized, nil
+}
+
+// NormalizeDynamicMapShapes recursively normalizes map(dynamic) values nested in
+// the supplied value to ensure serialization-safe element type structures.
+func NormalizeDynamicMapShapes(v tftypes.Value, p *tftypes.AttributePath) (tftypes.Value, error) {
+	if p == nil {
+		p = tftypes.NewAttributePath()
+	}
+	if !v.IsKnown() || v.IsNull() {
+		return v, nil
+	}
+
+	switch {
+	case v.Type().Is(tftypes.Object{}):
+		var vals map[string]tftypes.Value
+		if err := v.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+		atts := v.Type().(tftypes.Object).AttributeTypes
+		ovals := make(map[string]tftypes.Value, len(atts))
+		for name, attType := range atts {
+			np := p.WithAttributeName(name)
+			cv, ok := vals[name]
+			if !ok {
+				ovals[name] = tftypes.NewValue(attType, nil)
+				continue
+			}
+			nv, err := NormalizeDynamicMapShapes(cv, np)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+			ovals[name] = nv
+		}
+		return tftypes.NewValue(v.Type(), ovals), nil
+
+	case v.Type().Is(tftypes.Map{}):
+		var vals map[string]tftypes.Value
+		if err := v.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+		mvals := make(map[string]tftypes.Value, len(vals))
+		for key, el := range vals {
+			np := p.WithElementKeyString(key)
+			nv, err := NormalizeDynamicMapShapes(el, np)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+			mvals[key] = nv
+		}
+		if v.Type().(tftypes.Map).ElementType.Is(tftypes.DynamicPseudoType) {
+			var err error
+			mvals, err = NormalizeDynamicMapElements(mvals, p)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+		}
+		return tftypes.NewValue(v.Type(), mvals), nil
+
+	case v.Type().Is(tftypes.List{}) || v.Type().Is(tftypes.Set{}) || v.Type().Is(tftypes.Tuple{}):
+		var vals []tftypes.Value
+		if err := v.As(&vals); err != nil {
+			return tftypes.Value{}, p.NewError(err)
+		}
+		out := make([]tftypes.Value, len(vals))
+		for i, el := range vals {
+			np := p.WithElementKeyInt(i)
+			nv, err := NormalizeDynamicMapShapes(el, np)
+			if err != nil {
+				return tftypes.Value{}, err
+			}
+			out[i] = nv
+		}
+		return tftypes.NewValue(v.Type(), out), nil
+	}
+
+	return v, nil
+}
+
+func mergeDynamicMapObjectType(vals map[string]tftypes.Value) tftypes.Object {
+	attrType := make(map[string]tftypes.Type)
+	attrPresentCount := make(map[string]int)
+	attrTypeConsistent := make(map[string]bool)
+	totalElements := len(vals)
+
+	for _, v := range vals {
+		objType := v.Type().(tftypes.Object)
+		for name, t := range objType.AttributeTypes {
+			attrPresentCount[name]++
+			if priorType, ok := attrType[name]; !ok {
+				attrType[name] = t
+				attrTypeConsistent[name] = true
+			} else if !priorType.Equal(t) {
+				attrTypeConsistent[name] = false
+			}
+		}
+	}
+
+	merged := make(map[string]tftypes.Type, len(attrType))
+	for name, t := range attrType {
+		if attrPresentCount[name] != totalElements || !attrTypeConsistent[name] {
+			merged[name] = tftypes.DynamicPseudoType
+			continue
+		}
+		merged[name] = t
+	}
+	return tftypes.Object{AttributeTypes: merged}
+}
+
+func normalizeMapObjectAttributeValue(v tftypes.Value, targetType tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, error) {
+	if targetType.Is(tftypes.DynamicPseudoType) {
+		return v, nil
+	}
+	if v.Type().Equal(targetType) {
+		return v, nil
+	}
+	if v.IsNull() {
+		return tftypes.NewValue(targetType, nil), nil
+	}
+	if !v.IsKnown() {
+		return tftypes.NewValue(targetType, tftypes.UnknownValue), nil
+	}
+	return tftypes.Value{}, p.NewErrorf(
+		"[%s] incompatible map(dynamic) attribute type: expected %s, got %s",
+		attributePathSummary(p),
+		typeNameNoPrefix(targetType),
+		typeNameNoPrefix(v.Type()),
+	)
+}
+
+func describeMapElementTypes(vals map[string]tftypes.Value) string {
+	types := make(map[string]struct{}, len(vals))
+	for _, v := range vals {
+		types[typeNameNoPrefix(v.Type())] = struct{}{}
+	}
+	list := make([]string, 0, len(types))
+	for t := range types {
+		list = append(list, t)
+	}
+	sort.Strings(list)
+	return strings.Join(list, ", ")
 }
 
 // MorphTypeStructure converts a value to have a different type structure while preserving

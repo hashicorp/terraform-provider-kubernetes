@@ -514,6 +514,19 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		proposedVal["object"] = updatedObj
 	}
 
+	for _, attrName := range []string{"manifest", "object"} {
+		attrVal, ok := proposedVal[attrName]
+		if !ok {
+			continue
+		}
+		nv, diag := normalizePlannedDynamicMapShapes(attrName, attrVal, morph.NormalizeDynamicMapShapes)
+		if diag != nil {
+			resp.Diagnostics = append(resp.Diagnostics, diag)
+			return resp, nil
+		}
+		proposedVal[attrName] = nv
+	}
+
 	propStateVal := tftypes.NewValue(proposedState.Type(), proposedVal)
 	s.logger.Trace("[PlanResourceChange]", "new planned state", dump(propStateVal))
 
@@ -529,4 +542,22 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 
 	resp.PlannedState = &plannedState
 	return resp, nil
+}
+
+func normalizePlannedDynamicMapShapes(
+	attributeName string,
+	v tftypes.Value,
+	normalizer func(tftypes.Value, *tftypes.AttributePath) (tftypes.Value, error),
+) (tftypes.Value, *tfprotov5.Diagnostic) {
+	ap := tftypes.NewAttributePath().WithAttributeName(attributeName)
+	nv, err := normalizer(v, ap)
+	if err != nil {
+		return v, &tfprotov5.Diagnostic{
+			Attribute: ap,
+			Severity:  tfprotov5.DiagnosticSeverityError,
+			Summary:   "Failed to normalize dynamic map element types in planned state",
+			Detail:    err.Error(),
+		}
+	}
+	return nv, nil
 }

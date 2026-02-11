@@ -379,6 +379,73 @@ func TestMorphValueToType(t *testing.T) {
 				"three": tftypes.NewValue(tftypes.String, "baz"),
 			}),
 		},
+		"object(heterogeneous)->map(dynamic) normalized": {
+			In: sampleInType{
+				V: tftypes.NewValue(
+					tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"test": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"datas": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+						}},
+						"test2": tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+					}},
+					map[string]tftypes.Value{
+						"test": tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+								"datas": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+							}},
+							map[string]tftypes.Value{
+								"datas": tftypes.NewValue(
+									tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+									[]tftypes.Value{tftypes.NewValue(tftypes.String, "10.0.0.0/24")},
+								),
+							},
+						),
+						"test2": tftypes.NewValue(
+							tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+							map[string]tftypes.Value{},
+						),
+					},
+				),
+				T: tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+			},
+			Out: tftypes.NewValue(
+				tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+				map[string]tftypes.Value{
+					"test": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"datas": tftypes.DynamicPseudoType,
+						}},
+						map[string]tftypes.Value{
+							"datas": tftypes.NewValue(
+								tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+								[]tftypes.Value{tftypes.NewValue(tftypes.String, "10.0.0.0/24")},
+							),
+						},
+					),
+					"test2": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"datas": tftypes.DynamicPseudoType,
+						}},
+						map[string]tftypes.Value{
+							"datas": tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+						},
+					),
+				},
+			),
+		},
+		"object(incompatible-primitives)->map(dynamic) error": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"one": tftypes.String,
+					"two": tftypes.Number,
+				}}, map[string]tftypes.Value{
+					"one": tftypes.NewValue(tftypes.String, "foo"),
+					"two": tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(42)),
+				}),
+				T: tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+			},
+			WantErr: true,
+		},
 		"object->object": {
 			In: sampleInType{
 				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
@@ -902,4 +969,71 @@ func TestMorphTypeStructure(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNormalizeDynamicMapElements(t *testing.T) {
+	t.Run("normalizes-heterogeneous-object-elements", func(t *testing.T) {
+		in := map[string]tftypes.Value{
+			"test": tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"datas": tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+				}},
+				map[string]tftypes.Value{
+					"datas": tftypes.NewValue(
+						tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+						[]tftypes.Value{tftypes.NewValue(tftypes.String, "10.0.0.0/24")},
+					),
+				},
+			),
+			"test2": tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{}},
+				map[string]tftypes.Value{},
+			),
+		}
+
+		out, err := NormalizeDynamicMapElements(in, tftypes.NewAttributePath().WithAttributeName("object").WithAttributeName("spec").WithAttributeName("mapdata"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		expected := map[string]tftypes.Value{
+			"test": tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"datas": tftypes.DynamicPseudoType,
+				}},
+				map[string]tftypes.Value{
+					"datas": tftypes.NewValue(
+						tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+						[]tftypes.Value{tftypes.NewValue(tftypes.String, "10.0.0.0/24")},
+					),
+				},
+			),
+			"test2": tftypes.NewValue(
+				tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"datas": tftypes.DynamicPseudoType,
+				}},
+				map[string]tftypes.Value{
+					"datas": tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+				},
+			),
+		}
+
+		if !cmp.Equal(out, expected, cmp.Exporter(func(t reflect.Type) bool { return true })) {
+			t.Fatalf("unexpected normalized map values:\nexpected: %#v\nreceived: %#v", expected, out)
+		}
+	})
+
+	t.Run("fails-on-incompatible-non-object-elements", func(t *testing.T) {
+		in := map[string]tftypes.Value{
+			"one": tftypes.NewValue(tftypes.String, "foo"),
+			"two": tftypes.NewValue(tftypes.Number, new(big.Float).SetInt64(42)),
+		}
+		_, err := NormalizeDynamicMapElements(in, tftypes.NewAttributePath().WithAttributeName("object").WithAttributeName("spec").WithAttributeName("mapdata"))
+		if err == nil {
+			t.Fatal("expected normalization error but got nil")
+		}
+		if !strings.Contains(err.Error(), "cannot normalize map(dynamic)") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }

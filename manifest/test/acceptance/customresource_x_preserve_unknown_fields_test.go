@@ -267,3 +267,95 @@ func TestKubernetesManifest_CustomResource_x_preserve_unknown_fields_empty_objec
 		},
 	})
 }
+
+// TestKubernetesManifest_CustomResource_x_preserve_unknown_fields_map_dynamic_partial_objects
+// is a regression test for map(dynamic) shape normalization.
+// Without the normalization fix, this shape can panic Terraform with:
+//
+//	panic: inconsistent map element types
+//
+// The CRD schema below creates map(dynamic) behavior for:
+// spec.mapdata.additionalProperties.properties.datas (preserve unknown).
+// The CR uses one map element with datas=list(string) and another without datas.
+func TestKubernetesManifest_CustomResource_x_preserve_unknown_fields_map_dynamic_partial_objects(t *testing.T) {
+	ctx := context.Background()
+
+	reattachInfo, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create provider instance: %q", err)
+	}
+
+	kind := strings.Title(randString(8))
+	plural := strings.ToLower(kind) + "s"
+	group := "terraform.io"
+	version := "v1"
+	groupVersion := group + "/" + version
+	crd := fmt.Sprintf("%s.%s", plural, group)
+
+	name := strings.ToLower(randName())
+	namespace := "default"
+
+	tfvars := TFVARS{
+		"name":          name,
+		"namespace":     namespace,
+		"kind":          kind,
+		"plural":        plural,
+		"group":         group,
+		"group_version": groupVersion,
+		"cr_version":    version,
+	}
+
+	// Step 1: Create the CRD that produces map(dynamic) for spec.mapdata values.
+	crdStep := tfhelper.RequireNewWorkingDir(ctx, t)
+	crdStep.SetReattachInfo(ctx, reattachInfo)
+	defer func() {
+		crdStep.Destroy(ctx)
+		crdStep.Close()
+		k8shelper.AssertResourceDoesNotExist(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd)
+	}()
+
+	tfconfig := loadTerraformConfig(t, "x-kubernetes-preserve-unknown-fields-map-dynamic/crd/test.tf", tfvars)
+	crdStep.SetConfig(ctx, string(tfconfig))
+	crdStep.Init(ctx)
+	crdStep.Apply(ctx)
+	k8shelper.AssertResourceExists(t, "apiextensions.k8s.io/v1", "customresourcedefinitions", crd)
+
+	// wait for API to finish ingesting the CRD
+	time.Sleep(5 * time.Second) //lintignore:R018
+
+	// Step 2: Apply a CR with heterogeneous map(dynamic) element shapes.
+	// mapdata.test.datas is list(string), mapdata.test2 omits datas.
+	reattachInfo2, err := provider.ServeTest(ctx, hclog.Default(), t)
+	if err != nil {
+		t.Errorf("Failed to create additional provider instance: %q", err)
+	}
+
+	crStep := tfhelper.RequireNewWorkingDir(ctx, t)
+	crStep.SetReattachInfo(ctx, reattachInfo2)
+	defer func() {
+		crStep.Destroy(ctx)
+		crStep.Close()
+		k8shelper.AssertResourceDoesNotExist(t, groupVersion, kind, name)
+	}()
+
+	tfconfig = loadTerraformConfig(t, "x-kubernetes-preserve-unknown-fields-map-dynamic/test-cr-mapdata.tf", tfvars)
+	crStep.SetConfig(ctx, string(tfconfig))
+	crStep.Init(ctx)
+	crStep.Apply(ctx)
+
+	s1, err := crStep.State(ctx)
+	if err != nil {
+		t.Fatalf("Failed to retrieve terraform state: %q", err)
+	}
+	tfstate := tfstatehelper.NewHelper(s1)
+	tfstate.AssertAttributeValues(t, tfstatehelper.AttributeValues{
+		"kubernetes_manifest.test.object.metadata.name":               name,
+		"kubernetes_manifest.test.object.metadata.namespace":          namespace,
+		"kubernetes_manifest.test.object.spec.mapdata.test.datas.0":   "10.10.0.0/16",
+		"kubernetes_manifest.test.object.spec.mapdata.test.datas.1":   "10.20.0.0/16",
+		"kubernetes_manifest.test.manifest.spec.mapdata.test.datas.0": "10.10.0.0/16",
+		"kubernetes_manifest.test.manifest.spec.mapdata.test.datas.1": "10.20.0.0/16",
+	})
+	tfstate.AssertAttributeExists(t, "kubernetes_manifest.test.object.spec.mapdata.test2")
+	tfstate.AssertAttributeExists(t, "kubernetes_manifest.test.manifest.spec.mapdata.test2")
+}

@@ -607,6 +607,43 @@ func TestMapToTFMapValue(t *testing.T) {
 				}),
 			Err: nil,
 		},
+		"dynamic-map-normalize-heterogeneous-object-elements": {
+			In: sampleInType{
+				v: map[string]interface{}{
+					"test": map[string]interface{}{
+						"datas": []interface{}{"10.0.0.0/24"},
+					},
+					"test2": map[string]interface{}{},
+				},
+				t: tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+			},
+			Hints: map[string]string{},
+			Out: tftypes.NewValue(
+				tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+				map[string]tftypes.Value{
+					"test": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"datas": tftypes.DynamicPseudoType,
+						}},
+						map[string]tftypes.Value{
+							"datas": tftypes.NewValue(
+								tftypes.Tuple{ElementTypes: []tftypes.Type{tftypes.String}},
+								[]tftypes.Value{tftypes.NewValue(tftypes.String, "10.0.0.0/24")},
+							),
+						},
+					),
+					"test2": tftypes.NewValue(
+						tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+							"datas": tftypes.DynamicPseudoType,
+						}},
+						map[string]tftypes.Value{
+							"datas": tftypes.NewValue(tftypes.DynamicPseudoType, nil),
+						},
+					),
+				},
+			),
+			Err: nil,
+		},
 	}
 
 	for name, s := range samples {
@@ -631,6 +668,24 @@ func TestMapToTFMapValue(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestMapToTFMapValue_DynamicMapIncompatibleTypes(t *testing.T) {
+	_, err := mapToTFMapValue(
+		map[string]interface{}{
+			"one": "foo",
+			"two": 42,
+		},
+		tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+		map[string]string{},
+		tftypes.NewAttributePath(),
+	)
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+	if !strings.Contains(err.Error(), "cannot normalize map(dynamic) with incompatible element types") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

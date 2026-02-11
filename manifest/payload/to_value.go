@@ -217,6 +217,13 @@ func mapToTFMapValue(in map[string]interface{}, st tftypes.Type, th map[string]s
 		}
 		im[k] = mv
 	}
+	if schemaElementType.Is(tftypes.DynamicPseudoType) {
+		var err error
+		im, err = morph.NormalizeDynamicMapElements(im, at)
+		if err != nil {
+			return tftypes.Value{}, at.NewError(err)
+		}
+	}
 	// Use the schema type directly to preserve DynamicPseudoType and other schema-defined types
 	return tftypes.NewValue(st, im), nil
 }

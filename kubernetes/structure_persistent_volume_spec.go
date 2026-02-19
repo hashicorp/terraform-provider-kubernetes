@@ -220,6 +220,21 @@ func flattenLocalVolumeSource(in *v1.LocalVolumeSource) []interface{} {
 
 func flattenISCSIVolumeSource(in *v1.ISCSIVolumeSource) []interface{} {
 	att := make(map[string]interface{})
+	if in.DiscoveryCHAPAuth {
+		att["chap_auth_discovery"] = in.DiscoveryCHAPAuth
+	}
+	if in.SessionCHAPAuth {
+		att["chap_auth_session"] = in.SessionCHAPAuth
+	}
+	if in.InitiatorName != nil && *in.InitiatorName != "" {
+		att["initiator_name"] = *in.InitiatorName
+	}
+	if len(in.Portals) > 0 {
+		att["portals"] = in.Portals
+	}
+	if in.SecretRef != nil {
+		att["secret_ref"] = flattenLocalObjectReference(in.SecretRef)
+	}
 	if in.TargetPortal != "" {
 		att["target_portal"] = in.TargetPortal
 	}
@@ -243,6 +258,21 @@ func flattenISCSIVolumeSource(in *v1.ISCSIVolumeSource) []interface{} {
 
 func flattenISCSIPersistentVolumeSource(in *v1.ISCSIPersistentVolumeSource) []interface{} {
 	att := make(map[string]interface{})
+	if in.DiscoveryCHAPAuth {
+		att["chap_auth_discovery"] = in.DiscoveryCHAPAuth
+	}
+	if in.SessionCHAPAuth {
+		att["chap_auth_session"] = in.SessionCHAPAuth
+	}
+	if in.InitiatorName != nil && *in.InitiatorName != "" {
+		att["initiator_name"] = *in.InitiatorName
+	}
+	if len(in.Portals) > 0 {
+		att["portals"] = in.Portals
+	}
+	if in.SecretRef != nil {
+		att["secret_ref"] = flattenSecretReference(in.SecretRef)
+	}
 	if in.TargetPortal != "" {
 		att["target_portal"] = in.TargetPortal
 	}
@@ -823,6 +853,21 @@ func expandISCSIVolumeSource(l []interface{}) *v1.ISCSIVolumeSource {
 		TargetPortal: in["target_portal"].(string),
 		IQN:          in["iqn"].(string),
 	}
+	if v, ok := in["chap_auth_discovery"].(bool); ok {
+		obj.DiscoveryCHAPAuth = v
+	}
+	if v, ok := in["chap_auth_session"].(bool); ok {
+		obj.SessionCHAPAuth = v
+	}
+	if v, ok := in["initiator_name"].(string); ok && v != "" {
+		obj.InitiatorName = &v
+	}
+	if v, ok := in["portals"].([]string); ok {
+		obj.Portals = v
+	}
+	if v, ok := in["secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.SecretRef = expandLocalObjectReference(v)
+	}
 	if v, ok := in["lun"].(int); ok {
 		obj.Lun = int32(v)
 	}
@@ -846,6 +891,21 @@ func expandISCSIPersistentVolumeSource(l []interface{}) *v1.ISCSIPersistentVolum
 	obj := &v1.ISCSIPersistentVolumeSource{
 		TargetPortal: in["target_portal"].(string),
 		IQN:          in["iqn"].(string),
+	}
+	if v, ok := in["chap_auth_discovery"].(bool); ok {
+		obj.DiscoveryCHAPAuth = v
+	}
+	if v, ok := in["chap_auth_session"].(bool); ok {
+		obj.SessionCHAPAuth = v
+	}
+	if v, ok := in["initiator_name"].(string); ok && v != "" {
+		obj.InitiatorName = &v
+	}
+	if v, ok := in["portals"].([]string); ok {
+		obj.Portals = v
+	}
+	if v, ok := in["secret_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.SecretRef = expandSecretReference(v)
 	}
 	if v, ok := in["lun"].(int); ok {
 		obj.Lun = int32(v)

@@ -14,6 +14,7 @@ import (
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -42,7 +43,8 @@ type RawProviderServer struct {
 	discoveryClient             cache[discovery.DiscoveryInterface]
 	restMapper                  cache[meta.RESTMapper]
 	restClient                  cache[rest.Interface]
-	OAPIFoundry                 cache[openapi.Foundry]
+	oapiV2Foundry               cache[openapi.Foundry]
+	oapiV3Foundries             keyedCache[schema.GroupVersion, openapi.Foundry]
 	crds                        cache[[]unstructured.Unstructured]
 	checkValidCredentialsResult cache[[]*tfprotov5.Diagnostic]
 

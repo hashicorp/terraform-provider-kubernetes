@@ -218,6 +218,35 @@ func TestAccKubernetesDaemonSetV1_initContainer(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDaemonSetV1_host_users(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_daemon_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0") // User namespaces is beta in 1.25
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigHostUsers(name, imageName, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.host_users", "true"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigHostUsers(name, imageName, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.host_users", "false"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDaemonSetV1_noTopLevelLabels(t *testing.T) {
 	var conf appsv1.DaemonSet
 	resourceName := "kubernetes_daemon_set_v1.test"
@@ -1393,4 +1422,35 @@ func testAccKubernetesDaemonSetV1ConfigMinimalWithTemplateNamespace(name, imageN
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesDaemonSetV1ConfigHostUsers(name, image string, hostUsers bool) string {
+	return fmt.Sprintf(`
+resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    selector {
+      match_labels = {
+        app = "tf-acc-test"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "tf-acc-test"
+        }
+      }
+      spec {
+        host_users = %t
+        container {
+          image = "%s"
+          name  = "test"
+        }
+      }
+    }
+  }
+}
+`, name, hostUsers, image)
 }

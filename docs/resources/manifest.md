@@ -86,7 +86,7 @@ Optional:
 ### Example: Create a Kubernetes ConfigMap
 
 ```terraform
-resource "kubernetes_manifest" "test-configmap" {
+resource "kubernetes_manifest" "test_configmap" {
   manifest = {
     "apiVersion" = "v1"
     "kind"       = "ConfigMap"
@@ -104,7 +104,7 @@ resource "kubernetes_manifest" "test-configmap" {
 ### Example: Create a Kubernetes Custom Resource Definition
 
 ```terraform
-resource "kubernetes_manifest" "test-crd" {
+resource "kubernetes_manifest" "test_crd" {
   manifest = {
     apiVersion = "apiextensions.k8s.io/v1"
     kind       = "CustomResourceDefinition"

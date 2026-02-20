@@ -124,6 +124,17 @@ func GetProviderConfigSchema() *tfprotov5.Schema {
 				Deprecated:      false,
 			},
 			{
+				Name:            "config_data",
+				Type:            tftypes.String,
+				Description:     "Raw Kubernetes config data. Can be set with KUBE_CONFIG_DATA. Takes precidence over all over configutaion. No overrides allowed.",
+				Required:        false,
+				Optional:        true,
+				Computed:        false,
+				Sensitive:       true,
+				DescriptionKind: 0,
+				Deprecated:      false,
+			},
+			{
 				Name:            "config_context",
 				Type:            tftypes.String,
 				Description:     "",

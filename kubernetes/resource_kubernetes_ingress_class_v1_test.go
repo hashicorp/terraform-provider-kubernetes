@@ -288,3 +288,59 @@ func testAccKubernetesIngressClassV1ConfigParametersApiGroup(name, paramName str
 }
 `, name, paramName)
 }
+
+func TestAccKubernetesIngressClassV1_ControllerImmutable(t *testing.T) {
+	var conf1, conf2 networking.IngressClass
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_ingress_class_v1.test"
+	initialControllerValue := "example.com/ingress-controller"
+	updatedControllerValue := "example.com/new-ingress-controller"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		IDRefreshName:     resourceName,
+		IDRefreshIgnore:   []string{"metadata.0.resource_version"},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressClassV1ConfigBasicWithController(rName, initialControllerValue),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressClassV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", initialControllerValue),
+				),
+			},
+			{
+				Config: testAccKubernetesIngressClassV1ConfigBasicWithController(rName, updatedControllerValue),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressClassV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", rName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", updatedControllerValue),
+					testAccCheckKubernetesIngressClassForceNew(&conf1, &conf2, true),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckKubernetesIngressClassForceNew(old, new *networking.IngressClass, wantNew bool) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		if (old.UID == new.UID) == wantNew {
+			return fmt.Errorf("expected force new: %t, but resource was not recreated", wantNew)
+		}
+		return nil
+	}
+}
+
+func testAccKubernetesIngressClassV1ConfigBasicWithController(name, controllerValue string) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_class_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+  spec {
+    controller = %[2]q
+  }
+}
+`, name, controllerValue)
+}

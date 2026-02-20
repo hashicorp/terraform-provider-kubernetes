@@ -62,6 +62,37 @@ func TestAccKubernetesDataSourcePodV1_not_found(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourcePodV1_readWithLabel(t *testing.T) {
+	resourceName := "kubernetes_pod_v1.test"
+	dataSourceName := "data.kubernetes_pod_v1.test"
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	labelKey := "app"
+	labelValue := "test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDataSourcePodV1_basicWithLabel(name, imageName, labelKey, labelValue),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels."+labelKey, labelValue),
+				),
+			},
+			{
+				Config: testAccKubernetesDataSourcePodV1_basicWithLabel(name, imageName, labelKey, labelValue) +
+					testAccKubernetesDataSourcePodV1_readWithLabel(labelKey, labelValue),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels."+labelKey, labelValue),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesDataSourcePodV1_basic(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
@@ -75,6 +106,24 @@ func testAccKubernetesDataSourcePodV1_basic(name, imageName string) string {
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesDataSourcePodV1_basicWithLabel(name, imageName, labelKey, labelValue string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+    labels = {
+      %s = "%s"
+    }
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+  }
+}
+`, name, labelKey, labelValue, imageName)
 }
 
 func testAccKubernetesDataSourcePodV1_read() string {
@@ -93,4 +142,15 @@ func testAccKubernetesDataSourcePodV1_nonexistent(name string) string {
   }
 }
 `, name)
+}
+
+func testAccKubernetesDataSourcePodV1_readWithLabel(labelKey, labelValue string) string {
+	return fmt.Sprintf(`data "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      %s = "%s"
+    }
+  }
+}
+`, labelKey, labelValue)
 }

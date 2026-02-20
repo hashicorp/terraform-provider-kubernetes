@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -42,6 +43,7 @@ func dataSourceKubernetesPodV1(deprecationMessage string) *schema.Resource {
 }
 
 func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	var pod v1.Pod
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
 		return diag.FromErr(err)
@@ -55,8 +57,32 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 	}
 	d.SetId(buildId(om))
 
-	log.Printf("[INFO] Reading pod %s", metadata.Name)
-	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+	pods := conn.CoreV1().Pods(metadata.Namespace)
+
+	if metadata.Name != "" {
+		log.Printf("[INFO] Getting pod %s", metadata.Name)
+		podResult, getErr := pods.Get(ctx, metadata.Name, metav1.GetOptions{})
+		if getErr != nil {
+			err = getErr
+		} else {
+			pod = *podResult
+		}
+	} else {
+		log.Printf("[INFO] Listing pods")
+		listOptions := metav1.ListOptions{
+			LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{MatchLabels: metadata.Labels}),
+		}
+		podList, listErr := pods.List(ctx, listOptions)
+		if listErr != nil {
+			err = listErr
+		} else {
+			if len(podList.Items) == 0 {
+				return diag.Errorf("No pods found")
+			}
+			pod = podList.Items[0]
+		}
+	}
+
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil

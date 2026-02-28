@@ -176,6 +176,9 @@ func flattenProbe(in *v1.Probe) []interface{} {
 	if in.GRPC != nil {
 		att["grpc"] = flattenGRPC(in.GRPC)
 	}
+	if in.TerminationGracePeriodSeconds != nil {
+		att["termination_grace_period_seconds"] = *in.TerminationGracePeriodSeconds
+	}
 
 	return []interface{}{att}
 }
@@ -771,6 +774,11 @@ func expandProbe(l []interface{}) *v1.Probe {
 	}
 	if v, ok := in["timeout_seconds"].(int); ok {
 		obj.TimeoutSeconds = int32(v)
+	}
+
+	// Set the `TerminationGracePeriodSeconds` field only if it is not set to the default (0)
+	if v, ok := in["termination_grace_period_seconds"].(int); ok && v != 0 {
+		obj.TerminationGracePeriodSeconds = ptr.To(int64(v))
 	}
 
 	return &obj

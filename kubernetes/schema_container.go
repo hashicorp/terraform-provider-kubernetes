@@ -533,7 +533,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
-			Elem:        probeSchema(),
+			Elem:        probeSchema(LivenessProbe),
 		},
 		"name": {
 			Type:        schema.TypeString,
@@ -594,7 +594,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Description: "Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
-			Elem:        probeSchema(),
+			Elem:        probeSchema(ReadinessProbe),
 		},
 		"resources": {
 			Type:        schema.TypeList,
@@ -631,7 +631,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Description: "StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes",
-			Elem:        probeSchema(),
+			Elem:        probeSchema(StartupProbe),
 		},
 		"stdin": {
 			Type:        schema.TypeBool,
@@ -700,7 +700,18 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 	return s
 }
 
-func probeSchema() *schema.Resource {
+type ProbeType int
+
+const (
+	LivenessProbe ProbeType = iota
+	ReadinessProbe
+	StartupProbe
+)
+
+// probeSchema generates the schema for a Liveness/Readiness/Startup probe
+//
+//	probeType specifies the type of probe to generate the schema for (liveness, readiness, startup)
+func probeSchema(probeType ProbeType) *schema.Resource {
 	h := lifecycleHandlerFields()
 	h["grpc"] = &schema.Schema{
 		Type:        schema.TypeList,
@@ -756,6 +767,19 @@ func probeSchema() *schema.Resource {
 		ValidateFunc: validatePositiveInteger,
 		Description:  "Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
 	}
+
+	// Conditionally add a `termination_grace_period_seconds` to this schema if the probe type is Liveness or Startup
+	//	`Probe-level terminationGracePeriodSeconds cannot be set for readiness probes. It will be rejected by the API server.`
+	//	https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#probe-level-terminationgraceperiodseconds
+	if probeType == LivenessProbe || probeType == StartupProbe {
+		h["termination_grace_period_seconds"] = &schema.Schema{
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ValidateFunc: validateIntGreaterThan(0),
+			Description:  "Optional duration in seconds the pod needs to terminate gracefully upon probe failure. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process. If this value is nil, the pod's `terminationGracePeriodSeconds` will be used. Otherwise, this value overrides the value provided by the pod spec. Value must be non-negative integer greater than zero. `spec.terminationGracePeriodSeconds` is used if unset.",
+		}
+	}
+
 	return &schema.Resource{
 		Schema: h,
 	}

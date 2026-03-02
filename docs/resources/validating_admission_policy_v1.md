@@ -195,3 +195,44 @@ Nested Schema for `timeouts`
 - `delete` (String) Timeout for deleting the resource. Default is 20 minutes.
 - `read` (String) Timeout for reading the resource. Default is 20 minutes.
 - `update` (String) Timeout for updating the resource. Default is 20 minutes.
+
+## Example Usage
+
+```terraform
+resource "kubernetes_validating_admission_policy_v1" "example" {
+  metadata = {
+    name = "test-policy"
+  }
+
+  spec = {
+    failure_policy = "Fail"
+
+    match_constraints = {
+      resource_rules = [{
+        api_groups   = ["apps"]
+        api_versions = ["v1"]
+        operations   = ["CREATE", "UPDATE"]
+        resources    = ["deployments"]
+      }]
+    }
+
+    audit_annotations = [{
+      key              = "example"
+      value_expression = "'ok'"
+    }]
+
+    validations = [{
+      expression = "object.spec.replicas <= 5"
+      message    = "Replica count must not exceed 5"
+    }]
+  }
+}
+```
+
+## Import
+
+Validating Admission Policy can be imported using the name, e.g.
+
+```
+$ terraform import kubernetes_validating_admission_policy_v1.example terraform-example
+```

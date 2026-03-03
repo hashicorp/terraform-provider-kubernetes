@@ -29,6 +29,13 @@ func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []int
 	if in.VolumeMode != nil {
 		att["volume_mode"] = in.VolumeMode
 	}
+	if in.DataSource != nil && in.DataSource.Name != "" {
+		att["data_source"] = []interface{}{
+			map[string]interface{}{
+				"name": in.DataSource.Name,
+			},
+		}
+	}
 	return []interface{}{att}
 }
 
@@ -90,6 +97,16 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 	}
 	if v, ok := in["volume_mode"].(string); ok && v != "" {
 		obj.VolumeMode = ptr.To(corev1.PersistentVolumeMode(v))
+	}
+	if v, ok := in["data_source"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+		dataSource := v[0].(map[string]interface{})
+		if name, ok := dataSource["name"].(string); ok && name != "" {
+			obj.DataSource = &corev1.TypedLocalObjectReference{
+				Kind:     "PersistentVolumeClaim",
+				Name:     name,
+				APIGroup: ptr.To(""),
+			}
+		}
 	}
 	return obj, nil
 }

@@ -58,15 +58,17 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 		return nil, err
 	}
 
+	var waiters []Waiter
+
 	if v, ok := waitForBlockVal["rollout"]; ok {
 		var rollout bool
 		v.As(&rollout)
 		if rollout {
-			return &RolloutWaiter{
+			waiters = append(waiters, &RolloutWaiter{
 				resource,
 				resourceName,
 				hl,
-			}, nil
+			})
 		}
 	}
 
@@ -74,60 +76,68 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 		var conditionsBlocks []tftypes.Value
 		v.As(&conditionsBlocks)
 		if len(conditionsBlocks) > 0 {
-			return &ConditionsWaiter{
+			waiters = append(waiters, &ConditionsWaiter{
 				resource,
 				resourceName,
 				conditionsBlocks,
 				hl,
-			}, nil
+			})
 		}
 	}
 
 	fields, ok := waitForBlockVal["fields"]
-	if !ok || fields.IsNull() || !fields.IsKnown() {
+	if ok && !fields.IsNull() && fields.IsKnown() {
+		if !fields.Type().Is(tftypes.Map{}) {
+			return nil, fmt.Errorf(`"fields" should be a map of strings`)
+		}
+
+		var vm map[string]tftypes.Value
+		fields.As(&vm)
+		var matchers []FieldMatcher
+
+		for k, v := range vm {
+			var expr string
+			v.As(&expr)
+			var re *regexp.Regexp
+			if expr == "*" {
+				// NOTE this is just a shorthand so the user doesn't have to
+				// type the expression below all the time
+				re = regexp.MustCompile("(.*)?")
+			} else {
+				var err error
+				re, err = regexp.Compile(expr)
+				if err != nil {
+					return nil, fmt.Errorf("invalid regular expression: %q", expr)
+				}
+			}
+
+			p, err := FieldPathToTftypesPath(k)
+			if err != nil {
+				return nil, err
+			}
+			matchers = append(matchers, FieldMatcher{p, re})
+		}
+
+		waiters = append(waiters, &FieldWaiter{
+			resource,
+			resourceName,
+			resourceType,
+			th,
+			matchers,
+			hl,
+		})
+	}
+
+	// Return appropriate waiter based on count
+	if len(waiters) == 0 {
 		return &NoopWaiter{}, nil
 	}
 
-	if !fields.Type().Is(tftypes.Map{}) {
-		return nil, fmt.Errorf(`"fields" should be a map of strings`)
+	if len(waiters) == 1 {
+		return waiters[0], nil
 	}
 
-	var vm map[string]tftypes.Value
-	fields.As(&vm)
-	var matchers []FieldMatcher
-
-	for k, v := range vm {
-		var expr string
-		v.As(&expr)
-		var re *regexp.Regexp
-		if expr == "*" {
-			// NOTE this is just a shorthand so the user doesn't have to
-			// type the expression below all the time
-			re = regexp.MustCompile("(.*)?")
-		} else {
-			var err error
-			re, err = regexp.Compile(expr)
-			if err != nil {
-				return nil, fmt.Errorf("invalid regular expression: %q", expr)
-			}
-		}
-
-		p, err := FieldPathToTftypesPath(k)
-		if err != nil {
-			return nil, err
-		}
-		matchers = append(matchers, FieldMatcher{p, re})
-	}
-
-	return &FieldWaiter{
-		resource,
-		resourceName,
-		resourceType,
-		th,
-		matchers,
-		hl,
-	}, nil
-
+	return &CompositeWaiter{waiters: waiters, logger: hl}, nil
 }
 
 // FieldMatcher contains a tftypes.AttributePath to a field and a regexp to match on it
@@ -234,6 +244,26 @@ type NoopWaiter struct{}
 
 // Wait returns immediately
 func (w *NoopWaiter) Wait(_ context.Context) error {
+	return nil
+}
+
+// CompositeWaiter executes multiple waiters in sequence
+type CompositeWaiter struct {
+	waiters []Waiter
+	logger  hclog.Logger
+}
+
+// Wait executes all waiters in sequence
+func (w *CompositeWaiter) Wait(ctx context.Context) error {
+	w.logger.Info("[ApplyResourceChange][Wait] Starting composite wait...")
+	for i, waiter := range w.waiters {
+		w.logger.Info(fmt.Sprintf("[ApplyResourceChange][Wait] Executing waiter %d/%d", i+1, len(w.waiters)))
+		err := waiter.Wait(ctx)
+		if err != nil {
+			return fmt.Errorf("waiter %d failed: %w", i+1, err)
+		}
+	}
+	w.logger.Info("[ApplyResourceChange][Wait] All waiters completed successfully")
 	return nil
 }
 

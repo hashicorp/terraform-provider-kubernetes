@@ -6,7 +6,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
@@ -140,14 +139,6 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 					}
 					waiters = append(waiters, k)
 				}
-			}
-			if len(waiters) > 1 {
-				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-					Severity:  tfprotov5.DiagnosticSeverityError,
-					Summary:   "Invalid wait configuration",
-					Detail:    fmt.Sprintf(`You may only set one of "%s".`, strings.Join(waiters, "\", \"")),
-					Attribute: tftypes.NewAttributePath().WithAttributeName("wait"),
-				})
 			}
 		}
 	}

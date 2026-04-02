@@ -58,6 +58,17 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 		return nil, err
 	}
 
+	hasConfiguredWaitKey := false
+	for _, v := range waitForBlockVal {
+		if !v.IsNull() {
+			hasConfiguredWaitKey = true
+			break
+		}
+	}
+	if !hasConfiguredWaitKey {
+		return &NoopWaiter{}, nil
+	}
+
 	var waiters []Waiter
 
 	if v, ok := waitForBlockVal["rollout"]; ok {
@@ -126,11 +137,6 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 			matchers,
 			hl,
 		})
-	}
-
-	// Return appropriate waiter based on count
-	if len(waiters) == 0 {
-		return &NoopWaiter{}, nil
 	}
 
 	if len(waiters) == 1 {

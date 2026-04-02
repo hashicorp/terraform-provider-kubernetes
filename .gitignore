@@ -36,7 +36,3 @@ website/vendor
 # output binary
 terraform-provider-kubernetes
 __debug_bin
-
-# AI assistant rules
-AGENTS.md
-.bob/

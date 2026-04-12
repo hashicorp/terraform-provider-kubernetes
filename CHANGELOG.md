@@ -1,3 +1,24 @@
+## 3.0.2 (Unreleased)
+
+FEATURES:
+
+* resource/kubernetes_gateway_class_v1: Add GatewayClass resource for Kubernetes Gateway API v1
+* resource/kubernetes_gateway_v1: Add Gateway resource for Kubernetes Gateway API v1
+* resource/kubernetes_http_route_v1: Add HTTPRoute resource for Kubernetes Gateway API v1
+* resource/kubernetes_grpc_route_v1: Add GRPCRoute resource for Kubernetes Gateway API v1
+* resource/kubernetes_tls_route_v1: Add TLSRoute resource for Kubernetes Gateway API v1
+* resource/kubernetes_listener_set_v1: Add ListenerSet resource for Kubernetes Gateway API v1
+* resource/kubernetes_backend_tls_policy_v1: Add BackendTLSPolicy resource for Kubernetes Gateway API v1alpha3
+* resource/kubernetes_reference_grant_v1: Add ReferenceGrant resource for Kubernetes Gateway API v1beta1
+* data-source/kubernetes_gateway_class_v1: Add GatewayClass data source for Kubernetes Gateway API v1
+* data-source/kubernetes_gateway_v1: Add Gateway data source for Kubernetes Gateway API v1
+* data-source/kubernetes_http_route_v1: Add HTTPRoute data source for Kubernetes Gateway API v1
+* data-source/kubernetes_grpc_route_v1: Add GRPCRoute data source for Kubernetes Gateway API v1
+* data-source/kubernetes_tls_route_v1: Add TLSRoute data source for Kubernetes Gateway API v1
+* data-source/kubernetes_listener_set_v1: Add ListenerSet data source for Kubernetes Gateway API v1
+* data-source/kubernetes_backend_tls_policy_v1: Add BackendTLSPolicy data source for Kubernetes Gateway API v1alpha3
+* data-source/kubernetes_reference_grant_v1: Add ReferenceGrant data source for Kubernetes Gateway API v1beta1
+
 ## 3.0.1 (Dec 5, 2025)
 
 HOTFIX:

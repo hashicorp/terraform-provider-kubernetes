@@ -33,6 +33,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	aggregator "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 )
 
 const defaultFieldManagerName = "Terraform"
@@ -242,6 +243,17 @@ func Provider() *schema.Provider {
 			"kubernetes_ingress":    dataSourceKubernetesIngress(),
 			"kubernetes_ingress_v1": dataSourceKubernetesIngressV1(),
 
+			// gateway API
+			"kubernetes_gateway_class":         dataSourceKubernetesGatewayClassV1(),
+			"kubernetes_gateway_class_v1":      dataSourceKubernetesGatewayClassV1(),
+			"kubernetes_gateway_v1":            dataSourceKubernetesGatewayV1(),
+			"kubernetes_http_route_v1":         dataSourceKubernetesHTTPRouteV1(),
+			"kubernetes_grpc_route_v1":         dataSourceKubernetesGRPCRouteV1(),
+			"kubernetes_tls_route_v1":          dataSourceKubernetesTLSRouteV1(),
+			"kubernetes_listener_set_v1":       dataSourceKubernetesListenerSetV1(),
+			"kubernetes_backend_tls_policy_v1": dataSourceKubernetesBackendTLSPolicyV1(),
+			"kubernetes_reference_grant_v1":    dataSourceKubernetesReferenceGrantV1(),
+
 			// storage
 			"kubernetes_storage_class":    dataSourceKubernetesStorageClassV1("Deprecated; use kubernetes_storage_class_v1."),
 			"kubernetes_storage_class_v1": dataSourceKubernetesStorageClassV1(""),
@@ -330,6 +342,18 @@ func Provider() *schema.Provider {
 			"kubernetes_network_policy":    resourceKubernetesNetworkPolicyV1("Deprecated; use kubernetes_network_policy_v1."),
 			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicyV1(""),
 
+			// gateway API
+			"kubernetes_gateway_class":         resourceKubernetesGatewayClassV1("Deprecated; use kubernetes_gateway_class_v1."),
+			"kubernetes_gateway_class_v1":      resourceKubernetesGatewayClassV1(""),
+			"kubernetes_gateway":               resourceKubernetesGatewayV1("Deprecated; use kubernetes_gateway_v1."),
+			"kubernetes_gateway_v1":            resourceKubernetesGatewayV1(""),
+			"kubernetes_http_route_v1":         resourceKubernetesHTTPRouteV1(),
+			"kubernetes_grpc_route_v1":         resourceKubernetesGRPCRouteV1(),
+			"kubernetes_tls_route_v1":          resourceKubernetesTLSRouteV1(),
+			"kubernetes_listener_set_v1":       resourceKubernetesListenerSetV1(),
+			"kubernetes_backend_tls_policy_v1": resourceKubernetesBackendTLSPolicyV1(),
+			"kubernetes_reference_grant_v1":    resourceKubernetesReferenceGrantV1(),
+
 			// policy
 			"kubernetes_pod_disruption_budget":    resourceKubernetesPodDisruptionBudget(),
 			"kubernetes_pod_disruption_budget_v1": resourceKubernetesPodDisruptionBudgetV1(),
@@ -379,6 +403,7 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
+	GatewayClientset() (*gatewayclient.GatewayV1Client, error)
 }
 
 type providerMetadata struct {
@@ -389,6 +414,7 @@ type providerMetadata struct {
 	aggregatorClientset *aggregator.Clientset
 	dynamicClient       dynamic.Interface
 	discoveryClient     discovery.DiscoveryInterface
+	gatewayClientset    *gatewayclient.GatewayV1Client
 
 	IgnoreAnnotations []string
 	IgnoreLabels      []string
@@ -453,6 +479,21 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 	return k.discoveryClient, nil
 }
 
+func (k providerMetadata) GatewayClientset() (*gatewayclient.GatewayV1Client, error) {
+	if k.gatewayClientset != nil {
+		return k.gatewayClientset, nil
+	}
+
+	if k.config != nil {
+		gc, err := gatewayclient.NewForConfig(k.config)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to configure Gateway API client: %s", err)
+		}
+		k.gatewayClientset = gc
+	}
+	return k.gatewayClientset, nil
+}
+
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization
 	cfg, diags := initializeConfiguration(d)
@@ -490,6 +531,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		config:              cfg,
 		mainClientset:       nil,
 		aggregatorClientset: nil,
+		gatewayClientset:    nil,
 		IgnoreAnnotations:   ignoreAnnotations,
 		IgnoreLabels:        ignoreLabels,
 	}

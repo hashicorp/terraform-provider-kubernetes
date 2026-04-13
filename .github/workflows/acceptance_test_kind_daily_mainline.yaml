@@ -34,17 +34,7 @@ jobs:
         run: |
           git clone --depth 1 -b main https://github.com/hashicorp/terraform.git
           cd terraform
-          for attempt in 1 2 3; do
-            if go build -p 1 -o terraform; then
-              break
-            fi
-            if [ "$attempt" -eq 3 ]; then
-              echo "go build failed after 3 attempts"
-              exit 1
-            fi
-            echo "go build failed (attempt ${attempt}), retrying in 30s..."
-            sleep 30
-          done
+          go build -o terraform
           mkdir -p "${HOME}/bin"
           mv terraform "${HOME}/bin/terraform"
           echo "${HOME}/bin" >> "${GITHUB_PATH}"

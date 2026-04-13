@@ -139,6 +139,10 @@ func NewResourceWaiter(resource dynamic.ResourceInterface, resourceName string, 
 		})
 	}
 
+	if len(waiters) == 0 {
+		return &NoopWaiter{}, nil
+	}
+
 	if len(waiters) == 1 {
 		return waiters[0], nil
 	}

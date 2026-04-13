@@ -9,9 +9,6 @@ on:
       runTests:
         description: The regex passed to the -run option of `go test`
         default: "^TestAcc"
-      terraformVersion:
-        description: Terraform version
-        default: 1.12.0
       parallelRuns:
         description: The maximum number of tests to run simultaneously
         default: 8
@@ -22,8 +19,7 @@ env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
   KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.30.0' }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.12.0' }} 
-  
+
 jobs:
   acceptance_tests_kind:
     if: ${{ github.repository_owner == 'hashicorp' }}
@@ -35,13 +31,32 @@ jobs:
         uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
           go-version-file: 'go.mod'
+      # Build Terraform from hashicorp/terraform@main so acceptance tests track upstream CLI.
+      # Shallow clone, serial build, CGO off, and async-preemption off reduce Go compiler SIGSEGVs
+      # under load (GitHub runners and CPU-emulated Docker on Apple Silicon).
       - name: Install Terraform From Source
+        env:
+          GOMAXPROCS: "1"
+          CGO_ENABLED: "0"
+          GODEBUG: asyncpreemptoff=1
         run: |
-          git clone https://github.com/hashicorp/terraform.git
+          set -euo pipefail
+          git clone --depth 1 -b main https://github.com/hashicorp/terraform.git
           cd terraform
-          git switch main
-          go build -o terraform 
-          mv terraform /usr/bin/terraform
+          for attempt in 1 2 3; do
+            if go build -p 1 -o terraform; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "go build failed after 3 attempts"
+              exit 1
+            fi
+            echo "go build failed (attempt ${attempt}), retrying in 30s..."
+            sleep 30
+          done
+          mkdir -p "${HOME}/bin"
+          mv terraform "${HOME}/bin/terraform"
+          echo "${HOME}/bin" >> "${GITHUB_PATH}"
       - name: Setup kind
         uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
         with:

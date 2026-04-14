@@ -127,6 +127,7 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 		if len(waitBlock) > 0 {
 			var w map[string]tftypes.Value
 			waitBlock[0].As(&w)
+			waiters := []string{}
 			for k, ww := range w {
 				if !ww.IsNull() {
 					if k == "condition" {
@@ -136,6 +137,7 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 							continue
 						}
 					}
+					waiters = append(waiters, k)
 				}
 			}
 		}

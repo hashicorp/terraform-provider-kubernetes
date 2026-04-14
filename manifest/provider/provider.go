@@ -210,6 +210,12 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 						Description: "List of manifest fields whose values can be altered by the API server during 'apply'. Defaults to: [\"metadata.annotations\", \"metadata.labels\"]",
 						Optional:    true,
 					},
+					{
+						Name:        "skip_validation",
+						Type:        tftypes.Bool,
+						Description: "When set to true, skips validation of the manifest against the Kubernetes API server during the plan phase. This can be useful when the cluster is not available or when you want to defer validation until apply time.",
+						Optional:    true,
+					},
 				},
 			},
 		},

@@ -32,8 +32,8 @@ jobs:
           go-version-file: 'go.mod'
       - name: Install Terraform From Source
         run: |
-          git clone --depth 1 -b main https://github.com/hashicorp/terraform.git
-          cd terraform
+          git clone --depth 1 -b main https://github.com/hashicorp/terraform.git "${RUNNER_TEMP}/terraform"
+          cd "${RUNNER_TEMP}/terraform"
           go build -o terraform
           mkdir -p "${HOME}/bin"
           mv terraform "${HOME}/bin/terraform"

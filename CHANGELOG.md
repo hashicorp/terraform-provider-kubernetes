@@ -1,3 +1,9 @@
+## 3.0.2 (Apr 15, 2026)
+
+FEATURES:
+
+* kubernetes: Add `kubernetes_endpoint_slice_v1` data source [[GH-2847](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2847)]
+
 ## 3.0.1 (Dec 5, 2025)
 
 HOTFIX:

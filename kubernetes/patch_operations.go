@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func diffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOperations {
+func DiffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOperations {
 	ops := make([]PatchOperation, 0)
 
 	pathPrefix = strings.TrimRight(pathPrefix, "/")

@@ -28,6 +28,7 @@ website/node_modules
 *.iml
 .terraform.lock.hcl
 website/vendor
+vendor/
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate

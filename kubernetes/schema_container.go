@@ -98,6 +98,22 @@ func lifecycleHandlerFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"sleep": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			MaxItems:    1,
+			Description: "Sleep represents a duration that the container should sleep",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"seconds": {
+						Type:         schema.TypeInt,
+						Required:     true,
+						ValidateFunc: validation.IntAtLeast(0),
+						Description:  "Number of seconds to sleep.",
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -702,6 +718,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 
 func probeSchema() *schema.Resource {
 	h := lifecycleHandlerFields()
+	delete(h, "sleep")
 	h["grpc"] = &schema.Schema{
 		Type:        schema.TypeList,
 		Optional:    true,

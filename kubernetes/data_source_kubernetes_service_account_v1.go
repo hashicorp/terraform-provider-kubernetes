@@ -69,26 +69,30 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
+	metadataList := d.Get("metadata").([]interface{})
+	if len(metadataList) == 0 || metadataList[0] == nil {
+		return diag.Errorf("metadata block is required")
+	}
+	metadata := expandMetadata(metadataList)
 	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			d.SetId(buildId(sa.ObjectMeta))
 			return nil
 		}
-		return diag.Errorf(`Unable to fetch service account "%s/%s" from Kubernetes: %s`, metadata.Namespace, metadata.Name, err)
+		return diag.Errorf("Failed to read ServiceAccount %s/%s: %s", metadata.Namespace, metadata.Name, err)
 	}
 
 	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)
 
 	err = d.Set("default_secret_name", defaultSecret)
 	if err != nil {
-		return diag.Errorf("Unable to set default_secret_name: %s", err)
+		return diag.Errorf("Failed to set default_secret_name: %s", err)
 	}
 
 	d.SetId(buildId(sa.ObjectMeta))
 
-	log.Printf("[INFO] Reading service account %s", metadata.Name)
+	log.Printf("[INFO] Reading ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
 	svcAcc, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -98,7 +102,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 		diagMsg = append(diagMsg, diag.FromErr(err)...)
 		return diagMsg
 	}
-	log.Printf("[INFO] Received service account: %#v", svcAcc)
+	log.Printf("[INFO] Retrieved ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
 
 	err = d.Set("metadata", flattenMetadataFields(svcAcc.ObjectMeta))
 	if err != nil {
@@ -126,14 +130,20 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 		return diagMsg
 	}
 
-	defaultSecretName := d.Get("default_secret_name").(string)
-	log.Printf("[DEBUG] Default secret name is %q", defaultSecretName)
-	secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
-	log.Printf("[DEBUG] Flattened secrets: %#v", secrets)
-	err = d.Set("secret", secrets)
-	if err != nil {
-		diagMsg = append(diagMsg, diag.FromErr(err)...)
-		return diagMsg
+	defaultSecretNameRaw, ok := d.Get("default_secret_name").(string)
+	if !ok {
+		return diag.Errorf("default_secret_name must be a string")
+	}
+	defaultSecretName := defaultSecretNameRaw
+	
+	if defaultSecretName != "" {
+		log.Printf("[DEBUG] Setting default secret name for ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
+		secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
+		err = d.Set("secret", secrets)
+		if err != nil {
+			diagMsg = append(diagMsg, diag.FromErr(err)...)
+			return diagMsg
+		}
 	}
 
 	return nil

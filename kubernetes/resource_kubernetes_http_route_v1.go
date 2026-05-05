@@ -72,8 +72,9 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 					},
 					"rules": {
 						Type:        schema.TypeList,
-						Description: "Rules are a list of HTTP matchers, filters and actions.",
+						Description: "Rules are a list of HTTP matchers, filters and actions. Maximum 100 rules per route (Gateway API spec limit).",
 						Optional:    true,
+						MaxItems:    100,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"name": {
@@ -1019,7 +1020,7 @@ func resourceKubernetesHTTPRouteV1Create(ctx context.Context, d *schema.Resource
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	spec := expandHTTPRouteSpec(d.Get("spec").([]interface{}))
 
-	log.Printf("[INFO] Creating new HTTPRoute: %#v", spec)
+	log.Printf("[INFO] Creating HTTPRoute %s/%s", metadata.Namespace, metadata.Name)
 	out := &gatewayv1.HTTPRoute{
 		ObjectMeta: metadata,
 		Spec:       spec,
@@ -1030,7 +1031,7 @@ func resourceKubernetesHTTPRouteV1Create(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Submitted new HTTPRoute: %#v", result)
+	log.Printf("[INFO] Created HTTPRoute %s/%s", metadata.Namespace, metadata.Name)
 	d.SetId(buildId(result.ObjectMeta))
 
 	return resourceKubernetesHTTPRouteV1Read(ctx, d, meta)
@@ -1055,9 +1056,9 @@ func resourceKubernetesHTTPRouteV1Read(ctx context.Context, d *schema.ResourceDa
 			d.SetId("")
 			return diag.Diagnostics{}
 		}
-		return diag.Errorf("Failed to read HTTPRoute '%s' because: %s", name, err)
+		return diag.Errorf("Failed to read HTTPRoute %s/%s: %s", namespace, name, err)
 	}
-	log.Printf("[INFO] Received HTTPRoute: %#v", route)
+	log.Printf("[INFO] Retrieved HTTPRoute %s/%s", namespace, name)
 
 	err = d.Set("metadata", flattenMetadata(route.ObjectMeta, d, meta))
 	if err != nil {
@@ -1065,7 +1066,7 @@ func resourceKubernetesHTTPRouteV1Read(ctx context.Context, d *schema.ResourceDa
 	}
 
 	flattenedSpec := flattenHTTPRouteSpec(route.Spec)
-	log.Printf("[DEBUG] Flattened HTTPRoute spec: %#v", flattenedSpec)
+	log.Printf("[DEBUG] Setting HTTPRoute %s/%s spec", namespace, name)
 	err = d.Set("spec", flattenedSpec)
 	if err != nil {
 		return diag.FromErr(err)
@@ -1108,13 +1109,17 @@ func resourceKubernetesHTTPRouteV1Update(ctx context.Context, d *schema.Resource
 	existing.Annotations = metadata.Annotations
 	existing.Spec = expandHTTPRouteSpec(d.Get("spec").([]interface{}))
 
-	log.Printf("[INFO] Updating HTTPRoute: %#v", existing)
-	result, err := conn.HTTPRoutes(namespace).Update(ctx, existing, metav1.UpdateOptions{})
+	log.Printf("[INFO] Updating HTTPRoute %s/%s", namespace, name)
+	_, err = conn.HTTPRoutes(namespace).Update(ctx, existing, metav1.UpdateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to update HTTPRoute '%s' because: %s", name, err)
+		if statusErr, ok := err.(*errors.StatusError); ok {
+			if statusErr.ErrStatus.Code == 409 {
+				return diag.Errorf("Conflict: HTTPRoute %s/%s was modified by another user. Please refresh and try again", namespace, name)
+			}
+		}
+		return diag.Errorf("Failed to update HTTPRoute %s/%s: %s", namespace, name, err)
 	}
-
-	log.Printf("[INFO] Submitted updated HTTPRoute: %#v", result)
+	log.Printf("[INFO] Updated HTTPRoute %s/%s", namespace, name)
 
 	return resourceKubernetesHTTPRouteV1Read(ctx, d, meta)
 }
@@ -1137,7 +1142,7 @@ func resourceKubernetesHTTPRouteV1Delete(ctx context.Context, d *schema.Resource
 			d.SetId("")
 			return nil
 		}
-		return diag.Errorf("Failed to delete HTTPRoute '%s' because: %s", name, err)
+		return diag.Errorf("Failed to delete HTTPRoute %s/%s: %s", namespace, name, err)
 	}
 
 	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {

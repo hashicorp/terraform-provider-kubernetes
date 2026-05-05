@@ -136,7 +136,10 @@ func dataSourceKubernetesGatewayClassV1Read(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	name := d.Get("metadata.0.name").(string)
+	name, ok := d.Get("metadata.0.name").(string)
+	if !ok || name == "" {
+		return diag.Errorf("metadata.name is required and must be a string")
+	}
 
 	d.SetId(name)
 

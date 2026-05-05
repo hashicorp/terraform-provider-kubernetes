@@ -559,7 +559,13 @@ func expandHTTPRouteSpec(l []interface{}) gatewayv1.HTTPRouteSpec {
 	if v, ok := in["hostnames"].([]interface{}); ok && len(v) > 0 {
 		hostnames := make([]gatewayv1.Hostname, len(v))
 		for i, h := range v {
-			hostnames[i] = gatewayv1.Hostname(h.(string))
+			if hs, ok := h.(string); ok && hs != "" {
+				// Validate hostname format (max 253 chars per DNS spec)
+				if len(hs) > 253 {
+					return gatewayv1.HTTPRouteSpec{}, fmt.Errorf("hostname must be 253 characters or less, got %d", len(hs))
+				}
+				hostnames[i] = gatewayv1.Hostname(hs)
+			}
 		}
 		obj.Hostnames = hostnames
 	}

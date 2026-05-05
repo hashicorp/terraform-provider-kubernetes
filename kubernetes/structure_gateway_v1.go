@@ -4,6 +4,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -534,7 +536,13 @@ func expandGatewayV1Listener(in map[string]interface{}) (*gatewayv1.Listener, er
 	obj := &gatewayv1.Listener{}
 
 	if v, ok := in["name"].(string); ok && v != "" {
+		// Validate listener name length (Gateway API spec: max 253 characters)
+		if len(v) > 253 {
+			return nil, fmt.Errorf("listener name must be 253 characters or less, got %d", len(v))
+		}
 		obj.Name = gatewayv1.SectionName(v)
+	} else {
+		return nil, fmt.Errorf("listener name is required")
 	}
 
 	if v, ok := in["hostname"].(string); ok && v != "" {
@@ -542,12 +550,24 @@ func expandGatewayV1Listener(in map[string]interface{}) (*gatewayv1.Listener, er
 		obj.Hostname = &hostname
 	}
 
-	if v, ok := in["port"].(int); ok && v > 0 {
+	if v, ok := in["port"].(int); ok {
+		if v <= 0 || v > 65535 {
+			return nil, fmt.Errorf("port must be between 1 and 65535, got %d", v)
+		}
 		obj.Port = gatewayv1.PortNumber(v)
+	} else {
+		return nil, fmt.Errorf("listener port is required")
 	}
 
 	if v, ok := in["protocol"].(string); ok && v != "" {
+		// Validate protocol type
+		validProtocols := map[string]bool{"HTTP": true, "HTTPS": true, "TCP": true, "UDP": true, "TLS": true}
+		if !validProtocols[v] {
+			return nil, fmt.Errorf("invalid protocol %q, must be one of: HTTP, HTTPS, TCP, UDP, TLS", v)
+		}
 		obj.Protocol = gatewayv1.ProtocolType(v)
+	} else {
+		return nil, fmt.Errorf("listener protocol is required")
 	}
 
 	if v, ok := in["tls"].([]interface{}); ok && len(v) > 0 {

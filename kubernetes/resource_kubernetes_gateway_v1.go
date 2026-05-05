@@ -33,6 +33,7 @@ func resourceKubernetesGatewayV1(deprecationMessage string) *schema.Resource {
 		},
 		Identity: resourceIdentitySchemaNamespaced(),
 		Timeouts: &schema.ResourceTimeout{
+			// Timeouts validated in provider configure - max 30 minutes for safety
 			Create: schema.DefaultTimeout(10 * time.Minute),
 			Read:   schema.DefaultTimeout(5 * time.Minute),
 			Update: schema.DefaultTimeout(10 * time.Minute),
@@ -58,9 +59,10 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 					},
 					"listeners": {
 						Type:        schema.TypeList,
-						Description: "Listeners associated with this Gateway. Listeners define logical endpoints that are bound on this Gateway's addresses.",
+						Description: "Listeners associated with this Gateway. Listeners define logical endpoints that are bound on this Gateway's addresses. Maximum 64 listeners per Gateway (Gateway API spec limit).",
 						Required:    true,
 						MinItems:    1,
+						MaxItems:    64,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"name": {
@@ -650,12 +652,12 @@ func resourceKubernetesGatewayV1Create(ctx context.Context, d *schema.ResourceDa
 		Spec:       *spec,
 	}
 
-	log.Printf("[INFO] Creating new Gateway: %#v", gateway)
+	log.Printf("[INFO] Creating Gateway %s/%s", metadata.Namespace, metadata.Name)
 	out, err := conn.Gateways(metadata.Namespace).Create(ctx, gateway, metav1.CreateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to create Gateway '%s' because: %s", buildId(metadata), err)
+		return diag.Errorf("Failed to create Gateway %s/%s: %s", metadata.Namespace, metadata.Name, err)
 	}
-	log.Printf("[INFO] Submitted new Gateway: %#v", out)
+	log.Printf("[INFO] Created Gateway %s/%s", metadata.Namespace, metadata.Name)
 	d.SetId(buildId(out.ObjectMeta))
 
 	return resourceKubernetesGatewayV1Read(ctx, d, meta)
@@ -672,17 +674,17 @@ func resourceKubernetesGatewayV1Read(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Reading Gateway %s", name)
+	log.Printf("[INFO] Reading Gateway %s/%s", namespace, name)
 	gateway, err := conn.Gateways(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-			log.Printf("[DEBUG] Gateway %s not found, removing from state", name)
+			log.Printf("[INFO] Gateway %s/%s not found, removing from state", namespace, name)
 			d.SetId("")
 			return diag.Diagnostics{}
 		}
-		return diag.Errorf("Failed to read Gateway '%s' because: %s", name, err)
+		return diag.Errorf("Failed to read Gateway %s/%s: %s", namespace, name, err)
 	}
-	log.Printf("[INFO] Received Gateway: %#v", gateway)
+	log.Printf("[INFO] Retrieved Gateway %s/%s", namespace, name)
 
 	err = d.Set("metadata", flattenMetadata(gateway.ObjectMeta, d, meta))
 	if err != nil {
@@ -690,17 +692,15 @@ func resourceKubernetesGatewayV1Read(ctx context.Context, d *schema.ResourceData
 	}
 
 	flattenedSpec := flattenGatewayV1Spec(gateway.Spec)
-	log.Printf("[DEBUG] Flattened Gateway spec: %#v", flattenedSpec)
 	err = d.Set("spec", flattenedSpec)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.Errorf("Failed to set Gateway spec: %s", err)
 	}
 
 	flattenedStatus := flattenGatewayV1Status(gateway.Status)
-	log.Printf("[DEBUG] Flattened Gateway status: %#v", flattenedStatus)
 	err = d.Set("status", flattenedStatus)
 	if err != nil {
-		return diag.FromErr(err)
+		return diag.Errorf("Failed to set Gateway status: %s", err)
 	}
 
 	err = setResourceIdentityNamespaced(d, "gateway.networking.k8s.io/v1", "Gateway", namespace, name)
@@ -737,12 +737,17 @@ func resourceKubernetesGatewayV1Update(ctx context.Context, d *schema.ResourceDa
 	}
 	existing.Spec = *spec
 
-	log.Printf("[INFO] Updating Gateway: %#v", existing)
-	out, err := conn.Gateways(namespace).Update(ctx, existing, metav1.UpdateOptions{})
+	log.Printf("[INFO] Updating Gateway %s/%s", namespace, name)
+	_, err = conn.Gateways(namespace).Update(ctx, existing, metav1.UpdateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to update Gateway %s because: %s", d.Id(), err)
+		if statusErr, ok := err.(*errors.StatusError); ok {
+			if statusErr.ErrStatus.Code == 409 {
+				return diag.Errorf("Conflict: Gateway %s/%s was modified by another user. Please refresh and try again", namespace, name)
+			}
+		}
+		return diag.Errorf("Failed to update Gateway %s/%s: %s", namespace, name, err)
 	}
-	log.Printf("[INFO] Submitted updated Gateway: %#v", out)
+	log.Printf("[INFO] Updated Gateway %s/%s", namespace, name)
 
 	return resourceKubernetesGatewayV1Read(ctx, d, meta)
 }

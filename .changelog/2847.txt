@@ -1,0 +1,3 @@
+```release-note:feature
+kubernetes: Add `kubernetes_endpoint_slice_v1` data source
+```

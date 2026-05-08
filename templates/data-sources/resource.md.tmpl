@@ -1,0 +1,17 @@
+---
+subcategory: "manifest"
+page_title: "Kubernetes: kubernetes_resource"
+description: |-
+  This is a generic data source for Kubernetes API resources
+---
+
+# {{ .Name }}
+
+This data source is a generic way to retrieve resources from the Kubernetes API.
+
+{{ .SchemaMarkdown }}
+
+### Example: Get data from a ConfigMap
+
+{{tffile "examples/data-sources/resource/example_1.tf"}}
+

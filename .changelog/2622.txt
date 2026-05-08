@@ -1,0 +1,3 @@
+```release-note:enhancement
+Add `sub_path_expr` to volume mount options pod spec
+```

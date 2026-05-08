@@ -1,0 +1,3 @@
+```release-note:bug
+`manifest_decode()`: fix handling of manifests containing null values
+```

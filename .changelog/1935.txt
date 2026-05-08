@@ -1,0 +1,7 @@
+```release-note:enhancement
+`resource/kubernetes_persistent_volume`: add additional validation on the delete operation to make it idempotent
+```
+
+```release-note:enhancement
+`resource/kubernetes_persistent_volume_v1`: add additional validation on the delete operation to make it idempotent
+```

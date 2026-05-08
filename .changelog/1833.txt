@@ -1,0 +1,4 @@
+```release-note:enhancement
+resource/kubernetes_secret: Add a new attribute `wait_for_service_account_token` and corresponding `create` timeout
+resource/kubernetes_secret_v1: Add a new attribute `wait_for_service_account_token` and corresponding `create` timeout
+```

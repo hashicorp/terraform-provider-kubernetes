@@ -1,0 +1,251 @@
+// Copyright IBM Corp. 2017, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package kubernetes
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+
+	batchv1 "k8s.io/api/batch/v1"
+)
+
+func jobMetadataSchema() *schema.Schema {
+	m := namespacedMetadataSchema("job", true)
+	mr := m.Elem.(*schema.Resource)
+	mr.Schema["labels"].Computed = true
+	return m
+}
+
+func jobSpecFields(specUpdatable bool) map[string]*schema.Schema {
+	podTemplateFields := map[string]*schema.Schema{
+		"metadata": metadataSchema("job", true),
+		"spec": {
+			Type:        schema.TypeList,
+			Description: "Spec of the pods owned by the job",
+			Optional:    true,
+			ForceNew:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: podSpecFields(specUpdatable, false),
+			},
+		},
+	}
+	// Job and CronJob don't support "Always" as a value for "restart_policy" in Pod templates.
+	// This changes the default value of "restart_policy" to "Never"
+	// as expected by Job and CronJob resources.
+	podTemplateFieldsSpecSchema := podTemplateFields["spec"].Elem.(*schema.Resource)
+	restartPolicy := podTemplateFieldsSpecSchema.Schema["restart_policy"]
+	restartPolicy.Default = "Never"
+
+	s := map[string]*schema.Schema{
+		"active_deadline_seconds": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ForceNew:     false,
+			ValidateFunc: validatePositiveInteger,
+			Description:  "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
+		},
+		"backoff_limit": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Default:      6,
+			ForceNew:     false,
+			ValidateFunc: validateNonNegativeInteger,
+			Description:  "Specifies the number of retries before marking this job failed. Defaults to 6",
+		},
+		"backoff_limit_per_index": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ForceNew:     true,
+			ValidateFunc: validateNonNegativeInteger,
+			Description:  "Specifies the limit for the number of retries within an index before marking this index as failed. When enabled the number of failures per index is kept in the pod's batch.kubernetes.io/job-index-failure-count annotation. It can only be set when Job's completionMode=Indexed, and the Pod's restart policy is Never. The field is immutable.",
+		},
+		// This field is immutable in Jobs.
+		"completions": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ForceNew:     true,
+			Default:      1,
+			ValidateFunc: validatePositiveInteger,
+			Description:  "Specifies the desired number of successfully finished pods the job should be run with. Setting to nil means that the success of any pod signals the success of all pods, and allows parallelism to have any positive value. Setting to 1 means that parallelism is limited to 1 and the success of that pod signals the success of the job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
+		},
+		"completion_mode": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: true,
+			Computed: true,
+			ValidateFunc: validation.StringInSlice([]string{
+				string(batchv1.IndexedCompletion),
+				string(batchv1.NonIndexedCompletion),
+			}, false),
+			Description: "Specifies how Pod completions are tracked. It can be `NonIndexed` (default) or `Indexed`. More info: https://kubernetes.io/docs/concepts/workloads/controllers/job/#completion-mode",
+		},
+		"manual_selector": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			ForceNew:    false,
+			Description: "Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md",
+		},
+		"max_failed_indexes": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ForceNew:     false,
+			ValidateFunc: validateNonNegativeInteger,
+			Description:  "Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md",
+		},
+		"parallelism": {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			ForceNew:     false,
+			Default:      1,
+			ValidateFunc: validateNonNegativeInteger,
+			Description:  "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
+		},
+		"pod_failure_policy": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			ForceNew:    true,
+			MaxItems:    1,
+			Description: "Specifies the maximum desired number of pods the job should run at any given time. The actual number of pods running in steady state will be less than this number when ((.spec.completions - .status.successful) < .spec.parallelism), i.e. when the work left to do is less than max parallelism. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"rule": {
+						Type:        schema.TypeList,
+						Description: "A label query over volumes to consider for binding.",
+						Required:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"action": {
+									Type:     schema.TypeString,
+									Optional: true,
+								},
+								"on_exit_codes": {
+									Type:     schema.TypeList,
+									Optional: true,
+									MaxItems: 1,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"container_name": {
+												Type:     schema.TypeString,
+												Optional: true,
+											},
+											"operator": {
+												Type:     schema.TypeString,
+												Optional: true,
+											},
+											"values": {
+												Type:     schema.TypeList,
+												Required: true,
+												MinItems: 1,
+												MaxItems: 255,
+												Elem: &schema.Schema{Type: schema.TypeInt,
+													ValidateFunc: validation.IntNotInSlice([]int{0})},
+											},
+										},
+									},
+								},
+								"on_pod_condition": {
+									Type:     schema.TypeList,
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											"status": {
+												Type:     schema.TypeString,
+												Optional: true,
+												Default:  "True",
+											},
+											"type": {
+												Type:     schema.TypeString,
+												Optional: true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		// This field is immutable in Jobs.
+		"selector": {
+			Type:        schema.TypeList,
+			Description: "A label query over volumes to consider for binding.",
+			Optional:    true,
+			ForceNew:    true,
+			Computed:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"match_expressions": {
+						Type:        schema.TypeList,
+						Description: "A list of label selector requirements. The requirements are ANDed.",
+						Optional:    true,
+						ForceNew:    true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"key": {
+									Type:        schema.TypeString,
+									Description: "The label key that the selector applies to.",
+									Optional:    true,
+									ForceNew:    true,
+								},
+								"operator": {
+									Type:        schema.TypeString,
+									Description: "A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.",
+									Optional:    true,
+									ForceNew:    true,
+								},
+								"values": {
+									Type:        schema.TypeSet,
+									Description: "An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.",
+									Optional:    true,
+									ForceNew:    true,
+									Elem:        &schema.Schema{Type: schema.TypeString},
+									Set:         schema.HashString,
+								},
+							},
+						},
+					},
+					"match_labels": {
+						Type:        schema.TypeMap,
+						Description: "A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+						Optional:    true,
+						ForceNew:    true,
+					},
+				},
+			},
+		},
+		// PodTemplate fields are immutable in Jobs.
+		"template": {
+			Type:        schema.TypeList,
+			Description: "Describes the pod that will be created when executing a job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
+			Required:    true,
+			MaxItems:    1,
+			ForceNew:    true,
+			Elem: &schema.Resource{
+				Schema: podTemplateFields,
+			},
+		},
+		// This field can be edited in place.
+		"ttl_seconds_after_finished": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: false,
+			ValidateFunc: func(value interface{}, key string) ([]string, []error) {
+				v, err := strconv.Atoi(value.(string))
+				if err != nil {
+					return []string{}, []error{fmt.Errorf("%s is not a valid integer", key)}
+				}
+				return validateNonNegativeInteger(v, key)
+			},
+			Description: "ttlSecondsAfterFinished limits the lifetime of a Job that has finished execution (either Complete or Failed). If this field is set, ttlSecondsAfterFinished after the Job finishes, it is eligible to be automatically deleted. When the Job is being deleted, its lifecycle guarantees (e.g. finalizers) will be honored. If this field is unset, the Job won't be automatically deleted. If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.",
+		},
+	}
+
+	return s
+}

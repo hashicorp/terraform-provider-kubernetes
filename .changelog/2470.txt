@@ -1,0 +1,3 @@
+```release-note:doc
+Migrate legacy structure to new tfplugindocs template structure
+```

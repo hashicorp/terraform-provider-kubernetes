@@ -1,0 +1,3 @@
+```release-note:bug
+Fix diff after import when importing resources containing volume_mount
+```

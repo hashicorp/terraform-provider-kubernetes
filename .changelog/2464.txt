@@ -1,0 +1,3 @@
+```release-note:bug
+data-sources: revert a recently introduced deviation on datasources where querying a non-existent resource would cause an error (#2434).
+```

@@ -1,0 +1,24 @@
+---
+subcategory: "networking/v1"
+page_title: "Kubernetes: kubernetes_ingress_class_v1"
+description: |-
+  Ingresses can be implemented by different controllers, often with different configuration. Each Ingress should specify a class, a reference to an IngressClass resource that contains additional configuration including the name of the controller that should implement the class.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/ingress_class_v1/example_1.tf"}}
+
+## Import
+
+Ingress Classes can be imported using its name, e.g:
+
+```
+$ terraform import kubernetes_ingress_class_v1.example example
+```

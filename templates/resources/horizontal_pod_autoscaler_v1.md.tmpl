@@ -1,0 +1,24 @@
+---
+subcategory: "autoscaling/v1"
+page_title: "Kubernetes: kubernetes_horizontal_pod_autoscaler_v1"
+description: |-
+  Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
+---
+
+# {{ .Name }} 
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/horizontal_pod_autoscaler_v1/example_1.tf"}}
+
+## Import
+
+Horizontal Pod Autoscaler can be imported using the namespace and name, e.g.
+
+```
+$ terraform import kubernetes_horizontal_pod_autoscaler_v1.example default/terraform-example
+```

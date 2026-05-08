@@ -1,0 +1,28 @@
+---
+subcategory: "certificates/v1beta1"
+page_title: "Kubernetes: kubernetes_certificate_signing_request"
+description: |-
+  Use this resource to generate TLS certificates using Kubernetes.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/certificate_signing_request/example_1.tf"}}
+
+## Generating a New Certificate
+
+Since the certificate is a logical resource that lives only in the Terraform state, it will persist until it is explicitly destroyed by the user.
+
+In order to force the generation of a new certificate within an existing state, the certificate instance can be "tainted":
+
+```
+terraform taint kubernetes_certificate_signing_request.example
+```
+
+A new certificate will then be generated on the next `terraform apply`.

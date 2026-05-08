@@ -1,0 +1,24 @@
+---
+subcategory: "storage/v1beta1"
+page_title: "Kubernetes: kubernetes_csi_driver"
+description: |-
+  The Container Storage Interface (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container Orchestration Systems (COs) like Kubernetes.
+---
+
+# {{ .Name }}
+
+The [Container Storage Interface](https://kubernetes-csi.github.io/docs/introduction.html) (CSI) is a standard for exposing arbitrary block and file storage systems to containerized workloads on Container Orchestration Systems (COs) like Kubernetes.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/csi_driver/example_1.tf"}}
+
+## Import
+
+kubernetes_csi_driver can be imported using its name, e.g.
+
+```
+$ terraform import kubernetes_csi_driver.example terraform-example
+```

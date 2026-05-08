@@ -1,0 +1,15 @@
+```release-note:enhancement
+Add additional validation on the delete operation to make it idempotent. That affects the following resources:
+  - kubernetes_priority_class
+  - kubernetes_replication_controller
+  - kubernetes_resource_quota
+  - kubernetes_role
+  - kubernetes_role_binding
+  - kubernetes_secret
+  - kubernetes_service
+  - kubernetes_service_account
+  - kubernetes_stateful_set
+  - kubernetes_storage_class
+  - kubernetes_validating_webhook_configuration
+  - kubernetes_validating_webhook_configuration_v1
+```

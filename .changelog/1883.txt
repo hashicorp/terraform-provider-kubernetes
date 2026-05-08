@@ -1,0 +1,7 @@
+```release-note:doc
+`resource/kubernetes_service_account`: mark attribute `default_secret_name` as deprecated
+```
+
+```release-note:doc
+`resource/kubernetes_service_account_v1`: mark attribute `default_secret_name` as deprecated
+```

@@ -1,0 +1,3 @@
+```release-note:enhancement
+`kubernetes/resource_kubernetes_pod.go`: Add `legacy_lifecycle_states` attribute
+```

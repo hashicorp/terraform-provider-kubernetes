@@ -1,0 +1,34 @@
+---
+subcategory: "extensions/v1beta1"
+page_title: "Kubernetes: kubernetes_ingress"
+description: |-
+  Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.
+---
+
+# {{ .Name }}
+
+Ingress is a collection of rules that allow inbound connections to reach the endpoints defined by a backend. An Ingress can be configured to give services externally-reachable urls, load balance traffic, terminate SSL, offer name based virtual hosting etc.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/ingress/example_1.tf"}}
+
+## Example using Nginx ingress controller
+
+{{tffile "examples/resources/ingress/example_2.tf"}}
+
+## Import
+
+Ingress can be imported using its namespace and name:
+
+```
+terraform import kubernetes_ingress.<TERRAFORM_RESOURCE_NAME> <KUBE_NAMESPACE>/<KUBE_INGRESS_NAME>
+```
+
+e.g.
+
+```
+$ terraform import kubernetes_ingress.example default/terraform-name
+```

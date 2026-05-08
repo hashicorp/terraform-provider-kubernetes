@@ -1,0 +1,19 @@
+```release-note:bug
+`resource/kubernetes_network_policy`: Fix an issue when the delete operation may not be idempotent.
+```
+
+```release-note:bug
+`resource/kubernetes_network_policy_v1`: Fix an issue when the delete operation may not be idempotent.
+```
+
+```release-note:bug
+`resource/kubernetes_mutating_webhook_configuration`: Fix an issue when the delete operation may not be idempotent.
+```
+
+```release-note:bug
+`resource/kubernetes_persistent_volume_claim`: Fix an issue when the delete operation may not be idempotent.
+```
+
+```release-note:bug
+`resource/kubernetes_persistent_volume_claim_v1`: Fix an issue when the delete operation may not be idempotent.
+```

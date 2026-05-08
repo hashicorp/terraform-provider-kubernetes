@@ -1,0 +1,28 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_service"
+description: |-
+  A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.
+---
+
+# {{ .Name }}
+
+A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/service/example_1.tf"}}
+
+## Example using AWS load balancer
+
+{{tffile "examples/resources/service/example_2.tf"}}
+
+## Import
+
+Service can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_service.example default/terraform-name
+```

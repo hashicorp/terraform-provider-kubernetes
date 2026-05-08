@@ -1,0 +1,3 @@
+```release-note:new-resource
+`resource/kubernetes_runtime_class_v1`: Add a new resource `kubernetes_runtime_class_v1`.
+```

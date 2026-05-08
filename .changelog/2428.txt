@@ -1,0 +1,3 @@
+```release-note:enhancement
+Add provider defined functions: `manifest_encode`, `manifest_decode`, `manifest_decode_multi`
+```

@@ -1,0 +1,8 @@
+/.vscode/**
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+*.log
+**/terraform-provider-kubernetes*
+/terraform-provider-kubernetes*

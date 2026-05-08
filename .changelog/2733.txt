@@ -1,0 +1,3 @@
+```release-note:bug
+Fixes issue #2732 where the provider would fail when used with Terraform >= v1.12.1 due to missing `GetResourceIdentitySchemas` implementation.
+```

@@ -1,0 +1,4 @@
+```release-note:bug
+`resource/kubernetes_cron_job_v1`: Change the schema to include a namespace in `jobTemplate`
+`resource/kubernetes_stateful_set_v1`: Change the schema to include a namespace in `template`
+```

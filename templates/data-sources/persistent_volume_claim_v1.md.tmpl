@@ -1,0 +1,24 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_persistent_volume_claim_v1"
+description: |-
+  A PersistentVolumeClaim (PVC) is a request for storage by a user. This data source retrieves information about the specified PVC.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/data-sources/persistent_volume_claim_v1/example_1.tf"}}
+
+## Import
+
+Persistent Volume Claim can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_persistent_volume_claim_v1.example default/example-name
+```

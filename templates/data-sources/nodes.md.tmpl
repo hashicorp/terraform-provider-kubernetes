@@ -1,0 +1,22 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_nodes"
+description: |-
+  Gets nodes within a cluster.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }} 
+
+## Example usage
+
+### All nodes
+
+{{tffile "examples/data-sources/nodes/example_1.tf"}}
+
+### By label
+
+{{tffile "examples/data-sources/nodes/example_2.tf"}}

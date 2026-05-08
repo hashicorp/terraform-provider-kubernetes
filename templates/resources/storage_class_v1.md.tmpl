@@ -1,0 +1,24 @@
+---
+subcategory: "storage/v1"
+page_title: "Kubernetes: kubernetes_storage_class_v1"
+description: |-
+  Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/storage_class_v1/example_1.tf"}}
+
+## Import
+
+kubernetes_storage_class_v1 can be imported using its name, e.g.
+
+```
+$ terraform import kubernetes_storage_class_v1.example terraform-example
+```

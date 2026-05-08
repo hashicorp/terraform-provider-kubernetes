@@ -1,0 +1,23 @@
+```release-note:enhancement
+`resource/kubernetes_persistent_volume_claim`: add a new attribute `spec.volume_mode`.
+```
+
+```release-note:enhancement
+`resource/kubernetes_persistent_volume_claim_v1`: add a new attribute `spec.volume_mode`.
+```
+
+```release-note:enhancement
+`resource/kubernetes_stateful_set`: add a new attribute `spec.volume_claim_template.spec.volume_mode`.
+```
+
+```release-note:enhancement
+`resource/kubernetes_stateful_set_v1`: add a new attribute `spec.volume_claim_template.spec.volume_mode`.
+```
+
+```release-note:enhancement
+`data_source/kubernetes_persistent_volume_claim`: add a new attribute `spec.volume_mode`.
+```
+
+```release-note:enhancement
+`data_source/kubernetes_persistent_volume_claim_v1`: add a new attribute `spec.volume_mode`.
+```

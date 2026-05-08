@@ -1,0 +1,20 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_node_taint"
+description: |-
+  A Node Taint is an anti-affinity rule allowing a Kubernetes node to repel a set of pods.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/node_taint/example_1.tf"}}
+
+## Import
+
+This resource does not support the `import` command. As this resource operates on Kubernetes resources that already exist, creating the resource is equivalent to importing it.

@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_manifest`: fix an issue with the `kubernetes_manifest` resource, where an object fails to update correctly when employing wait conditions and thus some attributes are not available for the reference after creation.
+```

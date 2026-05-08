@@ -1,0 +1,24 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_config_map"
+description: |-
+  The resource provides mechanisms to inject containers with configuration data while keeping containers agnostic of Kubernetes.
+---
+
+# {{ .Name }}
+
+The resource provides mechanisms to inject containers with configuration data while keeping containers agnostic of Kubernetes. Config Map can be used to store fine-grained information like individual properties or coarse-grained information like entire config files or JSON blobs.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/config_map/example_1.tf"}}
+
+## Import
+
+Config Map can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_config_map.example default/my-config
+```

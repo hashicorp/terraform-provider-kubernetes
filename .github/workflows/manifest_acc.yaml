@@ -1,0 +1,88 @@
+name: Manifest acceptance tests
+
+on:
+  push:
+    branches:
+      - main
+      - v3-major-release
+    paths:
+      - "manifest/**/*.go"
+      - "manifest/**/go.mod"
+  pull_request:
+    branches:
+      - main
+      - v3-major-release
+    paths:
+      - "manifest/**/*.go"
+      - "manifest/**/go.mod"
+  workflow_dispatch:
+
+env:
+  KUBECONFIG: ${{ github.workspace }}/.kube/config
+
+jobs:
+  acceptance_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      # Don't cancel all in-progress and queued jobs in the matrix if any job in the matrix fails.
+      # That will be helpful to catch any issues related to a particular Kubernetes version.
+      fail-fast: false
+      matrix:
+        kubernetes_version:
+          # kind images: https://github.com/kubernetes-sigs/kind/releases (note the images are kind release specific)
+          - v1.30.6@sha256:b6d08db72079ba5ae1f4a88a09025c0a904af3b52387643c285442afb05ab994
+          - v1.29.10@sha256:3b2d8c31753e6c8069d4fc4517264cd20e86fd36220671fb7d0a5855103aa84b
+          - v1.28.15@sha256:a7c05c7ae043a0b8c818f5a06188bc2c4098f6cb59ca7d1856df00375d839251
+          - v1.27.16@sha256:2d21a61643eafc439905e18705b8186f3296384750a835ad7a005dceb9546d20
+          - v1.26.6@sha256:6e2d8b28a5b601defe327b98bd1c2d1930b49e5d8c512e1895099e4504007adb
+          - v1.26.15@sha256:c79602a44b4056d7e48dc20f7504350f1e87530fe953428b792def00bc1076dd
+        isMajorReleaseBranch:
+          - ${{ contains(github.ref, 'v3-major-release') }}
+        isBaseMajorRelease:
+          - ${{ contains(github.base_ref, 'v3-major-release') }}
+        include:
+          # include if reference is v3-major-release and base reference is not v3-major-release
+          - isMajorReleaseBranch: true
+            isBaseMajorRelease: false
+            kubernetes_version: v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30   
+          # include if reference is not v3-major-release and base reference is v3-major-release
+          - isMajorReleaseBranch: false
+            isBaseMajorRelease: true
+            kubernetes_version: v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30  
+        terraform_version:
+          - 1.12.0
+          - 1.11.2
+          - 1.10.5
+          - 1.9.8
+          - 1.8.5
+          - 1.6.6
+          - 1.5.7
+          - 1.4.7
+          - 1.3.10
+          - 1.2.9
+          - 1.1.9
+          - 1.0.11
+
+    steps:
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - name: Set up Go
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: 'go.mod'
+      - name: Setup kind
+        uses: helm/kind-action@0025e74a8c7512023d06dc019c617aa3cf561fde # v1.10.0
+        with:
+          version: v0.25.0
+          node_image: kindest/node:${{ matrix.kubernetes_version }}
+          # By default, this action creates a cluster with the name 'chart-testing'
+          cluster_name: manifest
+      - name: Build annotations webhook
+        run: |
+          docker build --rm -t tf-k8s-acc-webhook ./manifest/test/acceptance/testdata/ComputedFields/webhook/
+          kind load docker-image tf-k8s-acc-webhook --name=manifest
+      - name: Run tests
+        env:
+          KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}
+          TF_ACC_TERRAFORM_VERSION: ${{ matrix.terraform_version }}
+        run: |
+          go test -count=1 -tags acceptance -v ./manifest/test/acceptance/... -timeout 120m

@@ -1,0 +1,24 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_config_map_v1"
+description: |-
+  The resource provides mechanisms to inject containers with configuration data while keeping containers agnostic of Kubernetes.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/config_map_v1/example_1.tf"}}
+
+## Import
+
+Config Map can be imported using its namespace and name, e.g.
+
+```
+$ terraform import kubernetes_config_map_v1.example default/my-config
+```

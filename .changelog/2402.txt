@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_node_taint`: Fix the error check for nonexistant nodes so that terraform does not fail if there is a taint in the state file for a node that has been deleted.
+```

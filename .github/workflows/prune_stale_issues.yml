@@ -1,0 +1,15 @@
+name: "Close stale issues"
+on:
+  schedule:
+  - cron: "0 0 * * *"
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e # v9.0.0
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        stale-issue-message: 'Marking this issue as stale due to inactivity. If this issue receives no comments in the next 30 days it will automatically be closed. If this issue was automatically closed and you feel this issue should be reopened, we encourage creating a new issue linking back to this one for added context. This helps our maintainers find and focus on the active issues. Maintainers may also remove the stale label at their discretion. Thank you!'
+        days-before-stale: 365
+        days-before-close: 30

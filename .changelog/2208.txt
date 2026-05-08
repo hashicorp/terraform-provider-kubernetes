@@ -1,0 +1,3 @@
+```release-note:enhancement
+`resource/kubernetes_endpoint_slice_v1`: make attribute `endpoint.condition` optional. If you had previously included an empty block `condition {}` in your configuration, we request you to remove it. Doing so will prevent receiving continuous _"update in-place"_ messages while performing the plan and apply operations.
+```

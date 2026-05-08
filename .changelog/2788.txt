@@ -1,0 +1,3 @@
+```release-note:bug
+Environment variables should not override configuration when using `kubernetes_manifest`.
+```

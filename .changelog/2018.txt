@@ -1,0 +1,3 @@
+```release-note:note
+manifest/morph.go: Add Diagnostic message when determining a type fails
+```

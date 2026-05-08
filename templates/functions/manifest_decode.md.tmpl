@@ -1,0 +1,32 @@
+---
+subcategory: ""
+page_title: "manifest_decode function"
+description: |-
+  Decode a Kubernetes YAML manifest 
+---
+
+{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+
+For example, the {{ .FunctionArgumentsMarkdown }} template can be used to replace manual argument documentation if descriptions of function arguments are added in the provider source code. */ -}}
+
+# function: manifest_decode
+
+Given a YAML text containing a Kubernetes manifest, will decode and return an object representation of that resource.
+
+## Example Usage
+
+{{tffile "examples/functions/manifest_decode/example_1.tf"}}
+
+## Signature
+
+```text
+manifest_decode(manifest string) object
+```
+
+## Arguments
+
+1. `manifest` (String) The YAML text for a Kubernetes manifest
+
+## Return Type
+
+The `object` returned from `manifest_decode` is dynamic and will mirror the structure of the YAML manifest supplied.

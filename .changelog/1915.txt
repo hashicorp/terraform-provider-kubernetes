@@ -1,0 +1,3 @@
+```release-note:enhancement
+Add a new optional attribute `grpc` to `pod.spec.container.liveness_probe`, `pod.spec.container.readiness_probe`, and `pod.spec.container.startup_probe`. That affects all resources and data sources that use mentioned `pod.spec.container` probes directly or as a template.
+```

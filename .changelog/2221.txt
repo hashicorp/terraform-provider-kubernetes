@@ -1,0 +1,3 @@
+```release-note:doc
+Fix external broken links in the documentation.
+```

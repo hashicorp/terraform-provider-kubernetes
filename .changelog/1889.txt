@@ -1,0 +1,15 @@
+```release-note:bug
+Fix an issue when empty values of `spec.container.resources.limits` or `spec.container.resources.requests` produce continuous diff output during `plan` although no real changes were made. Affected resources: `kubernetes_pod`, `kubernetes_pod_v1`, `kubernetes_daemonset`, `kubernetes_daemon_set_v1`, `kubernetes_deployment`, `kubernetes_deployment_v1`.
+```
+
+```release-note:bug
+Fix an issue when changing values of `spec.container.resources.limits` or `spec.container.resources.requests` does not update appropriate Kubernetes resources. Affected resources: `kubernetes_pod`, `kubernetes_pod_v1`.
+```
+
+```release-note:enhancement
+`r/kubernetes_pod`: changing values of `spec.container.resources.limits` or `spec.container.resources.requests` will force resource recreation.
+```
+
+```release-note:enhancement
+`r/kubernetes_pod_v1`: changing values of `spec.container.resources.limits` or `spec.container.resources.requests` will force resource recreation.
+```

@@ -1,0 +1,16 @@
+# Copyright IBM Corp. 2017, 2026
+# SPDX-License-Identifier: MPL-2.0
+
+resource "kubernetes_manifest" "test" {
+  manifest = {
+    apiVersion = var.group_version
+    kind       = var.kind
+    metadata = {
+      namespace = var.namespace
+      name      = var.name
+    }
+    spec = {
+      selfSigned = {}
+    }
+  }
+}

@@ -1,0 +1,3 @@
+```release-note:enhancement
+Added `conditions` attribute to `kubernetes_nodes` data source, which will provide detailed node health and status information
+```

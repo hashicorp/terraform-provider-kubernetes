@@ -1,0 +1,3 @@
+```release-note:new-resource
+Add resource_kubernetes_env.go
+```

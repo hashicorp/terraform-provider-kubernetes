@@ -1,0 +1,3 @@
+```release-note:bug
+Revert "Handle Jobs with ttl_seconds_after_finished = 0 correctly"
+```

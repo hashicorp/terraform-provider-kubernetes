@@ -1,0 +1,3 @@
+```release-note:note
+We have updated the logic of data sources and now the provider will return all annotations and labels attached to the object, regardless of the `ignore_annotations` and `ignore_labels` provider settings. In addition to that, a list of ignored labels when they are attached to `kubernetes_job(_v1)` and `kubernetes_cron_job(_v1)` resources were extended with labels `batch.kubernetes.io/controller-uid` and `batch.kubernetes.io/job-name` since they aim to replace `controller-uid` and `job-name` in the future Kubernetes releases.
+```

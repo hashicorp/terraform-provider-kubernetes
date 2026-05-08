@@ -1,0 +1,28 @@
+---
+subcategory: "rbac/v1"
+page_title: "Kubernetes: kubernetes_cluster_role_v1"
+description: |-
+  A ClusterRole creates a role at the cluster level and in all namespaces.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/cluster_role_v1/example_1.tf"}}
+
+## Aggregation Rule Example Usage
+
+{{tffile "examples/resources/cluster_role_v1/example_2.tf"}}
+
+## Import
+
+ClusterRole can be imported using the name, e.g.
+
+```
+$ terraform import kubernetes_cluster_role_v1.example terraform-name
+```

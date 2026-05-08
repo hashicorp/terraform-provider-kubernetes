@@ -1,0 +1,3 @@
+```release-note:feature
+`kubernetes/data_source_kubernetes_persistent_volume.go`: Add data source for Kubernetes Persistent Volume Resource
+```

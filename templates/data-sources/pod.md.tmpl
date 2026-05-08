@@ -1,0 +1,30 @@
+---
+subcategory: "core/v1"
+page_title: "Kubernetes: kubernetes_pod"
+description: |-
+   A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+```
+data "kubernetes_pod" "test" {
+  metadata {
+    name = "terraform-example"
+  }
+}
+```
+
+## Import
+
+Pod can be imported using the namespace and name, e.g.
+
+```
+$ terraform import kubernetes_pod.example default/terraform-example
+```

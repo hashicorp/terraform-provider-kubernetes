@@ -1,0 +1,3 @@
+```release-note:feature
+`resources_kubernetes_daemon_set_v1` : Added `max_surge` argument for to `rolling_update` block.
+```

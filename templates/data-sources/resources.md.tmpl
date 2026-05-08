@@ -1,0 +1,21 @@
+---
+subcategory: "manifest"
+page_title: "Kubernetes: kubernetes_resources"
+description: |-
+  This data source is a generic way to query for a list of resources from the Kubernetes API and filter them. 
+---
+
+# {{ .Name }}
+
+This data source is a generic way to query for a list of Kubernetes resources and filter them using a label or field selector.
+
+{{ .SchemaMarkdown }} 
+
+### Example: Get a list of namespaces excluding "kube-system" using `field_selector`
+
+{{tffile "examples/data-sources/resources/example_1.tf"}}
+
+### Example: Get a list of namespaces excluding "kube-system" using `label_selector`
+
+{{tffile "examples/data-sources/resources/example_2.tf"}}
+

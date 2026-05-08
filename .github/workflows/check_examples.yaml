@@ -1,0 +1,60 @@
+name: Check examples
+
+on:
+  push:
+    branches:
+      - main
+      - v3-major-release
+    paths:
+      - "_examples/kubernetes_manifest/**"
+      - "**.go"
+  pull_request:
+    branches:
+      - main
+      - v3-major-release
+    paths:
+      - "_examples/kubernetes_manifest/**"
+      - "**.go"
+  workflow_dispatch:
+
+env:
+  KUBECONFIG: ${{ github.workspace }}/.kube/config
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        terraform_version:
+          - "1.6.6"
+          - "1.7.5"
+          - "1.8.5"
+          - "1.9.8"
+          - "1.10.5"
+          - "1.11.4"
+          - "1.12.1"
+    env:
+      TF_X_KUBERNETES_MANIFEST_RESOURCE: 1
+      TERM: linux
+    steps:
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ matrix.terraform_version }}
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - name: Set up Go
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: 'go.mod'
+      - name: Go mod verify
+        run: go mod verify
+      - name: Go build
+        run: go build
+      - name: Setup kind
+        uses: helm/kind-action@99576bfa6ddf9a8e612d83b513da5a75875caced # v1.9.0
+        with:
+          wait: 2m
+          version: "v0.17.0" # Kubernetes version: 1.25.X
+      - name: Check examples run
+        env:
+          KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}
+        run: ./manifest/scripts/check_examples.sh

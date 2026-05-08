@@ -1,0 +1,3 @@
+```release-note:bug
+`kubernetes_daemon_set_v1`: fix issue where fields `spec.strategy.rolling_update.max_surge` and `spec.strategy.rolling_update.max_unavailable` were not being validated correctly.
+```

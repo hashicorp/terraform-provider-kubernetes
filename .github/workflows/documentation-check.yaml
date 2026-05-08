@@ -1,0 +1,42 @@
+# name: "Documentation Updates"
+
+# on:
+#     pull_request:
+#       paths:
+#         - 'docs/**'
+#       types: [opened, synchronize, labeled]       
+
+#     push:
+#       branches:
+#         - main
+  
+# jobs:
+#     check-docs:
+#       runs-on: ubuntu-latest
+  
+#       if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-documentation') }}
+
+#       steps:
+#         - name: Checkout repository
+#           uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+
+#         - name: Set up Go
+#           uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+#           with:
+#             go-version-file: 'go.mod'
+
+#         - name: Install tfplugindocs command
+#           run: go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+        
+#         - name: Run tfplugindocs command
+#           run: tfplugindocs generate
+  
+#         - name: Check for changes
+#           run: |
+#             git diff --exit-code
+  
+#         - name: Undocumented changes 
+#           run: |
+#             echo 'Documentation is not up to date. Please refer to the `Making Changes` in the Contribution Guide on how to properly update documentation.'
+#             exit 1
+#           if: failure()

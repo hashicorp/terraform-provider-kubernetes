@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_manifest`: fix an issue in the `kubernetes_manifest` resource when it panics if tuple attributes within an object have a different number of elements. This leads to the situation when all types of end tuples are getting the same type.
+```

@@ -1,0 +1,33 @@
+run:
+  timeout: 5m
+
+issues:
+  max-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    - path: manifest/provider/resource.go
+      linters:
+        - staticcheck
+      # We need to use ValueFromMsgPack due to some missing abstraction in plugin-go.
+      text: "SA1019: tftypes.ValueFromMsgPack is deprecated: this function is exported for internal use in terraform-plugin-go."
+    - path: manifest/provider/import.go
+      linters:
+        - staticcheck
+      # We need to use MarshalMsgPack due to some missing abstraction in plugin-go.
+      text: "SA1019: impf.MarshalMsgPack is deprecated: this is not meant to be called by third parties."
+
+linters:
+  disable-all: true
+  enable:
+    - gosimple
+    - gofmt
+    - staticcheck
+
+linters-settings:
+  staticcheck:
+    checks:
+      - all
+  gosimple:
+    checks:
+      - all
+      - '-S1040' # Type assertion to current type: https://staticcheck.dev/docs/checks/#S1040

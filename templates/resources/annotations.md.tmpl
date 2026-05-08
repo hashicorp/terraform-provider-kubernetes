@@ -1,0 +1,24 @@
+---
+subcategory: "manifest"
+page_title: "Kubernetes: kubernetes_annotations"
+description: |-
+  This resource allows Terraform to manage the annotations for a resource that already exists
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/annotations/example_1.tf"}}
+
+## Example Usage: Patching resources which contain a pod template, e.g Deployment, Job
+
+{{tffile "examples/resources/annotations/example_2.tf"}}
+
+## Import
+
+This resource does not support the `import` command. As this resource operates on Kubernetes resources that already exist, creating the resource is equivalent to importing it.

@@ -1,0 +1,5 @@
+```release-note:enhancement
+FEATURES:
+  * New ephemeral resource: `kubernetes_certificate_signing_request_v1`
+  * New ephemeral resource: `kubernetes_token_request_v1`
+```

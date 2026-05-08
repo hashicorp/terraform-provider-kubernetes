@@ -1,0 +1,23 @@
+```release-note:enhancement
+`resource/kubernetes_cluster_role`: add attribute `generate_name` to produce a unique random name
+```
+
+```release-note:enhancement
+`resource/kubernetes_cluster_role_v1`: add attribute `generate_name` to produce a unique random name
+```
+
+```release-note:enhancement
+`resource/kubernetes_cluster_role_binding`: add attribute `generate_name` to produce a unique random name
+```
+
+```release-note:enhancement
+`resource/kubernetes_cluster_role_binding_v1`: add attribute `generate_name` to produce a unique random name
+```
+
+```release-note:enhancement
+`resource/kubernetes_role_binding`: add attribute `generate_name` to produce a unique random name
+```
+
+```release-note:enhancement
+`resource/kubernetes_role_binding_v1`: add attribute `generate_name` to produce a unique random name
+```

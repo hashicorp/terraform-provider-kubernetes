@@ -63,7 +63,10 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeList,
 						Description: "Hostnames defines a set of hostnames that should match against the HTTP Host header.",
 						Optional:    true,
-						Elem:        &schema.Schema{Type: schema.TypeString},
+						Elem: &schema.Schema{
+							Type:             schema.TypeString,
+							ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(1, 253)),
+						},
 					},
 					"use_default_gateways": {
 						Type:        schema.TypeString,
@@ -1018,10 +1021,7 @@ func resourceKubernetesHTTPRouteV1Create(ctx context.Context, d *schema.Resource
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec, err := expandHTTPRouteSpec(d.Get("spec").([]interface{}))
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	spec := expandHTTPRouteSpec(d.Get("spec").([]interface{}))
 
 	log.Printf("[INFO] Creating HTTPRoute %s/%s", metadata.Namespace, metadata.Name)
 	out := &gatewayv1.HTTPRoute{
@@ -1110,11 +1110,7 @@ func resourceKubernetesHTTPRouteV1Update(ctx context.Context, d *schema.Resource
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	existing.Labels = metadata.Labels
 	existing.Annotations = metadata.Annotations
-	updatedSpec, err := expandHTTPRouteSpec(d.Get("spec").([]interface{}))
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	existing.Spec = updatedSpec
+	existing.Spec = expandHTTPRouteSpec(d.Get("spec").([]interface{}))
 
 	log.Printf("[INFO] Updating HTTPRoute %s/%s", namespace, name)
 	_, err = conn.HTTPRoutes(namespace).Update(ctx, existing, metav1.UpdateOptions{})

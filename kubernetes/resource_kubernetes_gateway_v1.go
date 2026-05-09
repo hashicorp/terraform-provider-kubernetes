@@ -66,9 +66,10 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"name": {
-									Type:        schema.TypeString,
-									Description: "Name is the name of the Listener. This name MUST be unique within a Gateway.",
-									Required:    true,
+									Type:             schema.TypeString,
+									Description:      "Name is the name of the Listener. This name MUST be unique within a Gateway.",
+									Required:         true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(1, 253)),
 								},
 								"hostname": {
 									Type:        schema.TypeString,

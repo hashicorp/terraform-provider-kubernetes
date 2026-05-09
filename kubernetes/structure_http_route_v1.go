@@ -4,6 +4,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -544,9 +546,9 @@ func flattenConditions(in []metav1.Condition) []interface{} {
 	return result
 }
 
-func expandHTTPRouteSpec(l []interface{}) gatewayv1.HTTPRouteSpec {
+func expandHTTPRouteSpec(l []interface{}) (gatewayv1.HTTPRouteSpec, error) {
 	if len(l) == 0 || l[0] == nil {
-		return gatewayv1.HTTPRouteSpec{}
+		return gatewayv1.HTTPRouteSpec{}, nil
 	}
 
 	in := l[0].(map[string]interface{})
@@ -560,7 +562,6 @@ func expandHTTPRouteSpec(l []interface{}) gatewayv1.HTTPRouteSpec {
 		hostnames := make([]gatewayv1.Hostname, len(v))
 		for i, h := range v {
 			if hs, ok := h.(string); ok && hs != "" {
-				// Validate hostname format (max 253 chars per DNS spec)
 				if len(hs) > 253 {
 					return gatewayv1.HTTPRouteSpec{}, fmt.Errorf("hostname must be 253 characters or less, got %d", len(hs))
 				}
@@ -578,7 +579,7 @@ func expandHTTPRouteSpec(l []interface{}) gatewayv1.HTTPRouteSpec {
 		obj.Rules = expandHTTPRouteRules(v)
 	}
 
-	return obj
+	return obj, nil
 }
 
 func expandParentReferences(l []interface{}) []gatewayv1.ParentReference {

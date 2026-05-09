@@ -1018,7 +1018,10 @@ func resourceKubernetesHTTPRouteV1Create(ctx context.Context, d *schema.Resource
 	}
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec := expandHTTPRouteSpec(d.Get("spec").([]interface{}))
+	spec, err := expandHTTPRouteSpec(d.Get("spec").([]interface{}))
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	log.Printf("[INFO] Creating HTTPRoute %s/%s", metadata.Namespace, metadata.Name)
 	out := &gatewayv1.HTTPRoute{
@@ -1107,7 +1110,11 @@ func resourceKubernetesHTTPRouteV1Update(ctx context.Context, d *schema.Resource
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	existing.Labels = metadata.Labels
 	existing.Annotations = metadata.Annotations
-	existing.Spec = expandHTTPRouteSpec(d.Get("spec").([]interface{}))
+	updatedSpec, err := expandHTTPRouteSpec(d.Get("spec").([]interface{}))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	existing.Spec = updatedSpec
 
 	log.Printf("[INFO] Updating HTTPRoute %s/%s", namespace, name)
 	_, err = conn.HTTPRoutes(namespace).Update(ctx, existing, metav1.UpdateOptions{})

@@ -1,0 +1,3 @@
+```release-note:bug
+`data-source/kubernetes_service_account_v1`: Fix nil pointer dereference when service account is not found (404)
+```

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
 	"github.com/hashicorp/terraform-plugin-mux/tf6muxserver"
 	framework "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/move"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	manifest "github.com/hashicorp/terraform-provider-kubernetes/manifest/provider"
 )
@@ -34,8 +35,10 @@ func MuxServer(ctx context.Context, v string) (tfprotov6.ProviderServer, error) 
 		return nil, err
 	}
 
+	wrappedSdkProvider := move.NewServerWithMoveState(upgradedSdkProvider)
+
 	providers := []func() tfprotov6.ProviderServer{
-		func() tfprotov6.ProviderServer { return upgradedSdkProvider },
+		func() tfprotov6.ProviderServer { return wrappedSdkProvider },
 		func() tfprotov6.ProviderServer { return upgradedManifestProvider },
 		providerserver.NewProtocol6(framework.New(v, kubernetesProvider.Meta)),
 	}

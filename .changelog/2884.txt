@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_env`: Fix inverted error check in managed fields lookup
+```

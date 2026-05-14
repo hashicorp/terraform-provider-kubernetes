@@ -370,7 +370,7 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		if kind == "CronJob" {
 			spec, _, err = unstructured.NestedMap(u.Object, "f:spec", "f:jobTemplate", "f:spec", "f:template", "f:spec")
 		}
-		if err == nil {
+		if err != nil {
 			return nil, err
 		}
 

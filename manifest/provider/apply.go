@@ -187,36 +187,13 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		// planning in order to allow the response from apply to return potentially
 		// different values to the ones the user configured.
 		//
-		// Here we replace "computed" attributes (showing as Unknown) with their actual
-		// user-supplied values from "manifest" (if present).
-		obj, err = tftypes.Transform(obj, func(ap *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
-			_, isComputed := computedFields[ap.String()]
-			if !isComputed {
-				return v, nil
-			}
-			if v.IsKnown() {
-				return v, nil
-			}
-			ppMan, restPath, err := tftypes.WalkAttributePath(plannedStateVal["manifest"], ap)
-			if err != nil {
-				if len(restPath.Steps()) > 0 {
-					// attribute not in manifest
-					return v, nil
-				}
-				return v, ap.NewError(err)
-			}
-			nv, d := morph.ValueToType(ppMan.(tftypes.Value), v.Type(), tftypes.NewAttributePath())
-			if len(d) > 0 {
-				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityError,
-					Summary:  "Manifest configuration is incompatible with resource schema",
-					Detail:   "Detailed descriptions of errors will follow below.",
-				})
-				resp.Diagnostics = append(resp.Diagnostics, d...)
-				return v, nil
-			}
-			return nv, nil
-		})
+		// Here we replace "computed" attributes with their actual user-supplied
+		// values from "manifest" (if present). Computed fields absent from
+		// "manifest" remain Unknown so prior object state is not sent as desired
+		// server-side apply payload.
+		var diagnostics []*tfprotov5.Diagnostic
+		obj, diagnostics, err = backfillComputedFields(obj, plannedStateVal["manifest"], computedFields)
+		resp.Diagnostics = append(resp.Diagnostics, diagnostics...)
 		if err != nil {
 			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityError,

@@ -1,6 +1,6 @@
 module github.com/hashicorp/terraform-provider-kubernetes
 
-go 1.24.1
+go 1.26.3
 
 require (
 	github.com/Masterminds/semver v1.5.0

@@ -77,11 +77,13 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			d.SetId(buildId(sa.ObjectMeta))
+			d.SetId("")
 			return nil
 		}
 		return diag.Errorf("Failed to read ServiceAccount %s/%s: %s", metadata.Namespace, metadata.Name, err)
 	}
+
+	log.Printf("[INFO] Retrieved ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
 
 	defaultSecret, diagMsg := findDefaultServiceAccountV1(ctx, sa, conn)
 
@@ -92,53 +94,40 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 
 	d.SetId(buildId(sa.ObjectMeta))
 
-	log.Printf("[INFO] Reading ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
-	svcAcc, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-		diagMsg = append(diagMsg, diag.FromErr(err)...)
-		return diagMsg
-	}
-	log.Printf("[INFO] Retrieved ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
-
-	err = d.Set("metadata", flattenMetadataFields(svcAcc.ObjectMeta))
+	err = d.Set("metadata", flattenMetadataFields(sa.ObjectMeta))
 	if err != nil {
 		diagMsg = append(diagMsg, diag.FromErr(err)...)
 		return diagMsg
 	}
 
-	if svcAcc.AutomountServiceAccountToken == nil {
+	if sa.AutomountServiceAccountToken == nil {
 		err = d.Set("automount_service_account_token", false)
 		if err != nil {
 			diagMsg = append(diagMsg, diag.FromErr(err)...)
 			return diagMsg
 		}
 	} else {
-		err = d.Set("automount_service_account_token", *svcAcc.AutomountServiceAccountToken)
+		err = d.Set("automount_service_account_token", *sa.AutomountServiceAccountToken)
 		if err != nil {
 			diagMsg = append(diagMsg, diag.FromErr(err)...)
 			return diagMsg
 		}
 	}
 
-	err = d.Set("image_pull_secret", flattenLocalObjectReferenceArray(svcAcc.ImagePullSecrets))
+	err = d.Set("image_pull_secret", flattenLocalObjectReferenceArray(sa.ImagePullSecrets))
 	if err != nil {
 		diagMsg = append(diagMsg, diag.FromErr(err)...)
 		return diagMsg
 	}
 
-	defaultSecretNameRaw, ok := d.Get("default_secret_name").(string)
+	defaultSecretName, ok := d.Get("default_secret_name").(string)
 	if !ok {
 		return diag.Errorf("default_secret_name must be a string")
 	}
-	defaultSecretName := defaultSecretNameRaw
-	
+
 	if defaultSecretName != "" {
 		log.Printf("[DEBUG] Setting default secret name for ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
-		secrets := flattenServiceAccountSecrets(svcAcc.Secrets, defaultSecretName)
+		secrets := flattenServiceAccountSecrets(sa.Secrets, defaultSecretName)
 		err = d.Set("secret", secrets)
 		if err != nil {
 			diagMsg = append(diagMsg, diag.FromErr(err)...)

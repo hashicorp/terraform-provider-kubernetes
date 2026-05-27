@@ -53,16 +53,18 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"parent_refs": {
 						Type:        schema.TypeList,
-						Description: "ParentRefs identifies an API object (usually a Gateway) that routes should reference to attach to it.",
+						Description: "ParentRefs identifies an API object (usually a Gateway) that routes should reference to attach to it. Maximum 32 parent refs (Gateway API spec limit).",
 						Optional:    true,
+						MaxItems:    32,
 						Elem: &schema.Resource{
 							Schema: parentReferenceSchema(),
 						},
 					},
 					"hostnames": {
 						Type:        schema.TypeList,
-						Description: "Hostnames defines a set of hostnames that should match against the HTTP Host header.",
+						Description: "Hostnames defines a set of hostnames that should match against the HTTP Host header. Maximum 16 hostnames (Gateway API spec limit).",
 						Optional:    true,
+						MaxItems:    16,
 						Elem: &schema.Schema{
 							Type:             schema.TypeString,
 							ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(1, 253)),
@@ -75,9 +77,9 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 					},
 					"rules": {
 						Type:        schema.TypeList,
-						Description: "Rules are a list of HTTP matchers, filters and actions. Maximum 100 rules per route (Gateway API spec limit).",
+						Description: "Rules are a list of HTTP matchers, filters and actions. Maximum 16 rules per route (Gateway API spec limit).",
 						Optional:    true,
-						MaxItems:    100,
+						MaxItems:    16,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"name": {
@@ -512,79 +514,6 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 											"backend_request": {
 												Type:        schema.TypeString,
 												Description: "BackendRequest specifies a timeout for an individual request from the gateway to a backend.",
-												Optional:    true,
-											},
-										},
-									},
-								},
-								"retry": {
-									Type:        schema.TypeList,
-									Description: "Retry defines the configuration for when to retry an HTTP request.",
-									Optional:    true,
-									MaxItems:    1,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											"codes": {
-												Type:        schema.TypeList,
-												Description: "Codes defines the HTTP response status codes for which a backend request should be retried.",
-												Optional:    true,
-												Elem:        &schema.Schema{Type: schema.TypeInt},
-											},
-											"attempts": {
-												Type:        schema.TypeInt,
-												Description: "Attempts specifies the maximum number of times an individual request should be retried.",
-												Optional:    true,
-											},
-											"backoff": {
-												Type:        schema.TypeString,
-												Description: "Backoff specifies the duration between retries.",
-												Optional:    true,
-											},
-										},
-									},
-								},
-								"session_persistence": {
-									Type:        schema.TypeList,
-									Description: "SessionPersistence defines and configures session persistence for the route rule.",
-									Optional:    true,
-									MaxItems:    1,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											"session_name": {
-												Type:        schema.TypeString,
-												Description: "SessionName is the name of the session.",
-												Optional:    true,
-											},
-											"type": {
-												Type:         schema.TypeString,
-												Description:  "Type defines the type of session persistence. Supported values: Cookie, Header.",
-												Optional:     true,
-												ValidateFunc: validation.StringInSlice([]string{"Cookie", "Header"}, false),
-											},
-											"cookie_config": {
-												Type:        schema.TypeList,
-												Description: "CookieConfig provides configuration for the cookie lifetime in cookie-based session persistence.",
-												Optional:    true,
-												MaxItems:    1,
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														"lifetime_type": {
-															Type:         schema.TypeString,
-															Description:  "LifetimeType specifies whether the cookie has a permanent or session-based lifetime. Supported values: Permanent, Session.",
-															Optional:     true,
-															ValidateFunc: validation.StringInSlice([]string{"Permanent", "Session"}, false),
-														},
-													},
-												},
-											},
-											"absolute_timeout": {
-												Type:        schema.TypeString,
-												Description: "AbsoluteTimeout specifies the maximum duration for the session.",
-												Optional:    true,
-											},
-											"idle_timeout": {
-												Type:        schema.TypeString,
-												Description: "IdleTimeout specifies the duration after which an idle session should be expired.",
 												Optional:    true,
 											},
 										},

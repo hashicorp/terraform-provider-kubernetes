@@ -90,8 +90,9 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 					},
 					"listeners": {
 						Type:        schema.TypeList,
-						Description: "Listeners associated with this ListenerSet.",
+						Description: "Listeners associated with this ListenerSet. Maximum 64 listeners (Gateway API spec limit).",
 						Required:    true,
+						MaxItems:    64,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"name": {

@@ -1,0 +1,61 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: team-a-route
+  namespace: apps
+spec:
+  parentRefs:
+  - name: main-gateway
+    namespace: default
+  hostnames:
+  - "app.local"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /team-a
+    backendRefs:
+    - name: team-a-v1
+      port: 8080
+      weight: 80
+    - name: team-a-v2
+      port: 8080
+      weight: 20
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: team-b-route
+  namespace: apps
+spec:
+  parentRefs:
+  - name: main-gateway
+    namespace: default
+  hostnames:
+  - "app.local"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /team-b
+    backendRefs:
+    - name: team-b
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default-route
+  namespace: apps
+spec:
+  parentRefs:
+  - name: main-gateway
+    namespace: default
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: team-b
+      port: 8080

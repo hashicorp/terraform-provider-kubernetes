@@ -154,8 +154,9 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 					},
 					"addresses": {
 						Type:        schema.TypeList,
-						Description: "Addresses requested for this Gateway.",
+						Description: "Addresses requested for this Gateway. Maximum 16 addresses (Gateway API spec limit).",
 						Optional:    true,
+						MaxItems:    16,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"type": {
@@ -764,15 +765,15 @@ func resourceKubernetesGatewayV1Delete(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Deleting Gateway %s", name)
+	log.Printf("[INFO] Deleting Gateway %s/%s", namespace, name)
 	err = conn.Gateways(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		if statusErr, ok := err.(*errors.StatusError); ok && errors.IsNotFound(statusErr) {
-			log.Printf("[DEBUG] Gateway %s not found, removing from state", name)
+			log.Printf("[DEBUG] Gateway %s/%s not found, removing from state", namespace, name)
 			d.SetId("")
 			return diag.Diagnostics{}
 		}
-		return diag.Errorf("Failed to delete Gateway %s because: %s", d.Id(), err)
+		return diag.Errorf("Failed to delete Gateway %s/%s: %s", namespace, name, err)
 	}
 
 	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutDelete), func() *retry.RetryError {

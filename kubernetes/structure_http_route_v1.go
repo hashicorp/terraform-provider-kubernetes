@@ -77,14 +77,6 @@ func flattenHTTPRouteRule(in gatewayv1.HTTPRouteRule) map[string]interface{} {
 		rule["timeouts"] = flattenHTTPRouteTimeouts(in.Timeouts)
 	}
 
-	if in.Retry != nil {
-		rule["retry"] = flattenHTTPRouteRetry(in.Retry)
-	}
-
-	if in.SessionPersistence != nil {
-		rule["session_persistence"] = flattenSessionPersistence(in.SessionPersistence)
-	}
-
 	return rule
 }
 
@@ -328,42 +320,6 @@ func flattenHTTPCORSFilter(in *gatewayv1.HTTPCORSFilter) []interface{} {
 	return []interface{}{cors}
 }
 
-func flattenSessionPersistence(in *gatewayv1.SessionPersistence) []interface{} {
-	sp := make(map[string]interface{})
-
-	if in.SessionName != nil {
-		sp["session_name"] = *in.SessionName
-	}
-
-	if in.Type != nil {
-		sp["type"] = string(*in.Type)
-	}
-
-	if in.CookieConfig != nil {
-		sp["cookie_config"] = flattenCookieConfig(in.CookieConfig)
-	}
-
-	if in.AbsoluteTimeout != nil {
-		sp["absolute_timeout"] = *in.AbsoluteTimeout
-	}
-
-	if in.IdleTimeout != nil {
-		sp["idle_timeout"] = *in.IdleTimeout
-	}
-
-	return []interface{}{sp}
-}
-
-func flattenCookieConfig(in *gatewayv1.CookieConfig) []interface{} {
-	cc := make(map[string]interface{})
-
-	if in.LifetimeType != nil {
-		cc["lifetime_type"] = string(*in.LifetimeType)
-	}
-
-	return []interface{}{cc}
-}
-
 func flattenHTTPBackendRef(in gatewayv1.HTTPBackendRef) map[string]interface{} {
 	ref := make(map[string]interface{})
 
@@ -442,28 +398,6 @@ func flattenHTTPRouteTimeouts(in *gatewayv1.HTTPRouteTimeouts) []interface{} {
 	}
 
 	return []interface{}{timeouts}
-}
-
-func flattenHTTPRouteRetry(in *gatewayv1.HTTPRouteRetry) []interface{} {
-	retry := make(map[string]interface{})
-
-	if len(in.Codes) > 0 {
-		codes := make([]int, len(in.Codes))
-		for i, c := range in.Codes {
-			codes[i] = int(c)
-		}
-		retry["codes"] = codes
-	}
-
-	if in.Attempts != nil {
-		retry["attempts"] = *in.Attempts
-	}
-
-	if in.Backoff != nil {
-		retry["backoff"] = string(*in.Backoff)
-	}
-
-	return []interface{}{retry}
 }
 
 func flattenHTTPRouteStatus(in gatewayv1.HTTPRouteStatus) []interface{} {
@@ -557,13 +491,15 @@ func expandHTTPRouteSpec(l []interface{}) gatewayv1.HTTPRouteSpec {
 	}
 
 	if v, ok := in["hostnames"].([]interface{}); ok && len(v) > 0 {
-		hostnames := make([]gatewayv1.Hostname, len(v))
-		for i, h := range v {
+		var hostnames []gatewayv1.Hostname
+		for _, h := range v {
 			if hs, ok := h.(string); ok && hs != "" {
-				hostnames[i] = gatewayv1.Hostname(hs)
+				hostnames = append(hostnames, gatewayv1.Hostname(hs))
 			}
 		}
-		obj.Hostnames = hostnames
+		if len(hostnames) > 0 {
+			obj.Hostnames = hostnames
+		}
 	}
 
 	if v, ok := in["use_default_gateways"].(string); ok && v != "" {
@@ -664,14 +600,6 @@ func expandHTTPRouteRule(in map[string]interface{}) gatewayv1.HTTPRouteRule {
 
 	if v, ok := in["timeouts"].([]interface{}); ok && len(v) > 0 {
 		obj.Timeouts = expandHTTPRouteTimeouts(v)
-	}
-
-	if v, ok := in["retry"].([]interface{}); ok && len(v) > 0 {
-		obj.Retry = expandHTTPRouteRetry(v)
-	}
-
-	if v, ok := in["session_persistence"].([]interface{}); ok && len(v) > 0 {
-		obj.SessionPersistence = expandSessionPersistence(v)
 	}
 
 	return obj
@@ -1054,56 +982,6 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	return obj
 }
 
-func expandSessionPersistence(l []interface{}) *gatewayv1.SessionPersistence {
-	if len(l) == 0 || l[0] == nil {
-		return nil
-	}
-
-	in := l[0].(map[string]interface{})
-	obj := &gatewayv1.SessionPersistence{}
-
-	if v, ok := in["session_name"].(string); ok && v != "" {
-		obj.SessionName = &v
-	}
-
-	if v, ok := in["type"].(string); ok && v != "" {
-		t := gatewayv1.SessionPersistenceType(v)
-		obj.Type = &t
-	}
-
-	if v, ok := in["cookie_config"].([]interface{}); ok && len(v) > 0 {
-		obj.CookieConfig = expandCookieConfig(v)
-	}
-
-	if v, ok := in["absolute_timeout"].(string); ok && v != "" {
-		d := gatewayv1.Duration(v)
-		obj.AbsoluteTimeout = &d
-	}
-
-	if v, ok := in["idle_timeout"].(string); ok && v != "" {
-		d := gatewayv1.Duration(v)
-		obj.IdleTimeout = &d
-	}
-
-	return obj
-}
-
-func expandCookieConfig(l []interface{}) *gatewayv1.CookieConfig {
-	if len(l) == 0 || l[0] == nil {
-		return nil
-	}
-
-	in := l[0].(map[string]interface{})
-	obj := &gatewayv1.CookieConfig{}
-
-	if v, ok := in["lifetime_type"].(string); ok && v != "" {
-		lt := gatewayv1.CookieLifetimeType(v)
-		obj.LifetimeType = &lt
-	}
-
-	return obj
-}
-
 func expandHTTPBackendRefs(l []interface{}) []gatewayv1.HTTPBackendRef {
 	if len(l) == 0 {
 		return nil
@@ -1224,35 +1102,6 @@ func expandHTTPRouteTimeouts(l []interface{}) *gatewayv1.HTTPRouteTimeouts {
 	if v, ok := in["backend_request"].(string); ok && v != "" {
 		d := gatewayv1.Duration(v)
 		obj.BackendRequest = &d
-	}
-
-	return obj
-}
-
-func expandHTTPRouteRetry(l []interface{}) *gatewayv1.HTTPRouteRetry {
-	if len(l) == 0 || l[0] == nil {
-		return nil
-	}
-
-	in := l[0].(map[string]interface{})
-	obj := &gatewayv1.HTTPRouteRetry{}
-
-	if v, ok := in["codes"].([]interface{}); ok && len(v) > 0 {
-		codes := make([]gatewayv1.HTTPRouteRetryStatusCode, len(v))
-		for i, c := range v {
-			codes[i] = gatewayv1.HTTPRouteRetryStatusCode(c.(int))
-		}
-		obj.Codes = codes
-	}
-
-	if v, ok := in["attempts"].(int); ok && v > 0 {
-		a := v
-		obj.Attempts = &a
-	}
-
-	if v, ok := in["backoff"].(string); ok && v != "" {
-		d := gatewayv1.Duration(v)
-		obj.Backoff = &d
 	}
 
 	return obj

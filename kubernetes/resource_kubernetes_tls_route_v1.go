@@ -53,16 +53,18 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 				Schema: map[string]*schema.Schema{
 					"parent_refs": {
 						Type:        schema.TypeList,
-						Description: "ParentRefs identifies an API object (usually a Gateway) that routes should reference to attach to it.",
+						Description: "ParentRefs identifies an API object (usually a Gateway) that routes should reference to attach to it. Maximum 32 parent refs (Gateway API spec limit).",
 						Optional:    true,
+						MaxItems:    32,
 						Elem: &schema.Resource{
 							Schema: parentReferenceSchema(),
 						},
 					},
 					"hostnames": {
 						Type:        schema.TypeList,
-						Description: "Hostnames defines a set of SNI hostnames that should match against the SNI attribute.",
+						Description: "Hostnames defines a set of SNI hostnames that should match against the SNI attribute. Maximum 16 hostnames (Gateway API spec limit).",
 						Optional:    true,
+						MaxItems:    16,
 						Elem:        &schema.Schema{Type: schema.TypeString},
 					},
 					"use_default_gateways": {
@@ -72,8 +74,9 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 					},
 					"rules": {
 						Type:        schema.TypeList,
-						Description: "Rules are a list of TLS matchers and actions.",
+						Description: "Rules are a list of TLS matchers and actions. Maximum 16 rules per route (Gateway API spec limit).",
 						Optional:    true,
+						MaxItems:    16,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"name": {

@@ -4,6 +4,7 @@
 package kubernetes
 
 import (
+	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -156,7 +157,7 @@ func flattenTLSRouteConditions(in []metav1.Condition) []interface{} {
 		condition["message"] = c.Message
 		condition["reason"] = c.Reason
 		if c.LastTransitionTime.IsZero() == false {
-			condition["last_transition_time"] = c.LastTransitionTime.Format("2006-01-02T15:04:05Z")
+			condition["last_transition_time"] = c.LastTransitionTime.Format(time.RFC3339)
 		}
 		if c.ObservedGeneration != 0 {
 			condition["observed_generation"] = c.ObservedGeneration
@@ -181,7 +182,7 @@ func expandTLSRouteSpec(l []interface{}) gatewayv1.TLSRouteSpec {
 	if v, ok := in["hostnames"].([]interface{}); ok && len(v) > 0 {
 		hostnames := make([]gatewayv1.Hostname, len(v))
 		for i, h := range v {
-			hostnames[i] = gatewayv1.Hostname(h.(string))
+			if s, ok := h.(string); ok { hostnames[i] = gatewayv1.Hostname(s) }
 		}
 		obj.Hostnames = hostnames
 	}

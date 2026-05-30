@@ -4,6 +4,7 @@
 package kubernetes
 
 import (
+	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -113,7 +114,7 @@ func flattenGatewayClassV1Conditions(in []metav1.Condition) []interface{} {
 		m["message"] = c.Message
 		m["reason"] = c.Reason
 		if !c.LastTransitionTime.IsZero() {
-			m["last_transition_time"] = c.LastTransitionTime.String()
+			m["last_transition_time"] = c.LastTransitionTime.Format(time.RFC3339)
 		}
 		m["observed_generation"] = c.ObservedGeneration
 		att[i] = m
@@ -124,7 +125,7 @@ func flattenGatewayClassV1Conditions(in []metav1.Condition) []interface{} {
 func flattenGatewayClassV1SupportedFeatures(in []gatewayv1.SupportedFeature) []interface{} {
 	att := make([]interface{}, len(in))
 	for i, f := range in {
-		att[i] = string(f.Name)
+		att[i] = map[string]interface{}{"name": string(f.Name)}
 	}
 	return att
 }

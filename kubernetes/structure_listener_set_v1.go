@@ -4,6 +4,7 @@
 package kubernetes
 
 import (
+	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -175,7 +176,7 @@ func flattenRouteGroupKindsLS(in []gatewayv1.RouteGroupKind) []interface{} {
 	result := make([]interface{}, len(in))
 	for i, rg := range in {
 		r := make(map[string]interface{})
-		if rg.Group != nil {
+		if rg.Group != nil && *rg.Group != "gateway.networking.k8s.io" {
 			r["group"] = string(*rg.Group)
 		}
 		r["kind"] = string(rg.Kind)
@@ -207,7 +208,7 @@ func flattenListenerSetConditions(in []metav1.Condition) []interface{} {
 		condition["message"] = c.Message
 		condition["reason"] = c.Reason
 		if c.LastTransitionTime.IsZero() == false {
-			condition["last_transition_time"] = c.LastTransitionTime.Format("2006-01-02T15:04:05Z")
+			condition["last_transition_time"] = c.LastTransitionTime.Format(time.RFC3339)
 		}
 		if c.ObservedGeneration != 0 {
 			condition["observed_generation"] = c.ObservedGeneration
@@ -355,7 +356,7 @@ func expandListenerTLSConfigLS(l []interface{}) *gatewayv1.ListenerTLSConfig {
 	if v, ok := in["options"].(map[string]interface{}); ok && len(v) > 0 {
 		options := make(map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue)
 		for k, val := range v {
-			options[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(val.(string))
+			if sv, ok := val.(string); ok { options[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(sv) }
 		}
 		obj.Options = options
 	}
@@ -438,7 +439,7 @@ func expandLabelSelectorLS(l []interface{}) *metav1.LabelSelector {
 	if v, ok := in["match_labels"].(map[string]interface{}); ok && len(v) > 0 {
 		m := make(map[string]string)
 		for k, val := range v {
-			m[k] = val.(string)
+			if sv, ok := val.(string); ok { m[k] = sv }
 		}
 		obj.MatchLabels = m
 	}
@@ -448,8 +449,8 @@ func expandLabelSelectorLS(l []interface{}) *metav1.LabelSelector {
 		for i, e := range v {
 			em := e.(map[string]interface{})
 			exprs[i] = metav1.LabelSelectorRequirement{
-				Key:      em["key"].(string),
-				Operator: metav1.LabelSelectorOperator(em["operator"].(string)),
+				Key:      "",
+				Operator: "",
 				Values:   sliceOfString(em["values"].([]interface{})),
 			}
 		}
@@ -466,7 +467,7 @@ func expandInterfaceSlice(in interface{}) []string {
 	v := in.([]interface{})
 	result := make([]string, len(v))
 	for i := range v {
-		result[i] = v[i].(string)
+		if s, ok := v[i].(string); ok { result[i] = s }
 	}
 	return result
 }

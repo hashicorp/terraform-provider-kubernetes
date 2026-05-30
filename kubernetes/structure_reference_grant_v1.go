@@ -81,9 +81,12 @@ func expandReferenceGrantFrom(l []interface{}) []gatewayv1.ReferenceGrantFrom {
 			continue
 		}
 		in := item.(map[string]interface{})
-		group, _ := in["group"].(string)
-		kind, _ := in["kind"].(string)
-		namespace, _ := in["namespace"].(string)
+		group := ""
+		if g, ok := in["group"].(string); ok { group = g }
+		kind := ""
+		if k, ok := in["kind"].(string); ok { kind = k }
+		namespace := ""
+		if ns, ok := in["namespace"].(string); ok { namespace = ns }
 		result[i] = gatewayv1.ReferenceGrantFrom{
 			Group:     gatewayv1.Group(group),
 			Kind:      gatewayv1.Kind(kind),
@@ -104,8 +107,10 @@ func expandReferenceGrantTo(l []interface{}) []gatewayv1.ReferenceGrantTo {
 			continue
 		}
 		in := item.(map[string]interface{})
-		group, _ := in["group"].(string)
-		kind, _ := in["kind"].(string)
+		group := ""
+		if g, ok := in["group"].(string); ok { group = g }
+		kind := ""
+		if k, ok := in["kind"].(string); ok { kind = k }
 		to := gatewayv1.ReferenceGrantTo{
 			Group: gatewayv1.Group(group),
 			Kind:  gatewayv1.Kind(kind),

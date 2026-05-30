@@ -65,7 +65,10 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 						Description: "Hostnames defines a set of SNI hostnames that should match against the SNI attribute. Maximum 16 hostnames (Gateway API spec limit).",
 						Optional:    true,
 						MaxItems:    16,
-						Elem:        &schema.Schema{Type: schema.TypeString},
+						Elem: &schema.Schema{
+							Type:             schema.TypeString,
+							ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(1, 253)),
+						},
 					},
 					"use_default_gateways": {
 						Type:        schema.TypeString,
@@ -74,9 +77,10 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 					},
 					"rules": {
 						Type:        schema.TypeList,
-						Description: "Rules are a list of TLS matchers and actions. Maximum 16 rules per route (Gateway API spec limit).",
+						Description: "Rules are a list of TLS matchers and actions. Maximum 1 rule per route (Gateway API spec limit).",
 						Optional:    true,
-						MaxItems:    16,
+						MinItems:    1,
+						MaxItems:    1,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"name": {
@@ -88,6 +92,8 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeList,
 									Description: "BackendRefs defines the backend(s) where matching requests should be sent.",
 									Optional:    true,
+									MinItems:    1,
+									MaxItems:    16,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"group": {
@@ -114,14 +120,15 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 											"port": {
 												Type:         schema.TypeInt,
 												Description:  "Port is the port number of the referent.",
-												Required:     true,
+												Optional:     true,
 												ValidateFunc: validation.IsPortNumber,
 											},
 											"weight": {
-												Type:        schema.TypeInt,
-												Description: "Weight specifies the proportion of requests.",
-												Optional:    true,
-												Default:     1,
+												Type:         schema.TypeInt,
+												Description:  "Weight specifies the proportion of requests.",
+												Optional:     true,
+												Default:      1,
+												ValidateFunc: validation.IntBetween(0, 1000000),
 											},
 										},
 									},

@@ -80,11 +80,6 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 									Description: "Name is the name of the referent.",
 									Required:    true,
 								},
-								"section_name": {
-									Type:        schema.TypeString,
-									Description: "SectionName is the section name of the referent.",
-									Optional:    true,
-								},
 							},
 						},
 					},
@@ -115,6 +110,7 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "Protocol specifies the network protocol.",
 									Required:    true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"HTTP", "HTTPS", "TCP", "UDP", "TLS", "GRPC", "KUBE_PROXY"}, false)),
 								},
 								"tls": {
 									Type:        schema.TypeList,
@@ -128,11 +124,13 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 												Description: "Mode defines the TLS behavior.",
 												Optional:    true,
 												Default:     "Terminate",
+												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Terminate", "TerminateResume", "Passthrough"}, false)),
 											},
 											"certificate_refs": {
 												Type:        schema.TypeList,
 												Description: "CertificateRefs contains references to TLS certificates.",
 												Optional:    true,
+												MaxItems:    16,
 												Elem: &schema.Resource{
 													Schema: listenerSetSecretObjectReferenceSchema(),
 												},
@@ -168,6 +166,7 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 												Type:        schema.TypeList,
 												Description: "Kinds specifies the groups and kinds of Routes.",
 												Optional:    true,
+												MaxItems:    16,
 												Elem: &schema.Resource{
 													Schema: listenerSetRouteGroupKindSchema(),
 												},
@@ -268,6 +267,7 @@ func listenerSetRouteNamespacesSchema() map[string]*schema.Schema {
 			Description: "From indicates where Routes will be selected from.",
 			Optional:    true,
 			Default:     "Same",
+			ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "Selector", "Same"}, false)),
 		},
 		"selector": {
 			Type:        schema.TypeList,

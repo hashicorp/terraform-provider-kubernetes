@@ -4,6 +4,7 @@
 package kubernetes
 
 import (
+	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -77,6 +78,9 @@ func flattenHTTPRouteRule(in gatewayv1.HTTPRouteRule) map[string]interface{} {
 		rule["timeouts"] = flattenHTTPRouteTimeouts(in.Timeouts)
 	}
 
+	if in.SessionPersistence != nil {
+		rule["session_persistence"] = flattenSessionPersistence(in.SessionPersistence)
+	}
 	return rule
 }
 
@@ -173,6 +177,9 @@ func flattenHTTPRouteFilter(in gatewayv1.HTTPRouteFilter) map[string]interface{}
 		filter["extension_ref"] = flattenLocalObjectReferenceHTTPRoute(*in.ExtensionRef)
 	}
 
+	if in.ExternalAuth != nil {
+		filter["external_auth"] = flattenHTTPExternalAuthFilter(in.ExternalAuth)
+	}
 	return filter
 }
 
@@ -468,7 +475,7 @@ func flattenConditions(in []metav1.Condition) []interface{} {
 		condition["message"] = c.Message
 		condition["reason"] = c.Reason
 		if c.LastTransitionTime.IsZero() == false {
-			condition["last_transition_time"] = c.LastTransitionTime.Format("2006-01-02T15:04:05Z")
+			condition["last_transition_time"] = c.LastTransitionTime.Format(time.RFC3339)
 		}
 		if c.ObservedGeneration != 0 {
 			condition["observed_generation"] = c.ObservedGeneration
@@ -602,6 +609,9 @@ func expandHTTPRouteRule(in map[string]interface{}) gatewayv1.HTTPRouteRule {
 		obj.Timeouts = expandHTTPRouteTimeouts(v)
 	}
 
+	if v, ok := in["session_persistence"].([]interface{}); ok && len(v) > 0 {
+		obj.SessionPersistence = expandSessionPersistence(v)
+	}
 	return obj
 }
 
@@ -782,6 +792,9 @@ func expandHTTPRouteFilter(in map[string]interface{}) gatewayv1.HTTPRouteFilter 
 		obj.ExtensionRef = &ref
 	}
 
+	if v, ok := in["external_auth"].([]interface{}); ok && len(v) > 0 {
+		obj.ExternalAuth = expandHTTPExternalAuthFilter(v)
+	}
 	return obj
 }
 
@@ -812,7 +825,7 @@ func expandHTTPHeaderFilter(l []interface{}) *gatewayv1.HTTPHeaderFilter {
 	if v, ok := in["remove"].([]interface{}); ok && len(v) > 0 {
 		remove := make([]string, len(v))
 		for i, r := range v {
-			remove[i] = r.(string)
+			if s, ok := r.(string); ok { remove[i] = s }
 		}
 		obj.Remove = remove
 	}
@@ -942,7 +955,7 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["allow_origins"].([]interface{}); ok && len(v) > 0 {
 		origins := make([]gatewayv1.CORSOrigin, len(v))
 		for i, o := range v {
-			origins[i] = gatewayv1.CORSOrigin(o.(string))
+			if s, ok := o.(string); ok { origins[i] = gatewayv1.CORSOrigin(s) }
 		}
 		obj.AllowOrigins = origins
 	}
@@ -954,7 +967,7 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["allow_methods"].([]interface{}); ok && len(v) > 0 {
 		methods := make([]gatewayv1.HTTPMethodWithWildcard, len(v))
 		for i, m := range v {
-			methods[i] = gatewayv1.HTTPMethodWithWildcard(m.(string))
+			if s, ok := m.(string); ok { methods[i] = gatewayv1.HTTPMethodWithWildcard(s) }
 		}
 		obj.AllowMethods = methods
 	}
@@ -962,7 +975,7 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["allow_headers"].([]interface{}); ok && len(v) > 0 {
 		headers := make([]gatewayv1.HTTPHeaderName, len(v))
 		for i, h := range v {
-			headers[i] = gatewayv1.HTTPHeaderName(h.(string))
+			if s, ok := h.(string); ok { headers[i] = gatewayv1.HTTPHeaderName(s) }
 		}
 		obj.AllowHeaders = headers
 	}
@@ -970,7 +983,7 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["expose_headers"].([]interface{}); ok && len(v) > 0 {
 		headers := make([]gatewayv1.HTTPHeaderName, len(v))
 		for i, h := range v {
-			headers[i] = gatewayv1.HTTPHeaderName(h.(string))
+			if s, ok := h.(string); ok { headers[i] = gatewayv1.HTTPHeaderName(s) }
 		}
 		obj.ExposeHeaders = headers
 	}
@@ -1105,4 +1118,244 @@ func expandHTTPRouteTimeouts(l []interface{}) *gatewayv1.HTTPRouteTimeouts {
 	}
 
 	return obj
+}
+
+func flattenSessionPersistence(in *gatewayv1.SessionPersistence) []interface{} {
+	if in == nil {
+		return nil
+	}
+	m := make(map[string]interface{})
+	if in.SessionName != nil {
+		m["session_name"] = *in.SessionName
+	}
+	if in.AbsoluteTimeout != nil {
+		m["absolute_timeout"] = string(*in.AbsoluteTimeout)
+	}
+	if in.IdleTimeout != nil {
+		m["idle_timeout"] = string(*in.IdleTimeout)
+	}
+	if in.Type != nil {
+		m["type"] = string(*in.Type)
+	}
+	if in.CookieConfig != nil {
+		m["cookie_config"] = flattenCookieConfig(in.CookieConfig)
+	}
+	return []interface{}{m}
+}
+
+func flattenCookieConfig(in *gatewayv1.CookieConfig) []interface{} {
+	if in == nil {
+		return nil
+	}
+	m := make(map[string]interface{})
+	if in.LifetimeType != nil {
+		m["lifetime_type"] = string(*in.LifetimeType)
+	}
+	return []interface{}{m}
+}
+
+func expandSessionPersistence(l []interface{}) *gatewayv1.SessionPersistence {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.SessionPersistence{}
+	if v, ok := in["session_name"].(string); ok && v != "" {
+		obj.SessionName = &v
+	}
+	if v, ok := in["absolute_timeout"].(string); ok && v != "" {
+		at := gatewayv1.Duration(v)
+		obj.AbsoluteTimeout = &at
+	}
+	if v, ok := in["idle_timeout"].(string); ok && v != "" {
+		it := gatewayv1.Duration(v)
+		obj.IdleTimeout = &it
+	}
+	if v, ok := in["type"].(string); ok && v != "" {
+		t := gatewayv1.SessionPersistenceType(v)
+		obj.Type = &t
+	}
+	if v, ok := in["cookie_config"].([]interface{}); ok && len(v) > 0 {
+		obj.CookieConfig = expandCookieConfig(v)
+	}
+	return obj
+}
+
+func expandCookieConfig(l []interface{}) *gatewayv1.CookieConfig {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.CookieConfig{}
+	if v, ok := in["lifetime_type"].(string); ok && v != "" {
+		t := gatewayv1.CookieLifetimeType(v)
+		obj.LifetimeType = &t
+	}
+	return obj
+}
+
+func expandHTTPExternalAuthFilter(l []interface{}) *gatewayv1.HTTPExternalAuthFilter {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.HTTPExternalAuthFilter{}
+	if v, ok := in["protocol"].(string); ok && v != "" {
+		obj.ExternalAuthProtocol = gatewayv1.HTTPRouteExternalAuthProtocol(v)
+	}
+	if v, ok := in["backend_ref"].([]interface{}); ok && len(v) > 0 {
+		obj.BackendRef = expandBackendObjectReferenceHTTPExternalAuth(v)
+	}
+	if v, ok := in["grpc"].([]interface{}); ok && len(v) > 0 {
+		obj.GRPCAuthConfig = expandGRPCAuthConfig(v)
+	}
+	if v, ok := in["http"].([]interface{}); ok && len(v) > 0 {
+		obj.HTTPAuthConfig = expandHTTPAuthConfig(v)
+	}
+	if v, ok := in["forward_body"].([]interface{}); ok && len(v) > 0 {
+		obj.ForwardBody = expandForwardBodyConfig(v)
+	}
+	return obj
+}
+
+func expandBackendObjectReferenceHTTPExternalAuth(l []interface{}) gatewayv1.BackendObjectReference {
+	if len(l) == 0 || l[0] == nil {
+		return gatewayv1.BackendObjectReference{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := gatewayv1.BackendObjectReference{}
+	if g, ok := in["group"].(string); ok && g != "" {
+		gv := gatewayv1.Group(g)
+		obj.Group = &gv
+	}
+	if k, ok := in["kind"].(string); ok && k != "" {
+		kv := gatewayv1.Kind(k)
+		obj.Kind = &kv
+	}
+	if n, ok := in["name"].(string); ok && n != "" {
+		obj.Name = gatewayv1.ObjectName(n)
+	}
+	if ns, ok := in["namespace"].(string); ok && ns != "" {
+		nsv := gatewayv1.Namespace(ns)
+		obj.Namespace = &nsv
+	}
+	if p, ok := in["port"].(int); ok && p > 0 {
+		pv := gatewayv1.PortNumber(p)
+		obj.Port = &pv
+	}
+	return obj
+}
+
+func expandGRPCAuthConfig(l []interface{}) *gatewayv1.GRPCAuthConfig {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.GRPCAuthConfig{}
+	if v, ok := in["allowed_headers"].([]interface{}); ok && len(v) > 0 {
+		headers := make([]string, len(v))
+		for i, h := range v {
+			if s, ok := h.(string); ok { headers[i] = s }
+		}
+		obj.AllowedRequestHeaders = headers
+	}
+	return obj
+}
+
+func expandHTTPAuthConfig(l []interface{}) *gatewayv1.HTTPAuthConfig {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.HTTPAuthConfig{}
+	if v, ok := in["path"].(string); ok && v != "" {
+		obj.Path = v
+	}
+	if v, ok := in["allowed_request_headers"].([]interface{}); ok && len(v) > 0 {
+		headers := make([]string, len(v))
+		for i, h := range v {
+			if s, ok := h.(string); ok { headers[i] = s }
+		}
+		obj.AllowedRequestHeaders = headers
+	}
+	if v, ok := in["allowed_response_headers"].([]interface{}); ok && len(v) > 0 {
+		headers := make([]string, len(v))
+		for i, h := range v {
+			if s, ok := h.(string); ok { headers[i] = s }
+		}
+		obj.AllowedResponseHeaders = headers
+	}
+	return obj
+}
+
+func expandForwardBodyConfig(l []interface{}) *gatewayv1.ForwardBodyConfig {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.ForwardBodyConfig{}
+	if v, ok := in["max_size"].(int); ok && v > 0 {
+		obj.MaxSize = uint16(v)
+	}
+	return obj
+}
+
+func flattenHTTPExternalAuthFilter(in *gatewayv1.HTTPExternalAuthFilter) []interface{} {
+	if in == nil {
+		return nil
+	}
+	m := make(map[string]interface{})
+	m["protocol"] = string(in.ExternalAuthProtocol)
+	if in.BackendRef.Name != "" {
+		m["backend_ref"] = flattenBackendObjectReferenceHTTPExternalAuth(in.BackendRef)
+	}
+	if in.GRPCAuthConfig != nil {
+		m["grpc"] = flattenGRPCAuthConfig(in.GRPCAuthConfig)
+	}
+	if in.HTTPAuthConfig != nil {
+		m["http"] = flattenHTTPAuthConfig(in.HTTPAuthConfig)
+	}
+	if in.ForwardBody != nil {
+		m["forward_body"] = flattenForwardBodyConfig(in.ForwardBody)
+	}
+	return []interface{}{m}
+}
+
+func flattenBackendObjectReferenceHTTPExternalAuth(in gatewayv1.BackendObjectReference) []interface{} {
+	m := make(map[string]interface{})
+	if in.Group != nil && *in.Group != "" { m["group"] = string(*in.Group) }
+	if in.Kind != nil && *in.Kind != "" { m["kind"] = string(*in.Kind) }
+	m["name"] = string(in.Name)
+	if in.Namespace != nil && *in.Namespace != "" { m["namespace"] = string(*in.Namespace) }
+	if in.Port != nil { m["port"] = int(*in.Port) }
+	return []interface{}{m}
+}
+
+func flattenGRPCAuthConfig(in *gatewayv1.GRPCAuthConfig) []interface{} {
+	if in == nil { return nil }
+	m := make(map[string]interface{})
+	if len(in.AllowedRequestHeaders) > 0 {
+		m["allowed_headers"] = in.AllowedRequestHeaders
+	}
+	return []interface{}{m}
+}
+
+func flattenHTTPAuthConfig(in *gatewayv1.HTTPAuthConfig) []interface{} {
+	if in == nil { return nil }
+	m := make(map[string]interface{})
+	if in.Path != "" { m["path"] = in.Path }
+	if len(in.AllowedRequestHeaders) > 0 {
+		m["allowed_request_headers"] = in.AllowedRequestHeaders
+	}
+	if len(in.AllowedResponseHeaders) > 0 {
+		m["allowed_response_headers"] = in.AllowedResponseHeaders
+	}
+	return []interface{}{m}
+}
+
+func flattenForwardBodyConfig(in *gatewayv1.ForwardBodyConfig) []interface{} {
+	if in == nil { return nil }
+	m := make(map[string]interface{})
+	m["max_size"] = int(in.MaxSize)
+	return []interface{}{m}
 }

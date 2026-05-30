@@ -35,6 +35,7 @@ func TestAccKubernetesBackendTLSPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.target_refs.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.target_refs.0.kind", "Service"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.validation.0.hostname", "example.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.validation.0.well_known_ca_certificates", "System"),
 				),
 			},
 			{
@@ -42,6 +43,80 @@ func TestAccKubernetesBackendTLSPolicyV1_basic(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.uid"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesBackendTLSPolicyV1_updateHostname(t *testing.T) {
+	var conf gatewayv1.BackendTLSPolicy
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_backend_tls_policy_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckBackendTLSPolicyV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccBackendTLSPolicyV1ConfigBasic(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckBackendTLSPolicyV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.validation.0.hostname", "example.com"),
+				),
+			},
+			{
+				Config: testAccBackendTLSPolicyV1ConfigUpdatedHostname(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckBackendTLSPolicyV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.validation.0.hostname", "updated.example.com"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesBackendTLSPolicyV1_withSubjectAltNames(t *testing.T) {
+	var conf gatewayv1.BackendTLSPolicy
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_backend_tls_policy_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckBackendTLSPolicyV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccBackendTLSPolicyV1ConfigWithSubjectAltNames(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckBackendTLSPolicyV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.validation.0.subject_alt_names.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.validation.0.subject_alt_names.0.type", "Hostname"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.validation.0.subject_alt_names.1.type", "URI"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesBackendTLSPolicyV1_withOptions(t *testing.T) {
+	var conf gatewayv1.BackendTLSPolicy
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_backend_tls_policy_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckBackendTLSPolicyV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccBackendTLSPolicyV1ConfigWithOptions(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckBackendTLSPolicyV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.options.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.options.min_version", "VersionTLS12"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.options.max_version", "VersionTLS13"),
+				),
 			},
 		},
 	})
@@ -58,12 +133,10 @@ func testAccCheckBackendTLSPolicyV1Destroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_backend_tls_policy_v1" {
 			continue
 		}
-
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
-
 		resp, err := conn.BackendTLSPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
 			if resp.Name == rs.Primary.ID {
@@ -71,7 +144,6 @@ func testAccCheckBackendTLSPolicyV1Destroy(s *terraform.State) error {
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -81,23 +153,19 @@ func testAccCheckBackendTLSPolicyV1Exists(n string, obj *gatewayv1.BackendTLSPol
 		if !ok {
 			return fmt.Errorf("Not found: %s", n)
 		}
-
 		conn, err := testAccProvider.Meta().(KubeClientsets).GatewayClientset()
 		if err != nil {
 			return err
 		}
-
 		ctx := context.Background()
 		namespace, name, err := idParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
-
 		out, err := conn.BackendTLSPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
-
 		*obj = *out
 		return nil
 	}
@@ -106,24 +174,15 @@ func testAccCheckBackendTLSPolicyV1Exists(n string, obj *gatewayv1.BackendTLSPol
 func testAccBackendTLSPolicyV1ConfigBasic(rName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_v1" "test" {
-  metadata {
-    name = "%s-svc"
-  }
+  metadata { name = "%[1]s-svc" }
   spec {
-    selector = {
-      app = "test"
-    }
-    port {
-      port        = 443
-      target_port = 443
-    }
+    selector = { app = "test" }
+    port { port = 443; target_port = 443 }
   }
 }
 
 resource "kubernetes_backend_tls_policy_v1" "test" {
-  metadata {
-    name = %q
-  }
+  metadata { name = %[1]q }
   spec {
     target_refs {
       group = ""
@@ -136,5 +195,98 @@ resource "kubernetes_backend_tls_policy_v1" "test" {
     }
   }
 }
-`, rName, rName)
+`, rName)
+}
+
+func testAccBackendTLSPolicyV1ConfigUpdatedHostname(rName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata { name = "%[1]s-svc" }
+  spec {
+    selector = { app = "test" }
+    port { port = 443; target_port = 443 }
+  }
+}
+
+resource "kubernetes_backend_tls_policy_v1" "test" {
+  metadata { name = %[1]q }
+  spec {
+    target_refs {
+      group = ""
+      kind  = "Service"
+      name  = kubernetes_service_v1.test.metadata.0.name
+    }
+    validation {
+      hostname                   = "updated.example.com"
+      well_known_ca_certificates = "System"
+    }
+  }
+}
+`, rName)
+}
+
+func testAccBackendTLSPolicyV1ConfigWithSubjectAltNames(rName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata { name = "%[1]s-svc" }
+  spec {
+    selector = { app = "test" }
+    port { port = 443; target_port = 443 }
+  }
+}
+
+resource "kubernetes_backend_tls_policy_v1" "test" {
+  metadata { name = %[1]q }
+  spec {
+    target_refs {
+      group = ""
+      kind  = "Service"
+      name  = kubernetes_service_v1.test.metadata.0.name
+    }
+    validation {
+      hostname                   = "example.com"
+      well_known_ca_certificates = "System"
+      subject_alt_names {
+        type     = "Hostname"
+        hostname = "*.example.com"
+      }
+      subject_alt_names {
+        type = "URI"
+        uri  = "spiffe://cluster.local/ns/default/sa/default"
+      }
+    }
+  }
+}
+`, rName)
+}
+
+func testAccBackendTLSPolicyV1ConfigWithOptions(rName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata { name = "%[1]s-svc" }
+  spec {
+    selector = { app = "test" }
+    port { port = 443; target_port = 443 }
+  }
+}
+
+resource "kubernetes_backend_tls_policy_v1" "test" {
+  metadata { name = %[1]q }
+  spec {
+    target_refs {
+      group = ""
+      kind  = "Service"
+      name  = kubernetes_service_v1.test.metadata.0.name
+    }
+    validation {
+      hostname                   = "example.com"
+      well_known_ca_certificates = "System"
+    }
+    options = {
+      min_version = "VersionTLS12"
+      max_version = "VersionTLS13"
+    }
+  }
+}
+`, rName)
 }

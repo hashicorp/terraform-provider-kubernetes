@@ -103,6 +103,92 @@ func testAccCheckTLSRouteV1Exists(n string, obj *gatewayv1.TLSRoute) resource.Te
 	}
 }
 
+func TestAccKubernetesTLSRouteV1_withMultipleHostnames(t *testing.T) {
+	var conf gatewayv1.TLSRoute
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	gcName := acctest.RandomWithPrefix("tf-acc-test-gc")
+	resourceName := "kubernetes_tls_route_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckTLSRouteV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTLSRouteV1ConfigMultipleHostnames(rName, gcName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckTLSRouteV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.0", "*.example.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.1", "api.example.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.2", "example.com"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesTLSRouteV1_updateHostnames(t *testing.T) {
+	var conf gatewayv1.TLSRoute
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	gcName := acctest.RandomWithPrefix("tf-acc-test-gc")
+	resourceName := "kubernetes_tls_route_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckTLSRouteV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTLSRouteV1ConfigBasic(rName, gcName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckTLSRouteV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.0", "example.com"),
+				),
+			},
+			{
+				Config: testAccTLSRouteV1ConfigUpdatedHostnames(rName, gcName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckTLSRouteV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.0", "example.com"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.hostnames.1", "new.example.com"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesTLSRouteV1_updateBackendRefs(t *testing.T) {
+	var conf gatewayv1.TLSRoute
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	gcName := acctest.RandomWithPrefix("tf-acc-test-gc")
+	resourceName := "kubernetes_tls_route_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckTLSRouteV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTLSRouteV1ConfigBasic(rName, gcName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckTLSRouteV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.backend_refs.0.port", "443"),
+				),
+			},
+			{
+				Config: testAccTLSRouteV1ConfigUpdatedPort(rName, gcName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckTLSRouteV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.backend_refs.0.port", "8443"),
+				),
+			},
+		},
+	})
+}
+
 func testAccTLSRouteV1ConfigBasic(rName, gcName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_service_v1" "test" {
@@ -159,6 +245,150 @@ resource "kubernetes_tls_route_v1" "test" {
       backend_refs {
         name = kubernetes_service_v1.test.metadata.0.name
         port = 443
+      }
+    }
+  }
+}
+`, rName, gcName)
+}
+
+func testAccTLSRouteV1ConfigMultipleHostnames(rName, gcName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%[1]s-svc"
+  }
+  spec {
+    selector = { app = "test" }
+    port { port = 443; target_port = 443 }
+  }
+}
+
+resource "kubernetes_gateway_class_v1" "test" {
+  metadata { name = %[2]q }
+  spec { controller_name = "example.com/gateway-controller" }
+}
+
+resource "kubernetes_gateway_v1" "test" {
+  metadata { name = "%[1]s-gw" }
+  spec {
+    gateway_class_name = kubernetes_gateway_class_v1.test.metadata.0.name
+    listeners {
+      name     = "tls"
+      port     = 443
+      protocol = "TLS"
+      tls { mode = "Passthrough" }
+    }
+  }
+}
+
+resource "kubernetes_tls_route_v1" "test" {
+  metadata { name = %[1]q }
+  spec {
+    hostnames = ["*.example.com", "api.example.com", "example.com"]
+    parent_refs {
+      name = kubernetes_gateway_v1.test.metadata.0.name
+    }
+    rules {
+      backend_refs {
+        name = kubernetes_service_v1.test.metadata.0.name
+        port = 443
+      }
+    }
+  }
+}
+`, rName, gcName)
+}
+
+func testAccTLSRouteV1ConfigUpdatedHostnames(rName, gcName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%[1]s-svc"
+  }
+  spec {
+    selector = { app = "test" }
+    port { port = 443; target_port = 443 }
+  }
+}
+
+resource "kubernetes_gateway_class_v1" "test" {
+  metadata { name = %[2]q }
+  spec { controller_name = "example.com/gateway-controller" }
+}
+
+resource "kubernetes_gateway_v1" "test" {
+  metadata { name = "%[1]s-gw" }
+  spec {
+    gateway_class_name = kubernetes_gateway_class_v1.test.metadata.0.name
+    listeners {
+      name     = "tls"
+      port     = 443
+      protocol = "TLS"
+      tls { mode = "Passthrough" }
+    }
+  }
+}
+
+resource "kubernetes_tls_route_v1" "test" {
+  metadata { name = %[1]q }
+  spec {
+    hostnames = ["example.com", "new.example.com"]
+    parent_refs {
+      name = kubernetes_gateway_v1.test.metadata.0.name
+    }
+    rules {
+      backend_refs {
+        name = kubernetes_service_v1.test.metadata.0.name
+        port = 443
+      }
+    }
+  }
+}
+`, rName, gcName)
+}
+
+func testAccTLSRouteV1ConfigUpdatedPort(rName, gcName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%[1]s-svc"
+  }
+  spec {
+    selector = { app = "test" }
+    port { port = 443; target_port = 443 }
+  }
+}
+
+resource "kubernetes_gateway_class_v1" "test" {
+  metadata { name = %[2]q }
+  spec { controller_name = "example.com/gateway-controller" }
+}
+
+resource "kubernetes_gateway_v1" "test" {
+  metadata { name = "%[1]s-gw" }
+  spec {
+    gateway_class_name = kubernetes_gateway_class_v1.test.metadata.0.name
+    listeners {
+      name     = "tls"
+      port     = 443
+      protocol = "TLS"
+      tls { mode = "Passthrough" }
+    }
+  }
+}
+
+resource "kubernetes_tls_route_v1" "test" {
+  metadata { name = %[1]q }
+  spec {
+    hostnames = ["example.com"]
+    parent_refs {
+      name = kubernetes_gateway_v1.test.metadata.0.name
+    }
+    rules {
+      backend_refs {
+        name = kubernetes_service_v1.test.metadata.0.name
+        port = 8443
       }
     }
   }

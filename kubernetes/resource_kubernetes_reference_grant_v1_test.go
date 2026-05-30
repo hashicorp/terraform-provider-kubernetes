@@ -46,6 +46,84 @@ func TestAccKubernetesReferenceGrantV1_basic(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesReferenceGrantV1_updateFromNamespace(t *testing.T) {
+	var conf gatewayv1.ReferenceGrant
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_reference_grant_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckReferenceGrantV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccReferenceGrantV1ConfigBasic(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckReferenceGrantV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.from.0.namespace", "default"),
+				),
+			},
+			{
+				Config: testAccReferenceGrantV1ConfigUpdatedNamespace(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckReferenceGrantV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.from.0.namespace", "other-namespace"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesReferenceGrantV1_withGRPCRoute(t *testing.T) {
+	var conf gatewayv1.ReferenceGrant
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_reference_grant_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckReferenceGrantV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccReferenceGrantV1ConfigWithGRPCRoute(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckReferenceGrantV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.from.0.kind", "GRPCRoute"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.to.0.kind", "Service"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.to.0.name", "specific-svc"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesReferenceGrantV1_withMultipleFromAndTo(t *testing.T) {
+	var conf gatewayv1.ReferenceGrant
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_reference_grant_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckReferenceGrantV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccReferenceGrantV1ConfigMultipleFromTo(rName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckReferenceGrantV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.from.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.from.0.kind", "HTTPRoute"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.from.1.kind", "TLSRoute"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.to.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.to.0.kind", "Service"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.to.1.kind", "Service"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.to.1.name", "named-svc"),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckReferenceGrantV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).GatewayClientset()
 	if err != nil {
@@ -118,6 +196,83 @@ resource "kubernetes_reference_grant_v1" "test" {
     to {
       group = ""
       kind  = "Service"
+    }
+  }
+}
+`, rName)
+}
+
+func testAccReferenceGrantV1ConfigUpdatedNamespace(rName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_reference_grant_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = "default"
+  }
+  spec {
+    from {
+      group     = "gateway.networking.k8s.io"
+      kind      = "HTTPRoute"
+      namespace = "other-namespace"
+    }
+    to {
+      group = ""
+      kind  = "Service"
+    }
+  }
+}
+`, rName)
+}
+
+func testAccReferenceGrantV1ConfigWithGRPCRoute(rName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_reference_grant_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = "default"
+  }
+  spec {
+    from {
+      group     = "gateway.networking.k8s.io"
+      kind      = "GRPCRoute"
+      namespace = "default"
+    }
+    to {
+      group = ""
+      kind  = "Service"
+      name  = "specific-svc"
+    }
+  }
+}
+`, rName)
+}
+
+func testAccReferenceGrantV1ConfigMultipleFromTo(rName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_reference_grant_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = "default"
+  }
+  spec {
+    from {
+      group     = "gateway.networking.k8s.io"
+      kind      = "HTTPRoute"
+      namespace = "default"
+    }
+    from {
+      group     = "gateway.networking.k8s.io"
+      kind      = "TLSRoute"
+      namespace = "other-namespace"
+    }
+    to {
+      group = ""
+      kind  = "Service"
+    }
+    to {
+      group = ""
+      kind  = "Service"
+      name  = "named-svc"
     }
   }
 }

@@ -4,6 +4,7 @@
 package kubernetes
 
 import (
+	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -434,9 +435,11 @@ func flattenGatewayV1Conditions(in []metav1.Condition) []interface{} {
 		m["message"] = c.Message
 		m["reason"] = c.Reason
 		if !c.LastTransitionTime.IsZero() {
-			m["last_transition_time"] = c.LastTransitionTime.String()
+			m["last_transition_time"] = c.LastTransitionTime.Format(time.RFC3339)
 		}
-		m["observed_generation"] = c.ObservedGeneration
+		if c.ObservedGeneration != 0 {
+			m["observed_generation"] = c.ObservedGeneration
+		}
 		att[i] = m
 	}
 	return att
@@ -730,7 +733,7 @@ func expandLabelMap(m map[string]interface{}) map[gatewayv1.LabelKey]gatewayv1.L
 	}
 	result := make(map[gatewayv1.LabelKey]gatewayv1.LabelValue)
 	for k, v := range m {
-		result[gatewayv1.LabelKey(k)] = gatewayv1.LabelValue(v.(string))
+		if sv, ok := v.(string); ok { result[gatewayv1.LabelKey(k)] = gatewayv1.LabelValue(sv) }
 	}
 	return result
 }
@@ -741,7 +744,7 @@ func expandAnnotationMap(m map[string]interface{}) map[gatewayv1.AnnotationKey]g
 	}
 	result := make(map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue)
 	for k, v := range m {
-		result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(v.(string))
+		if val, ok := v.(string); ok { result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(val) }
 	}
 	return result
 }
@@ -936,7 +939,7 @@ func expandAnnotationValueMap(m map[string]interface{}) map[gatewayv1.Annotation
 	}
 	result := make(map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue)
 	for k, v := range m {
-		result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(v.(string))
+		if val, ok := v.(string); ok { result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(val) }
 	}
 	return result
 }
@@ -992,10 +995,14 @@ func expandLabelSelectorRequirementGateway(l []interface{}) []metav1.LabelSelect
 	obj := make([]metav1.LabelSelectorRequirement, len(l))
 	for i, n := range l {
 		in := n.(map[string]interface{})
-		obj[i] = metav1.LabelSelectorRequirement{
-			Key:      in["key"].(string),
-			Operator: metav1.LabelSelectorOperator(in["operator"].(string)),
-			Values:   sliceOfString(in["values"].([]interface{})),
+		if k, ok := in["key"].(string); ok {
+			obj[i].Key = k
+		}
+		if o, ok := in["operator"].(string); ok {
+			obj[i].Operator = metav1.LabelSelectorOperator(o)
+		}
+		if v, ok := in["values"].([]interface{}); ok {
+			obj[i].Values = sliceOfString(v)
 		}
 	}
 	return obj

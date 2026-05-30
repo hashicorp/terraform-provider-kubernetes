@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -52,6 +53,8 @@ func resourceKubernetesBackendTLSPolicyV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeList,
 						Description: "TargetRefs identifies an API object to apply the policy to.",
 						Required:    true,
+						MinItems:    1,
+						MaxItems:    16,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"group": {
@@ -88,6 +91,8 @@ func resourceKubernetesBackendTLSPolicyV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeList,
 									Description: "CACertificateRefs contains references to Kubernetes objects that contain a PEM-encoded TLS CA certificate bundle.",
 									Optional:    true,
+									ConflictsWith: []string{"spec.0.validation.0.well_known_ca_certificates"},
+									MaxItems:    8,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"group": {
@@ -112,22 +117,25 @@ func resourceKubernetesBackendTLSPolicyV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "WellKnownCACertificates specifies whether a well-known set of CA certificates may be used.",
 									Optional:    true,
+									ConflictsWith: []string{"spec.0.validation.0.ca_certificate_refs"},
 								},
 								"hostname": {
 									Type:        schema.TypeString,
 									Description: "Hostname is used for two purposes in the connection between Gateways and backends.",
-									Optional:    true,
+									Required:    true,
 								},
 								"subject_alt_names": {
 									Type:        schema.TypeList,
 									Description: "SubjectAltNames contains one or more Subject Alternative Names.",
 									Optional:    true,
+									MaxItems:    5,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"type": {
 												Type:        schema.TypeString,
 												Description: "Type determines the format of the Subject Alternative Name.",
 												Required:    true,
+												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Hostname", "URI"}, false)),
 											},
 											"hostname": {
 												Type:        schema.TypeString,

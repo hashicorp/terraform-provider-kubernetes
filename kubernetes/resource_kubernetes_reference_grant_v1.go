@@ -52,6 +52,7 @@ func resourceKubernetesReferenceGrantV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeList,
 						Description: "From describes the trusted namespaces and kinds that can reference the resources described in To.",
 						Required:    true,
+						MaxItems:    16,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"group": {
@@ -76,6 +77,7 @@ func resourceKubernetesReferenceGrantV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeList,
 						Description: "To describes the resources that may be referenced by the resources described in From.",
 						Required:    true,
+						MaxItems:    16,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"group": {

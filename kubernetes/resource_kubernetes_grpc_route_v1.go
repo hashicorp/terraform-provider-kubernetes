@@ -65,12 +65,16 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 						Description: "Hostnames defines a set of hostnames that should match against the GRPC Host header. Maximum 16 hostnames (Gateway API spec limit).",
 						Optional:    true,
 						MaxItems:    16,
-						Elem:        &schema.Schema{Type: schema.TypeString},
+						Elem: &schema.Schema{
+							Type:             schema.TypeString,
+							ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(1, 253)),
+						},
 					},
 					"use_default_gateways": {
 						Type:        schema.TypeString,
 						Description: "UseDefaultGateways indicates the default Gateway scope to use for this Route.",
 						Optional:    true,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "None"}, false)),
 					},
 					"rules": {
 						Type:        schema.TypeList,
@@ -89,6 +93,7 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 									Description: "Matches define conditions used for matching the rule against incoming gRPC requests.",
 									Optional:    true,
 									Computed:    true,
+									MaxItems:    64,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"method": {
@@ -103,6 +108,7 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 															Description: "Type specifies how to match against the service and/or method.",
 															Optional:    true,
 															Default:     "Exact",
+															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Exact", "RegularExpression"}, false)),
 														},
 														"service": {
 															Type:        schema.TypeString,
@@ -121,6 +127,7 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 												Type:        schema.TypeList,
 												Description: "Headers specifies gRPC request header matchers.",
 												Optional:    true,
+												MaxItems:    16,
 												Elem: &schema.Resource{
 													Schema: map[string]*schema.Schema{
 														"name": {
@@ -138,6 +145,7 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 															Description: "Type defines the type of header match.",
 															Optional:    true,
 															Default:     "Exact",
+															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Exact", "Regex"}, false)),
 														},
 													},
 												},
@@ -149,12 +157,14 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeList,
 									Description: "Filters define the filters that are applied to requests that match this rule.",
 									Optional:    true,
+									MaxItems:    16,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"type": {
 												Type:        schema.TypeString,
 												Description: "Type is the type of filter.",
 												Required:    true,
+												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"RequestHeaderModifier", "ResponseHeaderModifier", "RequestMirror", "ExtensionRef"}, false)),
 											},
 											"request_header_modifier":  grpcHeaderModifierFilterSchema(),
 											"response_header_modifier": grpcHeaderModifierFilterSchema(),
@@ -181,6 +191,7 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeList,
 									Description: "BackendRefs defines the backend(s) where matching requests should be sent.",
 									Optional:    true,
+									MaxItems:    16,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"group": {
@@ -211,10 +222,11 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 												ValidateFunc: validation.IsPortNumber,
 											},
 											"weight": {
-												Type:        schema.TypeInt,
-												Description: "Weight specifies the proportion of requests.",
-												Optional:    true,
-												Default:     1,
+												Type:         schema.TypeInt,
+												Description:  "Weight specifies the proportion of requests.",
+												Optional:     true,
+												Default:      1,
+												ValidateFunc: validation.IntBetween(0, 1000000),
 											},
 											"filters": {
 												Type:        schema.TypeList,
@@ -273,12 +285,30 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 												Description: "IdleTimeout specifies the duration after which an idle session should be expired.",
 												Optional:    true,
 											},
-											"type": {
-												Type:        schema.TypeString,
-												Description: "Type defines the type of session persistence.",
-												Optional:    true,
-												Default:     "Cookie",
+										"type": {
+											Type:             schema.TypeString,
+											Description:      "Type defines the type of session persistence. Valid values: Cookie, Header. Defaults to Cookie.",
+											Optional:         true,
+											Default:          "Cookie",
+											ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Cookie", "Header"}, false)),
+										},
+										"cookie_config": {
+											Type:        schema.TypeList,
+											Description: "CookieConfig provides configuration for cookie-based session persistence.",
+											Optional:    true,
+											MaxItems:    1,
+											Elem: &schema.Resource{
+												Schema: map[string]*schema.Schema{
+													"lifetime_type": {
+														Type:             schema.TypeString,
+														Description:      "LifetimeType specifies whether the cookie is permanent or session-based. Valid values: Permanent, Session. Defaults to Session.",
+														Optional:         true,
+														Default:          "Session",
+														ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Permanent", "Session"}, false)),
+													},
+												},
 											},
+										},
 										},
 									},
 								},

@@ -87,7 +87,7 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 									Description: "Protocol specifies the network protocol this listener expects to receive.",
 									Required:    true,
 									ValidateFunc: validation.StringInSlice([]string{
-										"HTTP", "HTTPS", "TCP", "UDP", "TLS",
+										"HTTP", "HTTPS", "TCP", "UDP", "TLS", "GRPC",
 									}, false),
 								},
 								"tls": {
@@ -102,6 +102,7 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 												Description: "Mode defines the TLS behavior for the TLS session initiated by the client.",
 												Optional:    true,
 												Default:     "Terminate",
+												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Terminate", "TerminateResume", "Passthrough"}, false)),
 											},
 											"certificate_refs": {
 												Type:        schema.TypeList,
@@ -142,6 +143,7 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 												Type:        schema.TypeList,
 												Description: "Kinds specifies the groups and kinds of Routes that are allowed to bind to this Gateway Listener.",
 												Optional:    true,
+												MaxItems:    8,
 												Elem: &schema.Resource{
 													Schema: routeGroupKindSchema(),
 												},
@@ -169,6 +171,7 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "Value of the address.",
 									Optional:    true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(0, 253)),
 								},
 							},
 						},
@@ -202,7 +205,7 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 											"group": {
 												Type:        schema.TypeString,
 												Description: "Group is the group of the referent.",
-												Optional:    true,
+												Required:    true,
 											},
 											"kind": {
 												Type:        schema.TypeString,
@@ -285,6 +288,7 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 												Type:        schema.TypeList,
 												Description: "PerPort specifies tls configuration assigned per port.",
 												Optional:    true,
+												MaxItems:    64,
 												Elem: &schema.Resource{
 													Schema: map[string]*schema.Schema{
 														"port": {
@@ -314,6 +318,7 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "DefaultScope, when set, configures the Gateway as a default Gateway.",
 						Optional:    true,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "None"}, false)),
 					},
 				},
 			},
@@ -502,6 +507,7 @@ func routeNamespacesSchema() map[string]*schema.Schema {
 			Description: "From indicates where Routes will be selected for this Gateway. Possible values are: All, Selector, Same.",
 			Optional:    true,
 			Default:     "Same",
+			ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "Selector", "Same"}, false)),
 		},
 		"selector": {
 			Type:        schema.TypeList,
@@ -522,6 +528,7 @@ func listenerNamespacesSchema() map[string]*schema.Schema {
 			Description: "From indicates where ListenerSets can attach to this Gateway. Possible values are: All, Selector, Same, None.",
 			Optional:    true,
 			Default:     "None",
+			ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "Selector", "Same", "None"}, false)),
 		},
 		"selector": {
 			Type:        schema.TypeList,
@@ -630,6 +637,7 @@ func tlsConfigSchema() map[string]*schema.Schema {
 						Description: "FrontendValidationMode defines the mode for validating the client certificate.",
 						Optional:    true,
 						Default:     "AllowValidOnly",
+						ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"AllowValidOnly", "AllowInsecureFallback"}, false)),
 					},
 				},
 			},

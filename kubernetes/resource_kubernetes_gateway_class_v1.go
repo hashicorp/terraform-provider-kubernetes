@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -52,15 +53,16 @@ func resourceKubernetesGatewayClassV1Schema() map[string]*schema.Schema {
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					"controller_name": {
-						Type:        schema.TypeString,
-						Description: "ControllerName is the name of the controller that is managing Gateways of this class. The value of this field MUST be a domain prefixed path.",
-						Required:    true,
+						Type:             schema.TypeString,
+						Description:      "ControllerName is the name of the controller. Must be a domain-prefixed path like example.net/gateway-controller.",
+						Required:         true,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.StringMatch(regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`), "ControllerName must be a domain-prefixed path")),
 					},
 					"description": {
-						Type:         schema.TypeString,
-						Description:  "Description helps describe a GatewayClass with more details. Max length is 64 characters.",
-						Optional:     true,
-						ValidateFunc: validation.StringLenBetween(0, 64),
+						Type:             schema.TypeString,
+						Description:      "Description helps describe a GatewayClass with more details. Max length is 64 characters.",
+						Optional:         true,
+						ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(0, 64)),
 					},
 					"parameters_ref": {
 						Type:        schema.TypeList,
@@ -83,6 +85,7 @@ func resourceKubernetesGatewayClassV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "Name is the name of the referent.",
 									Required:    true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(0, 253)),
 								},
 								"namespace": {
 									Type:        schema.TypeString,
@@ -132,11 +135,6 @@ func resourceKubernetesGatewayClassV1Schema() map[string]*schema.Schema {
 									Description: "LastTransitionTime is the last time the condition transitioned from one status to another.",
 									Computed:    true,
 								},
-								"last_update_time": {
-									Type:        schema.TypeString,
-									Description: "LastUpdateTime is the last time this condition was updated.",
-									Computed:    true,
-								},
 								"observed_generation": {
 									Type:        schema.TypeInt,
 									Description: "ObservedGeneration represents the generation of the resource that was observed by the controller.",
@@ -149,7 +147,11 @@ func resourceKubernetesGatewayClassV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeList,
 						Description: "SupportedFeatures is the set of features the GatewayClass support.",
 						Computed:    true,
-						Elem:        &schema.Schema{Type: schema.TypeString},
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"name": {Type: schema.TypeString, Computed: true},
+							},
+						},
 					},
 				},
 			},

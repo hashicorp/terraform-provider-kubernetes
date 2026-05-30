@@ -60,7 +60,7 @@ func flattenBackendTLSPolicyValidation(in gatewayv1.BackendTLSPolicyValidation) 
 		val["well_known_ca_certificates"] = string(*in.WellKnownCACertificates)
 	}
 
-	val["hostname"] = string(in.Hostname)
+	if in.Hostname != "" { val["hostname"] = string(in.Hostname) }
 
 	if len(in.SubjectAltNames) > 0 {
 		sans := make([]interface{}, len(in.SubjectAltNames))
@@ -171,7 +171,7 @@ func expandBackendTLSPolicySpec(l []interface{}) gatewayv1.BackendTLSPolicySpec 
 	if v, ok := in["options"].(map[string]interface{}); ok && len(v) > 0 {
 		options := make(map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue)
 		for key, val := range v {
-			options[gatewayv1.AnnotationKey(key)] = gatewayv1.AnnotationValue(val.(string))
+			if sv, ok := val.(string); ok { options[gatewayv1.AnnotationKey(key)] = gatewayv1.AnnotationValue(sv) }
 		}
 		obj.Options = options
 	}
@@ -190,12 +190,15 @@ func expandLocalPolicyTargetReferenceWithSectionName(l []interface{}) []gatewayv
 			continue
 		}
 		in := item.(map[string]interface{})
-		ref := gatewayv1.LocalPolicyTargetReferenceWithSectionName{
-			LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
-				Group: gatewayv1.Group(in["group"].(string)),
-				Kind:  gatewayv1.Kind(in["kind"].(string)),
-				Name:  gatewayv1.ObjectName(in["name"].(string)),
-			},
+		ref := gatewayv1.LocalPolicyTargetReferenceWithSectionName{}
+		if g, ok := in["group"].(string); ok {
+			ref.Group = gatewayv1.Group(g)
+		}
+		if k, ok := in["kind"].(string); ok {
+			ref.Kind = gatewayv1.Kind(k)
+		}
+		if n, ok := in["name"].(string); ok {
+			ref.Name = gatewayv1.ObjectName(n)
 		}
 
 		if v, ok := in["section_name"].(string); ok && v != "" {
@@ -220,11 +223,17 @@ func expandBackendTLSPolicyValidation(l []interface{}) gatewayv1.BackendTLSPolic
 		certs := make([]gatewayv1.LocalObjectReference, len(v))
 		for i, c := range v {
 			m := c.(map[string]interface{})
-			certs[i] = gatewayv1.LocalObjectReference{
-				Group: gatewayv1.Group(m["group"].(string)),
-				Kind:  gatewayv1.Kind(m["kind"].(string)),
-				Name:  gatewayv1.ObjectName(m["name"].(string)),
+			cert := gatewayv1.LocalObjectReference{}
+			if g, ok := m["group"].(string); ok {
+				cert.Group = gatewayv1.Group(g)
 			}
+			if k, ok := m["kind"].(string); ok {
+				cert.Kind = gatewayv1.Kind(k)
+			}
+			if n, ok := m["name"].(string); ok {
+				cert.Name = gatewayv1.ObjectName(n)
+			}
+			certs[i] = cert
 		}
 		obj.CACertificateRefs = certs
 	}
@@ -256,8 +265,9 @@ func expandSubjectAltNames(l []interface{}) []gatewayv1.SubjectAltName {
 			continue
 		}
 		in := item.(map[string]interface{})
-		san := gatewayv1.SubjectAltName{
-			Type: gatewayv1.SubjectAltNameType(in["type"].(string)),
+		san := gatewayv1.SubjectAltName{}
+		if ttype, ok := in["type"].(string); ok {
+			san.Type = gatewayv1.SubjectAltNameType(ttype)
 		}
 
 		if v, ok := in["hostname"].(string); ok && v != "" {

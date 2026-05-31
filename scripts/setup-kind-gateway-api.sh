@@ -8,7 +8,7 @@
 set -euo pipefail
 
 CLUSTER_NAME="${KIND_CLUSTER_NAME:-tf-gateway-api-test}"
-GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.4.0}"
+GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.5.1}"
 
 log() { echo "[INFO] $*"; }
 warn() { echo "[WARN] $*"; }
@@ -36,7 +36,7 @@ kubectl apply --server-side -f "https://github.com/kubernetes-sigs/gateway-api/r
 log "Verifying Gateway API CRDs..."
 for crd in gateways.gateway.networking.k8s.io httproutes.gateway.networking.k8s.io \
            grpcroutes.gateway.networking.k8s.io tlsroutes.gateway.networking.k8s.io \
-           backendtlsolicies.gateway.networking.k8s.io referencegrants.gateway.networking.k8s.io \
+           backendtlspolicies.gateway.networking.k8s.io referencegrants.gateway.networking.k8s.io \
            listenersets.gateway.networking.k8s.io gatewayclasses.gateway.networking.k8s.io; do
     if kubectl get crd "${crd}" >/dev/null 2>&1; then
         log "  OK: ${crd}"

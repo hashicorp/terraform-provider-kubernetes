@@ -71,9 +71,9 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 						},
 					},
 					"use_default_gateways": {
-						Type:        schema.TypeString,
-						Description: "UseDefaultGateways indicates the default Gateway scope to use for this Route.",
-						Optional:    true,
+						Type:             schema.TypeString,
+						Description:      "UseDefaultGateways indicates the default Gateway scope to use for this Route.",
+						Optional:         true,
 						ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "None"}, false)),
 					},
 					"rules": {
@@ -105,10 +105,10 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 												Elem: &schema.Resource{
 													Schema: map[string]*schema.Schema{
 														"type": {
-															Type:        schema.TypeString,
-															Description: "Type defines the type of path match.",
-															Optional:    true,
-															Default:     "PathPrefix",
+															Type:             schema.TypeString,
+															Description:      "Type defines the type of path match.",
+															Optional:         true,
+															Default:          "PathPrefix",
 															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"PathPrefix", "Exact", "RegularExpression"}, false)),
 														},
 														"value": {
@@ -124,8 +124,8 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 												Type:        schema.TypeList,
 												Description: "Headers specifies the HTTP request header match.",
 												Optional:    true,
-											MaxItems:    16,
-											Elem: &schema.Resource{
+												MaxItems:    16,
+												Elem: &schema.Resource{
 													Schema: map[string]*schema.Schema{
 														"name": {
 															Type:        schema.TypeString,
@@ -138,10 +138,10 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 															Required:    true,
 														},
 														"type": {
-															Type:        schema.TypeString,
-															Description: "Type defines the type of header match.",
-															Optional:    true,
-															Default:     "Exact",
+															Type:             schema.TypeString,
+															Description:      "Type defines the type of header match.",
+															Optional:         true,
+															Default:          "Exact",
 															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Exact", "RegularExpression"}, false)),
 														},
 													},
@@ -165,10 +165,10 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 															Required:    true,
 														},
 														"type": {
-															Type:        schema.TypeString,
-															Description: "Type defines the type of query param match.",
-															Optional:    true,
-															Default:     "Exact",
+															Type:             schema.TypeString,
+															Description:      "Type defines the type of query param match.",
+															Optional:         true,
+															Default:          "Exact",
 															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Exact", "RegularExpression"}, false)),
 														},
 													},
@@ -189,7 +189,7 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 									Type:        schema.TypeList,
 									Description: "Filters define the filters that are applied to requests that match this rule.",
 									Optional:    true,
-									MaxItems:    8,
+									MaxItems:    16,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"type": {
@@ -376,29 +376,29 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 															},
 														},
 														"percent": {
-															Type:          schema.TypeInt,
-															Description:   "Percent is the percentage of requests to mirror (0-100). Only one of Fraction or Percent may be specified.",
-															Optional:      true,
+															Type:        schema.TypeInt,
+															Description: "Percent is the percentage of requests to mirror (0-100). Only one of Fraction or Percent may be specified.",
+															Optional:    true,
 														},
 														"fraction": {
-															Type:          schema.TypeList,
-															Description:   "Fraction is the fraction of requests to mirror. Only one of Fraction or Percent may be specified.",
-															Optional:      true,
-															MaxItems:      1,
+															Type:        schema.TypeList,
+															Description: "Fraction is the fraction of requests to mirror. Only one of Fraction or Percent may be specified.",
+															Optional:    true,
+															MaxItems:    1,
 															Elem: &schema.Resource{
 																Schema: map[string]*schema.Schema{
 																	"numerator": {
-																	Type:         schema.TypeInt,
-																	Description:  "Numerator of the fraction (required, >= 0).",
-																	Required:     true,
-																	ValidateFunc: validation.IntAtLeast(0),
+																		Type:         schema.TypeInt,
+																		Description:  "Numerator of the fraction (required, >= 0).",
+																		Required:     true,
+																		ValidateFunc: validation.IntAtLeast(0),
 																	},
 																	"denominator": {
-																	Type:         schema.TypeInt,
-																	Description:  "Denominator of the fraction (optional, defaults to 100, >= 1).",
-																	Optional:     true,
-																	Default:      100,
-																	ValidateFunc: validation.IntAtLeast(1),
+																		Type:         schema.TypeInt,
+																		Description:  "Denominator of the fraction (optional, defaults to 100, >= 1).",
+																		Optional:     true,
+																		Default:      100,
+																		ValidateFunc: validation.IntAtLeast(1),
 																	},
 																},
 															},
@@ -444,144 +444,131 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 														},
 														"max_age": {
 															Type:         schema.TypeInt,
-															Description: "MaxAge is the maximum age in seconds for preflight cache.",
+															Description:  "MaxAge is the maximum age in seconds for preflight cache.",
+															Computed:     true,
 															Optional:     true,
 															ValidateFunc: validation.IntAtLeast(0),
 														},
 													},
 												},
 											},
-											"extension_ref": {
+											"extension_ref": extensionRefFilterSchema(),
+											"external_auth": {
 												Type:        schema.TypeList,
-												Description: "ExtensionRef is a reference to a custom extension filter.",
+												Description: "ExternalAuth describes the external authorization filter configuration.",
 												Optional:    true,
 												MaxItems:    1,
 												Elem: &schema.Resource{
 													Schema: map[string]*schema.Schema{
-														"name": {
-															Type:        schema.TypeString,
-															Description: "Name is the name of the extension.",
+														"protocol": {
+															Type:             schema.TypeString,
+															Description:      "Protocol specifies the protocol to use when communicating with the authorization server.",
+															Required:         true,
+															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"HTTP", "GRPC"}, false)),
+														},
+														"backend_ref": {
+															Type:        schema.TypeList,
+															Description: "BackendRef is a reference to the authorization server backend.",
 															Required:    true,
-														},
-													},
-												},
-											},
-									"external_auth": {
-										Type:        schema.TypeList,
-										Description: "ExternalAuth describes the external authorization filter configuration.",
-										Optional:    true,
-										MaxItems:    1,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"protocol": {
-													Type:             schema.TypeString,
-													Description:      "Protocol specifies the protocol to use when communicating with the authorization server.",
-													Required:         true,
-													ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"HTTP", "GRPC"}, false)),
-												},
-												"backend_ref": {
-													Type:        schema.TypeList,
-													Description: "BackendRef is a reference to the authorization server backend.",
-													Required:    true,
-													MaxItems:    1,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"group": {
-																Type:        schema.TypeString,
-																Description: "Group is the group of the referent.",
-																Optional:    true,
-																Default:     "",
-															},
-															"kind": {
-																Type:        schema.TypeString,
-																Description: "Kind is the kind of the referent.",
-																Optional:    true,
-																Default:     "Service",
-															},
-															"name": {
-																Type:        schema.TypeString,
-																Description: "Name is the name of the referent.",
-																Required:    true,
-															},
-															"namespace": {
-																Type:        schema.TypeString,
-																Description: "Namespace is the namespace of the referent.",
-																Optional:    true,
-															},
-															"port": {
-																Type:         schema.TypeInt,
-																Description:  "Port is the port number of the referent.",
-																Optional:     true,
-																ValidateFunc: validation.IsPortNumber,
+															MaxItems:    1,
+															Elem: &schema.Resource{
+																Schema: map[string]*schema.Schema{
+																	"group": {
+																		Type:        schema.TypeString,
+																		Description: "Group is the group of the referent.",
+																		Optional:    true,
+																		Default:     "",
+																	},
+																	"kind": {
+																		Type:        schema.TypeString,
+																		Description: "Kind is the kind of the referent.",
+																		Optional:    true,
+																		Default:     "Service",
+																	},
+																	"name": {
+																		Type:        schema.TypeString,
+																		Description: "Name is the name of the referent.",
+																		Required:    true,
+																	},
+																	"namespace": {
+																		Type:        schema.TypeString,
+																		Description: "Namespace is the namespace of the referent.",
+																		Optional:    true,
+																	},
+																	"port": {
+																		Type:         schema.TypeInt,
+																		Description:  "Port is the port number of the referent.",
+																		Optional:     true,
+																		ValidateFunc: validation.IsPortNumber,
+																	},
+																},
 															},
 														},
-													},
-												},
-												"grpc": {
-													Type:        schema.TypeList,
-													Description: "GRPC contains configuration for gRPC authorization.",
-													Optional:    true,
-													MaxItems:    1,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"allowed_headers": {
-																Type:        schema.TypeList,
-																Description: "AllowedHeaders specifies headers to forward to the authorization server.",
-																Optional:    true,
-																MaxItems:    64,
-																Elem:        &schema.Schema{Type: schema.TypeString},
+														"grpc": {
+															Type:        schema.TypeList,
+															Description: "GRPC contains configuration for gRPC authorization.",
+															Optional:    true,
+															MaxItems:    1,
+															Elem: &schema.Resource{
+																Schema: map[string]*schema.Schema{
+																	"allowed_headers": {
+																		Type:        schema.TypeList,
+																		Description: "AllowedHeaders specifies headers to forward to the authorization server.",
+																		Optional:    true,
+																		MaxItems:    64,
+																		Elem:        &schema.Schema{Type: schema.TypeString},
+																	},
+																},
 															},
 														},
-													},
-												},
-												"http": {
-													Type:        schema.TypeList,
-													Description: "HTTP contains configuration for HTTP authorization.",
-													Optional:    true,
-													MaxItems:    1,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"path": {
-																Type:        schema.TypeString,
-																Description: "Path is the path prefix for authorization requests.",
-																Optional:    true,
-															},
-															"allowed_request_headers": {
-																Type:        schema.TypeList,
-																Description: "AllowedRequestHeaders specifies additional headers to forward.",
-																Optional:    true,
-																MaxItems:    64,
-																Elem:        &schema.Schema{Type: schema.TypeString},
-															},
-															"allowed_response_headers": {
-																Type:        schema.TypeList,
-																Description: "AllowedResponseHeaders specifies headers from auth response to copy.",
-																Optional:    true,
-																MaxItems:    64,
-																Elem:        &schema.Schema{Type: schema.TypeString},
+														"http": {
+															Type:        schema.TypeList,
+															Description: "HTTP contains configuration for HTTP authorization.",
+															Optional:    true,
+															MaxItems:    1,
+															Elem: &schema.Resource{
+																Schema: map[string]*schema.Schema{
+																	"path": {
+																		Type:        schema.TypeString,
+																		Description: "Path is the path prefix for authorization requests.",
+																		Optional:    true,
+																	},
+																	"allowed_request_headers": {
+																		Type:        schema.TypeList,
+																		Description: "AllowedRequestHeaders specifies additional headers to forward.",
+																		Optional:    true,
+																		MaxItems:    64,
+																		Elem:        &schema.Schema{Type: schema.TypeString},
+																	},
+																	"allowed_response_headers": {
+																		Type:        schema.TypeList,
+																		Description: "AllowedResponseHeaders specifies headers from auth response to copy.",
+																		Optional:    true,
+																		MaxItems:    64,
+																		Elem:        &schema.Schema{Type: schema.TypeString},
+																	},
+																},
 															},
 														},
-													},
-												},
-												"forward_body": {
-													Type:        schema.TypeList,
-													Description: "ForwardBody controls if requests to the authorization server should include the body.",
-													Optional:    true,
-													MaxItems:    1,
-													Elem: &schema.Resource{
-														Schema: map[string]*schema.Schema{
-															"max_size": {
-																Type:         schema.TypeInt,
-																Description:  "MaxSize is the maximum size of the body to forward.",
-																Optional:     true,
-																ValidateFunc: validation.IntBetween(0, 65535),
+														"forward_body": {
+															Type:        schema.TypeList,
+															Description: "ForwardBody controls if requests to the authorization server should include the body.",
+															Optional:    true,
+															MaxItems:    1,
+															Elem: &schema.Resource{
+																Schema: map[string]*schema.Schema{
+																	"max_size": {
+																		Type:         schema.TypeInt,
+																		Description:  "MaxSize is the maximum size of the body to forward.",
+																		Optional:     true,
+																		ValidateFunc: validation.IntBetween(0, 65535),
+																	},
+																},
 															},
 														},
 													},
 												},
 											},
-										},
-									},
 										},
 									},
 								},
@@ -678,9 +665,9 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"codes": {
-												Type:         schema.TypeList,
-												Description:  "Codes defines the HTTP response status codes (400-599) for which a backend request should be retried.",
-												Optional:     true,
+												Type:        schema.TypeList,
+												Description: "Codes defines the HTTP response status codes (400-599) for which a backend request should be retried.",
+												Optional:    true,
 												Elem: &schema.Schema{
 													Type:         schema.TypeInt,
 													ValidateFunc: validation.IntBetween(400, 599),
@@ -1065,6 +1052,29 @@ func requestMirrorFilterSchema() *schema.Schema {
 					Description: "Percent is the percentage of requests to mirror.",
 					Optional:    true,
 				},
+				"fraction": {
+					Type:        schema.TypeList,
+					Description: "Fraction is the fraction of requests to mirror. Only one of Fraction or Percent may be specified.",
+					Optional:    true,
+					MaxItems:    1,
+					Elem: &schema.Resource{
+						Schema: map[string]*schema.Schema{
+							"numerator": {
+								Type:         schema.TypeInt,
+								Description:  "Numerator of the fraction (required, >= 0).",
+								Required:     true,
+								ValidateFunc: validation.IntAtLeast(0),
+							},
+							"denominator": {
+								Type:         schema.TypeInt,
+								Description:  "Denominator of the fraction (optional, defaults to 100, >= 1).",
+								Optional:     true,
+								Default:      100,
+								ValidateFunc: validation.IntAtLeast(1),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -1109,7 +1119,8 @@ func corsFilterSchema() *schema.Schema {
 				},
 				"max_age": {
 					Type:         schema.TypeInt,
-					Description: "MaxAge is the maximum age in seconds for preflight cache.",
+					Description:  "MaxAge is the maximum age in seconds for preflight cache.",
+					Computed:     true,
 					Optional:     true,
 					ValidateFunc: validation.IntAtLeast(0),
 				},
@@ -1165,6 +1176,16 @@ func extensionRefFilterSchema() *schema.Schema {
 		MaxItems:    1,
 		Elem: &schema.Resource{
 			Schema: map[string]*schema.Schema{
+				"group": {
+					Type:        schema.TypeString,
+					Description: "Group is the API group of the referent.",
+					Required:    true,
+				},
+				"kind": {
+					Type:        schema.TypeString,
+					Description: "Kind is the kind of the referent.",
+					Required:    true,
+				},
 				"name": {
 					Type:        schema.TypeString,
 					Description: "Name is the name of the extension.",

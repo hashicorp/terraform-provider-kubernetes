@@ -64,6 +64,7 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 						Type:        schema.TypeList,
 						Description: "Hostnames defines a set of SNI hostnames that should match against the SNI attribute. Maximum 16 hostnames (Gateway API spec limit).",
 						Optional:    true,
+						MinItems:    1,
 						MaxItems:    16,
 						Elem: &schema.Schema{
 							Type:             schema.TypeString,

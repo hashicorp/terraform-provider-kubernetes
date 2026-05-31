@@ -71,9 +71,9 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 						},
 					},
 					"use_default_gateways": {
-						Type:        schema.TypeString,
-						Description: "UseDefaultGateways indicates the default Gateway scope to use for this Route.",
-						Optional:    true,
+						Type:             schema.TypeString,
+						Description:      "UseDefaultGateways indicates the default Gateway scope to use for this Route.",
+						Optional:         true,
 						ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "None"}, false)),
 					},
 					"rules": {
@@ -104,10 +104,10 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 												Elem: &schema.Resource{
 													Schema: map[string]*schema.Schema{
 														"type": {
-															Type:        schema.TypeString,
-															Description: "Type specifies how to match against the service and/or method.",
-															Optional:    true,
-															Default:     "Exact",
+															Type:             schema.TypeString,
+															Description:      "Type specifies how to match against the service and/or method.",
+															Optional:         true,
+															Default:          "Exact",
 															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Exact", "RegularExpression"}, false)),
 														},
 														"service": {
@@ -141,11 +141,11 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 															Required:    true,
 														},
 														"type": {
-															Type:        schema.TypeString,
-															Description: "Type defines the type of header match.",
-															Optional:    true,
-															Default:     "Exact",
-															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Exact", "Regex"}, false)),
+															Type:             schema.TypeString,
+															Description:      "Type defines the type of header match.",
+															Optional:         true,
+															Default:          "Exact",
+															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Exact", "RegularExpression"}, false)),
 														},
 													},
 												},
@@ -161,29 +161,15 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"type": {
-												Type:        schema.TypeString,
-												Description: "Type is the type of filter.",
-												Required:    true,
+												Type:             schema.TypeString,
+												Description:      "Type is the type of filter.",
+												Required:         true,
 												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"RequestHeaderModifier", "ResponseHeaderModifier", "RequestMirror", "ExtensionRef"}, false)),
 											},
 											"request_header_modifier":  grpcHeaderModifierFilterSchema(),
 											"response_header_modifier": grpcHeaderModifierFilterSchema(),
 											"request_mirror":           requestMirrorFilterSchema(),
-											"extension_ref": {
-												Type:        schema.TypeList,
-												Description: "ExtensionRef is a reference to a custom extension filter.",
-												Optional:    true,
-												MaxItems:    1,
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														"name": {
-															Type:        schema.TypeString,
-															Description: "Name is the name of the extension.",
-															Required:    true,
-														},
-													},
-												},
-											},
+											"extension_ref":            extensionRefFilterSchema(),
 										},
 									},
 								},
@@ -242,21 +228,7 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 														"request_header_modifier":  grpcHeaderModifierFilterSchema(),
 														"response_header_modifier": grpcHeaderModifierFilterSchema(),
 														"request_mirror":           requestMirrorFilterSchema(),
-														"extension_ref": {
-															Type:        schema.TypeList,
-															Description: "ExtensionRef is a reference to a custom extension filter.",
-															Optional:    true,
-															MaxItems:    1,
-															Elem: &schema.Resource{
-																Schema: map[string]*schema.Schema{
-																	"name": {
-																		Type:        schema.TypeString,
-																		Description: "Name is the name of the extension.",
-																		Required:    true,
-																	},
-																},
-															},
-														},
+														"extension_ref":            extensionRefFilterSchema(),
 													},
 												},
 											},
@@ -285,30 +257,30 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 												Description: "IdleTimeout specifies the duration after which an idle session should be expired.",
 												Optional:    true,
 											},
-										"type": {
-											Type:             schema.TypeString,
-											Description:      "Type defines the type of session persistence. Valid values: Cookie, Header. Defaults to Cookie.",
-											Optional:         true,
-											Default:          "Cookie",
-											ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Cookie", "Header"}, false)),
-										},
-										"cookie_config": {
-											Type:        schema.TypeList,
-											Description: "CookieConfig provides configuration for cookie-based session persistence.",
-											Optional:    true,
-											MaxItems:    1,
-											Elem: &schema.Resource{
-												Schema: map[string]*schema.Schema{
-													"lifetime_type": {
-														Type:             schema.TypeString,
-														Description:      "LifetimeType specifies whether the cookie is permanent or session-based. Valid values: Permanent, Session. Defaults to Session.",
-														Optional:         true,
-														Default:          "Session",
-														ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Permanent", "Session"}, false)),
+											"type": {
+												Type:             schema.TypeString,
+												Description:      "Type defines the type of session persistence. Valid values: Cookie, Header. Defaults to Cookie.",
+												Optional:         true,
+												Default:          "Cookie",
+												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Cookie", "Header"}, false)),
+											},
+											"cookie_config": {
+												Type:        schema.TypeList,
+												Description: "CookieConfig provides configuration for cookie-based session persistence.",
+												Optional:    true,
+												MaxItems:    1,
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														"lifetime_type": {
+															Type:             schema.TypeString,
+															Description:      "LifetimeType specifies whether the cookie is permanent or session-based. Valid values: Permanent, Session. Defaults to Session.",
+															Optional:         true,
+															Default:          "Session",
+															ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Permanent", "Session"}, false)),
+														},
 													},
 												},
 											},
-										},
 										},
 									},
 								},

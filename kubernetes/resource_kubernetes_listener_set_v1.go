@@ -86,6 +86,7 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 					"listeners": {
 						Type:        schema.TypeList,
 						Description: "Listeners associated with this ListenerSet. Maximum 64 listeners (Gateway API spec limit).",
+						MinItems:    1,
 						Required:    true,
 						MaxItems:    64,
 						Elem: &schema.Resource{
@@ -107,10 +108,10 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 									ValidateFunc: validation.IsPortNumber,
 								},
 								"protocol": {
-									Type:        schema.TypeString,
-									Description: "Protocol specifies the network protocol.",
-									Required:    true,
-									ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"HTTP", "HTTPS", "TCP", "UDP", "TLS", "GRPC", "KUBE_PROXY"}, false)),
+									Type:             schema.TypeString,
+									Description:      "Protocol specifies the network protocol.",
+									Required:         true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"HTTP", "HTTPS", "TCP", "UDP", "TLS", "GRPC"}, false)),
 								},
 								"tls": {
 									Type:        schema.TypeList,
@@ -120,17 +121,17 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"mode": {
-												Type:        schema.TypeString,
-												Description: "Mode defines the TLS behavior.",
-												Optional:    true,
-												Default:     "Terminate",
-												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Terminate", "TerminateResume", "Passthrough"}, false)),
+												Type:             schema.TypeString,
+												Description:      "Mode defines the TLS behavior.",
+												Optional:         true,
+												Default:          "Terminate",
+												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Terminate", "Passthrough"}, false)),
 											},
 											"certificate_refs": {
 												Type:        schema.TypeList,
 												Description: "CertificateRefs contains references to TLS certificates.",
 												Optional:    true,
-												MaxItems:    16,
+												MaxItems:    64,
 												Elem: &schema.Resource{
 													Schema: listenerSetSecretObjectReferenceSchema(),
 												},
@@ -166,7 +167,7 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 												Type:        schema.TypeList,
 												Description: "Kinds specifies the groups and kinds of Routes.",
 												Optional:    true,
-												MaxItems:    16,
+												MaxItems:    8,
 												Elem: &schema.Resource{
 													Schema: listenerSetRouteGroupKindSchema(),
 												},
@@ -263,10 +264,10 @@ func listenerSetSecretObjectReferenceSchema() map[string]*schema.Schema {
 func listenerSetRouteNamespacesSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"from": {
-			Type:        schema.TypeString,
-			Description: "From indicates where Routes will be selected from.",
-			Optional:    true,
-			Default:     "Same",
+			Type:             schema.TypeString,
+			Description:      "From indicates where Routes will be selected from.",
+			Optional:         true,
+			Default:          "Same",
 			ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "Selector", "Same"}, false)),
 		},
 		"selector": {
@@ -323,6 +324,7 @@ func listenerSetRouteGroupKindSchema() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Group is the group of the referent.",
 			Optional:    true,
+			Default:     "gateway.networking.k8s.io",
 		},
 		"kind": {
 			Type:        schema.TypeString,

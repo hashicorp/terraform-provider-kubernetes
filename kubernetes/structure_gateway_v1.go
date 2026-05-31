@@ -4,9 +4,9 @@
 package kubernetes
 
 import (
-	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"time"
 )
 
 func flattenGatewayV1Spec(in gatewayv1.GatewaySpec) []interface{} {
@@ -271,7 +271,7 @@ func flattenGatewayBackendTLS(in *gatewayv1.GatewayBackendTLS) []interface{} {
 	backend := make(map[string]interface{})
 
 	if in.ClientCertificateRef != nil {
-		backend["client_certificate_ref"] = flattenSecretObjectReference(*in.ClientCertificateRef)
+		backend["client_certificate_ref"] = []interface{}{flattenSecretObjectReference(*in.ClientCertificateRef)}
 	}
 
 	return []interface{}{backend}
@@ -733,7 +733,9 @@ func expandLabelMap(m map[string]interface{}) map[gatewayv1.LabelKey]gatewayv1.L
 	}
 	result := make(map[gatewayv1.LabelKey]gatewayv1.LabelValue)
 	for k, v := range m {
-		if sv, ok := v.(string); ok { result[gatewayv1.LabelKey(k)] = gatewayv1.LabelValue(sv) }
+		if sv, ok := v.(string); ok {
+			result[gatewayv1.LabelKey(k)] = gatewayv1.LabelValue(sv)
+		}
 	}
 	return result
 }
@@ -744,7 +746,9 @@ func expandAnnotationMap(m map[string]interface{}) map[gatewayv1.AnnotationKey]g
 	}
 	result := make(map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue)
 	for k, v := range m {
-		if val, ok := v.(string); ok { result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(val) }
+		if val, ok := v.(string); ok {
+			result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(val)
+		}
 	}
 	return result
 }
@@ -939,7 +943,9 @@ func expandAnnotationValueMap(m map[string]interface{}) map[gatewayv1.Annotation
 	}
 	result := make(map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue)
 	for k, v := range m {
-		if val, ok := v.(string); ok { result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(val) }
+		if val, ok := v.(string); ok {
+			result[gatewayv1.AnnotationKey(k)] = gatewayv1.AnnotationValue(val)
+		}
 	}
 	return result
 }

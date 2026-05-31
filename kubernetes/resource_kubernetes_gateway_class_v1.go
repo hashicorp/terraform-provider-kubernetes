@@ -56,6 +56,7 @@ func resourceKubernetesGatewayClassV1Schema() map[string]*schema.Schema {
 						Type:             schema.TypeString,
 						Description:      "ControllerName is the name of the controller. Must be a domain-prefixed path like example.net/gateway-controller.",
 						Required:         true,
+						ForceNew:         true,
 						ValidateDiagFunc: validation.ToDiagFunc(validation.StringMatch(regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`), "ControllerName must be a domain-prefixed path")),
 					},
 					"description": {
@@ -82,10 +83,10 @@ func resourceKubernetesGatewayClassV1Schema() map[string]*schema.Schema {
 									Required:    true,
 								},
 								"name": {
-									Type:        schema.TypeString,
-									Description: "Name is the name of the referent.",
-									Required:    true,
-									ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(0, 253)),
+									Type:             schema.TypeString,
+									Description:      "Name is the name of the referent.",
+									Required:         true,
+									ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(1, 253)),
 								},
 								"namespace": {
 									Type:        schema.TypeString,

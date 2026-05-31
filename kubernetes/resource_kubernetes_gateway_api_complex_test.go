@@ -57,7 +57,7 @@ func TestAccKubernetesHTTPRouteV1_complexFilters(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.2.retry.0.backoff", "100ms"),
 				),
 			},
-			// Update: change weights (80/20 → 60/40), add 4th rule
+			// Update: change weights (80/20 -> 60/40), add 4th rule
 			{
 				Config: testAccHTTPRouteV1ConfigComplexUpdated(rName, gcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -366,7 +366,7 @@ resource "kubernetes_http_route_v1" "test" {
       name = kubernetes_gateway_v1.test.metadata.0.name
     }
 
-    # Rule 0: weights changed 80/20 → 60/40
+    # Rule 0: weights changed 80/20 -> 60/40
     rules {
       matches {
         path {
@@ -464,7 +464,7 @@ resource "kubernetes_http_route_v1" "test" {
       }
     }
 
-    # Rule 3: NEW — exact path + query_param match
+    # Rule 3: NEW - exact path + query_param match
     rules {
       matches {
         path {
@@ -632,7 +632,7 @@ resource "kubernetes_reference_grant_v1" "allow" {
   }
 }
 
-# HTTPRoute: routes /a → same namespace backend, /b → cross-namespace backend
+# HTTPRoute: routes /a -> same namespace backend, /b -> cross-namespace backend
 resource "kubernetes_http_route_v1" "cross" {
   metadata {
     name      = "%[1]s-cross"
@@ -839,7 +839,7 @@ resource "kubernetes_grpc_route_v1" "test" {
       name = kubernetes_gateway_v1.test.metadata.0.name
     }
 
-    # Rule 0: weights 90/10 → 70/30, add canary header to filter
+    # Rule 0: weights 90/10 -> 70/30, add canary header to filter
     rules {
       matches {
         method {

@@ -98,15 +98,16 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"mode": {
-												Type:        schema.TypeString,
-												Description: "Mode defines the TLS behavior for the TLS session initiated by the client.",
-												Optional:    true,
-												Default:     "Terminate",
-												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Terminate", "TerminateResume", "Passthrough"}, false)),
+												Type:             schema.TypeString,
+												Description:      "Mode defines the TLS behavior for the TLS session initiated by the client.",
+												Optional:         true,
+												Default:          "Terminate",
+												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Terminate", "Passthrough"}, false)),
 											},
 											"certificate_refs": {
 												Type:        schema.TypeList,
 												Description: "CertificateRefs contains a series of references to Kubernetes objects that contains TLS certificates and private keys.",
+												MaxItems:    64,
 												Optional:    true,
 												Elem: &schema.Resource{
 													Schema: secretObjectReferenceSchema(),
@@ -168,9 +169,9 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 									Default:     "IPAddress",
 								},
 								"value": {
-									Type:        schema.TypeString,
-									Description: "Value of the address.",
-									Optional:    true,
+									Type:             schema.TypeString,
+									Description:      "Value of the address.",
+									Optional:         true,
 									ValidateDiagFunc: validation.ToDiagFunc(validation.StringLenBetween(0, 253)),
 								},
 							},
@@ -315,9 +316,9 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 						},
 					},
 					"default_scope": {
-						Type:        schema.TypeString,
-						Description: "DefaultScope, when set, configures the Gateway as a default Gateway.",
-						Optional:    true,
+						Type:             schema.TypeString,
+						Description:      "DefaultScope, when set, configures the Gateway as a default Gateway.",
+						Optional:         true,
 						ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "None"}, false)),
 					},
 				},
@@ -503,10 +504,10 @@ func secretObjectReferenceSchema() map[string]*schema.Schema {
 func routeNamespacesSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"from": {
-			Type:        schema.TypeString,
-			Description: "From indicates where Routes will be selected for this Gateway. Possible values are: All, Selector, Same.",
-			Optional:    true,
-			Default:     "Same",
+			Type:             schema.TypeString,
+			Description:      "From indicates where Routes will be selected for this Gateway. Possible values are: All, Selector, Same.",
+			Optional:         true,
+			Default:          "Same",
 			ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "Selector", "Same"}, false)),
 		},
 		"selector": {
@@ -524,10 +525,10 @@ func routeNamespacesSchema() map[string]*schema.Schema {
 func listenerNamespacesSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"from": {
-			Type:        schema.TypeString,
-			Description: "From indicates where ListenerSets can attach to this Gateway. Possible values are: All, Selector, Same, None.",
-			Optional:    true,
-			Default:     "None",
+			Type:             schema.TypeString,
+			Description:      "From indicates where ListenerSets can attach to this Gateway. Possible values are: All, Selector, Same, None.",
+			Optional:         true,
+			Default:          "None",
 			ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"All", "Selector", "Same", "None"}, false)),
 		},
 		"selector": {
@@ -633,10 +634,10 @@ func tlsConfigSchema() map[string]*schema.Schema {
 						},
 					},
 					"mode": {
-						Type:        schema.TypeString,
-						Description: "FrontendValidationMode defines the mode for validating the client certificate.",
-						Optional:    true,
-						Default:     "AllowValidOnly",
+						Type:             schema.TypeString,
+						Description:      "FrontendValidationMode defines the mode for validating the client certificate.",
+						Optional:         true,
+						Default:          "AllowValidOnly",
 						ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"AllowValidOnly", "AllowInsecureFallback"}, false)),
 					},
 				},

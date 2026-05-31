@@ -11,7 +11,7 @@ import (
 )
 
 // =============================================================================
-// Advanced Empirical Tests — inspired by Gateway API conformance tests and
+// Advanced Empirical Tests - inspired by Gateway API conformance tests and
 // gateway-api-bench benchmarks (howardjohn/gateway-api-bench).
 //
 // These tests validate real-world scenarios:
@@ -33,7 +33,7 @@ import (
 // =============================================================================
 
 // ---------------------------------------------------------------------------
-// Canary Deployment — 50/50 weighted split across two backends
+// Canary Deployment - 50/50 weighted split across two backends
 // Validates: HTTPRoute backend weight, multiple backendRefs, service discovery
 // ---------------------------------------------------------------------------
 func TestAccGatewayAPIAdvanced_canaryDeployment(t *testing.T) {

@@ -495,10 +495,30 @@ func TestExpandHTTPRouteSpecRoundtrip(t *testing.T) {
 					},
 				},
 			},
+			"parent_refs": []interface{}{
+				map[string]interface{}{
+					"group":        "",
+					"kind":         "Service",
+					"name":         "my-service",
+					"namespace":    "default",
+					"section_name": "http",
+					"port":         80,
+				},
+			},
 		},
 	}
 
 	expanded := expandHTTPRouteSpec(input)
+
+	if len(expanded.ParentRefs) != 1 {
+		t.Fatalf("Expected 1 parent_ref, got %d", len(expanded.ParentRefs))
+	}
+	pr := expanded.ParentRefs[0]
+	if pr.Group == nil {
+		t.Error("Expected parent_ref Group to be non-nil")
+	} else if string(*pr.Group) != "" {
+		t.Errorf("Expected parent_ref Group to be '', got '%+v'", *pr.Group)
+	}
 
 	if len(expanded.Hostnames) != 2 {
 		t.Errorf("Expected 2 hostnames, got %d", len(expanded.Hostnames))

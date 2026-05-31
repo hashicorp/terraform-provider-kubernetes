@@ -4,9 +4,9 @@
 package kubernetes
 
 import (
-	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"time"
 )
 
 func flattenGRPCRouteSpec(in gatewayv1.GRPCRouteSpec) []interface{} {
@@ -217,7 +217,9 @@ func flattenGRPCBackendRef(in gatewayv1.GRPCBackendRef) map[string]interface{} {
 
 func flattenLocalObjectReferenceGRPC(in gatewayv1.LocalObjectReference) []interface{} {
 	ref := make(map[string]interface{})
-	ref["name"] = in.Name
+	ref["group"] = string(in.Group)
+	ref["kind"] = string(in.Kind)
+	ref["name"] = string(in.Name)
 	return []interface{}{ref}
 }
 
@@ -238,6 +240,10 @@ func flattenSessionPersistenceGRPC(in *gatewayv1.SessionPersistence) []interface
 
 	if in.Type != nil {
 		sp["type"] = string(*in.Type)
+	}
+
+	if in.CookieConfig != nil {
+		sp["cookie_config"] = flattenCookieConfig(in.CookieConfig)
 	}
 
 	return []interface{}{sp}
@@ -336,7 +342,9 @@ func expandGRPCRouteSpec(l []interface{}) gatewayv1.GRPCRouteSpec {
 	if v, ok := in["hostnames"].([]interface{}); ok && len(v) > 0 {
 		hostnames := make([]gatewayv1.Hostname, len(v))
 		for i, h := range v {
-			if s, ok := h.(string); ok { hostnames[i] = gatewayv1.Hostname(s) }
+			if s, ok := h.(string); ok {
+				hostnames[i] = gatewayv1.Hostname(s)
+			}
 		}
 		obj.Hostnames = hostnames
 	}
@@ -550,7 +558,9 @@ func expandHTTPHeaderFilterGRPC(l []interface{}) *gatewayv1.HTTPHeaderFilter {
 	if v, ok := in["remove"].([]interface{}); ok && len(v) > 0 {
 		remove := make([]string, len(v))
 		for i, r := range v {
-			if s, ok := r.(string); ok { remove[i] = s }
+			if s, ok := r.(string); ok {
+				remove[i] = s
+			}
 		}
 		obj.Remove = remove
 	}
@@ -614,7 +624,7 @@ func expandGRPCBackendRef(in map[string]interface{}) gatewayv1.GRPCBackendRef {
 		obj.Port = &p
 	}
 
-	if v, ok := in["weight"].(int); ok && v > 0 {
+	if v, ok := in["weight"].(int); ok {
 		w := int32(v)
 		obj.Weight = &w
 	}
@@ -633,6 +643,14 @@ func expandLocalObjectReferenceGRPC(l []interface{}) gatewayv1.LocalObjectRefere
 
 	in := l[0].(map[string]interface{})
 	obj := gatewayv1.LocalObjectReference{}
+
+	if v, ok := in["group"].(string); ok {
+		obj.Group = gatewayv1.Group(v)
+	}
+
+	if v, ok := in["kind"].(string); ok && v != "" {
+		obj.Kind = gatewayv1.Kind(v)
+	}
 
 	if v, ok := in["name"].(string); ok && v != "" {
 		obj.Name = gatewayv1.ObjectName(v)
@@ -666,6 +684,10 @@ func expandSessionPersistenceGRPC(l []interface{}) *gatewayv1.SessionPersistence
 	if v, ok := in["type"].(string); ok && v != "" {
 		t := gatewayv1.SessionPersistenceType(v)
 		obj.Type = &t
+	}
+
+	if v, ok := in["cookie_config"].([]interface{}); ok && len(v) > 0 {
+		obj.CookieConfig = expandCookieConfig(v)
 	}
 
 	return obj

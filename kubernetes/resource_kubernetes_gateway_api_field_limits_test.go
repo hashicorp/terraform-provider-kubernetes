@@ -11,7 +11,7 @@ import (
 )
 
 // =============================================================================
-// Empirical Field Limit Tests — run against a live Kind cluster with Gateway API CRDs
+// Empirical Field Limit Tests - run against a live Kind cluster with Gateway API CRDs
 //
 // These tests verify:
 //   - MaxItems/MinItems schema constraints hit the CRD and are accepted
@@ -59,7 +59,7 @@ func TestAccGatewayAPIFieldLimits_gatewayManyListeners(t *testing.T) {
 	})
 }
 
-// Test Gateway hostname validation — long hostname (253 chars boundary)
+// Test Gateway hostname validation - long hostname (253 chars boundary)
 func TestAccGatewayAPIFieldLimits_gatewayHostnameLength(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc")
 	resourceName := "kubernetes_gateway_v1.hostname"
@@ -83,7 +83,7 @@ func TestAccGatewayAPIFieldLimits_gatewayHostnameLength(t *testing.T) {
 	})
 }
 
-// Test Gateway protocol enum values — all core protocols
+// Test Gateway protocol enum values - all core protocols
 func TestAccGatewayAPIFieldLimits_gatewayProtocolTypes(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc")
 	resourceName := "kubernetes_gateway_v1.protocols"
@@ -230,7 +230,7 @@ func TestAccGatewayAPIFieldLimits_httpRouteBackendWeightsEdge(t *testing.T) {
 	})
 }
 
-// Test HTTPRoute path match types — PathPrefix, Exact, Regex
+// Test HTTPRoute path match types - PathPrefix, Exact, Regex
 func TestAccGatewayAPIFieldLimits_httpRoutePathMatchTypes(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc")
 
@@ -253,7 +253,7 @@ func TestAccGatewayAPIFieldLimits_httpRoutePathMatchTypes(t *testing.T) {
 	})
 }
 
-// Test HTTPRoute header/query match types — Exact vs Regex
+// Test HTTPRoute header/query match types - Exact vs Regex
 func TestAccGatewayAPIFieldLimits_httpRouteMatchTypesExactRegex(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc")
 
@@ -281,7 +281,7 @@ func TestAccGatewayAPIFieldLimits_httpRouteMatchTypesExactRegex(t *testing.T) {
 // GRPCRoute Field Limits
 // ---------------------------------------------------------------------------
 
-// Test GRPCRoute method match types — Exact, Path
+// Test GRPCRoute method match types - Exact, Path
 func TestAccGatewayAPIFieldLimits_grpcRouteMethodMatchTypes(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc")
 
@@ -387,7 +387,7 @@ func TestAccGatewayAPIFieldLimits_listenerSetProtocols(t *testing.T) {
 // BackendTLSPolicy Field Limits
 // ---------------------------------------------------------------------------
 
-// Test BackendTLSPolicy SAN types — Hostname, URI
+// Test BackendTLSPolicy SAN types - Hostname, URI
 func TestAccGatewayAPIFieldLimits_backendTLSSubjectAltNames(t *testing.T) {
 	rName := acctest.RandomWithPrefix("tf-acc")
 
@@ -442,7 +442,7 @@ func TestAccGatewayAPIFieldLimits_referenceGrantMultipleEntries(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Update In-Place Tests — verify CRUD update paths for all resources
+// Update In-Place Tests - verify CRUD update paths for all resources
 // ---------------------------------------------------------------------------
 
 // Test HTTPRoute update: change match, add filter, change backend

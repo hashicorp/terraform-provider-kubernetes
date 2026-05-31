@@ -121,7 +121,15 @@ func dataSourceKubernetesGatewayClassV1() *schema.Resource {
 							Type:        schema.TypeList,
 							Description: "SupportedFeatures is the set of features the GatewayClass support.",
 							Computed:    true,
-							Elem:        &schema.Schema{Type: schema.TypeString},
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:        schema.TypeString,
+										Description: "Name is the name of the supported feature.",
+										Computed:    true,
+									},
+								},
+							},
 						},
 					},
 				},

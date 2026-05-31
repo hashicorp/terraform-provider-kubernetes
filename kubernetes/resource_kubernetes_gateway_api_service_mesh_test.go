@@ -29,11 +29,11 @@ func TestAccKubernetesHTTPRouteV1_apiGatewayPattern(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckHTTPRouteV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.#", "3"),
-					// Rule 0: HTTP → HTTPS redirect
+					// Rule 0: HTTP -> HTTPS redirect
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.filters.0.type", "RequestRedirect"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.filters.0.request_redirect.0.scheme", "https"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.filters.0.request_redirect.0.status_code", "301"),
-					// Rule 1: /api prefix → backend with retry + timeout + header modifier
+					// Rule 1: /api prefix -> backend with retry + timeout + header modifier
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.matches.0.path.0.value", "/api"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.timeouts.0.request", "30s"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.timeouts.0.backend_request", "10s"),
@@ -44,7 +44,7 @@ func TestAccKubernetesHTTPRouteV1_apiGatewayPattern(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.filters.0.request_header_modifier.0.add.0.name", "X-Forwarded-Proto"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.filters.0.request_header_modifier.0.add.0.value", "https"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.filters.0.request_header_modifier.0.remove.0", "X-Internal-Debug"),
-					// Rule 2: /static prefix → URL rewrite + response header
+					// Rule 2: /static prefix -> URL rewrite + response header
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.2.filters.0.type", "URLRewrite"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.2.filters.0.url_rewrite.0.path.0.type", "ReplacePrefixMatch"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.2.filters.0.url_rewrite.0.path.0.replace_prefix_match", "/assets"),

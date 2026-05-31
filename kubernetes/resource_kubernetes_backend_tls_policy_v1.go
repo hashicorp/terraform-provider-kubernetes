@@ -88,11 +88,11 @@ func resourceKubernetesBackendTLSPolicyV1Schema() map[string]*schema.Schema {
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								"ca_certificate_refs": {
-									Type:        schema.TypeList,
-									Description: "CACertificateRefs contains references to Kubernetes objects that contain a PEM-encoded TLS CA certificate bundle.",
-									Optional:    true,
+									Type:          schema.TypeList,
+									Description:   "CACertificateRefs contains references to Kubernetes objects that contain a PEM-encoded TLS CA certificate bundle.",
+									Optional:      true,
 									ConflictsWith: []string{"spec.0.validation.0.well_known_ca_certificates"},
-									MaxItems:    8,
+									MaxItems:      8,
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"group": {
@@ -114,9 +114,9 @@ func resourceKubernetesBackendTLSPolicyV1Schema() map[string]*schema.Schema {
 									},
 								},
 								"well_known_ca_certificates": {
-									Type:        schema.TypeString,
-									Description: "WellKnownCACertificates specifies whether a well-known set of CA certificates may be used.",
-									Optional:    true,
+									Type:          schema.TypeString,
+									Description:   "WellKnownCACertificates specifies whether a well-known set of CA certificates may be used.",
+									Optional:      true,
 									ConflictsWith: []string{"spec.0.validation.0.ca_certificate_refs"},
 								},
 								"hostname": {
@@ -132,9 +132,9 @@ func resourceKubernetesBackendTLSPolicyV1Schema() map[string]*schema.Schema {
 									Elem: &schema.Resource{
 										Schema: map[string]*schema.Schema{
 											"type": {
-												Type:        schema.TypeString,
-												Description: "Type determines the format of the Subject Alternative Name.",
-												Required:    true,
+												Type:             schema.TypeString,
+												Description:      "Type determines the format of the Subject Alternative Name.",
+												Required:         true,
 												ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"Hostname", "URI"}, false)),
 											},
 											"hostname": {

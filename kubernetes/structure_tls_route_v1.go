@@ -4,9 +4,9 @@
 package kubernetes
 
 import (
-	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"time"
 )
 
 func flattenTLSRouteSpec(in gatewayv1.TLSRouteSpec) []interface{} {
@@ -182,7 +182,9 @@ func expandTLSRouteSpec(l []interface{}) gatewayv1.TLSRouteSpec {
 	if v, ok := in["hostnames"].([]interface{}); ok && len(v) > 0 {
 		hostnames := make([]gatewayv1.Hostname, len(v))
 		for i, h := range v {
-			if s, ok := h.(string); ok { hostnames[i] = gatewayv1.Hostname(s) }
+			if s, ok := h.(string); ok {
+				hostnames[i] = gatewayv1.Hostname(s)
+			}
 		}
 		obj.Hostnames = hostnames
 	}
@@ -321,7 +323,7 @@ func expandTLSBackendRef(in map[string]interface{}) gatewayv1.BackendRef {
 		obj.Port = &p
 	}
 
-	if v, ok := in["weight"].(int); ok && v > 0 {
+	if v, ok := in["weight"].(int); ok {
 		w := int32(v)
 		obj.Weight = &w
 	}

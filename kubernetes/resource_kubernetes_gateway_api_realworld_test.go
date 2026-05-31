@@ -6,8 +6,8 @@ package kubernetes
 // Real-world Gateway API scenarios based on official documentation:
 // https://gateway-api.sigs.k8s.io/guides/
 //
-// Scenario 1: HTTP→HTTPS redirect + TLS termination (dual-listener Gateway)
-// Scenario 2: Canary deployment — header-based then weighted traffic split
+// Scenario 1: HTTP->HTTPS redirect + TLS termination (dual-listener Gateway)
+// Scenario 2: Canary deployment - header-based then weighted traffic split
 // Scenario 3: URL rewrite + path-based routing to micro-services
 // Scenario 4: GRPCRoute canary with header routing + method-based split
 // Scenario 5: Full multi-tenant setup: BackendTLSPolicy + ReferenceGrant + cross-ns HTTPRoute
@@ -23,7 +23,7 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Scenario 1: HTTP → HTTPS Redirect
+// Scenario 1: HTTP -> HTTPS Redirect
 //
 // Real-world pattern: every HTTP request is redirected 301 to HTTPS.
 // Two listeners on the same gateway: port 80 (HTTP) and port 443 (HTTPS/TLS).
@@ -119,7 +119,7 @@ resource "kubernetes_gateway_v1" "test" {
   }
 }
 
-# Route 1: HTTP listener — redirects all traffic to HTTPS (301)
+# Route 1: HTTP listener - redirects all traffic to HTTPS (301)
 resource "kubernetes_http_route_v1" "redirect" {
   metadata {
     name      = "%s-redirect"
@@ -144,7 +144,7 @@ resource "kubernetes_http_route_v1" "redirect" {
   }
 }
 
-# Route 2: HTTPS listener — forwards to backend service
+# Route 2: HTTPS listener - forwards to backend service
 resource "kubernetes_http_route_v1" "https" {
   metadata {
     name      = "%s-https"
@@ -173,7 +173,7 @@ resource "kubernetes_http_route_v1" "https" {
 // Scenario 2: Canary Deployment
 //
 // Real-world pattern: progressive traffic shifting.
-// Step 1: Header-based canary (X-Canary: true → v2, else → v1).
+// Step 1: Header-based canary (X-Canary: true -> v2, else -> v1).
 // Step 2: Weighted split 90%/10%.
 // Step 3: Complete migration 0%/100%.
 // -----------------------------------------------------------------------------
@@ -215,7 +215,7 @@ func TestAccKubernetesGatewayAPI_CanaryDeployment(t *testing.T) {
 				),
 			},
 			{
-				// Step 3: near-complete migration — 1% v1, 99% v2
+				// Step 3: near-complete migration - 1% v1, 99% v2
 				Config: testAccGatewayAPICanaryStep3(rName, gcName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckHTTPRouteV1Exists(resourceName, &conf),
@@ -405,10 +405,10 @@ resource "kubernetes_http_route_v1" "canary" {
 // Scenario 3: URL Rewrite + Path-Based Micro-Service Routing
 //
 // Real-world pattern: API gateway in front of multiple micro-services.
-// /api/users  → user-service (URLRewrite strips prefix)
-// /api/orders → order-service (URLRewrite strips prefix)
-// /api/auth   → auth-service  (host rewrite)
-// Default     → frontend-service
+// /api/users  -> user-service (URLRewrite strips prefix)
+// /api/orders -> order-service (URLRewrite strips prefix)
+// /api/auth   -> auth-service  (host rewrite)
+// Default     -> frontend-service
 // -----------------------------------------------------------------------------
 
 func TestAccKubernetesGatewayAPI_PathBasedMicroservices(t *testing.T) {
@@ -427,17 +427,17 @@ func TestAccKubernetesGatewayAPI_PathBasedMicroservices(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckHTTPRouteV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.#", "4"),
-					// Rule 0: /api/users → URLRewrite ReplacePrefix /
+					// Rule 0: /api/users -> URLRewrite ReplacePrefix /
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.matches.0.path.0.type", "PathPrefix"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.matches.0.path.0.value", "/api/users"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.filters.0.type", "URLRewrite"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.filters.0.url_rewrite.0.path.0.type", "ReplacePrefixMatch"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.filters.0.url_rewrite.0.path.0.replace_prefix_match", "/"),
-					// Rule 1: /api/orders → URLRewrite ReplacePrefix /
+					// Rule 1: /api/orders -> URLRewrite ReplacePrefix /
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.matches.0.path.0.value", "/api/orders"),
-					// Rule 2: /api/auth → URLRewrite hostname
+					// Rule 2: /api/auth -> URLRewrite hostname
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.2.filters.0.url_rewrite.0.hostname", "auth-internal.svc.cluster.local"),
-					// Rule 3: default catch-all → frontend
+					// Rule 3: default catch-all -> frontend
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.3.backend_refs.0.name", fmt.Sprintf("%s-frontend", rName)),
 				),
 			},
@@ -540,7 +540,7 @@ resource "kubernetes_http_route_v1" "api" {
     }
     hostnames = ["api.example.com"]
 
-    # /api/users/** → user-service, strips /api/users prefix
+    # /api/users/** -> user-service, strips /api/users prefix
     rules {
       name = "users"
       matches {
@@ -565,7 +565,7 @@ resource "kubernetes_http_route_v1" "api" {
       }
     }
 
-    # /api/orders/** → order-service, strips /api/orders prefix
+    # /api/orders/** -> order-service, strips /api/orders prefix
     rules {
       name = "orders"
       matches {
@@ -590,7 +590,7 @@ resource "kubernetes_http_route_v1" "api" {
       }
     }
 
-    # /api/auth → auth-service, rewrites Host header to internal DNS
+    # /api/auth -> auth-service, rewrites Host header to internal DNS
     rules {
       name = "auth"
       matches {
@@ -612,7 +612,7 @@ resource "kubernetes_http_route_v1" "api" {
       }
     }
 
-    # Default catch-all → frontend SPA
+    # Default catch-all -> frontend SPA
     rules {
       name = "frontend"
       backend_refs {
@@ -627,14 +627,14 @@ resource "kubernetes_http_route_v1" "api" {
 }
 
 // -----------------------------------------------------------------------------
-// Scenario 4: GRPCRoute — gRPC reflection + method routing + canary
+// Scenario 4: GRPCRoute - gRPC reflection + method routing + canary
 //
 // Real-world pattern from gRPC guide:
-// - gRPC reflection service → reflected to main backend
-// - Login method → auth-service (Exact match)
-// - GetProfile method → profile-service
-// - canary header → all traffic to canary backend
-// - default → prod backend with 70/30 weighted split
+// - gRPC reflection service -> reflected to main backend
+// - Login method -> auth-service (Exact match)
+// - GetProfile method -> profile-service
+// - canary header -> all traffic to canary backend
+// - default -> prod backend with 70/30 weighted split
 // -----------------------------------------------------------------------------
 
 func TestAccKubernetesGatewayAPI_GRPCRoutingAdvanced(t *testing.T) {
@@ -655,7 +655,7 @@ func TestAccKubernetesGatewayAPI_GRPCRoutingAdvanced(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.#", "4"),
 					// Rule 0: gRPC reflection passthrough
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.0.matches.0.method.0.service", "grpc.reflection.v1.ServerReflection"),
-					// Rule 1: Login method → auth service
+					// Rule 1: Login method -> auth service
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.matches.0.method.0.service", "com.example.UserService"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rules.1.matches.0.method.0.method", "Login"),
 					// Rule 2: canary header routing
@@ -766,7 +766,7 @@ resource "kubernetes_grpc_route_v1" "test" {
     }
     hostnames = ["grpc.example.com"]
 
-    # Rule 0: gRPC reflection service — always route to main for tooling
+    # Rule 0: gRPC reflection service - always route to main for tooling
     rules {
       name = "reflection"
       matches {
@@ -782,7 +782,7 @@ resource "kubernetes_grpc_route_v1" "test" {
       }
     }
 
-    # Rule 1: Login method → dedicated auth service
+    # Rule 1: Login method -> dedicated auth service
     rules {
       name = "auth"
       matches {
@@ -799,7 +799,7 @@ resource "kubernetes_grpc_route_v1" "test" {
       }
     }
 
-    # Rule 2: canary header → canary backend (for QA/staging traffic)
+    # Rule 2: canary header -> canary backend (for QA/staging traffic)
     rules {
       name = "canary"
       matches {
@@ -816,7 +816,7 @@ resource "kubernetes_grpc_route_v1" "test" {
       }
     }
 
-    # Rule 3: default — 70/30 prod/v2 weighted split (gradual rollout)
+    # Rule 3: default - 70/30 prod/v2 weighted split (gradual rollout)
     rules {
       name = "default"
       backend_refs {
@@ -971,7 +971,7 @@ resource "kubernetes_http_route_v1" "tenant" {
     }
     hostnames = ["tenant.example.com"]
 
-    # Rule 0: default — add forwarded tenant header, with retry + timeout
+    # Rule 0: default - add forwarded tenant header, with retry + timeout
     rules {
       name = "default-with-retry"
       filters {
@@ -999,7 +999,7 @@ resource "kubernetes_http_route_v1" "tenant" {
       }
     }
 
-    # Rule 1: tenant A — header match routes to dedicated backend
+    # Rule 1: tenant A - header match routes to dedicated backend
     rules {
       name = "tenant-a"
       matches {

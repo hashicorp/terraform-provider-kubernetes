@@ -4,9 +4,9 @@
 package kubernetes
 
 import (
-	"time"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"time"
 )
 
 func flattenHTTPRouteSpec(in gatewayv1.HTTPRouteSpec) []interface{} {
@@ -81,7 +81,32 @@ func flattenHTTPRouteRule(in gatewayv1.HTTPRouteRule) map[string]interface{} {
 	if in.SessionPersistence != nil {
 		rule["session_persistence"] = flattenSessionPersistence(in.SessionPersistence)
 	}
+
+	if in.Retry != nil {
+		rule["retry"] = flattenHTTPRouteRetry(in.Retry)
+	}
 	return rule
+}
+
+func flattenHTTPRouteRetry(in *gatewayv1.HTTPRouteRetry) []interface{} {
+	if in == nil {
+		return nil
+	}
+	m := make(map[string]interface{})
+	if len(in.Codes) > 0 {
+		codes := make([]interface{}, len(in.Codes))
+		for i, c := range in.Codes {
+			codes[i] = int(c)
+		}
+		m["codes"] = codes
+	}
+	if in.Attempts != nil {
+		m["attempts"] = *in.Attempts
+	}
+	if in.Backoff != nil {
+		m["backoff"] = string(*in.Backoff)
+	}
+	return []interface{}{m}
 }
 
 func flattenHTTPRouteMatch(in gatewayv1.HTTPRouteMatch) map[string]interface{} {
@@ -278,7 +303,23 @@ func flattenHTTPRequestMirrorFilter(in *gatewayv1.HTTPRequestMirrorFilter) []int
 		mirror["percent"] = *in.Percent
 	}
 
+	if in.Fraction != nil {
+		mirror["fraction"] = flattenFraction(in.Fraction)
+	}
+
 	return []interface{}{mirror}
+}
+
+func flattenFraction(in *gatewayv1.Fraction) []interface{} {
+	if in == nil {
+		return nil
+	}
+	m := make(map[string]interface{})
+	m["numerator"] = int(in.Numerator)
+	if in.Denominator != nil {
+		m["denominator"] = int(*in.Denominator)
+	}
+	return []interface{}{m}
 }
 
 func flattenHTTPCORSFilter(in *gatewayv1.HTTPCORSFilter) []interface{} {
@@ -389,7 +430,9 @@ func flattenBackendObjectReference(in gatewayv1.BackendObjectReference) []interf
 
 func flattenLocalObjectReferenceHTTPRoute(in gatewayv1.LocalObjectReference) []interface{} {
 	ref := make(map[string]interface{})
-	ref["name"] = in.Name
+	ref["group"] = string(in.Group)
+	ref["kind"] = string(in.Kind)
+	ref["name"] = string(in.Name)
 	return []interface{}{ref}
 }
 
@@ -612,6 +655,36 @@ func expandHTTPRouteRule(in map[string]interface{}) gatewayv1.HTTPRouteRule {
 	if v, ok := in["session_persistence"].([]interface{}); ok && len(v) > 0 {
 		obj.SessionPersistence = expandSessionPersistence(v)
 	}
+
+	if v, ok := in["retry"].([]interface{}); ok && len(v) > 0 {
+		obj.Retry = expandHTTPRouteRetry(v)
+	}
+	return obj
+}
+
+func expandHTTPRouteRetry(l []interface{}) *gatewayv1.HTTPRouteRetry {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.HTTPRouteRetry{}
+	if v, ok := in["codes"].([]interface{}); ok && len(v) > 0 {
+		codes := make([]gatewayv1.HTTPRouteRetryStatusCode, 0, len(v))
+		for _, c := range v {
+			if code, ok := c.(int); ok {
+				codes = append(codes, gatewayv1.HTTPRouteRetryStatusCode(code))
+			}
+		}
+		obj.Codes = codes
+	}
+	if v, ok := in["attempts"].(int); ok && v > 0 {
+		a := v
+		obj.Attempts = &a
+	}
+	if v, ok := in["backoff"].(string); ok && v != "" {
+		b := gatewayv1.Duration(v)
+		obj.Backoff = &b
+	}
 	return obj
 }
 
@@ -825,7 +898,9 @@ func expandHTTPHeaderFilter(l []interface{}) *gatewayv1.HTTPHeaderFilter {
 	if v, ok := in["remove"].([]interface{}); ok && len(v) > 0 {
 		remove := make([]string, len(v))
 		for i, r := range v {
-			if s, ok := r.(string); ok { remove[i] = s }
+			if s, ok := r.(string); ok {
+				remove[i] = s
+			}
 		}
 		obj.Remove = remove
 	}
@@ -941,6 +1016,26 @@ func expandHTTPRequestMirrorFilter(l []interface{}) *gatewayv1.HTTPRequestMirror
 		obj.Percent = &percent
 	}
 
+	if v, ok := in["fraction"].([]interface{}); ok && len(v) > 0 {
+		obj.Fraction = expandFraction(v)
+	}
+
+	return obj
+}
+
+func expandFraction(l []interface{}) *gatewayv1.Fraction {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &gatewayv1.Fraction{}
+	if v, ok := in["numerator"].(int); ok {
+		obj.Numerator = int32(v)
+	}
+	if v, ok := in["denominator"].(int); ok && v > 0 {
+		d := int32(v)
+		obj.Denominator = &d
+	}
 	return obj
 }
 
@@ -955,7 +1050,9 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["allow_origins"].([]interface{}); ok && len(v) > 0 {
 		origins := make([]gatewayv1.CORSOrigin, len(v))
 		for i, o := range v {
-			if s, ok := o.(string); ok { origins[i] = gatewayv1.CORSOrigin(s) }
+			if s, ok := o.(string); ok {
+				origins[i] = gatewayv1.CORSOrigin(s)
+			}
 		}
 		obj.AllowOrigins = origins
 	}
@@ -967,7 +1064,9 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["allow_methods"].([]interface{}); ok && len(v) > 0 {
 		methods := make([]gatewayv1.HTTPMethodWithWildcard, len(v))
 		for i, m := range v {
-			if s, ok := m.(string); ok { methods[i] = gatewayv1.HTTPMethodWithWildcard(s) }
+			if s, ok := m.(string); ok {
+				methods[i] = gatewayv1.HTTPMethodWithWildcard(s)
+			}
 		}
 		obj.AllowMethods = methods
 	}
@@ -975,7 +1074,9 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["allow_headers"].([]interface{}); ok && len(v) > 0 {
 		headers := make([]gatewayv1.HTTPHeaderName, len(v))
 		for i, h := range v {
-			if s, ok := h.(string); ok { headers[i] = gatewayv1.HTTPHeaderName(s) }
+			if s, ok := h.(string); ok {
+				headers[i] = gatewayv1.HTTPHeaderName(s)
+			}
 		}
 		obj.AllowHeaders = headers
 	}
@@ -983,7 +1084,9 @@ func expandHTTPCORSFilter(l []interface{}) *gatewayv1.HTTPCORSFilter {
 	if v, ok := in["expose_headers"].([]interface{}); ok && len(v) > 0 {
 		headers := make([]gatewayv1.HTTPHeaderName, len(v))
 		for i, h := range v {
-			if s, ok := h.(string); ok { headers[i] = gatewayv1.HTTPHeaderName(s) }
+			if s, ok := h.(string); ok {
+				headers[i] = gatewayv1.HTTPHeaderName(s)
+			}
 		}
 		obj.ExposeHeaders = headers
 	}
@@ -1037,7 +1140,7 @@ func expandHTTPBackendRef(in map[string]interface{}) gatewayv1.HTTPBackendRef {
 		obj.Port = &p
 	}
 
-	if v, ok := in["weight"].(int); ok && v > 0 {
+	if v, ok := in["weight"].(int); ok {
 		w := int32(v)
 		obj.Weight = &w
 	}
@@ -1091,6 +1194,14 @@ func expandLocalObjectReferenceHTTPRoute(l []interface{}) gatewayv1.LocalObjectR
 
 	in := l[0].(map[string]interface{})
 	obj := gatewayv1.LocalObjectReference{}
+
+	if v, ok := in["group"].(string); ok {
+		obj.Group = gatewayv1.Group(v)
+	}
+
+	if v, ok := in["kind"].(string); ok && v != "" {
+		obj.Kind = gatewayv1.Kind(v)
+	}
 
 	if v, ok := in["name"].(string); ok && v != "" {
 		obj.Name = gatewayv1.ObjectName(v)
@@ -1255,7 +1366,9 @@ func expandGRPCAuthConfig(l []interface{}) *gatewayv1.GRPCAuthConfig {
 	if v, ok := in["allowed_headers"].([]interface{}); ok && len(v) > 0 {
 		headers := make([]string, len(v))
 		for i, h := range v {
-			if s, ok := h.(string); ok { headers[i] = s }
+			if s, ok := h.(string); ok {
+				headers[i] = s
+			}
 		}
 		obj.AllowedRequestHeaders = headers
 	}
@@ -1274,14 +1387,18 @@ func expandHTTPAuthConfig(l []interface{}) *gatewayv1.HTTPAuthConfig {
 	if v, ok := in["allowed_request_headers"].([]interface{}); ok && len(v) > 0 {
 		headers := make([]string, len(v))
 		for i, h := range v {
-			if s, ok := h.(string); ok { headers[i] = s }
+			if s, ok := h.(string); ok {
+				headers[i] = s
+			}
 		}
 		obj.AllowedRequestHeaders = headers
 	}
 	if v, ok := in["allowed_response_headers"].([]interface{}); ok && len(v) > 0 {
 		headers := make([]string, len(v))
 		for i, h := range v {
-			if s, ok := h.(string); ok { headers[i] = s }
+			if s, ok := h.(string); ok {
+				headers[i] = s
+			}
 		}
 		obj.AllowedResponseHeaders = headers
 	}
@@ -1323,16 +1440,26 @@ func flattenHTTPExternalAuthFilter(in *gatewayv1.HTTPExternalAuthFilter) []inter
 
 func flattenBackendObjectReferenceHTTPExternalAuth(in gatewayv1.BackendObjectReference) []interface{} {
 	m := make(map[string]interface{})
-	if in.Group != nil && *in.Group != "" { m["group"] = string(*in.Group) }
-	if in.Kind != nil && *in.Kind != "" { m["kind"] = string(*in.Kind) }
+	if in.Group != nil && *in.Group != "" {
+		m["group"] = string(*in.Group)
+	}
+	if in.Kind != nil && *in.Kind != "" {
+		m["kind"] = string(*in.Kind)
+	}
 	m["name"] = string(in.Name)
-	if in.Namespace != nil && *in.Namespace != "" { m["namespace"] = string(*in.Namespace) }
-	if in.Port != nil { m["port"] = int(*in.Port) }
+	if in.Namespace != nil && *in.Namespace != "" {
+		m["namespace"] = string(*in.Namespace)
+	}
+	if in.Port != nil {
+		m["port"] = int(*in.Port)
+	}
 	return []interface{}{m}
 }
 
 func flattenGRPCAuthConfig(in *gatewayv1.GRPCAuthConfig) []interface{} {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	m := make(map[string]interface{})
 	if len(in.AllowedRequestHeaders) > 0 {
 		m["allowed_headers"] = in.AllowedRequestHeaders
@@ -1341,9 +1468,13 @@ func flattenGRPCAuthConfig(in *gatewayv1.GRPCAuthConfig) []interface{} {
 }
 
 func flattenHTTPAuthConfig(in *gatewayv1.HTTPAuthConfig) []interface{} {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	m := make(map[string]interface{})
-	if in.Path != "" { m["path"] = in.Path }
+	if in.Path != "" {
+		m["path"] = in.Path
+	}
 	if len(in.AllowedRequestHeaders) > 0 {
 		m["allowed_request_headers"] = in.AllowedRequestHeaders
 	}
@@ -1354,7 +1485,9 @@ func flattenHTTPAuthConfig(in *gatewayv1.HTTPAuthConfig) []interface{} {
 }
 
 func flattenForwardBodyConfig(in *gatewayv1.ForwardBodyConfig) []interface{} {
-	if in == nil { return nil }
+	if in == nil {
+		return nil
+	}
 	m := make(map[string]interface{})
 	m["max_size"] = int(in.MaxSize)
 	return []interface{}{m}

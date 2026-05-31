@@ -60,7 +60,9 @@ func flattenBackendTLSPolicyValidation(in gatewayv1.BackendTLSPolicyValidation) 
 		val["well_known_ca_certificates"] = string(*in.WellKnownCACertificates)
 	}
 
-	if in.Hostname != "" { val["hostname"] = string(in.Hostname) }
+	if in.Hostname != "" {
+		val["hostname"] = string(in.Hostname)
+	}
 
 	if len(in.SubjectAltNames) > 0 {
 		sans := make([]interface{}, len(in.SubjectAltNames))
@@ -171,7 +173,9 @@ func expandBackendTLSPolicySpec(l []interface{}) gatewayv1.BackendTLSPolicySpec 
 	if v, ok := in["options"].(map[string]interface{}); ok && len(v) > 0 {
 		options := make(map[gatewayv1.AnnotationKey]gatewayv1.AnnotationValue)
 		for key, val := range v {
-			if sv, ok := val.(string); ok { options[gatewayv1.AnnotationKey(key)] = gatewayv1.AnnotationValue(sv) }
+			if sv, ok := val.(string); ok {
+				options[gatewayv1.AnnotationKey(key)] = gatewayv1.AnnotationValue(sv)
+			}
 		}
 		obj.Options = options
 	}

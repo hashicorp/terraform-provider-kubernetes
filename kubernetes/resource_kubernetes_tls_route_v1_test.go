@@ -260,7 +260,10 @@ resource "kubernetes_service_v1" "test" {
   }
   spec {
     selector = { app = "test" }
-    port { port = 443; target_port = 443 }
+    port {
+      port        = 443
+      target_port = 443
+    }
   }
 }
 
@@ -308,7 +311,10 @@ resource "kubernetes_service_v1" "test" {
   }
   spec {
     selector = { app = "test" }
-    port { port = 443; target_port = 443 }
+    port {
+      port        = 443
+      target_port = 443
+    }
   }
 }
 
@@ -356,7 +362,10 @@ resource "kubernetes_service_v1" "test" {
   }
   spec {
     selector = { app = "test" }
-    port { port = 443; target_port = 443 }
+    port {
+      port        = 443
+      target_port = 443
+    }
   }
 }
 

@@ -247,6 +247,7 @@ func listenerSetSecretObjectReferenceSchema() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is the kind of the referent.",
 			Optional:    true,
+			Default:     "Secret",
 		},
 		"name": {
 			Type:        schema.TypeString,

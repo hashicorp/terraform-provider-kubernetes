@@ -184,7 +184,11 @@ resource "kubernetes_gateway_v1" "test" {
   metadata { name = "%[1]s-gw" }
   spec {
     gateway_class_name = kubernetes_gateway_class_v1.test.metadata.0.name
-    listeners { name = "http"; port = 80; protocol = "HTTP" }
+    listeners {
+      name     = "http"
+      port     = 80
+      protocol = "HTTP"
+    }
   }
 }
 
@@ -192,7 +196,11 @@ resource "kubernetes_listener_set_v1" "test" {
   metadata { name = %[1]q }
   spec {
     parent_ref { name = kubernetes_gateway_v1.test.metadata.0.name }
-    listeners { name = "http-extra"; port = 8080; protocol = "HTTP" }
+    listeners {
+      name     = "http-extra"
+      port     = 8080
+      protocol = "HTTP"
+    }
   }
 }
 `, rName, gcName)
@@ -209,7 +217,11 @@ resource "kubernetes_gateway_v1" "test" {
   metadata { name = "%[1]s-gw" }
   spec {
     gateway_class_name = kubernetes_gateway_class_v1.test.metadata.0.name
-    listeners { name = "http"; port = 80; protocol = "HTTP" }
+    listeners {
+      name     = "http"
+      port     = 80
+      protocol = "HTTP"
+    }
   }
 }
 
@@ -217,8 +229,16 @@ resource "kubernetes_listener_set_v1" "test" {
   metadata { name = %[1]q }
   spec {
     parent_ref { name = kubernetes_gateway_v1.test.metadata.0.name }
-    listeners { name = "http-alt"; port = 8080; protocol = "HTTP" }
-    listeners { name = "https"; port = 8443; protocol = "HTTPS" }
+    listeners {
+      name     = "http-alt"
+      port     = 8080
+      protocol = "HTTP"
+    }
+    listeners {
+      name     = "https"
+      port     = 8443
+      protocol = "HTTPS"
+    }
   }
 }
 `, rName, gcName)
@@ -228,9 +248,9 @@ func testAccListenerSetV1ConfigWithTLS(rName, gcName string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_secret_v1" "test" {
   metadata { name = "%[1]s-tls" }
-  data {
-    tls.crt = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCekNDQWMrZ0F3SUJBZ0lSQUp2ZjJ2TnBkYnJmYnFMd0t0K2JFQXdNQTVHQTFVZERnNVY05DUXF3R0FZRApWUVFLRXd4ME1CNHdNQ0lHQTFVRUNnd0xYMEV4RGpBUUJnTlZCQU1NR0VwaklGb1hEVEk0TURreE1qQTVPVEF4Ck1CTUdCeXFHU000OUFnRUdDQ3FHU000OUF3RUhBMElBQkJqWVN5YkI2dXJkVjB1NnlLWUJxZjIwQlNjY0ZmYQpGdWJxQ0V3bVd6T2hJb1FjYjVxM0d0QWJ3cGdFZlJnS3FwNk9jUjM3Q0R1VUdKc3JkVXhKdEh5M29hMGRJWjcKZ0JmREI1c29rZ3N1eXF0T09sR0d0V2RlR3B3aEJlR0h6Nmh5VXJhNmdJZnB5b0tQZVdKbEhJNWdZcGJkYkJVCnlrV3NvN0p6cVh1dG1sWnNpT2hZbW1JYk9vVWd4cW1xN1VJMXNkRzRrWkN1T2RqNGx2VjB5V0NqT1l5YkpjSQpGQW5oQWdNQkFBRXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBTjQ3TlJhVUJZb3JkV3M3c3R4MmJ1N1p6aGQwCmMwVnF2WjdGZEVhN3ZQd0FqS3J5aVdGdXZsQWp3eXpJWU5hR0pZcWxjNzR2NlN4dU1vQW93VzJvMXhLWlBvT0MKM1h6N3dJNlJxYjJ3bUJ3N2R5VjN1V01xM2lWd3N1aDdJc2VJdXJrYjFyZmJyNjNqV2VZMXp3T250S3ZzV2NxCm5vUXR3cDdIb0lPbWVYQnFZMnhXcWpRbVZ5b3F6U3N5WnVZcXp5QXVJN3V5eU5lZnBJNlBnN1ZlVHh2b3VZaQo4MjJrZGZsUjJ3V0l6Y3F4cDh3b253UjN3aWJ3Z2hLcHJrZ1p5cXVhM3FhR2VlQ2ZyZ3F5N2R3b1F3PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
-    tls.key = "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBMmZ5b3l2Q1JvZkZ3Z2ZQWmZ4TjJhMm90UWJZVXlKMHl4N1h3aE5YQzR4MmZJNmsKMzVhVnlqVjRyVW1JNGZxVjJhQW93R3F3V0N0M1BtQkxZMXZqY2JjT0x0b2RlZU9oRnNpQWp3eXpJWU5hR0pZCnFxY3N5N3F3b0lPbWVYQnFZMnhXcWpRbVZ5b3F6U3N5WnVZcXp5QXVJN3V5eU5lZnBJNlBnN1ZlVHh2b3VZaQo0MmRrZGZsUjJ3V0l6Y3F4cDh3b253UjN3aWJ3Z2hLcHJrZ1p5cXVhM3FhR2VlQ2ZyZ3F5N2R3b1F3PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo="
+  data = {
+    "tls.crt" = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCekNDQWMrZ0F3SUJBZ0lSQUp2ZjJ2TnBkYnJmYnFMd0t0K2JFQXdNQTVHQTFVZERnNVY05DUXF3R0FZRApWUVFLRXd4ME1CNHdNQ0lHQTFVRUNnd0xYMEV4RGpBUUJnTlZCQU1NR0VwaklGb1hEVEk0TURreE1qQTVPVEF4Ck1CTUdCeXFHU000OUFnRUdDQ3FHU000OUF3RUhBMElBQkJqWVN5YkI2dXJkVjB1NnlLWUJxZjIwQlNjY0ZmYQpGdWJxQ0V3bVd6T2hJb1FjYjVxM0d0QWJ3cGdFZlJnS3FwNk9jUjM3Q0R1VUdKc3JkVXhKdEh5M29hMGRJWjcKZ0JmREI1c29rZ3N1eXF0T09sR0d0V2RlR3B3aEJlR0h6Nmh5VXJhNmdJZnB5b0tQZVdKbEhJNWdZcGJkYkJVCnlrV3NvN0p6cVh1dG1sWnNpT2hZbW1JYk9vVWd4cW1xN1VJMXNkRzRrWkN1T2RqNGx2VjB5V0NqT1l5YkpjSQpGQW5oQWdNQkFBRXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBTjQ3TlJhVUJZb3JkV3M3c3R4MmJ1N1p6aGQwCmMwVnF2WjdGZEVhN3ZQd0FqS3J5aVdGdXZsQWp3eXpJWU5hR0pZcWxjNzR2NlN4dU1vQW93VzJvMXhLWlBvT0MKM1h6N3dJNlJxYjJ3bUJ3N2R5VjN1V01xM2lWd3N1aDdJc2VJdXJrYjFyZmJyNjNqV2VZMXp3T250S3ZzV2NxCm5vUXR3cDdIb0lPbWVYQnFZMnhXcWpRbVZ5b3F6U3N5WnVZcXp5QXVJN3V5eU5lZnBJNlBnN1ZlVHh2b3VZaQo4MjJrZGZsUjJ3V0l6Y3F4cDh3b253UjN3aWJ3Z2hLcHJrZ1p5cXVhM3FhR2VlQ2ZyZ3F5N2R3b1F3PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
+    "tls.key" = "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBMmZ5b3l2Q1JvZkZ3Z2ZQWmZ4TjJhMm90UWJZVXlKMHl4N1h3aE5YQzR4MmZJNmsKMzVhVnlqVjRyVW1JNGZxVjJhQW93R3F3V0N0M1BtQkxZMXZqY2JjT0x0b2RlZU9oRnNpQWp3eXpJWU5hR0pZCnFxY3N5N3F3b0lPbWVYQnFZMnhXcWpRbVZ5b3F6U3N5WnVZcXp5QXVJN3V5eU5lZnBJNlBnN1ZlVHh2b3VZaQo0MmRrZGZsUjJ3V0l6Y3F4cDh3b253UjN3aWJ3Z2hLcHJrZ1p5cXVhM3FhR2VlQ2ZyZ3F5N2R3b1F3PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo="
   }
   type = "kubernetes.io/tls"
 }
@@ -244,7 +264,11 @@ resource "kubernetes_gateway_v1" "test" {
   metadata { name = "%[1]s-gw" }
   spec {
     gateway_class_name = kubernetes_gateway_class_v1.test.metadata.0.name
-    listeners { name = "http"; port = 80; protocol = "HTTP" }
+    listeners {
+      name     = "http"
+      port     = 80
+      protocol = "HTTP"
+    }
   }
 }
 
@@ -258,6 +282,9 @@ resource "kubernetes_listener_set_v1" "test" {
       protocol = "HTTPS"
       tls {
         mode = "Terminate"
+        certificate_refs {
+          name = kubernetes_secret_v1.test.metadata.0.name
+        }
       }
     }
   }
@@ -276,7 +303,11 @@ resource "kubernetes_gateway_v1" "test" {
   metadata { name = "%[1]s-gw" }
   spec {
     gateway_class_name = kubernetes_gateway_class_v1.test.metadata.0.name
-    listeners { name = "http"; port = 80; protocol = "HTTP" }
+    listeners {
+      name     = "http"
+      port     = 80
+      protocol = "HTTP"
+    }
   }
 }
 
@@ -284,7 +315,11 @@ resource "kubernetes_listener_set_v1" "test" {
   metadata { name = %[1]q }
   spec {
     parent_ref { name = kubernetes_gateway_v1.test.metadata.0.name }
-    listeners { name = "http-extra"; port = 9090; protocol = "HTTP" }
+    listeners {
+      name     = "http-extra"
+      port     = 9090
+      protocol = "HTTP"
+    }
   }
 }
 `, rName, gcName)

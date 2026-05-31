@@ -268,9 +268,10 @@ func TestAccGatewayAPIAdvanced_tlsRouteSNI(t *testing.T) {
 				Config: testAccGatewayAPIAdvancedTLSRouteSNI(rName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("kubernetes_tls_route_v1.sni", "spec.0.hostnames.#", "2"),
-					resource.TestCheckResourceAttr("kubernetes_tls_route_v1.sni", "spec.0.rules.#", "2"),
+					resource.TestCheckResourceAttr("kubernetes_tls_route_v1.sni", "spec.0.rules.#", "1"),
+					resource.TestCheckResourceAttr("kubernetes_tls_route_v1.sni", "spec.0.rules.0.backend_refs.#", "2"),
 					resource.TestCheckResourceAttr("kubernetes_tls_route_v1.sni", "spec.0.rules.0.backend_refs.0.name", rName+"-sni-a"),
-					resource.TestCheckResourceAttr("kubernetes_tls_route_v1.sni", "spec.0.rules.1.backend_refs.0.name", rName+"-sni-b"),
+					resource.TestCheckResourceAttr("kubernetes_tls_route_v1.sni", "spec.0.rules.0.backend_refs.1.name", rName+"-sni-b"),
 				),
 			},
 		},

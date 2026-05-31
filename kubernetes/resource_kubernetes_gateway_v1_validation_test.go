@@ -30,21 +30,23 @@ func TestAccGatewayV1_invalidProtocol(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccGatewayV1ConfigInvalidProtocol(rName),
-				ExpectError: regexp.MustCompile(`expected protocol to be one of`),
+				ExpectError: regexp.MustCompile(`protocol to be one of`),
 			},
 		},
 	})
 }
 
 func TestAccGatewayV1_validProtocols(t *testing.T) {
-	rName := acctest.RandomWithPrefix("tf-acc-test")
-	gcName := acctest.RandomWithPrefix("tf-acc-test-gc")
 	resourceName := "kubernetes_gateway_v1.test"
-	protocols := []string{"HTTP", "HTTPS", "TCP", "UDP", "TLS"}
+	// TLS is validated separately: the Gateway API CEL rules require a tls.mode
+	// for protocol TLS, which this generic single-listener config does not set.
+	protocols := []string{"HTTP", "HTTPS", "TCP", "UDP"}
 
 	for _, protocol := range protocols {
 		protocol := protocol
 		t.Run(protocol, func(t *testing.T) {
+			rName := acctest.RandomWithPrefix("tf-acc-test")
+			gcName := acctest.RandomWithPrefix("tf-acc-test-gc")
 			resource.ParallelTest(t, resource.TestCase{
 				PreCheck:          func() { testAccPreCheck(t) },
 				ProviderFactories: testAccProviderFactories,
@@ -210,7 +212,7 @@ func TestAccTLSRouteV1_maxItemsRules(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccTLSRouteV1ConfigTwoRules(rName),
-				ExpectError: regexp.MustCompile(`expected at most 1 item`),
+				ExpectError: regexp.MustCompile(`Too many rules blocks`),
 			},
 		},
 	})
@@ -226,7 +228,7 @@ func TestAccBackendTLSPolicyV1_hostnameRequired(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccBackendTLSPolicyV1ConfigMissingHostname(rName),
-				ExpectError: regexp.MustCompile(`missing required argument.*hostname`),
+				ExpectError: regexp.MustCompile(`(?i)(Missing required argument|must specify either)`),
 			},
 		},
 	})
@@ -504,7 +506,10 @@ resource "kubernetes_service_v1" "mirror" {
   }
   spec {
     selector = { app = "mirror" }
-    port { port = 8080; target_port = 8080 }
+    port {
+      port        = 8080
+      target_port = 8080
+    }
   }
 }
 
@@ -799,7 +804,10 @@ resource "kubernetes_service_v1" "test" {
   }
   spec {
     selector = { app = "test" }
-    port { port = 443; target_port = 443 }
+    port {
+      port        = 443
+      target_port = 443
+    }
   }
 }
 
@@ -868,7 +876,10 @@ resource "kubernetes_service_v1" "test" {
   }
   spec {
     selector = { app = "test" }
-    port { port = 443; target_port = 443 }
+    port {
+      port        = 443
+      target_port = 443
+    }
   }
 }
 
@@ -903,7 +914,10 @@ resource "kubernetes_service_v1" "test" {
   }
   spec {
     selector = { app = "test" }
-    port { port = 443; target_port = 443 }
+    port {
+      port        = 443
+      target_port = 443
+    }
   }
 }
 

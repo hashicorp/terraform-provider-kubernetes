@@ -635,6 +635,9 @@ resource "kubernetes_gateway_v1" "tsni" {
       hostname = "*.tls.example.com"
       port     = 443
       protocol = "TLS"
+      tls {
+        mode = "Passthrough"
+      }
       allowed_routes {
         namespaces { from = "All" }
         kinds { kind = "TLSRoute" }
@@ -672,8 +675,6 @@ resource "kubernetes_tls_route_v1" "sni" {
         name = kubernetes_service_v1.sni_a.metadata[0].name
         port = 443
       }
-    }
-    rules {
       backend_refs {
         name = kubernetes_service_v1.sni_b.metadata[0].name
         port = 443
@@ -1019,7 +1020,8 @@ resource "kubernetes_backend_tls_policy_v1" "prod" {
       name  = kubernetes_service_v1.stable.metadata[0].name
     }
     validation {
-      hostname = "backend.internal.example.com"
+      hostname                   = "backend.internal.example.com"
+      well_known_ca_certificates = "System"
     }
   }
 }

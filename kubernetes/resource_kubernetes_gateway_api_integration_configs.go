@@ -726,6 +726,9 @@ resource "kubernetes_gateway_v1" "tls" {
       hostname = "*.tls.example.com"
       port     = 443
       protocol = "TLS"
+      tls {
+        mode = "Passthrough"
+      }
       allowed_routes {
         namespaces { from = "All" }
         kinds { kind = "TLSRoute" }

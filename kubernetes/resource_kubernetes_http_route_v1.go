@@ -311,6 +311,7 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 															ValidateFunc: validation.IsPortNumber,
 														},
 														"status_code": {
+ValidateDiagFunc: validation.ToDiagFunc(validation.IntInSlice([]int{301, 302, 303, 307, 308})),
 															Type:        schema.TypeInt,
 															Description: "StatusCode is the HTTP status code to use for the redirect.",
 															Optional:    true,
@@ -376,6 +377,7 @@ func resourceKubernetesHTTPRouteV1Schema() map[string]*schema.Schema {
 															},
 														},
 														"percent": {
+ValidateDiagFunc: validation.ToDiagFunc(validation.IntBetween(0, 100)),
 															Type:        schema.TypeInt,
 															Description: "Percent is the percentage of requests to mirror (0-100). Only one of Fraction or Percent may be specified.",
 															Optional:    true,
@@ -977,6 +979,7 @@ func requestRedirectFilterSchema() *schema.Schema {
 					Optional:    true,
 				},
 				"status_code": {
+ValidateDiagFunc: validation.ToDiagFunc(validation.IntInSlice([]int{301, 302, 303, 307, 308})),
 					Type:        schema.TypeInt,
 					Description: "StatusCode is the HTTP status code to use for the redirect.",
 					Optional:    true,
@@ -1048,6 +1051,7 @@ func requestMirrorFilterSchema() *schema.Schema {
 					},
 				},
 				"percent": {
+ValidateDiagFunc: validation.ToDiagFunc(validation.IntBetween(0, 100)),
 					Type:        schema.TypeInt,
 					Description: "Percent is the percentage of requests to mirror.",
 					Optional:    true,

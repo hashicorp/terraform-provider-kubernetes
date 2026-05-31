@@ -581,7 +581,7 @@ func expandParentReferences(l []interface{}) []gatewayv1.ParentReference {
 func expandParentReference(in map[string]interface{}) gatewayv1.ParentReference {
 	obj := gatewayv1.ParentReference{}
 
-	if v, ok := in["group"].(string); ok && v != "" {
+	if v, ok := in["group"].(string); ok {
 		g := gatewayv1.Group(v)
 		obj.Group = &g
 	}

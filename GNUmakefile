@@ -109,7 +109,7 @@ tools:
 	go install github.com/bflad/tfproviderlint/cmd/tfproviderlint@v0.28.1
 	go install github.com/bflad/tfproviderdocs@v0.12.0
 	go install github.com/katbyte/terrafmt@v0.5.3
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 	go install github.com/hashicorp/go-changelog/cmd/changelog-build@latest
 	go install github.com/hashicorp/go-changelog/cmd/changelog-entry@latest
 

@@ -34,10 +34,12 @@ linters:
       - linters:
           - staticcheck
         path: manifest/provider/resource.go
+        # We need to use ValueFromMsgPack due to some missing abstraction in plugin-go.
         text: 'SA1019: tftypes.ValueFromMsgPack is deprecated: this function is exported for internal use in terraform-plugin-go.'
       - linters:
           - staticcheck
         path: manifest/provider/import.go
+        # We need to use MarshalMsgPack due to some missing abstraction in plugin-go.
         text: 'SA1019: impf.MarshalMsgPack is deprecated: this is not meant to be called by third parties.'
     paths:
       - third_party$

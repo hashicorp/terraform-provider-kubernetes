@@ -10,11 +10,11 @@ linters:
   settings:
     staticcheck:
       checks:
-        - all    
+        - all
         - '-S1040' # Type assertion to current type: https://staticcheck.dev/docs/checks/#S1040
         # ST*/QF* below: not enforced under golangci-lint v1; after v2 migration excluding them to keep ci green till we fix these issues
         - -QF1004
-        - -QF1008        
+        - -QF1008
         - -QF1011
         - -QF1012
         - -ST1003
@@ -22,7 +22,6 @@ linters:
         - -ST1016
         - -ST1019
         - -ST1023
-        
   exclusions:
     generated: lax
     presets:

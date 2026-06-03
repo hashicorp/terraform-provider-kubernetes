@@ -16,7 +16,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-	"github.com/mitchellh/go-homedir"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 	"golang.org/x/mod/semver"
 	"k8s.io/apimachinery/pkg/runtime"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -88,7 +88,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		configPath = configPathEnv
 	}
 	if len(configPath) > 0 {
-		configPathAbs, err := homedir.Expand(configPath)
+		configPathAbs, err := util.ExpandHome(configPath)
 		if err == nil {
 			_, err = os.Stat(configPathAbs)
 		}
@@ -126,7 +126,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 
 	if len(precedence) > 0 {
 		for i, p := range precedence {
-			absPath, err := homedir.Expand(p)
+			absPath, err := util.ExpandHome(p)
 			if err == nil {
 				_, err = os.Stat(absPath)
 			}

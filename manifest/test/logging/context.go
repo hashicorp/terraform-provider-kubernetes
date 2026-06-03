@@ -8,8 +8,30 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tfsdklog"
 	helperlogging "github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
-	testing "github.com/mitchellh/go-testing-interface"
 )
+
+// TestLogger is the minimal test handle interface needed to wire provider and
+// SDK logs into test output and annotate log entries with the current test
+// name.
+type TestLogger interface {
+	Helper()
+	Log(args ...interface{})
+	Name() string
+	Cleanup(func())
+	Error(args ...interface{})
+	Errorf(format string, args ...interface{})
+	Fail()
+	FailNow()
+	Failed() bool
+	Fatal(args ...interface{})
+	Fatalf(format string, args ...interface{})
+	Logf(format string, args ...interface{})
+	Parallel()
+	Skip(args ...interface{})
+	Skipf(format string, args ...interface{})
+	SkipNow()
+	Skipped() bool
+}
 
 // InitContext creates SDK logger contexts when the provider is running in
 // "production" (not under acceptance testing). The incoming context will
@@ -34,7 +56,7 @@ func InitContext(ctx context.Context) context.Context {
 // The standard library log package handling is important as provider code
 // under test may be using that package or another logging library outside of
 // terraform-plugin-log.
-func InitTestContext(ctx context.Context, t testing.T) context.Context {
+func InitTestContext(ctx context.Context, t TestLogger) context.Context {
 	helperlogging.SetOutput(t)
 
 	ctx = tfsdklog.RegisterTestSink(ctx, t)

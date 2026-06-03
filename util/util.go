@@ -8,6 +8,8 @@ package util
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,4 +57,26 @@ func ParseResourceID(id string) (schema.GroupVersionKind, string, string, error)
 
 	gvk := schema.FromAPIVersionAndKind(apiVersion, kind)
 	return gvk, name, namespace, nil
+}
+
+// ExpandHome expands a leading "~" in path to the current user's home directory.
+func ExpandHome(path string) (string, error) {
+	if path == "" || path[0] != '~' {
+		return path, nil
+	}
+
+	if len(path) > 1 && path[1] != '/' && path[1] != '\\' {
+		return "", fmt.Errorf("cannot expand user-specific home directory in path %q", path)
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	if path == "~" {
+		return home, nil
+	}
+
+	return filepath.Join(home, path[2:]), nil
 }

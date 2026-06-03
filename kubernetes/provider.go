@@ -15,7 +15,7 @@ import (
 
 	"github.com/hashicorp/go-cty/cty"
 	gversion "github.com/hashicorp/go-version"
-	"github.com/mitchellh/go-homedir"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging"
@@ -518,7 +518,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 	if len(configPaths) > 0 {
 		expandedPaths := []string{}
 		for _, p := range configPaths {
-			path, err := homedir.Expand(p)
+			path, err := util.ExpandHome(p)
 			if err != nil {
 				return nil, append(diags, diag.FromErr(err)...)
 			}

@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 )
@@ -197,10 +198,27 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		return resp, nil
 	}
 
+	// Check if skip_validation is enabled
+	skipValidation := false
+	if skipVal, ok := proposedVal["skip_validation"]; ok && !skipVal.IsNull() && skipVal.IsKnown() {
+		err := skipVal.As(&skipValidation)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to parse skip_validation attribute",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+	}
+
 	// test if credentials are valid - we're going to need them further down
-	resp.Diagnostics = append(resp.Diagnostics, s.checkValidCredentials(ctx)...)
-	if len(resp.Diagnostics) > 0 {
-		return resp, nil
+	// Skip validation if skip_validation is true
+	if !skipValidation {
+		resp.Diagnostics = append(resp.Diagnostics, s.checkValidCredentials(ctx)...)
+		if len(resp.Diagnostics) > 0 {
+			return resp, nil
+		}
 	}
 
 	computedFields := make(map[string]*tftypes.AttributePath)
@@ -285,47 +303,111 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		return resp, nil
 	}
 
-	rm, err := s.getRestMapper()
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to create K8s RESTMapper client",
-			Detail:   err.Error(),
-		})
-		return resp, nil
-	}
-	gvk, err := GVKFromTftypesObject(&ppMan, rm)
-	if err != nil {
-		rd := &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "API did not recognize GroupVersionKind from manifest (CRD may not be installed)",
-			Detail:   err.Error(),
+	var gvk schema.GroupVersionKind
+	var ns bool
+
+	if !skipValidation {
+		rm, err := s.getRestMapper()
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to create K8s RESTMapper client",
+				Detail:   err.Error(),
+			})
+			return resp, nil
 		}
-		resp.Diagnostics = append(resp.Diagnostics, rd)
-		if canDeferr && meta.IsNoMatchError(err) {
-			// request deferral when client configuration not fully known
-			resp.Deferred = &tfprotov5.Deferred{
-				Reason: tfprotov5.DeferredReasonResourceConfigUnknown,
+		gvk, err = GVKFromTftypesObject(&ppMan, rm)
+		if err != nil {
+			rd := &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "API did not recognize GroupVersionKind from manifest (CRD may not be installed)",
+				Detail:   err.Error(),
 			}
-			rd.Severity = tfprotov5.DiagnosticSeverityWarning
+			resp.Diagnostics = append(resp.Diagnostics, rd)
+			if canDeferr && meta.IsNoMatchError(err) {
+				// request deferral when client configuration not fully known
+				resp.Deferred = &tfprotov5.Deferred{
+					Reason: tfprotov5.DeferredReasonResourceConfigUnknown,
+				}
+				rd.Severity = tfprotov5.DiagnosticSeverityWarning
+			}
+			return resp, nil
 		}
-		return resp, nil
-	}
 
-	vdiags := s.validateResourceOnline(&ppMan)
-	if len(vdiags) > 0 {
-		resp.Diagnostics = append(resp.Diagnostics, vdiags...)
-		return resp, nil
-	}
+		vdiags := s.validateResourceOnline(&ppMan)
+		if len(vdiags) > 0 {
+			resp.Diagnostics = append(resp.Diagnostics, vdiags...)
+			return resp, nil
+		}
 
-	ns, err := IsResourceNamespaced(gvk, rm)
-	if err != nil {
-		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  "Failed to discover scope of resource",
-			Detail:   err.Error(),
-		})
-		return resp, nil
+		ns, err = IsResourceNamespaced(gvk, rm)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to discover scope of resource",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+	} else {
+		// When skip_validation is true, we need to extract basic info from manifest
+		// without connecting to the cluster
+		manifestMap := make(map[string]tftypes.Value)
+		err := ppMan.As(&manifestMap)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to parse manifest for skip_validation mode",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
+		// Extract basic GVK info from manifest
+		var apiVersion, kind string
+		if apiVal, ok := manifestMap["apiVersion"]; ok && !apiVal.IsNull() {
+			apiVal.As(&apiVersion)
+		}
+		if kindVal, ok := manifestMap["kind"]; ok && !kindVal.IsNull() {
+			kindVal.As(&kind)
+		}
+
+		if apiVersion == "" || kind == "" {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Missing required fields in manifest for skip_validation mode",
+				Detail:   "Both apiVersion and kind are required when skip_validation is enabled",
+			})
+			return resp, nil
+		}
+
+		// Parse GroupVersion from apiVersion
+		gv, err := schema.ParseGroupVersion(apiVersion)
+		if err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Invalid apiVersion format",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+
+		gvk = gv.WithKind(kind)
+
+		// For skip_validation mode, we assume the resource is namespaced if namespace is present
+		// This is a best-effort guess since we can't query the API
+		metadata, ok := manifestMap["metadata"]
+		if ok && !metadata.IsNull() {
+			var metadataMap map[string]tftypes.Value
+			if err := metadata.As(&metadataMap); err == nil {
+				if namespaceVal, exists := metadataMap["namespace"]; exists && !namespaceVal.IsNull() {
+					var namespace string
+					if err := namespaceVal.As(&namespace); err == nil && namespace != "" {
+						ns = true
+					}
+				}
+			}
+		}
 	}
 	if ns && !isImported {
 		resp.RequiresReplace = append(resp.RequiresReplace,
@@ -334,42 +416,65 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 	}
 
 	// Request a complete type for the resource from the OpenAPI spec
-	objectType, hints, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
-	if err != nil {
-		return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
-	}
+	var objectType tftypes.Type
+	var hints map[string]string
 
-	if !objectType.Is(tftypes.Object{}) {
-		// non-structural resources have no schema so we just use the
-		// type information we can get from the config
+	if !skipValidation {
+		objectType, hints, err = s.TFTypeFromOpenAPI(ctx, gvk, false)
+		if err != nil {
+			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
+		}
+
+		if !objectType.Is(tftypes.Object{}) {
+			// non-structural resources have no schema so we just use the
+			// type information we can get from the config
+			objectType = ppMan.Type()
+
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityWarning,
+				Summary:  "This custom resource does not have an associated OpenAPI schema.",
+				Detail:   "We could not find an OpenAPI schema for this custom resource. Updates to this resource will cause a forced replacement.",
+			})
+
+			fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(proposedVal)
+			if err != nil {
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Could not extract field_manager config",
+					Detail:   err.Error(),
+				})
+				return resp, nil
+			}
+
+			err = s.dryRun(ctx, ppMan, fieldManagerName, forceConflicts, ns)
+			if err != nil {
+				resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+					Severity: tfprotov5.DiagnosticSeverityError,
+					Summary:  "Dry-run failed for non-structured resource",
+					Detail:   fmt.Sprintf("A dry-run apply was performed for this resource but was unsuccessful: %v", err),
+				})
+				return resp, nil
+			}
+
+			resp.RequiresReplace = []*tftypes.AttributePath{
+				tftypes.NewAttributePath().WithAttributeName("manifest"),
+				tftypes.NewAttributePath().WithAttributeName("object"),
+			}
+		}
+	} else {
+		// When skip_validation is true, use the manifest type directly
+		// This means we won't have OpenAPI schema validation
 		objectType = ppMan.Type()
+		hints = make(map[string]string)
 
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityWarning,
-			Summary:  "This custom resource does not have an associated OpenAPI schema.",
-			Detail:   "We could not find an OpenAPI schema for this custom resource. Updates to this resource will cause a forced replacement.",
+			Summary:  "Skipping OpenAPI schema validation",
+			Detail:   "When skip_validation is enabled, the resource will not be validated against the Kubernetes API schema during plan. Validation will occur during apply.",
 		})
 
-		fieldManagerName, forceConflicts, err := s.getFieldManagerConfig(proposedVal)
-		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Could not extract field_manager config",
-				Detail:   err.Error(),
-			})
-			return resp, nil
-		}
-
-		err = s.dryRun(ctx, ppMan, fieldManagerName, forceConflicts, ns)
-		if err != nil {
-			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityError,
-				Summary:  "Dry-run failed for non-structured resource",
-				Detail:   fmt.Sprintf("A dry-run apply was performed for this resource but was unsuccessful: %v", err),
-			})
-			return resp, nil
-		}
-
+		// For skip_validation mode, we need to force replacement since we can't
+		// determine the proper schema for comparison
 		resp.RequiresReplace = []*tftypes.AttributePath{
 			tftypes.NewAttributePath().WithAttributeName("manifest"),
 			tftypes.NewAttributePath().WithAttributeName("object"),

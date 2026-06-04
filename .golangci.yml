@@ -1,33 +1,58 @@
+version: "2"
+
 run:
   timeout: 5m
 
-issues:
-  max-per-linter: 0
-  max-same-issues: 0
-  exclude-rules:
-    - path: manifest/provider/resource.go
-      linters:
-        - staticcheck
-      # We need to use ValueFromMsgPack due to some missing abstraction in plugin-go.
-      text: "SA1019: tftypes.ValueFromMsgPack is deprecated: this function is exported for internal use in terraform-plugin-go."
-    - path: manifest/provider/import.go
-      linters:
-        - staticcheck
-      # We need to use MarshalMsgPack due to some missing abstraction in plugin-go.
-      text: "SA1019: impf.MarshalMsgPack is deprecated: this is not meant to be called by third parties."
-
 linters:
-  disable-all: true
+  default: none
   enable:
-    - gosimple
-    - gofmt
     - staticcheck
-
-linters-settings:
-  staticcheck:
-    checks:
-      - all
-  gosimple:
-    checks:
-      - all
-      - '-S1040' # Type assertion to current type: https://staticcheck.dev/docs/checks/#S1040
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - '-S1040' # Type assertion to current type: https://staticcheck.dev/docs/checks/#S1040
+        # ST*/QF* below: not enforced under golangci-lint v1; after v2 migration excluding them to keep ci green till we fix these issues
+        - -QF1004
+        - -QF1008
+        - -QF1011
+        - -QF1012
+        - -ST1003
+        - -ST1005
+        - -ST1016
+        - -ST1019
+        - -ST1023
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - staticcheck
+        path: manifest/provider/resource.go
+        # We need to use ValueFromMsgPack due to some missing abstraction in plugin-go.
+        text: 'SA1019: tftypes.ValueFromMsgPack is deprecated: this function is exported for internal use in terraform-plugin-go.'
+      - linters:
+          - staticcheck
+        path: manifest/provider/import.go
+        # We need to use MarshalMsgPack due to some missing abstraction in plugin-go.
+        text: 'SA1019: impf.MarshalMsgPack is deprecated: this is not meant to be called by third parties.'
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

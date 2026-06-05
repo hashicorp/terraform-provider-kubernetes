@@ -91,6 +91,9 @@ func flattenPodSpec(in v1.PodSpec, isTemplate bool) ([]interface{}, error) {
 	att["host_ipc"] = in.HostIPC
 	att["host_network"] = in.HostNetwork
 	att["host_pid"] = in.HostPID
+	if in.HostUsers != nil {
+		att["host_users"] = *in.HostUsers
+	}
 
 	if in.Hostname != "" {
 		att["hostname"] = in.Hostname
@@ -794,6 +797,9 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 
 	if v, ok := in["host_pid"]; ok {
 		obj.HostPID = v.(bool)
+	}
+	if v, ok := in["host_users"]; ok {
+		obj.HostUsers = ptr.To(v.(bool))
 	}
 
 	if v, ok := in["hostname"]; ok {

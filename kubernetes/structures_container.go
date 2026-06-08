@@ -77,6 +77,9 @@ func flattenLifecycleHandler(in *v1.LifecycleHandler) []interface{} {
 	if in.HTTPGet != nil {
 		att["http_get"] = flattenHTTPGet(in.HTTPGet)
 	}
+	if in.Sleep != nil {
+		att["sleep"] = flattenSleep(in.Sleep)
+	}
 	if in.TCPSocket != nil {
 		att["tcp_socket"] = flattenTCPSocket(in.TCPSocket)
 	}
@@ -116,6 +119,12 @@ func flattenHTTPGet(in *v1.HTTPGetAction) []interface{} {
 		att["http_header"] = flattenHTTPHeader(in.HTTPHeaders)
 	}
 
+	return []interface{}{att}
+}
+
+func flattenSleep(in *v1.SleepAction) []interface{} {
+	att := make(map[string]interface{})
+	att["seconds"] = in.Seconds
 	return []interface{}{att}
 }
 
@@ -686,6 +695,18 @@ func expandSecurityCapabilities(l []interface{}) *v1.Capabilities {
 	return &obj
 }
 
+func expandSleep(l []interface{}) *v1.SleepAction {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.SleepAction{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := v1.SleepAction{}
+	if v, ok := in["seconds"].(int); ok {
+		obj.Seconds = int64(v)
+	}
+	return &obj
+}
+
 func expandTCPSocket(l []interface{}) *v1.TCPSocketAction {
 	if len(l) == 0 || l[0] == nil {
 		return &v1.TCPSocketAction{}
@@ -787,6 +808,9 @@ func expandLifecycleHandlers(l []interface{}) *v1.LifecycleHandler {
 	}
 	if v, ok := in["http_get"].([]interface{}); ok && len(v) > 0 {
 		obj.HTTPGet = expandHTTPGet(v)
+	}
+	if v, ok := in["sleep"].([]interface{}); ok && len(v) > 0 {
+		obj.Sleep = expandSleep(v)
 	}
 	if v, ok := in["tcp_socket"].([]interface{}); ok && len(v) > 0 {
 		obj.TCPSocket = expandTCPSocket(v)

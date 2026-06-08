@@ -1,0 +1,3 @@
+```release-note:bug
+`provider`: Use pointer receivers for providerMetadata client methods to enable caching
+```

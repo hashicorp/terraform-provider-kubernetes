@@ -55,7 +55,7 @@ func (f ManifestDecodeFunction) Run(ctx context.Context, req function.RunRequest
 		resp.Error = function.NewFuncError("Invalid manifest: YAML document is empty")
 		return
 	} else if len(elems) > 1 {
-		resp.Error = function.NewFuncError("YAML manifest contains multiple resources: use decode_manifest_multi to decode manifests containing more than one resource")
+		resp.Error = function.NewFuncError("YAML manifest contains multiple resources: use manifest_decode_multi to decode manifests containing more than one resource")
 		return
 	}
 

@@ -1,3 +1,7 @@
 ```release-note:bug
-deps: bump terraform-plugin-sdk/v2 to v2.40.1 to fix Unexpected Identity Change error
+resource/kubernetes_secret_v1: Fixed "Missing Resource Identity After Create" error when using write-only attributes (`data_wo` or `binary_data_wo`)
+```
+
+```release-note:bug
+provider: Fixed "Unexpected Identity Change" error occurring after apply when resources take extended time to become ready; bumps `terraform-plugin-sdk` to v2.40.1
 ```

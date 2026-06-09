@@ -1,0 +1,3 @@
+```release-note:bug
+deps: bump terraform-plugin-sdk/v2 to v2.40.1 to fix Unexpected Identity Change error
+```

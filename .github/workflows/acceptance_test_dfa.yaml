@@ -13,7 +13,7 @@ on:
     inputs:
       terraformVersion:
         description: Terraform version
-        default: v1.12.0-alpha20250312
+        default: 1.12.0-alpha20250312
 
 jobs:
   acceptance_tests:
@@ -26,9 +26,12 @@ jobs:
         uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version-file: 'go.mod'
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3.0.0
+        with:
+          terraform_version: ${{ github.event.inputs.terraformVersion || '1.12.0-alpha20250312' }}
       - name: Run Tests
         env:
           TF_ACC: 1
-          TF_ACC_TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || 'v1.12.0-alpha20250312' }}
         run: |
           go test -v -run '^TestAccKubernetesDeferredActions' ./kubernetes/test-dfa

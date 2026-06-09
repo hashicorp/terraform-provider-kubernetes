@@ -262,6 +262,13 @@ func resourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData,
 	d.Set("type", secret.Type)
 	d.Set("immutable", secret.Immutable)
 
+	// Identity only depends on namespace and name, so set it before any
+	// early returns to ensure it is always captured.
+	err = setResourceIdentityNamespaced(d, "v1", "Secret", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	// NOTE don't read data if write-only attributes are being used
 	if v, ok := d.Get("binary_data_wo_revision").(int); ok && v > 0 {
 		return nil
@@ -285,10 +292,6 @@ func resourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData,
 	}
 	d.Set("data", flattenByteMapToStringMap(secret.Data))
 
-	err = setResourceIdentityNamespaced(d, "v1", "Secret", namespace, name)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 	return nil
 }
 

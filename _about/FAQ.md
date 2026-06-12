@@ -1,21 +1,5 @@
 # Frequently Asked Questions
 
-### Who are the maintainers?
-
-The HashiCorp Terraform Kubernetes provider team is :
-
-* Vishnu Ravindra, Product Manager - [@vravind1](https://github.com/vravind1)
-* Alex Somesan, Engineer - [@alexsomesan](https://github.com/alexsomesan)
-* John Houston, Engineer - [@jrhouston](https://github.com/jrhouston)
-* Sacha Rybolovlev, Engineer - [@arybolovlev](https://github.com/arybolovlev)
-* Mauricio Alvarez Leon, Engineer - [@BBBmau](https://github.com/BBBmau) 
-* Sheneska Williams, Engineer - [@sheneska](https://github.com/sheneska) 
-* Brandy Jackson, Engineering Manager - [@ibrandyjackson](https://github.com/ibrandyjackson)
-
-Our collaborators are:
-
-* Patrick Decat - [@pdecat](https://github.com/pdecat)
-
 ### Why isn’t my PR merged yet?
 
 Unfortunately, due to the volume of issues and new pull requests we receive, we are unable to give each one the full attention that we would like. We do our best to focus on the contributions that provide the greatest value to the most community members.

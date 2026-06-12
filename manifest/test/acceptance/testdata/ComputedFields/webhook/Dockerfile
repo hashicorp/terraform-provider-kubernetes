@@ -1,7 +1,7 @@
 # Copyright IBM Corp. 2017, 2026
 # SPDX-License-Identifier: MPL-2.0
 
-FROM golang:1.24 AS builder
+FROM golang:1.26 AS builder
 WORKDIR /src/k8s-manifest-hook
 ADD *.go ./
 ADD go.* ./

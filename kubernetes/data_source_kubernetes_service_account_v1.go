@@ -73,6 +73,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			d.SetId(buildId(metadata))
 			return nil
 		}
 		return diag.Errorf(`Unable to fetch service account "%s/%s" from Kubernetes: %s`, metadata.Namespace, metadata.Name, err)

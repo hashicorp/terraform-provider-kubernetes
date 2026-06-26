@@ -1,3 +1,19 @@
+## 3.2.0 (Jun 4, 2026)
+
+ENHANCEMENTS:
+
+* Added linux/s390x build target for IBM Z platform [[GH-2897](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2897)]
+
+NOTES:
+
+* Upgrade Go to 1.26.3 [[GH-2896](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2896)]
+
+## 3.1.0 (Apr 15, 2026)
+
+FEATURES:
+
+* kubernetes: Add `kubernetes_endpoint_slice_v1` data source [[GH-2847](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2847)]
+
 ## 3.0.1 (Dec 5, 2025)
 
 HOTFIX:

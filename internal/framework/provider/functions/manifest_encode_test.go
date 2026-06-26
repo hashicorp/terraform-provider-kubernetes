@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package functions_test
@@ -15,7 +15,7 @@ func TestManifestEncode(t *testing.T) {
 	outputName := "test"
 
 	resource.UnitTest(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testManifestEncodeConfig(),
@@ -40,7 +40,7 @@ func TestManifestEncodeMulti(t *testing.T) {
 	outputName := "test"
 
 	resource.UnitTest(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testManifestEncodeMultiConfig(),

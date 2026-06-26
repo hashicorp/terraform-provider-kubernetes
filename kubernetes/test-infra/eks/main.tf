@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2017, 2026
 # SPDX-License-Identifier: MPL-2.0
 
 resource "random_string" "rand" {
@@ -112,7 +112,7 @@ locals {
       name = "terraform"
       user = {
         exec = {
-          apiVersion = "client.authentication.k8s.io/v1beta1"
+          apiVersion = "client.authentication.k8s.io/v1"
           command    = "aws"
           args = [
             "eks", "get-token", "--cluster-name", local.cluster_name

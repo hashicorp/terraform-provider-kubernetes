@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -14,10 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func dataSourceKubernetesNamespaceV1() *schema.Resource {
+func dataSourceKubernetesNamespaceV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description: "This data source provides a mechanism to query attributes of any specific namespace within a Kubernetes cluster. In Kubernetes, namespaces provide a scope for names and are intended as a way to divide cluster resources between multiple users.",
-		ReadContext: dataSourceKubernetesNamespaceV1Read,
+		Description:        "This data source provides a mechanism to query attributes of any specific namespace within a Kubernetes cluster. In Kubernetes, namespaces provide a scope for names and are intended as a way to divide cluster resources between multiple users.",
+		ReadContext:        dataSourceKubernetesNamespaceV1Read,
+		DeprecationMessage: deprecationMessage,
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("namespace", false),

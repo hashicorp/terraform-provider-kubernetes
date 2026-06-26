@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -59,9 +59,12 @@ func flattenNodeInfo(in v1.NodeSystemInfo) []interface{} {
 	if in.KubeletVersion != "" {
 		att["kubelet_version"] = in.KubeletVersion
 	}
+
+	//nolint:all
 	if in.KubeProxyVersion != "" {
 		att["kube_proxy_version"] = in.KubeProxyVersion
 	}
+
 	if in.OperatingSystem != "" {
 		att["operating_system"] = in.OperatingSystem
 	}

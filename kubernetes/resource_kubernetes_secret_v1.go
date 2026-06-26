@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -23,13 +23,14 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func resourceKubernetesSecretV1() *schema.Resource {
+func resourceKubernetesSecretV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "The resource provides mechanisms to inject containers with sensitive information, such as passwords, while keeping containers agnostic of Kubernetes. Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs. The resource will by default create a secret which is available to any pod in the specified (or default) namespace.",
-		CreateContext: resourceKubernetesSecretV1Create,
-		ReadContext:   resourceKubernetesSecretV1Read,
-		UpdateContext: resourceKubernetesSecretV1Update,
-		DeleteContext: resourceKubernetesSecretV1Delete,
+		Description:        "The resource provides mechanisms to inject containers with sensitive information, such as passwords, while keeping containers agnostic of Kubernetes. Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs. The resource will by default create a secret which is available to any pod in the specified (or default) namespace.",
+		CreateContext:      resourceKubernetesSecretV1Create,
+		ReadContext:        resourceKubernetesSecretV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesSecretV1Update,
+		DeleteContext:      resourceKubernetesSecretV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceIdentityImportNamespaced,
 		},
@@ -261,6 +262,11 @@ func resourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData,
 	d.Set("type", secret.Type)
 	d.Set("immutable", secret.Immutable)
 
+	err = setResourceIdentityNamespaced(d, "v1", "Secret", namespace, name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	// NOTE don't read data if write-only attributes are being used
 	if v, ok := d.Get("binary_data_wo_revision").(int); ok && v > 0 {
 		return nil
@@ -284,10 +290,6 @@ func resourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData,
 	}
 	d.Set("data", flattenByteMapToStringMap(secret.Data))
 
-	err = setResourceIdentityNamespaced(d, "v1", "Secret", namespace, name)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 	return nil
 }
 

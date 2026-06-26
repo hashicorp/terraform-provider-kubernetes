@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -337,8 +337,9 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_minimal(name string) strin
     max_replicas = 10
 
     scale_target_ref {
-      kind = "Deployment"
-      name = "TerraformAccTest"
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "TerraformAccTest"
     }
   }
 }
@@ -363,8 +364,9 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_basic(name string) string 
     max_replicas = 10
 
     scale_target_ref {
-      kind = "Deployment"
-      name = "TerraformAccTest"
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "TerraformAccTest"
     }
 
     behavior {
@@ -486,8 +488,9 @@ func testAccKubernetesHorizontalPodAutoscalerV2Config_modified(name string) stri
     max_replicas = 100
 
     scale_target_ref {
-      kind = "Deployment"
-      name = "TerraformAccTest"
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "TerraformAccTest"
     }
 
     behavior {

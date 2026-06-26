@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -17,13 +17,14 @@ import (
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 )
 
-func resourceKubernetesAPIServiceV1() *schema.Resource {
+func resourceKubernetesAPIServiceV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "An API Service is an abstraction which defines for locating and communicating with servers.",
-		CreateContext: resourceKubernetesAPIServiceV1Create,
-		ReadContext:   resourceKubernetesAPIServiceV1Read,
-		UpdateContext: resourceKubernetesAPIServiceV1Update,
-		DeleteContext: resourceKubernetesAPIServiceV1Delete,
+		Description:        "An API Service is an abstraction which defines for locating and communicating with servers.",
+		CreateContext:      resourceKubernetesAPIServiceV1Create,
+		ReadContext:        resourceKubernetesAPIServiceV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesAPIServiceV1Update,
+		DeleteContext:      resourceKubernetesAPIServiceV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

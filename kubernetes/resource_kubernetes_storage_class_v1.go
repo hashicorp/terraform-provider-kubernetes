@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -20,11 +20,13 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesStorageClassV1() *schema.Resource {
+func resourceKubernetesStorageClassV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform. Read more [here] (https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/)",
-		CreateContext: resourceKubernetesStorageClassV1Create,
-		ReadContext:   resourceKubernetesStorageClassV1Read,
+		Description:        "Storage class is the foundation of dynamic provisioning, allowing cluster administrators to define abstractions for the underlying storage platform. Read more [here] (https://kubernetes.io/blog/2017/03/dynamic-provisioning-and-storage-classes-kubernetes/)",
+		CreateContext:      resourceKubernetesStorageClassV1Create,
+		ReadContext:        resourceKubernetesStorageClassV1Read,
+		DeprecationMessage: deprecationMessage,
+
 		UpdateContext: resourceKubernetesStorageClassV1Update,
 		DeleteContext: resourceKubernetesStorageClassV1Delete,
 		Importer: &schema.ResourceImporter{

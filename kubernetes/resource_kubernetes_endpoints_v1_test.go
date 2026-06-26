@@ -1,6 +1,10 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
+// NOTE this API has been deprecated and the resource should be removed
+// in the next major provider version.
+//
+//nolint:all
 package kubernetes
 
 import (
@@ -142,7 +146,6 @@ func TestAccKubernetesEndpointsV1_generatedName(t *testing.T) {
 
 func testAccCheckKubernetesEndpointV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
-
 	if err != nil {
 		return err
 	}

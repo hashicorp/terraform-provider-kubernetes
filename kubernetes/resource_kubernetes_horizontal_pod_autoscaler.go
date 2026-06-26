@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -18,11 +18,12 @@ import (
 
 func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 	return &schema.Resource{
-		Description:   "Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.",
-		CreateContext: resourceKubernetesHorizontalPodAutoscalerCreate,
-		ReadContext:   resourceKubernetesHorizontalPodAutoscalerRead,
-		UpdateContext: resourceKubernetesHorizontalPodAutoscalerUpdate,
-		DeleteContext: resourceKubernetesHorizontalPodAutoscalerDelete,
+		DeprecationMessage: "Deprecated: this resource will be removed in the next major version of the provider. Use kubernetes_horizontal_pod_autoscaler_v2 (or _v1) instead.",
+		Description:        "Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.",
+		CreateContext:      resourceKubernetesHorizontalPodAutoscalerCreate,
+		ReadContext:        resourceKubernetesHorizontalPodAutoscalerRead,
+		UpdateContext:      resourceKubernetesHorizontalPodAutoscalerUpdate,
+		DeleteContext:      resourceKubernetesHorizontalPodAutoscalerDelete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

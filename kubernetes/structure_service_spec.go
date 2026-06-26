@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -128,6 +128,9 @@ func flattenLoadBalancerStatus(in v1.LoadBalancerStatus) []interface{} {
 		att := make(map[string]interface{})
 
 		att["ip"] = ingress.IP
+		if ingress.IPMode != nil {
+			att["ip_mode"] = string(*ingress.IPMode)
+		}
 		att["hostname"] = ingress.Hostname
 
 		out[i] = att

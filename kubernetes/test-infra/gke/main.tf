@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2017, 2026
 # SPDX-License-Identifier: MPL-2.0
 
 data "google_compute_zones" "available" {
@@ -92,7 +92,7 @@ locals {
         name = google_service_account.default.email
         user = {
           exec = {
-            apiVersion         = "client.authentication.k8s.io/v1beta1"
+            apiVersion         = "client.authentication.k8s.io/v1"
             command            = "gke-gcloud-auth-plugin"
             interactiveMode    = "Never"
             provideClusterInfo = true

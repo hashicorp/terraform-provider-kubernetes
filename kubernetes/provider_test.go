@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -344,6 +344,16 @@ func skipIfNotRunningInKind(t *testing.T) {
 	}
 	if !isRunningInKind {
 		t.Skip("The Kubernetes endpoint must come from Kind for this test to run - skipping")
+	}
+}
+
+func skipIfRunningInKind(t *testing.T) {
+	isRunningInKind, err := isRunningInKind()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isRunningInKind {
+		t.Skip("This test can't run in Kind - skipping")
 	}
 }
 

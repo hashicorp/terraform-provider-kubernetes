@@ -1,0 +1,3 @@
+```release-note:enhancement
+* Add support for sidecar containers via restart_policy field in init_container spec
+````

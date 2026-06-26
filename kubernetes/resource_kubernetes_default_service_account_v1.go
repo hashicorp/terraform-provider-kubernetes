@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -17,8 +17,8 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesDefaultServiceAccountV1() *schema.Resource {
-	serviceAccountResource := resourceKubernetesServiceAccountV1()
+func resourceKubernetesDefaultServiceAccountV1(deprecationMessage string) *schema.Resource {
+	serviceAccountResource := resourceKubernetesServiceAccountV1(deprecationMessage)
 
 	metaSchema := namespacedMetadataSchema("service account", false)
 

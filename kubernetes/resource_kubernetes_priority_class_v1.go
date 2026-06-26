@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -18,13 +18,14 @@ import (
 	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesPriorityClassV1() *schema.Resource {
+func resourceKubernetesPriorityClassV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		Description:   "A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.",
-		CreateContext: resourceKubernetesPriorityClassV1Create,
-		ReadContext:   resourceKubernetesPriorityClassV1Read,
-		UpdateContext: resourceKubernetesPriorityClassV1Update,
-		DeleteContext: resourceKubernetesPriorityClassV1Delete,
+		Description:        "A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.",
+		CreateContext:      resourceKubernetesPriorityClassV1Create,
+		ReadContext:        resourceKubernetesPriorityClassV1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesPriorityClassV1Update,
+		DeleteContext:      resourceKubernetesPriorityClassV1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

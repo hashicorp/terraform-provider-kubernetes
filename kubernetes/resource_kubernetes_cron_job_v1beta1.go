@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package kubernetes
@@ -18,12 +18,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func resourceKubernetesCronJobV1Beta1() *schema.Resource {
+func resourceKubernetesCronJobV1Beta1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceKubernetesCronJobV1Beta1Create,
-		ReadContext:   resourceKubernetesCronJobV1Beta1Read,
-		UpdateContext: resourceKubernetesCronJobV1Beta1Update,
-		DeleteContext: resourceKubernetesCronJobV1Beta1Delete,
+		CreateContext:      resourceKubernetesCronJobV1Beta1Create,
+		ReadContext:        resourceKubernetesCronJobV1Beta1Read,
+		DeprecationMessage: deprecationMessage,
+		UpdateContext:      resourceKubernetesCronJobV1Beta1Update,
+		DeleteContext:      resourceKubernetesCronJobV1Beta1Delete,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},

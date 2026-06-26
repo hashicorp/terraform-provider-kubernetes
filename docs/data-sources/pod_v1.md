@@ -868,6 +868,7 @@ Read-Only:
 - `tty` (Boolean)
 - `volume_mount` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--volume_mount))
 - `working_dir` (String)
+- `restart_policy` (String) 
 
 <a id="nestedobjatt--spec--init_container--env"></a>
 ### Nested Schema for `spec.init_container.env`

@@ -6,6 +6,7 @@ package manifestyaml_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -17,8 +18,9 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery/cached/memory"
@@ -90,17 +92,23 @@ func getManifestObject(clients kubernetes.KubeClientsets, id string) (bool, erro
 	}
 
 	ri := dyn.Resource(mapping.Resource)
+	var live *unstructured.Unstructured
 	var getErr error
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-		_, getErr = ri.Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		live, getErr = ri.Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	} else {
-		_, getErr = ri.Get(context.Background(), name, metav1.GetOptions{})
+		live, getErr = ri.Get(context.Background(), name, metav1.GetOptions{})
 	}
 	if apierrors.IsNotFound(getErr) {
 		return false, nil
 	}
 	if getErr != nil {
 		return false, getErr
+	}
+	// An object with a deletionTimestamp (e.g. a Namespace in Terminating) is on its
+	// way out — treat as gone for destroy checks.
+	if live.GetDeletionTimestamp() != nil {
+		return false, nil
 	}
 	return true, nil
 }
@@ -342,12 +350,12 @@ func TestAccManifestYAML_ownedFieldDriftCorrected(t *testing.T) {
 		CheckDestroy:             testAccCheckManifestYAMLDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccManifestYAMLConfigMap(name, "intended"),
+				Config: testAccManifestYAMLConfigMapForced(name, "intended"),
 				Check:  testAccCheckManifestYAMLExists(resourceName),
 			},
 			{
-				// External change to the OWNED data.key; config unchanged.
-				Config:    testAccManifestYAMLConfigMap(name, "intended"),
+				// External change to the OWNED data.key; config unchanged (force reclaims it).
+				Config:    testAccManifestYAMLConfigMapForced(name, "intended"),
 				PreConfig: func() { externalPatchConfigMapData(t, name, "key", "tampered") },
 				// We own data.key ⇒ drift ⇒ update planned.
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -361,11 +369,76 @@ func TestAccManifestYAML_ownedFieldDriftCorrected(t *testing.T) {
 	})
 }
 
+// TestAccManifestYAML_forceReplaceOn proves force_replace_on turns an in-place
+// update into a replacement when a declared (immutable) path changes.
+func TestAccManifestYAML_forceReplaceOn(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-cm")
+	resourceName := "kubernetes_manifest_yaml.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckManifestYAMLDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccManifestYAMLConfigMapReplaceOn(name, "v1"),
+				Check:  testAccCheckManifestYAMLExists(resourceName),
+			},
+			{
+				// data.key is listed in force_replace_on ⇒ a value change replaces
+				// the object instead of updating it in place.
+				Config: testAccManifestYAMLConfigMapReplaceOn(name, "v2"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace),
+					},
+				},
+				Check: testAccCheckManifestYAMLExists(resourceName),
+			},
+		},
+	})
+}
+
+// TestAccManifestYAML_multiDocRejected proves a multi-document yaml_body is rejected
+// with guidance toward for_each + manifest_decode_multi.
+func TestAccManifestYAML_multiDocRejected(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-cm")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckManifestYAMLDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccManifestYAMLMultiDoc(name),
+				ExpectError: regexp.MustCompile(`manifest_decode_multi`),
+			},
+		},
+	})
+}
+
 // ---- config builders -------------------------------------------------------
 
 func testAccManifestYAMLConfigMap(name, value string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_manifest_yaml" "test" {
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: %s
+      namespace: default
+    data:
+      key: %q
+  YAML
+}
+`, name, value)
+}
+
+// testAccManifestYAMLConfigMapForced is like testAccManifestYAMLConfigMap but sets
+// force_conflicts so drift on a field co-owned by another manager can be reclaimed.
+func testAccManifestYAMLConfigMapForced(name, value string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_manifest_yaml" "test" {
+  force_conflicts = true
   yaml_body = <<-YAML
     apiVersion: v1
     kind: ConfigMap
@@ -414,4 +487,49 @@ resource "kubernetes_manifest_yaml" "ns" {
   }
 }
 `, name)
+}
+
+// testAccManifestYAMLConfigMapReplaceOn declares data.key as a force_replace_on
+// path so a value change triggers replacement instead of an in-place update.
+func testAccManifestYAMLConfigMapReplaceOn(name, value string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_manifest_yaml" "test" {
+  force_replace_on = ["data.key"]
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: %s
+      namespace: default
+    data:
+      key: %q
+  YAML
+}
+`, name, value)
+}
+
+// testAccManifestYAMLMultiDoc returns a yaml_body containing two documents, which
+// the resource must reject.
+func testAccManifestYAMLMultiDoc(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_manifest_yaml" "test" {
+  yaml_body = <<-YAML
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: %s-a
+      namespace: default
+    data:
+      key: a
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: %s-b
+      namespace: default
+    data:
+      key: b
+  YAML
+}
+`, name, name)
 }

@@ -6,6 +6,7 @@ package manifestyaml
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -59,6 +60,7 @@ type manifestYAMLModel struct {
 	FieldManager   types.String `tfsdk:"field_manager"`
 	ForceConflicts types.Bool   `tfsdk:"force_conflicts"`
 	IgnoreFields   types.List   `tfsdk:"ignore_fields"`
+	ForceReplaceOn types.List   `tfsdk:"force_replace_on"`
 
 	ID              types.String `tfsdk:"id"`
 	APIVersion      types.String `tfsdk:"api_version"`
@@ -68,8 +70,28 @@ type manifestYAMLModel struct {
 	UID             types.String `tfsdk:"uid"`
 	ResourceVersion types.String `tfsdk:"resource_version"`
 	LiveManifest    types.String `tfsdk:"live_manifest"`
+	Status          types.String `tfsdk:"status"`
 
-	Delete *deleteModel `tfsdk:"delete"`
+	Wait     *waitModel     `tfsdk:"wait"`
+	Delete   *deleteModel   `tfsdk:"delete"`
+	Timeouts timeouts.Value `tfsdk:"timeouts"`
+}
+
+type waitModel struct {
+	Rollout   types.Bool   `tfsdk:"rollout"`
+	Condition types.String `tfsdk:"condition"`
+	Fields    types.Map    `tfsdk:"fields"`
+	Timeout   types.String `tfsdk:"timeout"`
+}
+
+// hasAny reports whether any wait condition is configured.
+func (w *waitModel) hasAny() bool {
+	if w == nil {
+		return false
+	}
+	return w.Rollout.ValueBool() ||
+		(!w.Condition.IsNull() && w.Condition.ValueString() != "") ||
+		(!w.Fields.IsNull() && !w.Fields.IsUnknown() && len(w.Fields.Elements()) > 0)
 }
 
 type deleteModel struct {

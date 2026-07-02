@@ -6,7 +6,12 @@ package manifestyaml
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -39,7 +44,7 @@ func (r *ManifestYAML) apply(ctx context.Context, m *manifestYAMLModel, preview 
 		return nil, err
 	}
 
-	force := m.ForceConflicts.ValueBool()
+	force := m.ForceConflicts.ValueBool() || preview // dry-run (preview) forces so drift detection isn't masked by conflicts
 	opts := metav1.PatchOptions{
 		FieldManager: m.FieldManager.ValueString(),
 		Force:        &force,
@@ -59,6 +64,93 @@ func resourceInterface(dyn dynamic.Interface, gvr k8sschema.GroupVersionResource
 	return dyn.Resource(gvr)
 }
 
+// defaultOpTimeout is the fallback for create/update/delete when the user does not
+// set a timeouts{} block.
+const defaultOpTimeout = 20 * time.Minute
+
+// opTimeout resolves the effective timeout for a CRUD operation. It never returns a
+// value shorter than the configured readiness wait, so a long wait{timeout} cannot be
+// cut off by the (shorter) default operation timeout.
+func opTimeout(ctx context.Context, tv timeouts.Value, kind string, w *waitModel) (time.Duration, diag.Diagnostics) {
+	var d time.Duration
+	var diags diag.Diagnostics
+	switch kind {
+	case "create":
+		d, diags = tv.Create(ctx, defaultOpTimeout)
+	case "update":
+		d, diags = tv.Update(ctx, defaultOpTimeout)
+	case "delete":
+		d, diags = tv.Delete(ctx, defaultOpTimeout)
+	default:
+		d = defaultOpTimeout
+	}
+	if w != nil && w.hasAny() {
+		if min := waitTimeout(w) + time.Minute; min > d {
+			d = min
+		}
+	}
+	return d, diags
+}
+
+// applyErrDiag turns a failed apply into a helpful diagnostic. SSA field-ownership
+// conflicts (HTTP 409) are the common case and get actionable guidance.
+func applyErrDiag(err error) (string, string) {
+	if apierrors.IsConflict(err) {
+		return "kubernetes_manifest_yaml: field manager conflict",
+			fmt.Sprintf("Server-Side Apply reported a field-ownership conflict:\n\n%s\n\n"+
+				"Another field manager already owns one or more of these fields. Either set "+
+				"`force_conflicts = true` to take ownership, or use a distinct `field_manager` "+
+				"if you intend to co-own the object with another controller.", err.Error())
+	}
+	return "kubernetes_manifest_yaml: apply failed", err.Error()
+}
+
+// isImmutableErr reports whether an apply error is a Kubernetes rejection of an
+// update to an immutable field (which requires object replacement, not update).
+func isImmutableErr(err error) bool {
+	if err == nil || (!apierrors.IsInvalid(err) && !apierrors.IsBadRequest(err) && !apierrors.IsForbidden(err)) {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	for _, s := range []string{
+		"immutable",
+		"are forbidden",
+		"is forbidden: updates to",
+		"cannot be changed",
+		"may not be changed",
+		"field is immutable",
+	} {
+		if strings.Contains(msg, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// waitForDeleted blocks until the named object is gone (NotFound) or ctx expires.
+// On timeout it surfaces any finalizers still holding the object.
+func waitForDeleted(ctx context.Context, ri dynamic.ResourceInterface, name string) error {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	for {
+		_, err := ri.Get(ctx, name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			if live, gerr := ri.Get(context.Background(), name, metav1.GetOptions{}); gerr == nil {
+				if fin, _, _ := unstructured.NestedStringSlice(live.Object, "metadata", "finalizers"); len(fin) > 0 {
+					return fmt.Errorf("timed out waiting for %q to be deleted; object still has finalizers: %s",
+						name, strings.Join(fin, ", "))
+				}
+			}
+			return fmt.Errorf("timed out waiting for %q to be deleted", name)
+		case <-ticker.C:
+		}
+	}
+}
+
 // setComputed writes the identity/status computed fields from a live object.
 func setComputed(m *manifestYAMLModel, obj *unstructured.Unstructured) {
 	m.ID = types.StringValue(buildID(obj))
@@ -68,10 +160,25 @@ func setComputed(m *manifestYAMLModel, obj *unstructured.Unstructured) {
 	if ns := obj.GetNamespace(); ns != "" {
 		m.Namespace = types.StringValue(ns)
 	} else {
-		m.Namespace = types.StringNull()
+		m.Namespace = types.StringValue("") // cluster-scoped: known empty string, not null
 	}
 	m.UID = types.StringValue(string(obj.GetUID()))
 	m.ResourceVersion = types.StringValue(obj.GetResourceVersion())
+}
+
+// objectIdentity builds a lookup stub from the model's computed identity fields,
+// falling back to yaml_body. This lets Read work even when yaml_body is unavailable
+// (e.g. immediately after import).
+func objectIdentity(m *manifestYAMLModel) (*unstructured.Unstructured, error) {
+	if m.APIVersion.ValueString() != "" && m.Kind.ValueString() != "" && m.Name.ValueString() != "" {
+		u := &unstructured.Unstructured{}
+		u.SetAPIVersion(m.APIVersion.ValueString())
+		u.SetKind(m.Kind.ValueString())
+		u.SetName(m.Name.ValueString())
+		u.SetNamespace(m.Namespace.ValueString())
+		return u, nil
+	}
+	return decodeYAML(m.YamlBody.ValueString())
 }
 
 func (r *ManifestYAML) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -81,14 +188,30 @@ func (r *ManifestYAML) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
+	to, d := opTimeout(ctx, plan.Timeouts, "create", plan.Wait)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, to)
+	defer cancel()
+
 	out, err := r.apply(ctx, &plan, false)
 	if err != nil {
-		resp.Diagnostics.AddError("kubernetes_manifest_yaml: apply failed", err.Error())
+		resp.Diagnostics.AddError(applyErrDiag(err))
 		return
 	}
 	setComputed(&plan, out)
 	if err := setLiveManifest(ctx, &plan, out); err != nil {
 		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())
+		return
+	}
+	if err := setStatus(&plan, out); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: status read failed", err.Error())
+		return
+	}
+	if err := r.waitForReady(ctx, out, plan.Wait); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: wait failed", err.Error())
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -101,7 +224,7 @@ func (r *ManifestYAML) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	obj, err := decodeYAML(state.YamlBody.ValueString())
+	obj, err := objectIdentity(&state)
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes_manifest_yaml: invalid stored manifest", err.Error())
 		return
@@ -133,6 +256,10 @@ func (r *ManifestYAML) Read(ctx context.Context, req resource.ReadRequest, resp 
 		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())
 		return
 	}
+	if err := setStatus(&state, live); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: status read failed", err.Error())
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -143,14 +270,30 @@ func (r *ManifestYAML) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
+	to, d := opTimeout(ctx, plan.Timeouts, "update", plan.Wait)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, to)
+	defer cancel()
+
 	out, err := r.apply(ctx, &plan, false)
 	if err != nil {
-		resp.Diagnostics.AddError("kubernetes_manifest_yaml: apply failed", err.Error())
+		resp.Diagnostics.AddError(applyErrDiag(err))
 		return
 	}
 	setComputed(&plan, out)
 	if err := setLiveManifest(ctx, &plan, out); err != nil {
 		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())
+		return
+	}
+	if err := setStatus(&plan, out); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: status read failed", err.Error())
+		return
+	}
+	if err := r.waitForReady(ctx, out, plan.Wait); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: wait failed", err.Error())
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -185,24 +328,65 @@ func (r *ManifestYAML) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 		return
 	}
 
+	// Semantic-equality (RFC-011 §6.4): if the planned YAML normalizes to the same
+	// document as state (only whitespace/comments/key-order differ), suppress the diff
+	// by keeping the prior value.
+	if n1, e1 := normalizeYAML(plan.YamlBody.ValueString()); e1 == nil {
+		if n2, e2 := normalizeYAML(state.YamlBody.ValueString()); e2 == nil && n1 == n2 {
+			plan.YamlBody = state.YamlBody
+			resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
+		}
+	}
+
 	// buildID encodes apiVersion/kind/namespace/name — the object's identity.
 	if buildID(planObj) != buildID(stateObj) {
 		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("yaml_body"))
 		return // replacement supersedes drift projection
 	}
 
+	// force_replace_on: user-declared immutable paths (e.g. a StatefulSet's
+	// spec.volumeClaimTemplates). Changing any of them replaces the object instead of
+	// attempting an update that Kubernetes would reject. Deterministic and offline-safe.
+	for _, p := range replaceOnList(ctx, &plan) {
+		if pathChanged(planObj.Object, stateObj.Object, p) {
+			resp.RequiresReplace = append(resp.RequiresReplace, path.Root("yaml_body"))
+			return
+		}
+	}
+
 	// Owned-field drift (RFC-011 §6.3): dry-run SSA the planned object, project the
-	// owned fields, and set live_manifest in the plan. If it differs from prior state,
-	// the diff on live_manifest surfaces drift and triggers an in-place update.
-	// Degrades gracefully: if the cluster is unreachable at plan, leave it computed.
+	// owned fields, and compare to prior state. If they differ, the object has drifted
+	// (or the config changed) → surface it via live_manifest and mark the server-assigned
+	// computed fields unknown so the corrective apply stays consistent.
+	// Degrades gracefully: if the cluster is unreachable at plan, leave computed as-is.
 	dry, err := r.apply(ctx, &plan, true)
+	if err != nil {
+		// A rejected update to an immutable field means the change needs replacement.
+		// Guide the user to force_replace_on rather than letting apply fail with a raw 422.
+		if isImmutableErr(err) {
+			resp.Diagnostics.AddError(
+				"kubernetes_manifest_yaml: change requires replacement",
+				fmt.Sprintf("The planned change modifies a field that Kubernetes does not allow to be "+
+					"updated in place:\n\n%s\n\nAdd the changed field path(s) to `force_replace_on` so Terraform "+
+					"replaces the object instead of updating it. For workloads that must keep their Pods/PVCs across "+
+					"the replacement (e.g. StatefulSets), also set `delete { propagation_policy = \"Orphan\" }`.",
+					err.Error()),
+			)
+		}
+		return
+	}
+	projected, err := projectOwned(dry, fieldManagerOf(&plan), ignoreList(ctx, &plan))
 	if err != nil {
 		return
 	}
-	if err := setLiveManifest(ctx, &plan, dry); err != nil {
-		return
+	if projected != state.LiveManifest.ValueString() {
+		plan.LiveManifest = types.StringValue(projected)
+		// These change when the corrective apply runs; mark unknown to avoid
+		// "inconsistent result after apply".
+		plan.ResourceVersion = types.StringUnknown()
+		plan.Status = types.StringUnknown()
+		resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 	}
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 func (r *ManifestYAML) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -211,6 +395,14 @@ func (r *ManifestYAML) Delete(ctx context.Context, req resource.DeleteRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	to, d := opTimeout(ctx, state.Timeouts, "delete", nil)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, to)
+	defer cancel()
 
 	obj, err := decodeYAML(state.YamlBody.ValueString())
 	if err != nil {
@@ -228,10 +420,21 @@ func (r *ManifestYAML) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	err = resourceInterface(dyn, gvr, namespaced, obj.GetNamespace()).
-		Delete(ctx, obj.GetName(), deleteOptions(state.Delete))
-	if err != nil && !apierrors.IsNotFound(err) {
+	ri := resourceInterface(dyn, gvr, namespaced, obj.GetNamespace())
+	err = ri.Delete(ctx, obj.GetName(), deleteOptions(state.Delete))
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return // already gone
+		}
 		resp.Diagnostics.AddError("kubernetes_manifest_yaml: delete failed", err.Error())
+		return
+	}
+
+	// Block until the object is actually gone so Terraform does not report success while
+	// finalizers still hold it. Orphan/Background deletes return quickly; Foreground waits
+	// for dependents. Bounded by the delete timeout.
+	if err := waitForDeleted(ctx, ri, obj.GetName()); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: delete did not complete", err.Error())
 		return
 	}
 }
@@ -284,7 +487,16 @@ func (r *ManifestYAML) ImportState(ctx context.Context, req resource.ImportState
 	state.FieldManager = types.StringValue("terraform")
 	state.ForceConflicts = types.BoolNull()
 	state.IgnoreFields = types.ListNull(types.StringType)
+	state.ForceReplaceOn = types.ListNull(types.StringType)
 	state.YamlBody = types.StringNull() // user must supply matching config
+	// A freshly-built model needs a correctly-typed (not zero-value) timeouts object,
+	// otherwise state.Set fails type conversion on the timeouts attribute.
+	state.Timeouts = timeouts.Value{Object: types.ObjectNull(map[string]attr.Type{
+		"create": types.StringType,
+		"read":   types.StringType,
+		"update": types.StringType,
+		"delete": types.StringType,
+	})}
 	setComputed(&state, live)
 	if err := setLiveManifest(ctx, &state, live); err != nil {
 		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())

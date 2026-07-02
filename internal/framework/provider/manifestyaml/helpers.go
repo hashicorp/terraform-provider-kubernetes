@@ -4,7 +4,10 @@
 package manifestyaml
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -12,13 +15,24 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 )
 
 // decodeYAML parses a single-document YAML string into an unstructured object.
+// Multi-document input (more than one non-empty YAML document separated by "---")
+// is rejected: this resource manages exactly one object. Use `for_each` over
+// `provider::kubernetes::manifest_decode_multi(...)` to apply many documents.
 func decodeYAML(y string) (*unstructured.Unstructured, error) {
+	if n, err := countYAMLDocuments(y); err != nil {
+		return nil, err
+	} else if n > 1 {
+		return nil, fmt.Errorf("yaml_body contains %d documents; kubernetes_manifest_yaml manages exactly one object. "+
+			"Split the documents and use `for_each` over `provider::kubernetes::manifest_decode_multi(var.yaml)` "+
+			"(apply CRDs before the custom resources that use them)", n)
+	}
 	j, err := yaml.YAMLToJSON([]byte(y))
 	if err != nil {
 		return nil, fmt.Errorf("invalid YAML: %w", err)
@@ -34,6 +48,25 @@ func decodeYAML(y string) (*unstructured.Unstructured, error) {
 		return nil, fmt.Errorf("manifest must set metadata.name (generateName is not supported)")
 	}
 	return obj, nil
+}
+
+// countYAMLDocuments counts the non-empty YAML documents in the input, splitting on
+// "---" document separators the same way kubectl does.
+func countYAMLDocuments(y string) (int, error) {
+	reader := utilyaml.NewYAMLReader(bufio.NewReader(strings.NewReader(y)))
+	count := 0
+	for {
+		doc, err := reader.Read()
+		if err == io.EOF {
+			return count, nil
+		}
+		if err != nil {
+			return count, fmt.Errorf("invalid YAML: %w", err)
+		}
+		if len(bytes.TrimSpace(doc)) > 0 {
+			count++
+		}
+	}
 }
 
 // resolveGVR maps the object's GVK to a GroupVersionResource via cluster discovery.

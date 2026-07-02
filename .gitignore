@@ -36,3 +36,6 @@ website/vendor
 # output binary
 terraform-provider-kubernetes
 __debug_bin
+
+# local-only scratch / planning (never pushed)
+.nopush/

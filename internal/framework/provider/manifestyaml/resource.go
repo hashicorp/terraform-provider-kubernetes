@@ -58,6 +58,7 @@ type manifestYAMLModel struct {
 	YamlBody       types.String `tfsdk:"yaml_body"`
 	FieldManager   types.String `tfsdk:"field_manager"`
 	ForceConflicts types.Bool   `tfsdk:"force_conflicts"`
+	IgnoreFields   types.List   `tfsdk:"ignore_fields"`
 
 	ID              types.String `tfsdk:"id"`
 	APIVersion      types.String `tfsdk:"api_version"`
@@ -66,6 +67,7 @@ type manifestYAMLModel struct {
 	Namespace       types.String `tfsdk:"namespace"`
 	UID             types.String `tfsdk:"uid"`
 	ResourceVersion types.String `tfsdk:"resource_version"`
+	LiveManifest    types.String `tfsdk:"live_manifest"`
 
 	Delete *deleteModel `tfsdk:"delete"`
 }

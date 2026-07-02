@@ -87,6 +87,10 @@ func (r *ManifestYAML) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 	setComputed(&plan, out)
+	if err := setLiveManifest(ctx, &plan, out); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -125,6 +129,10 @@ func (r *ManifestYAML) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	setComputed(&state, live)
+	if err := setLiveManifest(ctx, &state, live); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -141,6 +149,10 @@ func (r *ManifestYAML) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	setComputed(&plan, out)
+	if err := setLiveManifest(ctx, &plan, out); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -176,7 +188,21 @@ func (r *ManifestYAML) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 	// buildID encodes apiVersion/kind/namespace/name — the object's identity.
 	if buildID(planObj) != buildID(stateObj) {
 		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("yaml_body"))
+		return // replacement supersedes drift projection
 	}
+
+	// Owned-field drift (RFC-011 §6.3): dry-run SSA the planned object, project the
+	// owned fields, and set live_manifest in the plan. If it differs from prior state,
+	// the diff on live_manifest surfaces drift and triggers an in-place update.
+	// Degrades gracefully: if the cluster is unreachable at plan, leave it computed.
+	dry, err := r.apply(ctx, &plan, true)
+	if err != nil {
+		return
+	}
+	if err := setLiveManifest(ctx, &plan, dry); err != nil {
+		return
+	}
+	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 func (r *ManifestYAML) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -257,7 +283,12 @@ func (r *ManifestYAML) ImportState(ctx context.Context, req resource.ImportState
 	var state manifestYAMLModel
 	state.FieldManager = types.StringValue("terraform")
 	state.ForceConflicts = types.BoolNull()
+	state.IgnoreFields = types.ListNull(types.StringType)
 	state.YamlBody = types.StringNull() // user must supply matching config
 	setComputed(&state, live)
+	if err := setLiveManifest(ctx, &state, live); err != nil {
+		resp.Diagnostics.AddError("kubernetes_manifest_yaml: owned-field projection failed", err.Error())
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }

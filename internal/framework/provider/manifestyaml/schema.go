@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func (r *ManifestYAML) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -36,8 +37,14 @@ func (r *ManifestYAML) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				MarkdownDescription: "Force apply, taking ownership of fields managed by another field manager.",
 				Optional:            true,
 			},
+			"ignore_fields": schema.ListAttribute{
+				MarkdownDescription: "Dotted field paths (e.g. \"spec.replicas\") to exclude from the owned-field " +
+					"projection, so an external controller (e.g. an HPA) can own them without causing drift.",
+				ElementType: types.StringType,
+				Optional:    true,
+			},
 
-			// Computed identity / status.
+			// Computed identity / projection.
 			"id": schema.StringAttribute{
 				MarkdownDescription: "apiVersion=<>,kind=<>,namespace=<>,name=<>",
 				Computed:            true,
@@ -48,6 +55,12 @@ func (r *ManifestYAML) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"namespace":        schema.StringAttribute{Computed: true},
 			"uid":              schema.StringAttribute{Computed: true},
 			"resource_version": schema.StringAttribute{Computed: true},
+			"live_manifest": schema.StringAttribute{
+				MarkdownDescription: "Canonical JSON of the fields owned by this resource's field manager " +
+					"(the drift anchor). Only these fields are compared on plan.",
+				Computed:  true,
+				Sensitive: true,
+			},
 		},
 		Blocks: map[string]schema.Block{
 			"delete": schema.SingleNestedBlock{

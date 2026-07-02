@@ -20,9 +20,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
 )
+
+// externalPatchConfigMapData merge-patches a ConfigMap's data as a DIFFERENT field
+// manager, simulating another controller/tool mutating the object out-of-band.
+func externalPatchConfigMapData(t *testing.T, name, key, val string) {
+	t.Helper()
+	dyn, err := testAccClients().DynamicClient()
+	if err != nil {
+		t.Fatalf("dynamic client: %v", err)
+	}
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
+	patch := []byte(fmt.Sprintf(`{"data":{%q:%q}}`, key, val))
+	_, err = dyn.Resource(gvr).Namespace("default").
+		Patch(context.Background(), name, apitypes.MergePatchType, patch,
+			metav1.PatchOptions{FieldManager: "external-tool"})
+	if err != nil {
+		t.Fatalf("external patch failed: %v", err)
+	}
+}
 
 // ---- helpers ---------------------------------------------------------------
 
@@ -280,6 +299,63 @@ func TestAccManifestYAML_identityChangeReplaces(t *testing.T) {
 					testAccCheckManifestYAMLExists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "name", name2),
 				),
+			},
+		},
+	})
+}
+
+// TestAccManifestYAML_externalKeyNoDrift proves owned-field projection: a key
+// added by another manager (external-tool) does NOT cause a Terraform diff.
+func TestAccManifestYAML_externalKeyNoDrift(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-cm")
+	resourceName := "kubernetes_manifest_yaml.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckManifestYAMLDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccManifestYAMLConfigMap(name, "hello"),
+				Check:  testAccCheckManifestYAMLExists(resourceName),
+			},
+			{
+				// Another tool adds data.extra; config unchanged.
+				Config:    testAccManifestYAMLConfigMap(name, "hello"),
+				PreConfig: func() { externalPatchConfigMapData(t, name, "extra", "added-externally") },
+				// Projection ⇒ we don't own data.extra ⇒ NO drift.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+// TestAccManifestYAML_ownedFieldDriftCorrected proves drift on an OWNED field is
+// detected and corrected on the next apply.
+func TestAccManifestYAML_ownedFieldDriftCorrected(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-cm")
+	resourceName := "kubernetes_manifest_yaml.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckManifestYAMLDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccManifestYAMLConfigMap(name, "intended"),
+				Check:  testAccCheckManifestYAMLExists(resourceName),
+			},
+			{
+				// External change to the OWNED data.key; config unchanged.
+				Config:    testAccManifestYAMLConfigMap(name, "intended"),
+				PreConfig: func() { externalPatchConfigMapData(t, name, "key", "tampered") },
+				// We own data.key ⇒ drift ⇒ update planned.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: testAccCheckManifestYAMLExists(resourceName),
 			},
 		},
 	})

@@ -6,12 +6,9 @@ package manifestyaml
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -19,9 +16,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	k8sschema "k8s.io/apimachinery/pkg/runtime/schema"
 	apitypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
 )
 
 // apply performs a Server-Side Apply of the object described by the model's yaml_body.
@@ -55,100 +50,6 @@ func (r *ManifestYAML) apply(ctx context.Context, m *manifestYAMLModel, preview 
 
 	ri := resourceInterface(dyn, gvr, namespaced, obj.GetNamespace())
 	return ri.Patch(ctx, obj.GetName(), apitypes.ApplyPatchType, data, opts)
-}
-
-func resourceInterface(dyn dynamic.Interface, gvr k8sschema.GroupVersionResource, namespaced bool, ns string) dynamic.ResourceInterface {
-	if namespaced {
-		return dyn.Resource(gvr).Namespace(ns)
-	}
-	return dyn.Resource(gvr)
-}
-
-// defaultOpTimeout is the fallback for create/update/delete when the user does not
-// set a timeouts{} block.
-const defaultOpTimeout = 20 * time.Minute
-
-// opTimeout resolves the effective timeout for a CRUD operation. It never returns a
-// value shorter than the configured readiness wait, so a long wait{timeout} cannot be
-// cut off by the (shorter) default operation timeout.
-func opTimeout(ctx context.Context, tv timeouts.Value, kind string, w *waitModel) (time.Duration, diag.Diagnostics) {
-	var d time.Duration
-	var diags diag.Diagnostics
-	switch kind {
-	case "create":
-		d, diags = tv.Create(ctx, defaultOpTimeout)
-	case "update":
-		d, diags = tv.Update(ctx, defaultOpTimeout)
-	case "delete":
-		d, diags = tv.Delete(ctx, defaultOpTimeout)
-	default:
-		d = defaultOpTimeout
-	}
-	if w != nil && w.hasAny() {
-		if min := waitTimeout(w) + time.Minute; min > d {
-			d = min
-		}
-	}
-	return d, diags
-}
-
-// applyErrDiag turns a failed apply into a helpful diagnostic. SSA field-ownership
-// conflicts (HTTP 409) are the common case and get actionable guidance.
-func applyErrDiag(err error) (string, string) {
-	if apierrors.IsConflict(err) {
-		return "kubernetes_manifest_yaml: field manager conflict",
-			fmt.Sprintf("Server-Side Apply reported a field-ownership conflict:\n\n%s\n\n"+
-				"Another field manager already owns one or more of these fields. Either set "+
-				"`force_conflicts = true` to take ownership, or use a distinct `field_manager` "+
-				"if you intend to co-own the object with another controller.", err.Error())
-	}
-	return "kubernetes_manifest_yaml: apply failed", err.Error()
-}
-
-// isImmutableErr reports whether an apply error is a Kubernetes rejection of an
-// update to an immutable field (which requires object replacement, not update).
-func isImmutableErr(err error) bool {
-	if err == nil || (!apierrors.IsInvalid(err) && !apierrors.IsBadRequest(err) && !apierrors.IsForbidden(err)) {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	for _, s := range []string{
-		"immutable",
-		"are forbidden",
-		"is forbidden: updates to",
-		"cannot be changed",
-		"may not be changed",
-		"field is immutable",
-	} {
-		if strings.Contains(msg, s) {
-			return true
-		}
-	}
-	return false
-}
-
-// waitForDeleted blocks until the named object is gone (NotFound) or ctx expires.
-// On timeout it surfaces any finalizers still holding the object.
-func waitForDeleted(ctx context.Context, ri dynamic.ResourceInterface, name string) error {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-	for {
-		_, err := ri.Get(ctx, name, metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		select {
-		case <-ctx.Done():
-			if live, gerr := ri.Get(context.Background(), name, metav1.GetOptions{}); gerr == nil {
-				if fin, _, _ := unstructured.NestedStringSlice(live.Object, "metadata", "finalizers"); len(fin) > 0 {
-					return fmt.Errorf("timed out waiting for %q to be deleted; object still has finalizers: %s",
-						name, strings.Join(fin, ", "))
-				}
-			}
-			return fmt.Errorf("timed out waiting for %q to be deleted", name)
-		case <-ticker.C:
-		}
-	}
 }
 
 // setComputed writes the identity/status computed fields from a live object.

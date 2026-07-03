@@ -1,0 +1,40 @@
+---
+subcategory: "manifest"
+page_title: "Kubernetes: kubernetes_manifest_yaml"
+description: |-
+  Applies a single Kubernetes object from raw YAML using Server-Side Apply, without requiring the typed OpenAPI schema at plan time.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+`kubernetes_manifest_yaml` is a schemaless alternative to [`kubernetes_manifest`](manifest.md). It takes raw YAML for exactly one object and applies it with [Server-Side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) (SSA). Because it does not build a typed schema from the cluster's OpenAPI document at plan time, it works well for CRDs and for migrating configurations from community `kubectl_manifest` resources.
+
+Drift is tracked only for the fields this resource's [field manager](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management) owns (projected from `managedFields`), so server defaults and fields owned by other controllers do not produce spurious diffs.
+
+~> **Note** This resource manages a **single** object. To apply a multi-document YAML file, use `for_each` over [`provider::kubernetes::manifest_decode_multi(...)`](../functions/manifest_decode_multi.md) and apply CRDs before the custom resources that use them.
+
+~> **Note** `yaml_body` is marked **sensitive** because a manifest may contain a `Secret`. Terraform will not display its contents in plan output.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/manifest_yaml/example_1.tf"}}
+
+### Replacing a StatefulSet on an immutable-field change (orphan upgrade)
+
+Some fields (a StatefulSet's `volumeClaimTemplates`, `serviceName`, `selector`, `podManagementPolicy`, and similar) cannot be updated in place. List those paths in `force_replace_on` so Terraform replaces the object instead of attempting a rejected update. Combine it with `delete { propagation_policy = "Orphan" }` to keep the underlying Pods and PVCs; the recreated object re-adopts them.
+
+{{tffile "examples/resources/manifest_yaml/example_2.tf"}}
+
+## Import
+
+Import an existing object using a `key=value` identifier:
+
+```shell
+terraform import kubernetes_manifest_yaml.example 'apiVersion=apps/v1,kind=Deployment,namespace=default,name=nginx'
+```
+
+Because `yaml_body` is required and cannot be reconstructed from the live object, add matching configuration after importing (or use `terraform plan -generate-config-out`).

@@ -1,0 +1,3 @@
+```release-note:feature
+**New Resource** `kubernetes_manifest_yaml`: applies a single Kubernetes object from raw YAML using Server-Side Apply, without requiring the typed OpenAPI schema at plan time. Supports owned-field drift detection (managedFields projection), `wait {}` readiness with pod-error surfacing, computed `status`, `ignore_fields`, `force_replace_on` for Kubernetes-immutable fields, `delete {}` propagation (including `Orphan`), configurable `timeouts {}`, and import by `apiVersion=...,kind=...,namespace=...,name=...`.
+```

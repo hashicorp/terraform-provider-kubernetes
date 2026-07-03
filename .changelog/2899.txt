@@ -1,0 +1,3 @@
+```release-note:feature
+**New Resource** `kubernetes_manifest_patch`: declaratively owns a subset of fields on a pre-existing Kubernetes object using Server-Side Apply, without creating or deleting the object (the generic form of `kubernetes_labels`/`kubernetes_annotations`/`*_data`). Supports a typed `patch` object (set a leaf to `null` to remove a field), a `patch_json` escape hatch (`json`/`merge`/`strategic`), owned-field drift detection, `ignore_fields`, `force_conflicts`, configurable `timeouts`, import, and a `destroy_behavior` of `relinquish` (default — leaves the object untouched) or `remove_fields`.
+```

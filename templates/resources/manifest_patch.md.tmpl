@@ -1,0 +1,40 @@
+---
+subcategory: "manifest"
+page_title: "Kubernetes: kubernetes_manifest_patch"
+description: |-
+  Owns a subset of fields on a pre-existing Kubernetes object using Server-Side Apply, without creating or deleting the object.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+`kubernetes_manifest_patch` is the generic form of the single-purpose partial-management resources ([`kubernetes_labels`](labels.md), [`kubernetes_annotations`](annotations.md), [`kubernetes_config_map_v1_data`](config_map_v1_data.md), …): it patches **any field** on **any object** the target already has, using [Server-Side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) field management. It does **not** create or delete the target object.
+
+Use it to modify objects owned by Helm, an operator, or a managed add-on — for example, add an annotation to a Helm-installed Service, set environment variables on the EKS `aws-node` DaemonSet, or set a field a typed resource does not yet expose.
+
+~> **Note** The target object must already exist; `kubernetes_manifest_patch` never creates it. Create it first (for example with [`kubernetes_manifest_yaml`](manifest_yaml.md)) and use `depends_on` if needed.
+
+~> **Note** Set a `patch` leaf to `null` to **remove** that field (Server-Side Apply prunes the fields this resource owns but no longer declares).
+
+~> **Note** Destroying the resource uses `destroy_behavior` — by default `relinquish`, which leaves the object untouched. It never deletes the target object.
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/manifest_patch/example_1.tf"}}
+
+### Patching a managed add-on and using the JSON escape hatch
+
+{{tffile "examples/resources/manifest_patch/example_2.tf"}}
+
+## Import
+
+Import an existing patch using a `key=value` identifier that includes the field manager:
+
+```shell
+terraform import kubernetes_manifest_patch.example 'apiVersion=apps/v1,kind=Deployment,namespace=default,name=app,fieldManager=terraform-patch'
+```
+
+Because `patch` is user configuration and cannot be reconstructed from the live object, add matching configuration after importing.

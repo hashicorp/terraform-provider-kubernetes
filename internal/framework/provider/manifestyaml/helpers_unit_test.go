@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubemanifest"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -238,7 +240,7 @@ func TestOpTimeout_defaultWhenNoWait(t *testing.T) {
 	if diags.HasError() {
 		t.Fatalf("unexpected diags: %v", diags)
 	}
-	if got != defaultOpTimeout {
-		t.Fatalf("expected default op timeout %s, got %s", defaultOpTimeout, got)
+	if got != kubemanifest.DefaultOpTimeout {
+		t.Fatalf("expected default op timeout %s, got %s", kubemanifest.DefaultOpTimeout, got)
 	}
 }

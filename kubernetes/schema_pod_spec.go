@@ -196,6 +196,14 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Description: "Use the host's pid namespace.",
 		},
 
+		"host_users": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			ForceNew:    !isUpdatable,
+			Description: "Use the host's user namespace. Optional: Defaults to true. If set to true or not present, the pod will be run in the host user namespace. If set to false, a new userns is created for the pod. Setting false is useful for mitigating container breakout vulnerabilities even allowing users to run their containers as root without actually having root privileges on the host.",
+		},
+
 		"hostname": {
 			Type:        schema.TypeString,
 			Optional:    true,

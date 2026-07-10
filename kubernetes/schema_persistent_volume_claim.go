@@ -56,7 +56,8 @@ func persistentVolumeClaimSpecFields(isUpdatable bool) map[string]*schema.Schema
 						ForceNew:         !isUpdatable,
 						DiffSuppressFunc: suppressEquivalentResourceQuantity,
 					},
-					// This is the only field the API will allow modifying in-place, so ForceNew is not used.
+					// The API permits in-place storage expansion for standalone PVCs, so requests
+					// remains updateable in both schema contexts.
 					"requests": {
 						Type:             schema.TypeMap,
 						Description:      "Map describing the minimum amount of compute resources required. If this is omitted for a container, it defaults to `limits` if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/",

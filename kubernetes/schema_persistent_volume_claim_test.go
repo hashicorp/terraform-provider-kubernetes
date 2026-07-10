@@ -23,6 +23,18 @@ func TestGenericEphemeralVolumeClaimTemplateForceNew(t *testing.T) {
 			wantForceNew:  false,
 		},
 		{
+			name:          "daemon set pod template",
+			root:          resourceKubernetesDaemonSetSchemaV1(),
+			claimSpecPath: []string{"spec", "template", "spec", "volume", "ephemeral", "volume_claim_template", "spec"},
+			wantForceNew:  false,
+		},
+		{
+			name:          "stateful set pod template",
+			root:          resourceKubernetesStatefulSetSchemaV1(),
+			claimSpecPath: []string{"spec", "template", "spec", "volume", "ephemeral", "volume_claim_template", "spec"},
+			wantForceNew:  false,
+		},
+		{
 			name:          "standalone pod",
 			root:          resourceKubernetesPodSchemaV1(),
 			claimSpecPath: []string{"spec", "volume", "ephemeral", "volume_claim_template", "spec"},
@@ -62,7 +74,7 @@ func TestGenericEphemeralVolumeClaimTemplateForceNew(t *testing.T) {
 			}
 
 			if requests := nestedSchemaField(t, claimSpec, "resources", "requests"); requests.ForceNew {
-				t.Error("resources.requests must remain updateable for persistent volume claim expansion")
+				t.Error("resources.requests ForceNew behavior must remain unchanged")
 			}
 		})
 	}

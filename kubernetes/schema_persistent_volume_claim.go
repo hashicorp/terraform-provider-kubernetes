@@ -18,19 +18,19 @@ func persistentVolumeClaimFields() map[string]*schema.Schema {
 			Required:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: persistentVolumeClaimSpecFields(),
+				Schema: persistentVolumeClaimSpecFields(false),
 			},
 		},
 	}
 }
 
-func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
+func persistentVolumeClaimSpecFields(isUpdatable bool) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"access_modes": {
 			Type:        schema.TypeSet,
 			Description: "A set of the desired access modes the volume should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes",
 			Required:    true,
-			ForceNew:    true,
+			ForceNew:    !isUpdatable,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 				ValidateFunc: validation.StringInSlice([]string{
@@ -53,7 +53,7 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 						Type:             schema.TypeMap,
 						Description:      "Map describing the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/",
 						Optional:         true,
-						ForceNew:         true,
+						ForceNew:         !isUpdatable,
 						DiffSuppressFunc: suppressEquivalentResourceQuantity,
 					},
 					// This is the only field the API will allow modifying in-place, so ForceNew is not used.
@@ -70,17 +70,17 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Type:        schema.TypeList,
 			Description: "A label query over volumes to consider for binding.",
 			Optional:    true,
-			ForceNew:    true,
+			ForceNew:    !isUpdatable,
 			MaxItems:    1,
 			Elem: &schema.Resource{
-				Schema: labelSelectorFields(false),
+				Schema: labelSelectorFields(isUpdatable),
 			},
 		},
 		"volume_name": {
 			Type:        schema.TypeString,
 			Description: "The binding reference to the PersistentVolume backing this claim.",
 			Optional:    true,
-			ForceNew:    true,
+			ForceNew:    !isUpdatable,
 			Computed:    true,
 		},
 		"storage_class_name": {
@@ -88,14 +88,14 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 			Description: "Name of the storage class requested by the claim",
 			Optional:    true,
 			Computed:    true,
-			ForceNew:    true,
+			ForceNew:    !isUpdatable,
 		},
 		"volume_mode": {
 			Type:        schema.TypeString,
 			Description: "Defines what type of volume is required by the claim.",
 			Optional:    true,
 			Computed:    true,
-			ForceNew:    true,
+			ForceNew:    !isUpdatable,
 			ValidateFunc: validation.StringInSlice([]string{
 				string(corev1.PersistentVolumeBlock),
 				string(corev1.PersistentVolumeFilesystem),

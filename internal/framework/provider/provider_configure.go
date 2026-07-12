@@ -19,4 +19,5 @@ func (p *KubernetesProvider) Configure(ctx context.Context, req provider.Configu
 	resp.ResourceData = p.SDKv2Meta
 	resp.DataSourceData = p.SDKv2Meta
 	resp.EphemeralResourceData = p.SDKv2Meta
+	resp.ActionData = p.SDKv2Meta
 }

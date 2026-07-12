@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/admissionregistrationv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/appsv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/authenticationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
@@ -24,6 +26,7 @@ var (
 	_ provider.Provider                       = &KubernetesProvider{}
 	_ provider.ProviderWithFunctions          = &KubernetesProvider{}
 	_ provider.ProviderWithEphemeralResources = &KubernetesProvider{}
+	_ provider.ProviderWithActions            = &KubernetesProvider{}
 )
 
 // KubernetesProvider defines the provider implementation.
@@ -214,6 +217,14 @@ func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Fu
 		pfunctions.NewManifestDecodeFunction,
 		pfunctions.NewManifestDecodeMultiFunction,
 		pfunctions.NewManifestEncodeFunction,
+	}
+}
+
+func (p *KubernetesProvider) Actions(ctx context.Context) []func() action.Action {
+	return []func() action.Action{
+		appsv1.NewDaemonSetRestartAction,
+		appsv1.NewDeploymentRestartAction,
+		appsv1.NewStatefulSetRestartAction,
 	}
 }
 

@@ -1,0 +1,11 @@
+```release-note:feature
+action/kubernetes_daemonset_restart: New action to restart a DaemonSet, equivalent to `kubectl rollout restart daemonset`
+```
+
+```release-note:feature
+action/kubernetes_deployment_restart: New action to restart a Deployment, equivalent to `kubectl rollout restart deployment`
+```
+
+```release-note:feature
+action/kubernetes_statefulset_restart: New action to restart a StatefulSet, equivalent to `kubectl rollout restart statefulset`
+```

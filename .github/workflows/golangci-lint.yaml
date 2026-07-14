@@ -21,7 +21,6 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@82d40c283aeb1f2b6595839195e95c2d6a49081b # v5.0.0
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         with:
-          version: 'v1.64.2'
-          skip-pkg-cache: true
+          version: 'v2.12.2'

@@ -270,8 +270,7 @@ func TestAccGatewayClassV1_invalidControllerNamePattern(t *testing.T) {
 // ============================================================
 
 func testAccGatewayV1ConfigInvalidProtocol(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = "%[1]s-gc"
   }
@@ -297,8 +296,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGatewayV1ConfigProtocol(rName, gcName, protocol string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -324,8 +322,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGatewayV1ConfigInvalidTLSMode(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = "%[1]s-gc"
   }
@@ -354,8 +351,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGatewayV1ConfigLongListenerName(rName, longName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = "%[1]s-gc"
   }
@@ -381,9 +377,10 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigInvalidFilterType(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_gateway_class_v1" "test" {
@@ -439,9 +436,10 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigInvalidStatusCode(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_gateway_class_v1" "test" {
@@ -494,9 +492,10 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigInvalidPercent(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_service_v1" "mirror" {
@@ -571,9 +570,10 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigInvalidPathType(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_gateway_class_v1" "test" {
@@ -627,9 +627,10 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigInvalidUseDefaultGateways(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_gateway_class_v1" "test" {
@@ -678,9 +679,10 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccGRPCRouteV1ConfigInvalidFilterType(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_gateway_class_v1" "test" {
@@ -736,9 +738,10 @@ resource "kubernetes_grpc_route_v1" "test" {
 }
 
 func testAccGRPCRouteV1ConfigInvalidMethodType(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_gateway_class_v1" "test" {
@@ -792,9 +795,10 @@ resource "kubernetes_grpc_route_v1" "test" {
 }
 
 func testAccTLSRouteV1ConfigTwoRules(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_service_v1" "test" {
@@ -864,9 +868,10 @@ resource "kubernetes_tls_route_v1" "test" {
 }
 
 func testAccBackendTLSPolicyV1ConfigMissingHostname(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_service_v1" "test" {
@@ -902,9 +907,10 @@ resource "kubernetes_backend_tls_policy_v1" "test" {
 }
 
 func testAccBackendTLSPolicyV1ConfigInvalidSubjectAltNameType(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "test" {
-  metadata { name = %[1]q }
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
 }
 
 resource "kubernetes_service_v1" "test" {
@@ -944,8 +950,7 @@ resource "kubernetes_backend_tls_policy_v1" "test" {
 }
 
 func testAccGatewayClassV1ConfigInvalidControllerName(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[1]q
   }

@@ -9,6 +9,8 @@ set -euo pipefail
 
 CLUSTER_NAME="${KIND_CLUSTER_NAME:-tf-gateway-api-test}"
 GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.5.1}"
+CLOUD_PROVIDER_KIND_VERSION="${CLOUD_PROVIDER_KIND_VERSION:-v0.11.1}"
+CLOUD_PROVIDER_KIND_CONTAINER="cloud-provider-kind-${CLUSTER_NAME}"
 
 log() { echo "[INFO] $*"; }
 warn() { echo "[WARN] $*"; }
@@ -30,10 +32,12 @@ export KUBECONFIG="/tmp/kind-kubeconfig"
 log "Kubeconfig written to /tmp/kind-kubeconfig"
 
 log "Installing Gateway API CRDs ${GATEWAY_API_VERSION} (experimental channel)"
-kubectl apply --server-side -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml" || \
+kubectl apply --server-side --request-timeout=5m \
+    -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml" || \
     fail "Failed to install Gateway API CRDs"
 
 log "Verifying Gateway API CRDs..."
+missing_crds=0
 for crd in gateways.gateway.networking.k8s.io httproutes.gateway.networking.k8s.io \
            grpcroutes.gateway.networking.k8s.io tlsroutes.gateway.networking.k8s.io \
            backendtlspolicies.gateway.networking.k8s.io referencegrants.gateway.networking.k8s.io \
@@ -42,18 +46,39 @@ for crd in gateways.gateway.networking.k8s.io httproutes.gateway.networking.k8s.
         log "  OK: ${crd}"
     else
         warn "  MISSING: ${crd}"
+        missing_crds=$((missing_crds + 1))
     fi
 done
+if (( missing_crds > 0 )); then
+    fail "Gateway API installation is incomplete: ${missing_crds} required CRD(s) are missing"
+fi
 
-log "Deploying cloud-provider-kind (LoadBalancer + Gateway API controller)"
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/cloud-provider-kind/master/install.yaml 2>/dev/null || \
-    warn "cloud-provider-kind may already be deployed"
+if ! docker ps --format '{{.Names}}' | grep -qx "${CLOUD_PROVIDER_KIND_CONTAINER}"; then
+    if docker ps -a --format '{{.Names}}' | grep -qx "${CLOUD_PROVIDER_KIND_CONTAINER}"; then
+        log "Removing stopped cloud-provider-kind container"
+        docker rm "${CLOUD_PROVIDER_KIND_CONTAINER}" >/dev/null
+    fi
 
-log "Waiting for cloud-provider-kind..."
-kubectl wait --namespace cloud-provider-kind \
-    --for=condition=ready pod \
-    --selector=app=cloud-provider-kind \
-    --timeout=120s 2>/dev/null || warn "cloud-provider-kind not ready (check manually)"
+    log "Starting cloud-provider-kind ${CLOUD_PROVIDER_KIND_VERSION}"
+    docker run --detach \
+        --name "${CLOUD_PROVIDER_KIND_CONTAINER}" \
+        --network kind \
+        --volume /var/run/docker.sock:/var/run/docker.sock \
+        "registry.k8s.io/cloud-provider-kind/cloud-controller-manager:${CLOUD_PROVIDER_KIND_VERSION}" \
+        --gateway-channel=experimental >/dev/null || fail "Failed to start cloud-provider-kind"
+else
+    log "cloud-provider-kind container is already running"
+fi
+
+log "Waiting for the cloud-provider-kind GatewayClass..."
+for _ in $(seq 1 60); do
+    if kubectl get gatewayclass cloud-provider-kind >/dev/null 2>&1; then
+        break
+    fi
+    sleep 2
+done
+kubectl get gatewayclass cloud-provider-kind >/dev/null 2>&1 || \
+    fail "cloud-provider-kind did not create its GatewayClass; inspect: docker logs ${CLOUD_PROVIDER_KIND_CONTAINER}"
 
 log "Creating test namespaces"
 kubectl create namespace gateway-api-tests --dry-run=client -o yaml | kubectl apply -f - 2>/dev/null || true
@@ -156,4 +181,5 @@ log "To run only integration tests:"
 log "  go test -v -run 'TestAccGatewayAPIIntegration' ./kubernetes/ -timeout 60m"
 log ""
 log "To destroy the cluster:"
+log "  docker rm -f ${CLOUD_PROVIDER_KIND_CONTAINER}"
 log "  kind delete cluster --name ${CLUSTER_NAME}"

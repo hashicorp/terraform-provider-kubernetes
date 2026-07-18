@@ -183,8 +183,7 @@ func testAccCheckGatewayV1Exists(n string, obj *gatewayv1.Gateway) resource.Test
 }
 
 func testAccGatewayV1ConfigBasic(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -210,8 +209,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGatewayV1ConfigListenerTLS(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata {
     name = "tls-cert"
   }
@@ -257,8 +255,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGatewayV1ConfigAllowedRoutes(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -289,8 +286,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGatewayV1ConfigAllowedRoutesWithSelector(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }

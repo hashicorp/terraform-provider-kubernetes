@@ -68,8 +68,7 @@ func smGatewayStack(rName, gcName, protocol string, extraServices ...string) str
 	for _, s := range extraServices {
 		extra += s
 	}
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -109,8 +108,7 @@ resource "kubernetes_service_v1" "backend" {
 }
 
 func testAccHTTPRouteV1CorsAndCookieSessionConfig(rName, gcName string) string {
-	return smGatewayStack(rName, gcName, "HTTP") + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return smGatewayStack(rName, gcName, "HTTP") + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -131,12 +129,12 @@ resource "kubernetes_http_route_v1" "test" {
       filters {
         type = "CORS"
         cors {
-          allow_origins    = ["https://app.example.com"]
-          allow_methods    = ["GET", "POST"]
-          allow_headers    = ["Authorization"]
-          expose_headers   = ["X-Request-Id"]
+          allow_origins     = ["https://app.example.com"]
+          allow_methods     = ["GET", "POST"]
+          allow_headers     = ["Authorization"]
+          expose_headers    = ["X-Request-Id"]
           allow_credentials = true
-          max_age          = 3600
+          max_age           = 3600
         }
       }
 
@@ -161,8 +159,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1MirrorAndCanaryConfig(rName, gcName string) string {
-	extraSvcs := fmt.Sprintf(`
-resource "kubernetes_service_v1" "stable" {
+	extraSvcs := fmt.Sprintf(`resource "kubernetes_service_v1" "stable" {
   metadata { name = "%[1]s-stable" }
   spec {
     selector = { app = "stable" }
@@ -194,8 +191,7 @@ resource "kubernetes_service_v1" "shadow" {
 }
 `, rName)
 
-	return smGatewayStack(rName, gcName, "HTTP", extraSvcs) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return smGatewayStack(rName, gcName, "HTTP", extraSvcs) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -241,8 +237,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccBackendTLSPolicyV1SubjectAltNamesConfig(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "auth" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "auth" {
   metadata {
     name = "%[1]s-auth"
   }
@@ -298,8 +293,7 @@ resource "kubernetes_backend_tls_policy_v1" "test" {
 }
 
 func testAccTLSRouteV1SNIPassthroughConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -375,8 +369,7 @@ resource "kubernetes_tls_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1HeaderSessionConfig(rName, gcName string) string {
-	return smGatewayStack(rName, gcName, "HTTP") + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return smGatewayStack(rName, gcName, "HTTP") + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -418,8 +411,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccGRPCRouteV1ServiceMeshFullConfig(rName, gcName string) string {
-	extraSvcs := fmt.Sprintf(`
-resource "kubernetes_service_v1" "grpc_v1" {
+	extraSvcs := fmt.Sprintf(`resource "kubernetes_service_v1" "grpc_v1" {
   metadata { name = "%[1]s-grpc-v1" }
   spec {
     selector = { app = "grpc-v1" }
@@ -441,8 +433,7 @@ resource "kubernetes_service_v1" "grpc_v2" {
 }
 `, rName)
 
-	return smGatewayStack(rName, gcName, "HTTP", extraSvcs) + fmt.Sprintf(`
-resource "kubernetes_grpc_route_v1" "test" {
+	return smGatewayStack(rName, gcName, "HTTP", extraSvcs) + fmt.Sprintf(`resource "kubernetes_grpc_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -517,8 +508,7 @@ resource "kubernetes_grpc_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1APIGatewayPatternConfig(rName, gcName string) string {
-	extraSvcs := fmt.Sprintf(`
-resource "kubernetes_service_v1" "api" {
+	extraSvcs := fmt.Sprintf(`resource "kubernetes_service_v1" "api" {
   metadata { name = "%[1]s-api" }
   spec {
     selector = { app = "api" }
@@ -540,8 +530,7 @@ resource "kubernetes_service_v1" "static" {
 }
 `, rName)
 
-	return smGatewayStack(rName, gcName, "HTTP", extraSvcs) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return smGatewayStack(rName, gcName, "HTTP", extraSvcs) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -602,7 +591,7 @@ resource "kubernetes_http_route_v1" "test" {
       }
 
       retry {
-        codes   = [500, 502, 503, 504]
+        codes    = [500, 502, 503, 504]
         attempts = 3
         backoff  = "500ms"
       }
@@ -620,7 +609,7 @@ resource "kubernetes_http_route_v1" "test" {
         type = "URLRewrite"
         url_rewrite {
           path {
-            type                = "ReplacePrefixMatch"
+            type                 = "ReplacePrefixMatch"
             replace_prefix_match = "/assets"
           }
         }

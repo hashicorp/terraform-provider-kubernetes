@@ -210,8 +210,7 @@ func testAccKubernetesSecretV1Data_empty(name string) string {
 
 // Generate some basic config, with a secret with basic data
 func testAccKubernetesSecretV1Data_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret_v1_data" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1_data" "test" {
   metadata {
     name = %q
   }
@@ -225,8 +224,7 @@ resource "kubernetes_secret_v1_data" "test" {
 }
 
 func testAccKubernetesSecretV1Data_modified(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret_v1_data" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1_data" "test" {
   metadata {
     name = %q
   }

@@ -1,0 +1,7 @@
+```release-note:feature
+gateway-api: Add Gateway API v1 resources and data sources for GatewayClass, Gateway, HTTPRoute, GRPCRoute, TLSRoute, ListenerSet, BackendTLSPolicy, and ReferenceGrant.
+```
+
+```release-note:bug
+data-source/kubernetes_service_account_v1: Avoid a panic when the ServiceAccount is missing and clear stale secret state when no default token Secret exists.
+```

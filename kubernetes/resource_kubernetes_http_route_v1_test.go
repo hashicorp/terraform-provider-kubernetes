@@ -177,8 +177,7 @@ func testAccCheckHTTPRouteV1Exists(n string, obj *gatewayv1.HTTPRoute) resource.
 }
 
 func testAccHTTPRouteV1ConfigBasic(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s-svc"
   }
@@ -236,8 +235,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigWithMatch(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s-svc"
   }
@@ -306,8 +304,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigWithFilters(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s-svc"
   }
@@ -374,8 +371,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigWithHostnames(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s-svc"
   }
@@ -563,8 +559,7 @@ func TestAccKubernetesHTTPRouteV1_withMultipleRules(t *testing.T) {
 // --- config helpers for new HTTPRoute tests -----------------------------------
 
 func testAccHTTPRouteV1BaseConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s-svc"
   }
@@ -603,8 +598,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigWithSessionPersistence(rName, gcName string) string {
-	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -633,8 +627,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigWithRetry(rName, gcName string) string {
-	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -663,8 +656,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigWithBackendRefFilters(rName, gcName string) string {
-	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -693,8 +685,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigWithMultipleRules(rName, gcName string) string {
-	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return testAccHTTPRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }

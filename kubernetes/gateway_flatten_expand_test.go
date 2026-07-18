@@ -4,11 +4,148 @@
 package kubernetes
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"k8s.io/utils/ptr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
+
+func TestGatewayAPIProtocolTypeValidation(t *testing.T) {
+	tests := map[string]bool{
+		"HTTP":                   true,
+		"GRPC":                   true,
+		"example.com/custom":     true,
+		"example.com":            false,
+		"example.com/foo-bar":    false,
+		"/custom":                false,
+		"":                       false,
+		strings.Repeat("a", 256): false,
+	}
+
+	for protocol, valid := range tests {
+		_, errors := validateGatewayAPIProtocolType(protocol, "protocol")
+		if valid && len(errors) > 0 {
+			t.Errorf("expected protocol %q to be valid, got %v", protocol, errors)
+		}
+		if !valid && len(errors) == 0 {
+			t.Errorf("expected protocol %q to be rejected", protocol)
+		}
+	}
+}
+
+func TestGatewayAPIV15SchemaRequirements(t *testing.T) {
+	tlsSpec := resourceKubernetesTLSRouteV1Schema()["spec"].Elem.(*schema.Resource).Schema
+	if !tlsSpec["hostnames"].Required {
+		t.Error("TLSRoute hostnames must be required")
+	}
+	if !tlsSpec["rules"].Required {
+		t.Error("TLSRoute rules must be required")
+	}
+	tlsRule := tlsSpec["rules"].Elem.(*schema.Resource).Schema
+	if !tlsRule["backend_refs"].Required {
+		t.Error("TLSRoute backend_refs must be required")
+	}
+
+	backendRef := backendObjectReferenceSchema()
+	if !backendRef["port"].Optional || backendRef["port"].Required {
+		t.Error("BackendObjectReference port must be optional for non-Service resources")
+	}
+
+	secretRef := secretObjectReferenceSchema()
+	if got := secretRef["kind"].Default; got != "Secret" {
+		t.Errorf("expected SecretObjectReference kind default to be Secret, got %#v", got)
+	}
+	if got := secretRef["group"].Default; got != "" {
+		t.Errorf("expected SecretObjectReference group default to be empty, got %#v", got)
+	}
+
+	listenerSetSecretRef := listenerSetSecretObjectReferenceSchema()
+	if got := listenerSetSecretRef["kind"].Default; got != "Secret" {
+		t.Errorf("expected ListenerSet SecretObjectReference kind default to be Secret, got %#v", got)
+	}
+	if got := listenerSetSecretRef["group"].Default; got != "" {
+		t.Errorf("expected ListenerSet SecretObjectReference group default to be empty, got %#v", got)
+	}
+}
+
+func TestExpandHTTPRequestMirrorFilterPreservesZeroPercent(t *testing.T) {
+	mirror := expandHTTPRequestMirrorFilter([]interface{}{map[string]interface{}{
+		"backend_ref": []interface{}{map[string]interface{}{
+			"name": "mirror-backend",
+			"port": 8080,
+		}},
+		"percent": 0,
+	}})
+
+	if mirror.Percent == nil {
+		t.Fatal("expected explicit zero percent to remain present")
+	}
+	if got := *mirror.Percent; got != 0 {
+		t.Fatalf("expected zero mirror percent, got %d", got)
+	}
+
+	withoutPercent := expandHTTPRequestMirrorFilter([]interface{}{map[string]interface{}{
+		"backend_ref": []interface{}{map[string]interface{}{
+			"name": "mirror-backend",
+			"port": 8080,
+		}},
+	}})
+	if withoutPercent.Percent != nil {
+		t.Fatalf("expected omitted percent to remain nil, got %d", *withoutPercent.Percent)
+	}
+}
+
+func TestHTTPRouteSchemaPreservesExplicitZeroMirrorPercent(t *testing.T) {
+	raw := map[string]interface{}{
+		"spec": []interface{}{map[string]interface{}{
+			"rules": []interface{}{map[string]interface{}{
+				"filters": []interface{}{map[string]interface{}{
+					"type": "RequestMirror",
+					"request_mirror": []interface{}{map[string]interface{}{
+						"backend_ref": []interface{}{map[string]interface{}{
+							"name": "mirror-backend",
+							"port": 8080,
+						}},
+						"percent": 0,
+					}},
+				}},
+			}},
+		}},
+	}
+
+	data := schema.TestResourceDataRaw(t, resourceKubernetesHTTPRouteV1Schema(), raw)
+	spec := expandHTTPRouteSpec(data.Get("spec").([]interface{}))
+	mirror := spec.Rules[0].Filters[0].RequestMirror
+	if mirror == nil || mirror.Percent == nil || *mirror.Percent != 0 {
+		t.Fatalf("expected Terraform schema round-trip to preserve explicit zero percent, got %#v", mirror)
+	}
+}
+
+func TestCORSMaxAgeRejectsZero(t *testing.T) {
+	maxAge := corsFilterSchema().Elem.(*schema.Resource).Schema["max_age"]
+	_, errors := maxAge.ValidateFunc(0, "max_age")
+	if len(errors) == 0 {
+		t.Fatal("expected CORS max_age=0 to be rejected")
+	}
+	_, errors = maxAge.ValidateFunc(1, "max_age")
+	if len(errors) != 0 {
+		t.Fatalf("expected CORS max_age=1 to be accepted, got %v", errors)
+	}
+}
+
+func TestRequestRedirectPortValidation(t *testing.T) {
+	port := requestRedirectFilterSchema().Elem.(*schema.Resource).Schema["port"]
+	_, errors := port.ValidateFunc(0, "port")
+	if len(errors) == 0 {
+		t.Fatal("expected redirect port 0 to be rejected")
+	}
+	_, errors = port.ValidateFunc(443, "port")
+	if len(errors) != 0 {
+		t.Fatalf("expected redirect port 443 to be accepted, got %v", errors)
+	}
+}
 
 func TestFlattenHTTPRouteSpecRoundtrip(t *testing.T) {
 	spec := gatewayv1.HTTPRouteSpec{

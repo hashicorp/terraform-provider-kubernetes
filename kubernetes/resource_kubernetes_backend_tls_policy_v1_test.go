@@ -172,8 +172,7 @@ func testAccCheckBackendTLSPolicyV1Exists(n string, obj *gatewayv1.BackendTLSPol
 }
 
 func testAccBackendTLSPolicyV1ConfigBasic(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata { name = "%[1]s-svc" }
   spec {
     selector = { app = "test" }
@@ -185,7 +184,9 @@ resource "kubernetes_service_v1" "test" {
 }
 
 resource "kubernetes_backend_tls_policy_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     target_refs {
       group = ""
@@ -202,8 +203,7 @@ resource "kubernetes_backend_tls_policy_v1" "test" {
 }
 
 func testAccBackendTLSPolicyV1ConfigUpdatedHostname(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata { name = "%[1]s-svc" }
   spec {
     selector = { app = "test" }
@@ -215,7 +215,9 @@ resource "kubernetes_service_v1" "test" {
 }
 
 resource "kubernetes_backend_tls_policy_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     target_refs {
       group = ""
@@ -232,8 +234,7 @@ resource "kubernetes_backend_tls_policy_v1" "test" {
 }
 
 func testAccBackendTLSPolicyV1ConfigWithSubjectAltNames(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata { name = "%[1]s-svc" }
   spec {
     selector = { app = "test" }
@@ -245,7 +246,9 @@ resource "kubernetes_service_v1" "test" {
 }
 
 resource "kubernetes_backend_tls_policy_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     target_refs {
       group = ""
@@ -270,8 +273,7 @@ resource "kubernetes_backend_tls_policy_v1" "test" {
 }
 
 func testAccBackendTLSPolicyV1ConfigWithOptions(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata { name = "%[1]s-svc" }
   spec {
     selector = { app = "test" }
@@ -283,7 +285,9 @@ resource "kubernetes_service_v1" "test" {
 }
 
 resource "kubernetes_backend_tls_policy_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     target_refs {
       group = ""

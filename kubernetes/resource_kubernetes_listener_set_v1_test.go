@@ -174,9 +174,10 @@ func testAccCheckListenerSetV1Exists(n string, obj *gatewayv1.ListenerSet) resou
 }
 
 func testAccListenerSetV1ConfigBasic(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %[2]q }
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
+  metadata {
+    name = %[2]q
+  }
   spec { controller_name = "example.com/gateway-controller" }
 }
 
@@ -193,7 +194,9 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 resource "kubernetes_listener_set_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     parent_ref { name = kubernetes_gateway_v1.test.metadata.0.name }
     listeners {
@@ -207,9 +210,10 @@ resource "kubernetes_listener_set_v1" "test" {
 }
 
 func testAccListenerSetV1ConfigMultipleListeners(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %[2]q }
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
+  metadata {
+    name = %[2]q
+  }
   spec { controller_name = "example.com/gateway-controller" }
 }
 
@@ -226,7 +230,9 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 resource "kubernetes_listener_set_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     parent_ref { name = kubernetes_gateway_v1.test.metadata.0.name }
     listeners {
@@ -245,8 +251,7 @@ resource "kubernetes_listener_set_v1" "test" {
 }
 
 func testAccListenerSetV1ConfigWithTLS(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_secret_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
   metadata { name = "%[1]s-tls" }
   data = {
     "tls.crt" = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCekNDQWMrZ0F3SUJBZ0lSQUp2ZjJ2TnBkYnJmYnFMd0t0K2JFQXdNQTVHQTFVZERnNVY05DUXF3R0FZRApWUVFLRXd4ME1CNHdNQ0lHQTFVRUNnd0xYMEV4RGpBUUJnTlZCQU1NR0VwaklGb1hEVEk0TURreE1qQTVPVEF4Ck1CTUdCeXFHU000OUFnRUdDQ3FHU000OUF3RUhBMElBQkJqWVN5YkI2dXJkVjB1NnlLWUJxZjIwQlNjY0ZmYQpGdWJxQ0V3bVd6T2hJb1FjYjVxM0d0QWJ3cGdFZlJnS3FwNk9jUjM3Q0R1VUdKc3JkVXhKdEh5M29hMGRJWjcKZ0JmREI1c29rZ3N1eXF0T09sR0d0V2RlR3B3aEJlR0h6Nmh5VXJhNmdJZnB5b0tQZVdKbEhJNWdZcGJkYkJVCnlrV3NvN0p6cVh1dG1sWnNpT2hZbW1JYk9vVWd4cW1xN1VJMXNkRzRrWkN1T2RqNGx2VjB5V0NqT1l5YkpjSQpGQW5oQWdNQkFBRXdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBTjQ3TlJhVUJZb3JkV3M3c3R4MmJ1N1p6aGQwCmMwVnF2WjdGZEVhN3ZQd0FqS3J5aVdGdXZsQWp3eXpJWU5hR0pZcWxjNzR2NlN4dU1vQW93VzJvMXhLWlBvT0MKM1h6N3dJNlJxYjJ3bUJ3N2R5VjN1V01xM2lWd3N1aDdJc2VJdXJrYjFyZmJyNjNqV2VZMXp3T250S3ZzV2NxCm5vUXR3cDdIb0lPbWVYQnFZMnhXcWpRbVZ5b3F6U3N5WnVZcXp5QXVJN3V5eU5lZnBJNlBnN1ZlVHh2b3VZaQo4MjJrZGZsUjJ3V0l6Y3F4cDh3b253UjN3aWJ3Z2hLcHJrZ1p5cXVhM3FhR2VlQ2ZyZ3F5N2R3b1F3PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="
@@ -256,7 +261,9 @@ resource "kubernetes_secret_v1" "test" {
 }
 
 resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %[2]q }
+  metadata {
+    name = %[2]q
+  }
   spec { controller_name = "example.com/gateway-controller" }
 }
 
@@ -273,7 +280,9 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 resource "kubernetes_listener_set_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     parent_ref { name = kubernetes_gateway_v1.test.metadata.0.name }
     listeners {
@@ -293,9 +302,10 @@ resource "kubernetes_listener_set_v1" "test" {
 }
 
 func testAccListenerSetV1ConfigUpdatedPort(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %[2]q }
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
+  metadata {
+    name = %[2]q
+  }
   spec { controller_name = "example.com/gateway-controller" }
 }
 
@@ -312,7 +322,9 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 resource "kubernetes_listener_set_v1" "test" {
-  metadata { name = %[1]q }
+  metadata {
+    name = %[1]q
+  }
   spec {
     parent_ref { name = kubernetes_gateway_v1.test.metadata.0.name }
     listeners {

@@ -63,7 +63,7 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 					"hostnames": {
 						Type:        schema.TypeList,
 						Description: "Hostnames defines a set of SNI hostnames that should match against the SNI attribute. Maximum 16 hostnames (Gateway API spec limit).",
-						Optional:    true,
+						Required:    true,
 						MinItems:    1,
 						MaxItems:    16,
 						Elem: &schema.Schema{
@@ -79,7 +79,7 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 					"rules": {
 						Type:        schema.TypeList,
 						Description: "Rules are a list of TLS matchers and actions. Maximum 1 rule per route (Gateway API spec limit).",
-						Optional:    true,
+						Required:    true,
 						MinItems:    1,
 						MaxItems:    1,
 						Elem: &schema.Resource{
@@ -92,7 +92,7 @@ func resourceKubernetesTLSRouteV1Schema() map[string]*schema.Schema {
 								"backend_refs": {
 									Type:        schema.TypeList,
 									Description: "BackendRefs defines the backend(s) where matching requests should be sent.",
-									Optional:    true,
+									Required:    true,
 									MinItems:    1,
 									MaxItems:    16,
 									Elem: &schema.Resource{
@@ -199,9 +199,10 @@ func tlsBackendObjectReferenceSchema() map[string]*schema.Schema {
 			Optional:    true,
 		},
 		"port": {
-			Type:        schema.TypeInt,
-			Description: "Port is the port number of the referent.",
-			Required:    true,
+			Type:         schema.TypeInt,
+			Description:  "Port is required for Service references and optional for other resource kinds.",
+			Optional:     true,
+			ValidateFunc: validation.IsPortNumber,
 		},
 	}
 }

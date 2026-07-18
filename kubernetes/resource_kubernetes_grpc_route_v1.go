@@ -203,8 +203,8 @@ func resourceKubernetesGRPCRouteV1Schema() map[string]*schema.Schema {
 											},
 											"port": {
 												Type:         schema.TypeInt,
-												Description:  "Port is the port number of the referent.",
-												Required:     true,
+												Description:  "Port is required for Service references and optional for other resource kinds.",
+												Optional:     true,
 												ValidateFunc: validation.IsPortNumber,
 											},
 											"weight": {
@@ -349,9 +349,10 @@ func grpcBackendObjectReferenceSchema() map[string]*schema.Schema {
 			Optional:    true,
 		},
 		"port": {
-			Type:        schema.TypeInt,
-			Description: "Port is the port number of the referent.",
-			Required:    true,
+			Type:         schema.TypeInt,
+			Description:  "Port is required for Service references and optional for other resource kinds.",
+			Optional:     true,
+			ValidateFunc: validation.IsPortNumber,
 		},
 	}
 }

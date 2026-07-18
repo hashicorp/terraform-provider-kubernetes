@@ -188,8 +188,7 @@ func TestAccKubernetesDataSourceHTTPRouteV1_complex(t *testing.T) {
 }
 
 func gatewayStackConfig(rName, gcName, protocol string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -241,8 +240,7 @@ resource "kubernetes_service_v1" "backend2" {
 }
 
 func testAccHTTPRouteV1ConfigComplex(rName, gcName string) string {
-	return gatewayStackConfig(rName, gcName, "HTTP") + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return gatewayStackConfig(rName, gcName, "HTTP") + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -355,8 +353,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigComplexUpdated(rName, gcName string) string {
-	return gatewayStackConfig(rName, gcName, "HTTP") + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return gatewayStackConfig(rName, gcName, "HTTP") + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -489,8 +486,7 @@ resource "kubernetes_http_route_v1" "test" {
 }
 
 func testAccHTTPRouteV1ConfigComplexWithDataSource(rName, gcName string) string {
-	return gatewayStackConfig(rName, gcName, "HTTP") + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "test" {
+	return gatewayStackConfig(rName, gcName, "HTTP") + fmt.Sprintf(`resource "kubernetes_http_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -554,8 +550,7 @@ data "kubernetes_http_route_v1" "read" {
 func testAccGatewayAPIStackCrossNamespace(rName, gcName string) string {
 	nsA := "default"
 	nsB := fmt.Sprintf("%s-b", rName)
-	return fmt.Sprintf(`
-resource "kubernetes_namespace_v1" "secondary" {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "secondary" {
   metadata {
     name = %[3]q
   }
@@ -665,8 +660,7 @@ resource "kubernetes_http_route_v1" "cross" {
 }
 
 func testAccGRPCRouteV1ConfigComplex(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -780,8 +774,7 @@ resource "kubernetes_grpc_route_v1" "test" {
 }
 
 func testAccGRPCRouteV1ConfigComplexUpdated(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }

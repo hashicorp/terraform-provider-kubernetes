@@ -104,8 +104,7 @@ func testAccCheckGRPCRouteV1Exists(n string, obj *gatewayv1.GRPCRoute) resource.
 }
 
 func testAccGRPCRouteV1ConfigBasic(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s-svc"
   }
@@ -290,8 +289,7 @@ func TestAccKubernetesGRPCRouteV1_withWeightedBackends(t *testing.T) {
 // --- config helpers for new GRPCRoute tests -----------------------------------
 
 func testAccGRPCRouteV1BaseConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%[1]s-svc"
   }
@@ -330,8 +328,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGRPCRouteV1ConfigWithMethodMatching(rName, gcName string) string {
-	return testAccGRPCRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_grpc_route_v1" "test" {
+	return testAccGRPCRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`resource "kubernetes_grpc_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -377,8 +374,7 @@ resource "kubernetes_grpc_route_v1" "test" {
 }
 
 func testAccGRPCRouteV1ConfigWithHeaderMatching(rName, gcName string) string {
-	return testAccGRPCRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_grpc_route_v1" "test" {
+	return testAccGRPCRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`resource "kubernetes_grpc_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -410,8 +406,7 @@ resource "kubernetes_grpc_route_v1" "test" {
 }
 
 func testAccGRPCRouteV1ConfigWithSessionPersistence(rName, gcName string) string {
-	return testAccGRPCRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_grpc_route_v1" "test" {
+	return testAccGRPCRouteV1BaseConfig(rName, gcName) + fmt.Sprintf(`resource "kubernetes_grpc_route_v1" "test" {
   metadata {
     name = %[1]q
   }
@@ -436,8 +431,7 @@ resource "kubernetes_grpc_route_v1" "test" {
 }
 
 func testAccGRPCRouteV1ConfigWithWeightedBackends(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "v1" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "v1" {
   metadata {
     name = "%[1]s-svc-v1"
   }

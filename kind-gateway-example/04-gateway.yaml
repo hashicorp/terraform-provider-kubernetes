@@ -4,7 +4,7 @@ metadata:
   name: main-gateway
   namespace: default
 spec:
-  gatewayClassName: envoy
+  gatewayClassName: cloud-provider-kind
   listeners:
   - name: http
     protocol: HTTP

@@ -56,8 +56,7 @@ func TestAccKubernetesGatewayV1DataSource_basic(t *testing.T) {
 }
 
 func testAccGatewayV1DataSourceConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -135,8 +134,7 @@ func TestAccKubernetesHTTPRouteV1DataSource_basic(t *testing.T) {
 }
 
 func testAccHTTPRouteV1DataSourceConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -256,8 +254,7 @@ func TestAccKubernetesGRPCRouteV1DataSource_basic(t *testing.T) {
 }
 
 func testAccGRPCRouteV1DataSourceConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -373,8 +370,7 @@ func TestAccKubernetesTLSRouteV1DataSource_basic(t *testing.T) {
 }
 
 func testAccTLSRouteV1DataSourceConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }
@@ -487,8 +483,7 @@ func TestAccKubernetesReferenceGrantV1DataSource_basic(t *testing.T) {
 }
 
 func testAccReferenceGrantV1DataSourceConfig(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_reference_grant_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_reference_grant_v1" "test" {
   metadata {
     name      = %[1]q
     namespace = "default"
@@ -557,8 +552,7 @@ func TestAccKubernetesBackendTLSPolicyV1DataSource_basic(t *testing.T) {
 }
 
 func testAccBackendTLSPolicyV1DataSourceConfig(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name      = "%[1]s-svc"
     namespace = "default"
@@ -645,8 +639,7 @@ func TestAccKubernetesListenerSetV1DataSource_basic(t *testing.T) {
 }
 
 func testAccListenerSetV1DataSourceConfig(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %[2]q
   }

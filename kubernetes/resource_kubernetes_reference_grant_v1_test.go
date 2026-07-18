@@ -181,8 +181,7 @@ func testAccCheckReferenceGrantV1Exists(n string, obj *gatewayv1.ReferenceGrant)
 }
 
 func testAccReferenceGrantV1ConfigBasic(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_reference_grant_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_reference_grant_v1" "test" {
   metadata {
     name      = %q
     namespace = "default"
@@ -203,8 +202,7 @@ resource "kubernetes_reference_grant_v1" "test" {
 }
 
 func testAccReferenceGrantV1ConfigUpdatedNamespace(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_reference_grant_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_reference_grant_v1" "test" {
   metadata {
     name      = %q
     namespace = "default"
@@ -225,8 +223,7 @@ resource "kubernetes_reference_grant_v1" "test" {
 }
 
 func testAccReferenceGrantV1ConfigWithGRPCRoute(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_reference_grant_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_reference_grant_v1" "test" {
   metadata {
     name      = %q
     namespace = "default"
@@ -248,8 +245,7 @@ resource "kubernetes_reference_grant_v1" "test" {
 }
 
 func testAccReferenceGrantV1ConfigMultipleFromTo(rName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_reference_grant_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_reference_grant_v1" "test" {
   metadata {
     name      = %q
     namespace = "default"

@@ -64,8 +64,7 @@ func TestAccKubernetesGatewayAPI_HTTPSRedirect(t *testing.T) {
 }
 
 func testAccGatewayAPIHTTPSRedirect(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
   metadata {
     name = %q
   }
@@ -235,9 +234,10 @@ func TestAccKubernetesGatewayAPI_CanaryDeployment(t *testing.T) {
 }
 
 func testAccGatewayAPICanaryBase(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %q }
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
+  metadata {
+    name = %q
+  }
   spec { controller_name = "example.com/foo" }
 }
 
@@ -287,8 +287,7 @@ resource "kubernetes_gateway_v1" "test" {
 }
 
 func testAccGatewayAPICanaryStep1(rName, gcName string) string {
-	return testAccGatewayAPICanaryBase(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "canary" {
+	return testAccGatewayAPICanaryBase(rName, gcName) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "canary" {
   metadata {
     name      = "%s-canary"
     namespace = "default"
@@ -332,8 +331,7 @@ resource "kubernetes_http_route_v1" "canary" {
 }
 
 func testAccGatewayAPICanaryStep2(rName, gcName string) string {
-	return testAccGatewayAPICanaryBase(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "canary" {
+	return testAccGatewayAPICanaryBase(rName, gcName) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "canary" {
   metadata {
     name      = "%s-canary"
     namespace = "default"
@@ -367,8 +365,7 @@ resource "kubernetes_http_route_v1" "canary" {
 }
 
 func testAccGatewayAPICanaryStep3(rName, gcName string) string {
-	return testAccGatewayAPICanaryBase(rName, gcName) + fmt.Sprintf(`
-resource "kubernetes_http_route_v1" "canary" {
+	return testAccGatewayAPICanaryBase(rName, gcName) + fmt.Sprintf(`resource "kubernetes_http_route_v1" "canary" {
   metadata {
     name      = "%s-canary"
     namespace = "default"
@@ -451,9 +448,10 @@ func TestAccKubernetesGatewayAPI_PathBasedMicroservices(t *testing.T) {
 }
 
 func testAccGatewayAPIPathBasedMicroservices(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %q }
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
+  metadata {
+    name = %q
+  }
   spec { controller_name = "example.com/foo" }
 }
 
@@ -553,7 +551,7 @@ resource "kubernetes_http_route_v1" "api" {
         type = "URLRewrite"
         url_rewrite {
           path {
-            type                = "ReplacePrefixMatch"
+            type                 = "ReplacePrefixMatch"
             replace_prefix_match = "/"
           }
         }
@@ -578,7 +576,7 @@ resource "kubernetes_http_route_v1" "api" {
         type = "URLRewrite"
         url_rewrite {
           path {
-            type                = "ReplacePrefixMatch"
+            type                 = "ReplacePrefixMatch"
             replace_prefix_match = "/"
           }
         }
@@ -677,9 +675,10 @@ func TestAccKubernetesGatewayAPI_GRPCRoutingAdvanced(t *testing.T) {
 }
 
 func testAccGatewayAPIGRPCAdvanced(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %q }
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
+  metadata {
+    name = %q
+  }
   spec { controller_name = "example.com/foo" }
 }
 
@@ -878,9 +877,10 @@ func TestAccKubernetesGatewayAPI_MultiTenantFull(t *testing.T) {
 }
 
 func testAccGatewayAPIMultiTenantFull(rName, gcName string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_gateway_class_v1" "test" {
-  metadata { name = %q }
+	return fmt.Sprintf(`resource "kubernetes_gateway_class_v1" "test" {
+  metadata {
+    name = %q
+  }
   spec { controller_name = "example.com/foo" }
 }
 
@@ -984,7 +984,7 @@ resource "kubernetes_http_route_v1" "tenant" {
         }
       }
       retry {
-        codes   = [503, 504]
+        codes    = [503, 504]
         attempts = 3
         backoff  = "100ms"
       }

@@ -207,7 +207,7 @@ func flattenListenerSetConditions(in []metav1.Condition) []interface{} {
 		condition["status"] = string(c.Status)
 		condition["message"] = c.Message
 		condition["reason"] = c.Reason
-		if c.LastTransitionTime.IsZero() == false {
+		if !c.LastTransitionTime.IsZero() {
 			condition["last_transition_time"] = c.LastTransitionTime.Format(time.RFC3339)
 		}
 		if c.ObservedGeneration != 0 {

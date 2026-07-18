@@ -108,10 +108,10 @@ func resourceKubernetesListenerSetV1Schema() map[string]*schema.Schema {
 									ValidateFunc: validation.IsPortNumber,
 								},
 								"protocol": {
-									Type:             schema.TypeString,
-									Description:      "Protocol specifies the network protocol.",
-									Required:         true,
-									ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"HTTP", "HTTPS", "TCP", "UDP", "TLS", "GRPC"}, false)),
+									Type:         schema.TypeString,
+									Description:  "Protocol specifies the network protocol.",
+									Required:     true,
+									ValidateFunc: validateGatewayAPIProtocolType,
 								},
 								"tls": {
 									Type:        schema.TypeList,
@@ -242,6 +242,7 @@ func listenerSetSecretObjectReferenceSchema() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Group is the group of the referent.",
 			Optional:    true,
+			Default:     "",
 		},
 		"kind": {
 			Type:        schema.TypeString,

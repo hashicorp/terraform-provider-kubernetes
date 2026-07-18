@@ -28,7 +28,6 @@ website/node_modules
 *.iml
 .terraform.lock.hcl
 website/vendor
-vendor/
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
@@ -37,5 +36,3 @@ vendor/
 # output binary
 terraform-provider-kubernetes
 __debug_bin
-.omo/
-terraform-provider-kubernetes_v*

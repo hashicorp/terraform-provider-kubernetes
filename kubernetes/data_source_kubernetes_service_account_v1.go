@@ -125,14 +125,12 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 		return diag.Errorf("default_secret_name must be a string")
 	}
 
-	if defaultSecretName != "" {
-		log.Printf("[DEBUG] Setting default secret name for ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
-		secrets := flattenServiceAccountSecrets(sa.Secrets, defaultSecretName)
-		err = d.Set("secret", secrets)
-		if err != nil {
-			diagMsg = append(diagMsg, diag.FromErr(err)...)
-			return diagMsg
-		}
+	log.Printf("[DEBUG] Setting secrets for ServiceAccount %s/%s", metadata.Namespace, metadata.Name)
+	secrets := flattenServiceAccountSecrets(sa.Secrets, defaultSecretName)
+	err = d.Set("secret", secrets)
+	if err != nil {
+		diagMsg = append(diagMsg, diag.FromErr(err)...)
+		return diagMsg
 	}
 
 	return nil

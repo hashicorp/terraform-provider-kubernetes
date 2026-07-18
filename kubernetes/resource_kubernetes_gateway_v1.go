@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -83,12 +84,10 @@ func resourceKubernetesGatewayV1Schema() map[string]*schema.Schema {
 									ValidateFunc: validation.IsPortNumber,
 								},
 								"protocol": {
-									Type:        schema.TypeString,
-									Description: "Protocol specifies the network protocol this listener expects to receive.",
-									Required:    true,
-									ValidateFunc: validation.StringInSlice([]string{
-										"HTTP", "HTTPS", "TCP", "UDP", "TLS", "GRPC",
-									}, false),
+									Type:         schema.TypeString,
+									Description:  "Protocol specifies the network protocol this listener expects to receive.",
+									Required:     true,
+									ValidateFunc: validateGatewayAPIProtocolType,
 								},
 								"tls": {
 									Type:        schema.TypeList,
@@ -482,11 +481,13 @@ func secretObjectReferenceSchema() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Group is the group of the referent.",
 			Optional:    true,
+			Default:     "",
 		},
 		"kind": {
 			Type:        schema.TypeString,
 			Description: "Kind is kind of the referent.",
 			Optional:    true,
+			Default:     "Secret",
 		},
 		"name": {
 			Type:        schema.TypeString,
@@ -499,6 +500,18 @@ func secretObjectReferenceSchema() map[string]*schema.Schema {
 			Optional:    true,
 		},
 	}
+}
+
+var gatewayAPIProtocolTypeRegexp = regexp.MustCompile(`^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9]+$`)
+
+func validateGatewayAPIProtocolType(v interface{}, key string) ([]string, []error) {
+	return validation.All(
+		validation.StringLenBetween(1, 255),
+		validation.StringMatch(
+			gatewayAPIProtocolTypeRegexp,
+			"must be a valid core protocol name or a domain-prefixed implementation-specific protocol",
+		),
+	)(v, key)
 }
 
 func routeNamespacesSchema() map[string]*schema.Schema {

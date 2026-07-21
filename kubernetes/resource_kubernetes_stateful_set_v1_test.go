@@ -1478,3 +1478,86 @@ func testAccKubernetesStatefulSetV1ConfigMinimalWithTemplateNamespace(name, imag
 }
 `, name, imageName)
 }
+
+func TestAccKubernetesStatefulSetV1_volumeClaimTemplateDataSource(t *testing.T) {
+	var conf appsv1.StatefulSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_stateful_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigVolumeClaimTemplateDataSource(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.data_source.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.data_source.0.kind", "VolumeSnapshot"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.data_source.0.name", name+"-snapshot"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.data_source.0.api_group", "snapshot.storage.k8s.io"),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesStatefulSetV1ConfigVolumeClaimTemplateDataSource(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+    service_name = "ss-test-service"
+    replicas     = 0
+    template {
+      metadata {
+        labels = {
+          app = "ss-test"
+        }
+      }
+      spec {
+        container {
+          name    = "ss-test"
+          image   = "%s"
+          command = ["sleep", "300"]
+
+          volume_mount {
+            name       = "data"
+            mount_path = "/data"
+          }
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+    volume_claim_template {
+      metadata {
+        name = "data"
+      }
+      spec {
+        access_modes       = ["ReadWriteOnce"]
+        storage_class_name = "standard"
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+        data_source {
+          api_group = "snapshot.storage.k8s.io"
+          kind      = "VolumeSnapshot"
+          name      = "%s-snapshot"
+        }
+      }
+    }
+  }
+  wait_for_rollout = false
+}
+`, name, imageName, name)
+}

@@ -154,9 +154,10 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		var namespace string
 		dsConfig["namespace"].As(&namespace)
 		if namespace == "" {
-			namespace = "default"
+			res, err = rcl.List(ctx, listOptions)
+		} else {
+			res, err = rcl.Namespace(namespace).List(ctx, listOptions)
 		}
-		res, err = rcl.Namespace(namespace).List(ctx, listOptions)
 	} else {
 		res, err = rcl.List(ctx, listOptions)
 	}

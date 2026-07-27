@@ -438,6 +438,9 @@ func flattenVolumes(volumes []v1.Volume) []interface{} {
 		if v.PhotonPersistentDisk != nil {
 			obj["photon_persistent_disk"] = flattenPhotonPersistentDiskVolumeSource(v.PhotonPersistentDisk)
 		}
+		if v.Image != nil {
+			obj["image"] = flattenImageVolumeSource(v.Image)
+		}
 		if v.Ephemeral != nil {
 			obj["ephemeral"] = flattenPodEphemeralVolumeSource(v.Ephemeral)
 		}
@@ -698,6 +701,17 @@ func flattenPodEphemeralVolumeClaimTemplate(in *v1.PersistentVolumeClaimTemplate
 
 	att["spec"] = flattenPersistentVolumeClaimSpec(in.Spec)
 
+	return []interface{}{att}
+}
+
+func flattenImageVolumeSource(in *v1.ImageVolumeSource) []interface{} {
+	att := make(map[string]interface{})
+	if in.Reference != "" {
+		att["reference"] = in.Reference
+	}
+	if in.PullPolicy != "" {
+		att["pull_policy"] = string(in.PullPolicy)
+	}
 	return []interface{}{att}
 }
 
@@ -1148,6 +1162,21 @@ func expandDownwardAPIVolumeFile(in []interface{}) ([]v1.DownwardAPIVolumeFile, 
 		}
 	}
 	return dapivf, nil
+}
+
+func expandImageVolumeSource(l []interface{}) *v1.ImageVolumeSource {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.ImageVolumeSource{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.ImageVolumeSource{}
+	if v, ok := in["reference"].(string); ok && v != "" {
+		obj.Reference = v
+	}
+	if v, ok := in["pull_policy"].(string); ok && v != "" {
+		obj.PullPolicy = v1.PullPolicy(v)
+	}
+	return obj
 }
 
 func expandConfigMapVolumeSource(l []interface{}) (*v1.ConfigMapVolumeSource, error) {
@@ -1628,6 +1657,9 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		}
 		if v, ok := m["photon_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 			vl[i].PhotonPersistentDisk = expandPhotonPersistentDiskVolumeSource(v)
+		}
+		if v, ok := m["image"].([]interface{}); ok && len(v) > 0 {
+			vl[i].Image = expandImageVolumeSource(v)
 		}
 		if v, ok := m["ephemeral"].([]interface{}); ok && len(v) > 0 {
 			ephemeral, err := expandEphemeralVolumeSource(v)

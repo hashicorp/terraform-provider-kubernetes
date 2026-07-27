@@ -14,8 +14,8 @@ func TestFlattenStatefulSetSpecUpdateStrategy_maxUnavailable(t *testing.T) {
 	input := v1.StatefulSetUpdateStrategy{
 		Type: v1.RollingUpdateStatefulSetStrategyType,
 		RollingUpdate: &v1.RollingUpdateStatefulSetStrategy{
-			Partition:       ptr.To(int32(1)),
-			MaxUnavailable:  &maxUnavailable,
+			Partition:      ptr.To(int32(1)),
+			MaxUnavailable: &maxUnavailable,
 		},
 	}
 

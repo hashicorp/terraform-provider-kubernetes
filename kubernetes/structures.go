@@ -138,14 +138,15 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 	metadataAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
 	metadataLabels := d.Get("metadata.0.labels").(map[string]interface{})
 
-	ignoreAnnotations := providerMeta.(providerMetadata).IgnoreAnnotations
-	removeInternalKeys(meta.Annotations, metadataAnnotations)
-	removeKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
+	pm := providerMeta.(providerMetadata)
+	return flattenMetadataFiltered(meta, metadataAnnotations, metadataLabels, pm.IgnoreAnnotations, pm.IgnoreLabels)
+}
 
-	ignoreLabels := providerMeta.(providerMetadata).IgnoreLabels
-	removeInternalKeys(meta.Labels, metadataLabels)
-	removeKeys(meta.Labels, metadataLabels, ignoreLabels)
-
+func flattenMetadataFiltered(meta metav1.ObjectMeta, userAnnotations, userLabels map[string]interface{}, ignoreAnnotations, ignoreLabels []string) []interface{} {
+	removeInternalKeys(meta.Annotations, userAnnotations)
+	removeKeys(meta.Annotations, userAnnotations, ignoreAnnotations)
+	removeInternalKeys(meta.Labels, userLabels)
+	removeKeys(meta.Labels, userLabels, ignoreLabels)
 	return flattenMetadataFields(meta)
 }
 

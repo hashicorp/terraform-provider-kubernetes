@@ -167,7 +167,7 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData, met
 	if spec.ServiceName != "" {
 		att["service_name"] = spec.ServiceName
 	}
-	template, err := flattenPodTemplateSpec(spec.Template)
+	template, err := flattenPodTemplateSpec(spec.Template, d, meta)
 	if err != nil {
 		return []interface{}{att}, err
 	}
@@ -189,10 +189,16 @@ func flattenStatefulSetSpec(spec v1.StatefulSetSpec, d *schema.ResourceData, met
 	return []interface{}{att}, nil
 }
 
-func flattenPodTemplateSpec(t corev1.PodTemplateSpec) ([]interface{}, error) {
+func flattenPodTemplateSpec(t corev1.PodTemplateSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	template := make(map[string]interface{})
 
-	template["metadata"] = flattenMetadataFields(t.ObjectMeta)
+	template["metadata"] = flattenMetadataFiltered(
+		t.ObjectMeta,
+		d.Get("template.0.metadata.0.annotations").(map[string]interface{}),
+		d.Get("template.0.metadata.0.labels").(map[string]interface{}),
+		meta.(providerMetadata).IgnoreAnnotations,
+		meta.(providerMetadata).IgnoreLabels,
+	)
 	spec, err := flattenPodSpec(t.Spec, true)
 	if err != nil {
 		return []interface{}{template}, err

@@ -778,5 +778,3 @@ func TestExpandPodSecurityContext_SeLinuxChangePolicy(t *testing.T) {
 		t.Fatalf("Expected SELinuxChangePolicy=%q, got %q", corev1.SELinuxChangePolicyRecursive, *output.SELinuxChangePolicy)
 	}
 }
-
-

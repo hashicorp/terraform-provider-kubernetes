@@ -4,6 +4,8 @@
 package kubernetes
 
 import (
+	"regexp"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
@@ -77,21 +79,27 @@ func statefulSetSpecFields() map[string]*schema.Schema {
 							"OnDelete",
 						}, false),
 					},
-					"rolling_update": {
-						Type:        schema.TypeList,
-						Description: "RollingUpdate strategy type for StatefulSet",
-						Optional:    true,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								"partition": {
-									Type:        schema.TypeInt,
-									Optional:    true,
-									Description: "Indicates the ordinal at which the StatefulSet should be partitioned. Default value is 0.",
-									Default:     0,
+						"rolling_update": {
+								Type:        schema.TypeList,
+								Description: "RollingUpdate strategy type for StatefulSet",
+								Optional:    true,
+								Elem: &schema.Resource{
+									Schema: map[string]*schema.Schema{
+										"partition": {
+											Type:        schema.TypeInt,
+											Optional:    true,
+											Description: "Indicates the ordinal at which the StatefulSet should be partitioned. Default value is 0.",
+											Default:     0,
+										},
+										"max_unavailable": {
+											Type:         schema.TypeString,
+											Description:  "The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding up. This can not be 0 if MaxSurge is 0. Defaults to 1.",
+											Optional:     true,
+											ValidateFunc: validation.StringMatch(regexp.MustCompile(`^([0-9]+|[0-9]+%|)$`), ""),
+										},
+									},
 								},
 							},
-						},
-					},
 				},
 			},
 		},

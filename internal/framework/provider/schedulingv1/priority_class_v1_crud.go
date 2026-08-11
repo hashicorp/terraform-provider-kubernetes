@@ -34,13 +34,14 @@ func (r *PriorityClassV1) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	m := plan.Metadata[0]
 	preemptionPolicy := corev1.PreemptionPolicy(plan.PreemptionPolicy.ValueString())
 	obj := &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:         plan.Metadata.Name.ValueString(),
-			GenerateName: plan.Metadata.GenerateName.ValueString(),
-			Labels:       expandStringMap(plan.Metadata.Labels),
-			Annotations:  expandStringMap(plan.Metadata.Annotations),
+			Name:         m.Name.ValueString(),
+			GenerateName: m.GenerateName.ValueString(),
+			Labels:       expandStringMap(m.Labels),
+			Annotations:  expandStringMap(m.Annotations),
 		},
 		Value:            int32(plan.Value.ValueInt64()),
 		Description:      plan.Description.ValueString(),
@@ -52,18 +53,18 @@ func (r *PriorityClassV1) Create(ctx context.Context, req resource.CreateRequest
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error creating PriorityClass",
-			fmt.Sprintf("Failed to create PriorityClass %q: %s", plan.Metadata.Name.ValueString(), err.Error()),
+			fmt.Sprintf("Failed to create PriorityClass %q: %s", m.Name.ValueString(), err.Error()),
 		)
 		return
 	}
 
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata = flattenPriorityClassMetadata(
+	plan.Metadata = []MetadataModel{flattenPriorityClassMetadata(
 		out.ObjectMeta,
-		plan.Metadata,
+		m,
 		meta.GetIgnoreAnnotations(),
 		meta.GetIgnoreLabels(),
-	)
+	)}
 
 	// Reflect server-set scalar fields
 	if out.PreemptionPolicy != nil {
@@ -109,12 +110,16 @@ func (r *PriorityClassV1) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	state.Metadata = flattenPriorityClassMetadata(
+	var currentMeta MetadataModel
+	if len(state.Metadata) > 0 {
+		currentMeta = state.Metadata[0]
+	}
+	state.Metadata = []MetadataModel{flattenPriorityClassMetadata(
 		out.ObjectMeta,
-		state.Metadata,
+		currentMeta,
 		meta.GetIgnoreAnnotations(),
 		meta.GetIgnoreLabels(),
-	)
+	)}
 
 	state.Value = types.Int64Value(int64(out.Value))
 	state.Description = types.StringValue(out.Description)
@@ -154,18 +159,20 @@ func (r *PriorityClassV1) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	name := state.ID.ValueString()
+	stateMeta := state.Metadata[0]
+	planMeta := plan.Metadata[0]
 
 	// Build JSON Patch for metadata (annotations + labels) and mutable scalar fields.
 	ops := make(kubernetes.PatchOperations, 0)
 	ops = append(ops, kubernetes.DiffStringMap(
 		"/metadata/annotations",
-		toStringInterfaceMap(state.Metadata.Annotations),
-		toStringInterfaceMap(plan.Metadata.Annotations),
+		toStringInterfaceMap(stateMeta.Annotations),
+		toStringInterfaceMap(planMeta.Annotations),
 	)...)
 	ops = append(ops, kubernetes.DiffStringMap(
 		"/metadata/labels",
-		toStringInterfaceMap(state.Metadata.Labels),
-		toStringInterfaceMap(plan.Metadata.Labels),
+		toStringInterfaceMap(stateMeta.Labels),
+		toStringInterfaceMap(planMeta.Labels),
 	)...)
 	ops = append(ops, &kubernetes.AddOperation{
 		Path:  "/description",
@@ -198,12 +205,12 @@ func (r *PriorityClassV1) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata = flattenPriorityClassMetadata(
+	plan.Metadata = []MetadataModel{flattenPriorityClassMetadata(
 		out.ObjectMeta,
-		plan.Metadata,
+		planMeta,
 		meta.GetIgnoreAnnotations(),
 		meta.GetIgnoreLabels(),
-	)
+	)}
 	plan.Description = types.StringValue(out.Description)
 	plan.GlobalDefault = types.BoolValue(out.GlobalDefault)
 	if out.PreemptionPolicy != nil {
@@ -272,9 +279,7 @@ func (r *PriorityClassV1) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	var state PriorityClassModel
-	state.ID = types.StringValue(out.Name)
-	state.Metadata = flattenPriorityClassMetadata(
+	flatMeta := flattenPriorityClassMetadata(
 		out.ObjectMeta,
 		MetadataModel{},
 		meta.GetIgnoreAnnotations(),
@@ -284,9 +289,12 @@ func (r *PriorityClassV1) ImportState(ctx context.Context, req resource.ImportSt
 	// Only set generate_name if the server actually has one; otherwise leave nil
 	// to avoid a perpetual diff against configs that use name instead.
 	if out.GenerateName == "" {
-		state.Metadata.GenerateName = types.StringNull()
+		flatMeta.GenerateName = types.StringNull()
 	}
 
+	var state PriorityClassModel
+	state.ID = types.StringValue(out.Name)
+	state.Metadata = []MetadataModel{flatMeta}
 	state.Value = types.Int64Value(int64(out.Value))
 	state.Description = types.StringValue(out.Description)
 	state.GlobalDefault = types.BoolValue(out.GlobalDefault)

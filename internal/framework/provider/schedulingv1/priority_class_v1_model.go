@@ -6,12 +6,12 @@ package schedulingv1
 import "github.com/hashicorp/terraform-plugin-framework/types"
 
 type PriorityClassModel struct {
-	ID               types.String  `tfsdk:"id"`
-	Metadata         MetadataModel `tfsdk:"metadata"`
-	Value            types.Int64   `tfsdk:"value"`
-	Description      types.String  `tfsdk:"description"`
-	GlobalDefault    types.Bool    `tfsdk:"global_default"`
-	PreemptionPolicy types.String  `tfsdk:"preemption_policy"`
+	ID               types.String    `tfsdk:"id"`
+	Metadata         []MetadataModel `tfsdk:"metadata"`
+	Value            types.Int64     `tfsdk:"value"`
+	Description      types.String    `tfsdk:"description"`
+	GlobalDefault    types.Bool      `tfsdk:"global_default"`
+	PreemptionPolicy types.String    `tfsdk:"preemption_policy"`
 }
 
 type MetadataModel struct {

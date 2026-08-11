@@ -90,7 +90,7 @@ func TestAccPriorityClassV1_upgradeFromSDKv2(t *testing.T) {
 						VersionConstraint: "3.0.1",
 					},
 				},
-				Config: testAccPriorityClassV1Config_basic(name),
+				Config: testAccPriorityClassV1Config_sdkv2(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "value", "100"),
@@ -108,6 +108,21 @@ func TestAccPriorityClassV1_upgradeFromSDKv2(t *testing.T) {
 			},
 		},
 	})
+}
+
+// testAccPriorityClassV1Config_sdkv2 uses block-style metadata required by the
+// SDK v2 provider (v3.0.1 and earlier). Used only in the upgrade test Step 1.
+func testAccPriorityClassV1Config_sdkv2(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = %q
+  }
+
+  value             = 100
+  preemption_policy = "Never"
+}
+`, name)
 }
 
 func testAccPriorityClassV1Config_basic(name string) string {

@@ -20,13 +20,13 @@ func TestAccPriorityClassV1_basic(t *testing.T) {
 			{
 				Config: testAccPriorityClassV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "metadata.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "value", "100"),
 					resource.TestCheckResourceAttr(resourceName, "preemption_policy", "Never"),
 					resource.TestCheckResourceAttr(resourceName, "description", ""),
 					resource.TestCheckResourceAttr(resourceName, "global_default", "false"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.uid"),
-					resource.TestCheckResourceAttrSet(resourceName, "metadata.resource_version"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 				),
 			},
 			// Import by name
@@ -35,8 +35,8 @@ func TestAccPriorityClassV1_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"metadata.resource_version",
-					"metadata.generation",
+					"metadata.0.resource_version",
+					"metadata.0.generation",
 				},
 			},
 		},
@@ -62,7 +62,7 @@ func TestAccPriorityClassV1_update(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "description", "High priority workloads"),
 					resource.TestCheckResourceAttr(resourceName, "global_default", "false"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.labels.team", "platform"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "platform"),
 				),
 			},
 		},
@@ -90,19 +90,19 @@ func TestAccPriorityClassV1_upgradeFromSDKv2(t *testing.T) {
 						VersionConstraint: "3.0.1",
 					},
 				},
-				Config: testAccPriorityClassV1Config_sdkv2(name),
+				Config: testAccPriorityClassV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "value", "100"),
 				),
 			},
-			// Step 2: apply the local (framework) provider — state upgrader converts v0 → v1.
-			// ExpectEmptyPlan asserts no diff after upgrade, proving the upgrader is correct.
+			// Step 2: apply the local (framework) provider — state upgrader bumps v0 → v1.
+			// Both versions use the same list-style metadata, so no structural conversion occurs.
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccPriorityClassV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "metadata.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(resourceName, "value", "100"),
 				),
 			},
@@ -110,9 +110,7 @@ func TestAccPriorityClassV1_upgradeFromSDKv2(t *testing.T) {
 	})
 }
 
-// testAccPriorityClassV1Config_sdkv2 uses block-style metadata required by the
-// SDK v2 provider (v3.0.1 and earlier). Used only in the upgrade test Step 1.
-func testAccPriorityClassV1Config_sdkv2(name string) string {
+func testAccPriorityClassV1Config_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_priority_class_v1" "test" {
   metadata {
@@ -125,23 +123,10 @@ resource "kubernetes_priority_class_v1" "test" {
 `, name)
 }
 
-func testAccPriorityClassV1Config_basic(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class_v1" "test" {
-  metadata = {
-    name = %q
-  }
-
-  value             = 100
-  preemption_policy = "Never"
-}
-`, name)
-}
-
 func testAccPriorityClassV1Config_updated(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_priority_class_v1" "test" {
-  metadata = {
+  metadata {
     name = %q
     labels = {
       team = "platform"

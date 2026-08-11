@@ -19,6 +19,51 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// metadataBlockAttrs returns the attribute map used inside the metadata block.
+// Shared between the live schema (ListNestedBlock) and the v0 PriorSchema
+// (ListNestedAttribute) so both describe the same fields.
+func metadataBlockAttrs() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"annotations": schema.MapAttribute{
+			MarkdownDescription: "An unstructured key value map stored with the priority class that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations",
+			ElementType:         types.StringType,
+			Optional:            true,
+		},
+		"generate_name": schema.StringAttribute{
+			MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the name field has not been provided. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Optional:            true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"generation": schema.Int64Attribute{
+			MarkdownDescription: "A sequence number representing a specific generation of the desired state.",
+			Computed:            true,
+		},
+		"labels": schema.MapAttribute{
+			MarkdownDescription: "Map of string keys and values that can be used to organize and categorize (scope and select) the priority class. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels",
+			ElementType:         types.StringType,
+			Optional:            true,
+		},
+		"name": schema.StringAttribute{
+			MarkdownDescription: "Name of the priority class, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+		},
+		"resource_version": schema.StringAttribute{
+			MarkdownDescription: "An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
+			Computed:            true,
+		},
+		"uid": schema.StringAttribute{
+			MarkdownDescription: "The unique in time and space value for this priority class. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids",
+			Computed:            true,
+		},
+	}
+}
+
 // PriorityClassV1Schema returns the Plugin Framework schema for PriorityClassV1.
 // Exported so that unit tests can construct tfsdk.State values for the state upgrader.
 func PriorityClassV1Schema() schema.Schema {
@@ -29,49 +74,6 @@ func PriorityClassV1Schema() schema.Schema {
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique ID for this terraform resource",
 				Computed:            true,
-			},
-			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-				Required:            true,
-				Attributes: map[string]schema.Attribute{
-					"annotations": schema.MapAttribute{
-						MarkdownDescription: "An unstructured key value map stored with the priority class that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations",
-						ElementType:         types.StringType,
-						Optional:            true,
-					},
-					"generate_name": schema.StringAttribute{
-						MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the name field has not been provided. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-						Optional:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-					"generation": schema.Int64Attribute{
-						MarkdownDescription: "A sequence number representing a specific generation of the desired state.",
-						Computed:            true,
-					},
-					"labels": schema.MapAttribute{
-						MarkdownDescription: "Map of string keys and values that can be used to organize and categorize (scope and select) the priority class. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels",
-						ElementType:         types.StringType,
-						Optional:            true,
-					},
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Name of the priority class, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
-						Optional:            true,
-						Computed:            true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-					"resource_version": schema.StringAttribute{
-						MarkdownDescription: "An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
-						Computed:            true,
-					},
-					"uid": schema.StringAttribute{
-						MarkdownDescription: "The unique in time and space value for this priority class. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids",
-						Computed:            true,
-					},
-				},
 			},
 			"value": schema.Int64Attribute{
 				MarkdownDescription: "The value of this priority class. This is the actual priority that pods receive when they have the name of this class in their pod spec.",
@@ -105,6 +107,17 @@ func PriorityClassV1Schema() schema.Schema {
 				},
 				Validators: []validator.String{
 					stringvalidator.OneOf("Never", "PreemptLowerPriority"),
+				},
+			},
+		},
+		// metadata uses ListNestedBlock — the framework equivalent of SDK v2's
+		// TypeList{MaxItems:1}. Blocks use HCL block syntax (metadata { name = "..." })
+		// and produce state paths metadata.0.name, preserving full SDK v2 compatibility.
+		Blocks: map[string]schema.Block{
+			"metadata": schema.ListNestedBlock{
+				MarkdownDescription: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: metadataBlockAttrs(),
 				},
 			},
 		},

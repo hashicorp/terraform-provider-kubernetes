@@ -14,6 +14,9 @@ import (
 
 // priorStateV0 represents the SDK v2 state shape (schema version 0).
 // In SDK v2, metadata was stored as a TypeList — a slice with exactly one element.
+// Because the framework v1 schema also uses ListNestedAttribute, the shapes are
+// structurally identical; the upgrader only needs to re-emit the state so Terraform
+// records the bumped schema_version.
 type priorStateV0 struct {
 	ID               types.String      `tfsdk:"id"`
 	Metadata         []priorMetadataV0 `tfsdk:"metadata"`
@@ -35,12 +38,13 @@ type priorMetadataV0 struct {
 }
 
 // upgradeStateHandlers returns the map of state upgraders for PriorityClassV1.
-// Handles v0 → v1: converts SDK v2 TypeList metadata to SingleNestedAttribute.
+// Handles v0 → v1: both versions use ListNestedAttribute for metadata, so the
+// upgrader is structural-only — it bumps schema_version without changing any values.
 func upgradeStateHandlers() map[int64]resource.StateUpgrader {
 	return map[int64]resource.StateUpgrader{
 		0: {
 			// PriorSchema tells the framework how to decode the v0 state into priorStateV0.
-			// It must exactly mirror the SDK v2 schema shape — TypeList for metadata.
+			// It must exactly mirror the SDK v2 schema shape — ListNestedAttribute for metadata.
 			PriorSchema: &schema.Schema{
 				Attributes: map[string]schema.Attribute{
 					"id": schema.StringAttribute{
@@ -101,9 +105,8 @@ func upgradeStateHandlers() map[int64]resource.StateUpgrader {
 }
 
 // upgradeStateV0Handler converts SDK v2 state (v0) to framework state (v1).
-// The framework decodes the prior state into req.State automatically using PriorSchema.
-// This function reads priorStateV0, converts the list-style metadata to a flat
-// MetadataModel, and writes the result as PriorityClassModel (v1 shape).
+// Both versions store metadata as a list, so this is a structural re-emit that
+// bumps the schema_version and normalises generate_name / empty maps.
 func upgradeStateV0Handler(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
 	var prior priorStateV0
 	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
@@ -125,33 +128,35 @@ func upgradeStateV0Handler(ctx context.Context, req resource.UpgradeStateRequest
 
 	m := prior.Metadata[0]
 
-	upgraded := PriorityClassModel{
-		ID:               prior.ID,
-		Value:            prior.Value,
-		Description:      prior.Description,
-		GlobalDefault:    prior.GlobalDefault,
-		PreemptionPolicy: prior.PreemptionPolicy,
-		Metadata: MetadataModel{
-			Name:            m.Name,
-			Generation:      m.Generation,
-			ResourceVersion: m.ResourceVersion,
-			UID:             m.UID,
-		},
+	meta := MetadataModel{
+		Name:            m.Name,
+		Generation:      m.Generation,
+		ResourceVersion: m.ResourceVersion,
+		UID:             m.UID,
 	}
 
 	// generate_name: empty string in SDK v2 state → null in framework to avoid plan drift
 	if m.GenerateName.IsNull() || m.GenerateName.ValueString() == "" {
-		upgraded.Metadata.GenerateName = types.StringNull()
+		meta.GenerateName = types.StringNull()
 	} else {
-		upgraded.Metadata.GenerateName = m.GenerateName
+		meta.GenerateName = m.GenerateName
 	}
 
 	// Empty/null maps → nil to avoid perpetual plan diff
 	if len(m.Annotations) > 0 {
-		upgraded.Metadata.Annotations = m.Annotations
+		meta.Annotations = m.Annotations
 	}
 	if len(m.Labels) > 0 {
-		upgraded.Metadata.Labels = m.Labels
+		meta.Labels = m.Labels
+	}
+
+	upgraded := PriorityClassModel{
+		ID:               prior.ID,
+		Metadata:         []MetadataModel{meta},
+		Value:            prior.Value,
+		Description:      prior.Description,
+		GlobalDefault:    prior.GlobalDefault,
+		PreemptionPolicy: prior.PreemptionPolicy,
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &upgraded)...)

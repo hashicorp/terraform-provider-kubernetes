@@ -212,6 +212,16 @@ func ignoreKey(key string, expressions []string) bool {
 	return false
 }
 
+// IsInternalKey is the exported version of isInternalKey for use by Framework resources.
+func IsInternalKey(annotationKey string) bool {
+	return isInternalKey(annotationKey)
+}
+
+// IgnoreKey is the exported version of ignoreKey for use by Framework resources.
+func IgnoreKey(key string, expressions []string) bool {
+	return ignoreKey(key, expressions)
+}
+
 func flattenByteMapToBase64Map(m map[string][]byte) map[string]string {
 	result := make(map[string]string)
 	for k, v := range m {

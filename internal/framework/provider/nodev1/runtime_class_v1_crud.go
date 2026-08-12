@@ -47,15 +47,15 @@ func (r *RuntimeClassV1) Create(ctx context.Context, req resource.CreateRequest,
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error creating RuntimeClass",
-			fmt.Sprintf("Failed to create RuntimeClass %q: %s", plan.Metadata.Name.ValueString(), err.Error()),
+			fmt.Sprintf("Failed to create RuntimeClass %q: %s", plan.Metadata[0].Name.ValueString(), err.Error()),
 		)
 		return
 	}
 
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata.UID = types.StringValue(string(out.UID))
-	plan.Metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
-	plan.Metadata.Generation = types.Int64Value(out.Generation)
+	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
@@ -89,7 +89,7 @@ func (r *RuntimeClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	name := state.Metadata.Name.ValueString()
+	name := state.Metadata[0].Name.ValueString()
 	out, err := conn.NodeV1().RuntimeClasses().Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -103,7 +103,9 @@ func (r *RuntimeClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	state.Metadata = flattenMetadata(out.ObjectMeta, state.Metadata.Annotations, state.Metadata.Labels)
+	state.Metadata = []MetadataModel{
+		flattenMetadata(out.ObjectMeta, state.Metadata[0].Annotations, state.Metadata[0].Labels),
+	}
 	state.Handler = types.StringValue(out.Handler)
 	state.ID = types.StringValue(out.Name)
 
@@ -139,7 +141,7 @@ func (r *RuntimeClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	name := plan.Metadata.Name.ValueString()
+	name := plan.Metadata[0].Name.ValueString()
 
 	cur, err := conn.NodeV1().RuntimeClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -150,8 +152,8 @@ func (r *RuntimeClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	cur.Labels = expandStringMap(plan.Metadata.Labels)
-	cur.Annotations = expandStringMap(plan.Metadata.Annotations)
+	cur.Labels = expandStringMap(plan.Metadata[0].Labels)
+	cur.Annotations = expandStringMap(plan.Metadata[0].Annotations)
 
 	out, err := conn.NodeV1().RuntimeClasses().Update(ctx, cur, metav1.UpdateOptions{})
 	if err != nil {
@@ -163,9 +165,9 @@ func (r *RuntimeClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 	}
 
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata.UID = types.StringValue(string(out.UID))
-	plan.Metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
-	plan.Metadata.Generation = types.Int64Value(out.Generation)
+	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
@@ -199,7 +201,7 @@ func (r *RuntimeClassV1) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	name := state.Metadata.Name.ValueString()
+	name := state.Metadata[0].Name.ValueString()
 	err = conn.NodeV1().RuntimeClasses().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		resp.Diagnostics.AddError(
@@ -251,7 +253,7 @@ func (r *RuntimeClassV1) ImportState(ctx context.Context, req resource.ImportSta
 	})
 	state.Timeouts = timeouts.Value{Object: timeoutsObj}
 
-	state.Metadata = flattenMetadata(out.ObjectMeta, nil, nil)
+	state.Metadata = []MetadataModel{flattenMetadata(out.ObjectMeta, nil, nil)}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 

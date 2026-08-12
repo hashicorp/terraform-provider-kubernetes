@@ -21,7 +21,7 @@ func TestAccRuntimeClassV1_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"kubernetes_runtime_class_v1.test",
-						"metadata.name",
+						"metadata.0.name",
 						name,
 					),
 					resource.TestCheckResourceAttr(
@@ -31,11 +31,11 @@ func TestAccRuntimeClassV1_basic(t *testing.T) {
 					),
 					resource.TestCheckResourceAttrSet(
 						"kubernetes_runtime_class_v1.test",
-						"metadata.uid",
+						"metadata.0.uid",
 					),
 					resource.TestCheckResourceAttrSet(
 						"kubernetes_runtime_class_v1.test",
-						"metadata.resource_version",
+						"metadata.0.resource_version",
 					),
 				),
 			},
@@ -44,7 +44,7 @@ func TestAccRuntimeClassV1_basic(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"metadata.resource_version",
+					"metadata.0.resource_version",
 					"timeouts",
 				},
 			},
@@ -63,12 +63,12 @@ func TestAccRuntimeClassV1_labels(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"kubernetes_runtime_class_v1.test",
-						"metadata.name",
+						"metadata.0.name",
 						name,
 					),
 					resource.TestCheckResourceAttr(
 						"kubernetes_runtime_class_v1.test",
-						"metadata.labels.env",
+						"metadata.0.labels.env",
 						"staging",
 					),
 				),
@@ -78,7 +78,7 @@ func TestAccRuntimeClassV1_labels(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(
 						"kubernetes_runtime_class_v1.test",
-						"metadata.labels.env",
+						"metadata.0.labels.env",
 						"production",
 					),
 				),
@@ -98,7 +98,7 @@ func TestAccRuntimeClassV1_labels(t *testing.T) {
 func testAccRuntimeClassV1Config_basic(name string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_runtime_class_v1" "test" {
-  metadata = {
+  metadata {
     name = %q
   }
   handler = "runc"
@@ -109,7 +109,7 @@ resource "kubernetes_runtime_class_v1" "test" {
 func testAccRuntimeClassV1Config_withLabel(name, labelKey, labelValue string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_runtime_class_v1" "test" {
-  metadata = {
+  metadata {
     name = %q
     labels = {
       %q = %q

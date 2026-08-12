@@ -11,11 +11,10 @@ import (
 )
 
 var (
-	_ resource.Resource                 = (*RuntimeClassV1)(nil)
-	_ resource.ResourceWithConfigure    = (*RuntimeClassV1)(nil)
-	_ resource.ResourceWithImportState  = (*RuntimeClassV1)(nil)
-	_ resource.ResourceWithIdentity     = (*RuntimeClassV1)(nil)
-	_ resource.ResourceWithUpgradeState = (*RuntimeClassV1)(nil)
+	_ resource.Resource                = (*RuntimeClassV1)(nil)
+	_ resource.ResourceWithConfigure   = (*RuntimeClassV1)(nil)
+	_ resource.ResourceWithImportState = (*RuntimeClassV1)(nil)
+	_ resource.ResourceWithIdentity    = (*RuntimeClassV1)(nil)
 )
 
 type RuntimeClassV1 struct {

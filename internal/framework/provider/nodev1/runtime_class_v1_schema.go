@@ -18,7 +18,8 @@ import (
 
 func (r *RuntimeClassV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version: 1, // SDKv2 was version 0 (default); Framework is version 1
+		// Version 0 — matches the SDKv2 schema version so existing state files
+		// are compatible with no state upgrade required.
 		MarkdownDescription: "A RuntimeClass is used to determine which container runtime is used to run " +
 			"all containers in a pod. RuntimeClass objects in the `node.k8s.io` API group select a " +
 			"specific handler (e.g. `runc`, `kata`, `gvisor`). " +
@@ -26,70 +27,75 @@ func (r *RuntimeClassV1) Schema(ctx context.Context, req resource.SchemaRequest,
 
 		Blocks: map[string]schema.Block{
 			"timeouts": timeouts.BlockAll(ctx),
+
+			// metadata is a ListNestedBlock with MaxItems:1, matching the SDKv2
+			// TypeList shape. This keeps the HCL syntax and state paths identical
+			// to the SDKv2 provider (metadata { } and metadata.0.name) so that
+			// existing configurations and state files require no changes.
+			"metadata": schema.ListNestedBlock{
+				MarkdownDescription: "Standard object metadata. " +
+					"More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"annotations": schema.MapAttribute{
+							MarkdownDescription: "An unstructured key value map stored with the RuntimeClass. " +
+								"Keys under *.kubernetes.io/ are managed by the cluster and filtered from state. " +
+								"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/",
+							ElementType: types.StringType,
+							Optional:    true,
+						},
+
+						"generate_name": schema.StringAttribute{
+							MarkdownDescription: "Prefix used by the server to generate a unique name when `name` is not provided. " +
+								"More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+							Optional: true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+						},
+
+						"generation": schema.Int64Attribute{
+							MarkdownDescription: "A sequence number representing a specific generation of the desired state. Read-only.",
+							Computed:            true,
+						},
+
+						"labels": schema.MapAttribute{
+							MarkdownDescription: "Map of string keys and values that can be used to organize and categorize the RuntimeClass. " +
+								"Keys under *.kubernetes.io/ are filtered from state. " +
+								"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/",
+							ElementType: types.StringType,
+							Optional:    true,
+						},
+
+						"name": schema.StringAttribute{
+							MarkdownDescription: "Name of the RuntimeClass, must be unique. Cannot be updated. " +
+								"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+							Optional: true,
+							Computed: true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.RequiresReplace(),
+							},
+						},
+
+						"resource_version": schema.StringAttribute{
+							MarkdownDescription: "An opaque value representing the internal version of this object. Read-only.",
+							Computed:            true,
+						},
+
+						"uid": schema.StringAttribute{
+							MarkdownDescription: "The unique in time and space value for this RuntimeClass. Read-only. " +
+								"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
+							Computed: true,
+						},
+					},
+				},
+			},
 		},
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier for this resource (the RuntimeClass name).",
 				Computed:            true,
-			},
-
-			"metadata": schema.SingleNestedAttribute{
-				MarkdownDescription: "Standard object metadata. " +
-					"More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-				Required: true,
-				Attributes: map[string]schema.Attribute{
-					"annotations": schema.MapAttribute{
-						MarkdownDescription: "An unstructured key value map stored with the RuntimeClass. " +
-							"Keys under *.kubernetes.io/ are managed by the cluster and filtered from state. " +
-							"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/",
-						ElementType: types.StringType,
-						Optional:    true,
-					},
-
-					"generate_name": schema.StringAttribute{
-						MarkdownDescription: "Prefix used by the server to generate a unique name when `name` is not provided. " +
-							"More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-						Optional: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-
-					"generation": schema.Int64Attribute{
-						MarkdownDescription: "A sequence number representing a specific generation of the desired state. Read-only.",
-						Computed:            true,
-					},
-
-					"labels": schema.MapAttribute{
-						MarkdownDescription: "Map of string keys and values that can be used to organize and categorize the RuntimeClass. " +
-							"Keys under *.kubernetes.io/ are filtered from state. " +
-							"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/",
-						ElementType: types.StringType,
-						Optional:    true,
-					},
-
-					"name": schema.StringAttribute{
-						MarkdownDescription: "Name of the RuntimeClass, must be unique. Cannot be updated. " +
-							"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
-						Optional: true,
-						Computed: true,
-						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
-						},
-					},
-
-					"resource_version": schema.StringAttribute{
-						MarkdownDescription: "An opaque value representing the internal version of this object. Read-only.",
-						Computed:            true,
-					},
-
-					"uid": schema.StringAttribute{
-						MarkdownDescription: "The unique in time and space value for this RuntimeClass. Read-only. " +
-							"More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
-						Computed: true,
-					},
-				},
 			},
 
 			"handler": schema.StringAttribute{

@@ -10,11 +10,14 @@ import (
 
 // RuntimeClassV1Model maps 1-to-1 to the Terraform schema via tfsdk tags.
 // The Framework serialises/deserialises state into this struct automatically.
+// Metadata is a []MetadataModel (slice of one) because the schema uses
+// ListNestedBlock — matching the SDKv2 TypeList(MaxItems:1) shape so that
+// HCL syntax (metadata { }) and state paths (metadata.0.name) are unchanged.
 type RuntimeClassV1Model struct {
-	Timeouts timeouts.Value `tfsdk:"timeouts"`
-	ID       types.String   `tfsdk:"id"`
-	Metadata MetadataModel  `tfsdk:"metadata"`
-	Handler  types.String   `tfsdk:"handler"`
+	Timeouts timeouts.Value  `tfsdk:"timeouts"`
+	ID       types.String    `tfsdk:"id"`
+	Metadata []MetadataModel `tfsdk:"metadata"`
+	Handler  types.String    `tfsdk:"handler"`
 }
 
 // MetadataModel mirrors the Kubernetes ObjectMeta fields exposed to Terraform users.

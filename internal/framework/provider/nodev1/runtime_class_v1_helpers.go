@@ -31,13 +31,14 @@ func expandStringMap(m map[string]types.String) map[string]string {
 }
 
 // buildRuntimeClassObject constructs the Kubernetes API struct from the plan model.
+// Metadata is a slice of one (ListNestedBlock) — index [0] is always the element.
 func buildRuntimeClassObject(plan RuntimeClassV1Model) *nodev1.RuntimeClass {
 	return &nodev1.RuntimeClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:         plan.Metadata.Name.ValueString(),
-			GenerateName: plan.Metadata.GenerateName.ValueString(),
-			Labels:       expandStringMap(plan.Metadata.Labels),
-			Annotations:  expandStringMap(plan.Metadata.Annotations),
+			Name:         plan.Metadata[0].Name.ValueString(),
+			GenerateName: plan.Metadata[0].GenerateName.ValueString(),
+			Labels:       expandStringMap(plan.Metadata[0].Labels),
+			Annotations:  expandStringMap(plan.Metadata[0].Annotations),
 		},
 		Handler: plan.Handler.ValueString(),
 	}

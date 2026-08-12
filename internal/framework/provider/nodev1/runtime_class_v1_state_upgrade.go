@@ -17,10 +17,12 @@ import (
 // (schema version 0) into the Framework schema (version 1).
 //
 // SDKv2 stored metadata as a TypeList with MaxItems:1 — so state looks like:
-//   "metadata": [{ "name": "x", "uid": "abc", ... }]
+//
+//	"metadata": [{ "name": "x", "uid": "abc", ... }]
 //
 // The Framework stores metadata as a SingleNestedAttribute — so state looks like:
-//   "metadata": { "name": "x", "uid": "abc", ... }
+//
+//	"metadata": { "name": "x", "uid": "abc", ... }
 //
 // This upgrader unwraps the list into a plain object. Terraform calls this
 // automatically when it finds schema version 0 in terraform.tfstate.

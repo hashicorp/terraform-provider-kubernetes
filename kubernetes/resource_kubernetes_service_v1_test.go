@@ -870,8 +870,7 @@ func TestAccKubernetesServiceV1_loadBalancer_ipMode(t *testing.T) {
 }
 
 func testAccKubernetesServiceV1Config_loadBalancer_ipMode(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
   metadata {
     name = "%s"
   }

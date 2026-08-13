@@ -15,6 +15,7 @@ var (
 	_ resource.ResourceWithConfigure    = (*PriorityClassV1)(nil)
 	_ resource.ResourceWithImportState  = (*PriorityClassV1)(nil)
 	_ resource.ResourceWithIdentity     = (*PriorityClassV1)(nil)
+	_ resource.ResourceWithMoveState    = (*PriorityClassV1)(nil)
 	_ resource.ResourceWithUpgradeState = (*PriorityClassV1)(nil)
 )
 
@@ -55,4 +56,8 @@ func (r *PriorityClassV1) IdentitySchema(_ context.Context, _ resource.IdentityS
 
 func (r *PriorityClassV1) UpgradeState(_ context.Context) map[int64]resource.StateUpgrader {
 	return upgradeStateHandlers()
+}
+
+func (r *PriorityClassV1) MoveState(_ context.Context) []resource.StateMover {
+	return moveStateHandlers()
 }

@@ -140,7 +140,7 @@ func resourceKubernetesDaemonSetSchemaV1() map[string]*schema.Schema {
 		},
 		"wait_for_rollout": {
 			Type:        schema.TypeBool,
-			Description: "Wait for the rollout of the deployment to complete. Defaults to true.",
+			Description: "Wait for the rollout of the daemon set to complete. Defaults to true.",
 			Default:     true,
 			Optional:    true,
 		},

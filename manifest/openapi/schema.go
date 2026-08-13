@@ -37,17 +37,29 @@ func resolveSchemaRef(ref *openapi3.SchemaRef, defs map[string]*openapi3.SchemaR
 	switch sid {
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.JSONSchemaProps":
 		t := openapi3.Schema{
-			Type: "",
+			Type: nil,
 		}
 		return &t, nil
 	case "io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1beta1.JSONSchemaProps":
 		t := openapi3.Schema{
-			Type: "",
+			Type: nil,
 		}
 		return &t, nil
 	}
 
 	return resolveSchemaRef(nref, defs)
+}
+
+// schemaType returns the single OpenAPI type name for t, or "" if t is unset.
+// kin-openapi v0.144+ represents Schema.Type as *openapi3.Types ([]string) to
+// support OpenAPI 3.1's multi-type schemas (e.g. "type: [string, null]"), but
+// the Kubernetes OpenAPI v2/v3.0 specs this foundry consumes never declare
+// more than one type, so only the first entry is relevant here.
+func schemaType(t *openapi3.Types) string {
+	if t == nil || len(*t) == 0 {
+		return ""
+	}
+	return (*t)[0]
 }
 
 func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync.Map, defs map[string]*openapi3.SchemaRef, ap tftypes.AttributePath, th map[string]string) (tftypes.Type, error) {
@@ -69,7 +81,10 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	// since we have no further structural information about it.
 	if xpufJSON, ok := elem.Extensions[manifest.PreserveUnknownFieldsLabel]; ok {
 		var xpuf bool
-		v, err := xpufJSON.(json.RawMessage).MarshalJSON()
+		// kin-openapi decodes Schema.Extensions values into plain `any` (not
+		// json.RawMessage as in older versions), so re-marshal before
+		// unmarshalling into the target type rather than type-asserting.
+		v, err := json.Marshal(xpufJSON)
 		if err == nil {
 			err = json.Unmarshal(v, &xpuf)
 			if err == nil && xpuf {
@@ -85,7 +100,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 	// 		return t.(tftypes.Type), nil
 	// 	}
 	// }
-	switch elem.Type {
+	switch schemaType(elem.Type) {
 	case "string":
 		if elem.Format == "int-or-string" {
 			th[ap.String()] = "io.k8s.apimachinery.pkg.util.intstr.IntOrString"
@@ -103,7 +118,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 
 	case "":
 		if xv, ok := elem.Extensions["x-kubernetes-int-or-string"]; ok {
-			xb, err := xv.(json.RawMessage).MarshalJSON()
+			xb, err := json.Marshal(xv)
 			if err != nil {
 				return tftypes.DynamicPseudoType, nil
 			}
@@ -118,7 +133,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 
 	case "array":
 		switch {
-		case elem.Items != nil && elem.AdditionalProperties == nil: // normal array - translates to a tftypes.List
+		case elem.Items != nil && elem.AdditionalProperties.Schema == nil: // normal array - translates to a tftypes.List
 			it, err := resolveSchemaRef(elem.Items, defs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema for items: %s", err)
@@ -137,8 +152,8 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 				typeCache.Store(h, t)
 			}
 			return t, nil
-		case elem.AdditionalProperties != nil && elem.Items == nil: // "overriden" array - translates to a tftypes.Tuple
-			it, err := resolveSchemaRef(elem.AdditionalProperties, defs)
+		case elem.AdditionalProperties.Schema != nil && elem.Items == nil: // "overriden" array - translates to a tftypes.Tuple
+			it, err := resolveSchemaRef(elem.AdditionalProperties.Schema, defs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema for items: %s", err)
 			}
@@ -153,8 +168,14 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 
 	case "object":
 
+		// Use len() rather than a nil check: openapi2conv.ToV3SchemaRef (used
+		// when converting v2/Swagger definitions to v3 Schemas) always
+		// allocates Properties via make(), so a schema with no properties
+		// converts to a non-nil empty map rather than nil. len() treats nil
+		// and empty maps identically, so this stays correct for schemas
+		// loaded directly as v3 too.
 		switch {
-		case elem.Properties != nil && elem.AdditionalProperties == nil:
+		case len(elem.Properties) != 0 && elem.AdditionalProperties.Schema == nil:
 			// this is a standard OpenAPI object
 			atts := make(map[string]tftypes.Type, len(elem.Properties))
 			for p, v := range elem.Properties {
@@ -175,9 +196,9 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			}
 			return t, nil
 
-		case elem.Properties == nil && elem.AdditionalProperties != nil:
+		case len(elem.Properties) == 0 && elem.AdditionalProperties.Schema != nil:
 			// this is how OpenAPI defines associative arrays
-			s, err := resolveSchemaRef(elem.AdditionalProperties, defs)
+			s, err := resolveSchemaRef(elem.AdditionalProperties.Schema, defs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema: %s", err)
 			}
@@ -192,7 +213,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 			}
 			return t, nil
 
-		case elem.Properties == nil && elem.AdditionalProperties == nil:
+		case len(elem.Properties) == 0 && elem.AdditionalProperties.Schema == nil:
 			// this is a strange case, encountered with io.k8s.apimachinery.pkg.apis.meta.v1.FieldsV1 and also io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceSubresourceStatus
 			t = tftypes.DynamicPseudoType
 			if herr == nil {
@@ -203,7 +224,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 		}
 	}
 
-	return nil, fmt.Errorf("unknown type: %s", elem.Type)
+	return nil, fmt.Errorf("unknown type: %s", schemaType(elem.Type))
 }
 
 func isTypeFullyKnown(t tftypes.Type) bool {

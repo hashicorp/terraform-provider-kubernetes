@@ -1794,12 +1794,25 @@ Read-Only:
 
 Read-Only:
 
+- `chap_auth_discovery` (Boolean)
+- `chap_auth_session` (Boolean)
 - `fs_type` (String)
+- `initiator_name` (String)
 - `iqn` (String)
 - `iscsi_interface` (String)
 - `lun` (Number)
+- `portals` (List of String)
 - `read_only` (Boolean)
+- `secret_ref` (List of Object) (see [below for nested schema](#nestedobjatt--spec--volume--iscsi--secret_ref))
 - `target_portal` (String)
+
+
+<a id="nestedobjatt--spec--volume--iscsi--secret_ref"></a>
+### Nested Schema for `spec.volume.iscsi.secret_ref`
+
+Read-Only:
+
+- `name` (String)
 
 
 <a id="nestedobjatt--spec--volume--local"></a>

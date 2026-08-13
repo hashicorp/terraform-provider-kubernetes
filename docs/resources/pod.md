@@ -492,6 +492,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--container--lifecycle--post_start--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--container--lifecycle--post_start--http_get))
+- `sleep` (Block List, Max: 1) Sleep represents a duration that the container should sleep (see [below for nested schema](#nestedblock--spec--container--lifecycle--post_start--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--container--lifecycle--post_start--tcp_socket))
 
 <a id="nestedblock--spec--container--lifecycle--post_start--exec"></a>
@@ -523,6 +524,14 @@ Optional:
 
 
 
+<a id="nestedblock--spec--container--lifecycle--post_start--sleep"></a>
+### Nested Schema for `spec.container.lifecycle.post_start.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep.
+
+
 <a id="nestedblock--spec--container--lifecycle--post_start--tcp_socket"></a>
 ### Nested Schema for `spec.container.lifecycle.post_start.tcp_socket`
 
@@ -539,6 +548,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--container--lifecycle--pre_stop--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--container--lifecycle--pre_stop--http_get))
+- `sleep` (Block List, Max: 1) Sleep represents a duration that the container should sleep (see [below for nested schema](#nestedblock--spec--container--lifecycle--pre_stop--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--container--lifecycle--pre_stop--tcp_socket))
 
 <a id="nestedblock--spec--container--lifecycle--pre_stop--exec"></a>
@@ -568,6 +578,14 @@ Optional:
 - `name` (String) The header field name
 - `value` (String) The header field value
 
+
+
+<a id="nestedblock--spec--container--lifecycle--pre_stop--sleep"></a>
+### Nested Schema for `spec.container.lifecycle.pre_stop.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep.
 
 
 <a id="nestedblock--spec--container--lifecycle--pre_stop--tcp_socket"></a>
@@ -1054,6 +1072,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--post_start--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--post_start--http_get))
+- `sleep` (Block List, Max: 1) Sleep represents a duration that the container should sleep (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--post_start--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--post_start--tcp_socket))
 
 <a id="nestedblock--spec--init_container--lifecycle--post_start--exec"></a>
@@ -1085,6 +1104,14 @@ Optional:
 
 
 
+<a id="nestedblock--spec--init_container--lifecycle--post_start--sleep"></a>
+### Nested Schema for `spec.init_container.lifecycle.post_start.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep.
+
+
 <a id="nestedblock--spec--init_container--lifecycle--post_start--tcp_socket"></a>
 ### Nested Schema for `spec.init_container.lifecycle.post_start.tcp_socket`
 
@@ -1101,6 +1128,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--pre_stop--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--pre_stop--http_get))
+- `sleep` (Block List, Max: 1) Sleep represents a duration that the container should sleep (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--pre_stop--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--init_container--lifecycle--pre_stop--tcp_socket))
 
 <a id="nestedblock--spec--init_container--lifecycle--pre_stop--exec"></a>
@@ -1130,6 +1158,14 @@ Optional:
 - `name` (String) The header field name
 - `value` (String) The header field value
 
+
+
+<a id="nestedblock--spec--init_container--lifecycle--pre_stop--sleep"></a>
+### Nested Schema for `spec.init_container.lifecycle.pre_stop.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep.
 
 
 <a id="nestedblock--spec--init_container--lifecycle--pre_stop--tcp_socket"></a>

@@ -437,6 +437,9 @@ func (k providerMetadata) DynamicClient() (dynamic.Interface, error) {
 	return k.dynamicClient, nil
 }
 
+func (k providerMetadata) IgnoreAnnotationPatterns() []string { return k.IgnoreAnnotations }
+func (k providerMetadata) IgnoreLabelPatterns() []string      { return k.IgnoreLabels }
+
 func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error) {
 	if k.discoveryClient != nil {
 		return k.discoveryClient, nil

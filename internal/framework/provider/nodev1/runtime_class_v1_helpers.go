@@ -65,18 +65,22 @@ func flattenMetadata(
 	meta metav1.ObjectMeta,
 	configuredAnnotations map[string]types.String,
 	configuredLabels map[string]types.String,
+	ignoreAnnotations []string,
+	ignoreLabels []string,
 ) MetadataModel {
 	annotations := make(map[string]string)
 	for k, v := range meta.Annotations {
 		annotations[k] = v
 	}
 	removeInternalKeys(annotations, configuredAnnotations)
+	removeKeys(annotations, configuredAnnotations, ignoreAnnotations)
 
 	labels := make(map[string]string)
 	for k, v := range meta.Labels {
 		labels[k] = v
 	}
 	removeInternalKeys(labels, configuredLabels)
+	removeKeys(labels, configuredLabels, ignoreLabels)
 
 	m := MetadataModel{
 		Name:            types.StringValue(meta.Name),
@@ -96,6 +100,23 @@ func flattenMetadata(
 	}
 
 	return m
+}
+
+// removeKeys removes metadata keys that match any of the user-configured ignore
+// patterns (regexes), unless the user has explicitly set that key in their config.
+// Mirrors kubernetes/structures.go:removeKeys.
+func removeKeys(m map[string]string, configuredKeys map[string]types.String, ignorePatterns []string) {
+	for k := range m {
+		if _, userOwns := configuredKeys[k]; userOwns {
+			continue
+		}
+		for _, pattern := range ignorePatterns {
+			if matched, _ := regexp.MatchString(pattern, k); matched {
+				delete(m, k)
+				break
+			}
+		}
+	}
 }
 
 // removeInternalKeys removes cluster-managed keys from m unless the user

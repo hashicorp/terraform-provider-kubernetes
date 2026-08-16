@@ -4,7 +4,6 @@
 package nodev1
 
 import (
-	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -14,7 +13,6 @@ import (
 // ListNestedBlock — matching the SDKv2 TypeList(MaxItems:1) shape so that
 // HCL syntax (metadata { }) and state paths (metadata.0.name) are unchanged.
 type RuntimeClassV1Model struct {
-	Timeouts timeouts.Value  `tfsdk:"timeouts"`
 	ID       types.String    `tfsdk:"id"`
 	Metadata []MetadataModel `tfsdk:"metadata"`
 	Handler  types.String    `tfsdk:"handler"`

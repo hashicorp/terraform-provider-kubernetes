@@ -12,9 +12,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
-// sdkv2RuntimeClassProviderVersion is the last release that served
-// kubernetes_runtime_class_v1 from the SDKv2 implementation.
-// Step 1 of every migration test runs against it to write real SDKv2 state.
+// sdkv2RuntimeClassProviderVersion is the last published release of the
+// hashicorp/kubernetes provider that served kubernetes_runtime_class_v1 from
+// the SDKv2 implementation. The resource moved to the Framework provider in
+// v3.0.0, so there is no newer SDKv2-based release to reference.
+// Step 1 of every migration test applies with this version to write real
+// SDKv2 state; step 2 switches to the local Framework binary to verify the
+// provider upgrade is transparent (empty plan, no destroy/recreate).
 const sdkv2RuntimeClassProviderVersion = "2.35.1"
 
 // testAccRuntimeClassMigration is the shared helper for all migration sub-tests.
@@ -52,6 +56,12 @@ func testAccRuntimeClassMigration(t *testing.T, config string) {
 			// The state shape is identical (ListNestedBlock = TypeList), so
 			// no state upgrade runs. The plan MUST be empty — no diff means
 			// the provider switch was fully transparent to the user.
+			//
+			// ConfigPlanChecks is the terraform-plugin-testing way to assert the
+			// plan shape before apply. PlanOnly: true is the equivalent in the
+			// older terraform-plugin-sdk/v2 test helper. We use ConfigPlanChecks
+			// here because this test file uses terraform-plugin-testing throughout
+			// and no issues were encountered with it during validation.
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   config,
@@ -95,6 +105,23 @@ func TestAccRuntimeClassV1_UpgradeFromSDKV2_generateName(t *testing.T) {
 	testAccRuntimeClassMigration(t, testAccRuntimeClassV1MigConfig_generateName(prefix))
 }
 
+// TestAccRuntimeClassV1_UpgradeFromSDKV2_withName — explicit name with all
+// optional metadata fields set (labels and annotations). Exercises the
+// fully-populated metadata path for the most common user shape.
+func TestAccRuntimeClassV1_UpgradeFromSDKV2_withName(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccRuntimeClassMigration(t, testAccRuntimeClassV1MigConfig_withName(name))
+}
+
+// TestAccRuntimeClassV1_UpgradeFromSDKV2_withGenerateName — generate_name with
+// all optional metadata fields set (labels and annotations). Exercises the
+// fully-populated metadata path for the server-assigned-name shape.
+func TestAccRuntimeClassV1_UpgradeFromSDKV2_withGenerateName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-migration-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccRuntimeClassMigration(t, testAccRuntimeClassV1MigConfig_withGenerateName(prefix))
+}
+
+
 // TestAccRuntimeClassV1_UpgradeFromSDKV2_emptyMaps — both labels and annotations
 // declared as explicit empty maps {}.
 //
@@ -121,16 +148,16 @@ func TestAccRuntimeClassV1_UpgradeFromSDKV2_emptyMaps(t *testing.T) {
 				Config: testAccRuntimeClassV1MigConfig_emptyMaps(name),
 			},
 			{
-					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-					Config:                   testAccRuntimeClassV1MigConfig_emptyMaps(name),
-					// PlanOnly asserts the plan shape without applying.
-					// SDKv2 writes null for `labels = {}` and `annotations = {}` because
-					// it cannot represent the difference between null and an empty map.
-					// The Framework sees {} in config vs null in state → one update planned.
-					// ExpectNonEmptyPlan: true documents this expected behaviour.
-					PlanOnly:           true,
-					ExpectNonEmptyPlan: true,
-				},
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccRuntimeClassV1MigConfig_emptyMaps(name),
+				// PlanOnly asserts the plan shape without applying.
+				// SDKv2 writes null for `labels = {}` and `annotations = {}` because
+				// it cannot represent the difference between null and an empty map.
+				// The Framework sees {} in config vs null in state → one update planned.
+				// ExpectNonEmptyPlan: true documents this expected behaviour.
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
 		},
 	})
 }
@@ -203,4 +230,42 @@ resource "kubernetes_runtime_class_v1" "migrate_test" {
   handler = "runc"
 }
 `, name)
+}
+
+func testAccRuntimeClassV1MigConfig_withName(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_runtime_class_v1" "migrate_test" {
+  metadata {
+    name = %q
+    labels = {
+      env  = "staging"
+      team = "platform"
+    }
+    annotations = {
+      owner   = "team-a"
+      version = "v1"
+    }
+  }
+  handler = "runc"
+}
+`, name)
+}
+
+func testAccRuntimeClassV1MigConfig_withGenerateName(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_runtime_class_v1" "migrate_test" {
+  metadata {
+    generate_name = %q
+    labels = {
+      env  = "staging"
+      team = "platform"
+    }
+    annotations = {
+      owner   = "team-a"
+      version = "v1"
+    }
+  }
+  handler = "runc"
+}
+`, prefix)
 }

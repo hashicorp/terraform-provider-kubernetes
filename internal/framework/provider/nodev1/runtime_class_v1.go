@@ -18,7 +18,17 @@ var (
 )
 
 type RuntimeClassV1 struct {
-	SDKv2Meta func() any
+	SDKv2Meta         func() any
+	IgnoreAnnotations []string
+	IgnoreLabels      []string
+}
+
+// kubeIgnoreKeys is a local interface satisfied by kubernetes.providerMetadata.
+// It allows the nodev1 package to retrieve the user-configured ignore patterns
+// without importing the unexported providerMetadata type.
+type kubeIgnoreKeys interface {
+	IgnoreAnnotationPatterns() []string
+	IgnoreLabelPatterns() []string
 }
 
 func NewRuntimeClassV1() resource.Resource {
@@ -34,10 +44,15 @@ func (r *RuntimeClassV1) Configure(_ context.Context, req resource.ConfigureRequ
 		return
 	}
 	r.SDKv2Meta = req.ProviderData.(func() any)
+	if ik, ok := r.SDKv2Meta().(kubeIgnoreKeys); ok {
+		r.IgnoreAnnotations = ik.IgnoreAnnotationPatterns()
+		r.IgnoreLabels = ik.IgnoreLabelPatterns()
+	}
 }
 
 func (r *RuntimeClassV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = identityschema.Schema{
+		Version: 1,
 		Attributes: map[string]identityschema.Attribute{
 			"api_version": identityschema.StringAttribute{
 				RequiredForImport: true,

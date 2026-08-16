@@ -37,11 +37,3 @@ website/vendor
 terraform-provider-kubernetes
 __debug_bin
 
-heredoc> CODE_WALKTHROUGH.md
-DEMO_GUIDE.md
-LIVE_DEMO_COMMANDS.md
-RUNTIME_PODS_PLAN.md
-STUDY_NOTES_FRAMEWORK_MIGRATION.md
-migration-plan.md
-demo/
-CODE_WALKTHROUGH.md

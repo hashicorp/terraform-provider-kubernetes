@@ -5,13 +5,15 @@ package schedulingv1
 
 import (
 	"context"
+	"math"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -19,6 +21,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+func (r *PriorityClassV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = PriorityClassV1Schema()
+}
 
 // metadataBlockAttrs returns the attribute map used inside the metadata block.
 // Shared between the live schema (ListNestedBlock) and the v0 PriorSchema
@@ -80,12 +86,22 @@ func PriorityClassV1Schema() schema.Schema {
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique ID for this terraform resource",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"value": schema.Int64Attribute{
 				MarkdownDescription: "The value of this priority class. This is the actual priority that pods receive when they have the name of this class in their pod spec.",
 				Required:            true,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
+				},
+				Validators: []validator.Int64{
+					// Kubernetes enforces: user-defined priority classes must not exceed
+					// HighestUserDefinablePriority (1,000,000,000). Values above that are
+					// reserved for system-critical classes (system-* prefix).
+					// Lower bound is int32 min since the API field is int32.
+					int64validator.Between(math.MinInt32, 1_000_000_000),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -99,9 +115,6 @@ func PriorityClassV1Schema() schema.Schema {
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"preemption_policy": schema.StringAttribute{
 				MarkdownDescription: "PreemptionPolicy is the Policy for preempting pods with lower priority. One of `Never`, `PreemptLowerPriority`. Defaults to `PreemptLowerPriority` if unset.",
@@ -122,6 +135,9 @@ func PriorityClassV1Schema() schema.Schema {
 		Blocks: map[string]schema.Block{
 			"metadata": schema.ListNestedBlock{
 				MarkdownDescription: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+				Validators: []validator.List{
+					listvalidator.SizeBetween(1, 1),
+				},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: metadataBlockAttrs(),
 				},
@@ -130,6 +146,3 @@ func PriorityClassV1Schema() schema.Schema {
 	}
 }
 
-func (r *PriorityClassV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = PriorityClassV1Schema()
-}

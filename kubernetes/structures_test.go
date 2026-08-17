@@ -31,7 +31,7 @@ func TestIsInternalKey(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.Key, func(t *testing.T) {
-			isInternal := isInternalKey(tc.Key)
+			isInternal := IsInternalKey(tc.Key)
 			if tc.Expected && isInternal != tc.Expected {
 				t.Fatalf("Expected %q to be internal", tc.Key)
 			}

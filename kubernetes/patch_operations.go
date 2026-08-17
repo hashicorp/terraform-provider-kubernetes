@@ -156,7 +156,3 @@ func (o *RemoveOperation) String() string {
 	return string(b)
 }
 
-// DiffStringMap is the exported version of diffStringMap for use by Framework resources.
-func DiffStringMap(pathPrefix string, oldV, newV map[string]interface{}) PatchOperations {
-	return diffStringMap(pathPrefix, oldV, newV)
-}

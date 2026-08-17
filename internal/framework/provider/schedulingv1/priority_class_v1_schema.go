@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -32,6 +33,9 @@ func metadataBlockAttrs() map[string]schema.Attribute {
 		"generate_name": schema.StringAttribute{
 			MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the name field has not been provided. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:            true,
+			Validators: []validator.String{
+				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("name")),
+			},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -49,6 +53,9 @@ func metadataBlockAttrs() map[string]schema.Attribute {
 			MarkdownDescription: "Name of the priority class, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
 			Optional:            true,
 			Computed:            true,
+			Validators: []validator.String{
+				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("generate_name")),
+			},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -68,7 +75,6 @@ func metadataBlockAttrs() map[string]schema.Attribute {
 // Exported so that unit tests can construct tfsdk.State values for the state upgrader.
 func PriorityClassV1Schema() schema.Schema {
 	return schema.Schema{
-		Version:             1,
 		MarkdownDescription: "A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

@@ -5,18 +5,19 @@ package schedulingv1_test
 
 // Migration tests for kubernetes_priority_class_v1.
 //
-// These tests verify that switching from the SDKv2 implementation to the
-// Plugin Framework implementation does not alter provider behaviour.
-// They follow the HashiCorp migration testing guide:
-// https://developer.hashicorp.com/terraform/plugin/framework/migrating/testing
+// These tests verify MoveState — the mechanism that allows users to migrate
+// from the deprecated kubernetes_priority_class (SDKv2) resource to
+// kubernetes_priority_class_v1 (Framework) using a `moved` block:
 //
-// Two categories are covered:
-//   A. UpgradeState (v0 → v1): SDKv2 kubernetes_priority_class_v1 state at
-//      schema version 0 is transparently upgraded to version 1 the first time
-//      the Framework provider reads it.
-//   B. MoveState: SDKv2 kubernetes_priority_class (deprecated alias) state is
-//      translated into kubernetes_priority_class_v1 state when the user adds a
-//      `moved` block.
+//	moved {
+//	  from = kubernetes_priority_class.example
+//	  to   = kubernetes_priority_class_v1.example
+//	}
+//
+// No UpgradeState handler is needed because the Framework schema uses
+// ListNestedBlock for metadata, which produces an identical JSON state shape
+// to the SDKv2 TypeList{MaxItems:1} — schema_version stays at 0 and Terraform
+// reads the existing state directly without any upgrade step.
 
 import (
 	"context"
@@ -26,106 +27,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
 	schedulingv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/schedulingv1"
 )
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
-// metaObjType is the tftypes shape of one SDKv2 TypeList metadata element.
-var metaObjType = tftypes.Object{
-	AttributeTypes: map[string]tftypes.Type{
-		"name":             tftypes.String,
-		"generate_name":    tftypes.String,
-		"annotations":      tftypes.Map{ElementType: tftypes.String},
-		"labels":           tftypes.Map{ElementType: tftypes.String},
-		"resource_version": tftypes.String,
-		"uid":              tftypes.String,
-		"generation":       tftypes.Number,
-	},
-}
-
-// v0StateType is the full tftypes shape of an SDKv2 priority_class_v1 state.
-var v0StateType = tftypes.Object{
-	AttributeTypes: map[string]tftypes.Type{
-		"id":                tftypes.String,
-		"value":             tftypes.Number,
-		"description":       tftypes.String,
-		"global_default":    tftypes.Bool,
-		"preemption_policy": tftypes.String,
-		"metadata":          tftypes.List{ElementType: metaObjType},
-	},
-}
-
-// buildV0Value constructs a tftypes.Value representing SDKv2 schema version 0
-// state. Pass empty strings for optional string fields to simulate omission.
-func buildV0Value(id, name, generateName, description, preemptionPolicy string,
-	value int, globalDefault bool,
-	annotations, labels map[string]tftypes.Value,
-	resourceVersion, uid string, generation int,
-) tftypes.Value {
-	return tftypes.NewValue(v0StateType, map[string]tftypes.Value{
-		"id":                tftypes.NewValue(tftypes.String, id),
-		"value":             tftypes.NewValue(tftypes.Number, value),
-		"description":       tftypes.NewValue(tftypes.String, description),
-		"global_default":    tftypes.NewValue(tftypes.Bool, globalDefault),
-		"preemption_policy": tftypes.NewValue(tftypes.String, preemptionPolicy),
-		"metadata": tftypes.NewValue(
-			tftypes.List{ElementType: metaObjType},
-			[]tftypes.Value{
-				tftypes.NewValue(metaObjType, map[string]tftypes.Value{
-					"name":             tftypes.NewValue(tftypes.String, name),
-					"generate_name":    tftypes.NewValue(tftypes.String, generateName),
-					"annotations":      tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, annotations),
-					"labels":           tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, labels),
-					"resource_version": tftypes.NewValue(tftypes.String, resourceVersion),
-					"uid":              tftypes.NewValue(tftypes.String, uid),
-					"generation":       tftypes.NewValue(tftypes.Number, generation),
-				}),
-			},
-		),
-	})
-}
-
-// runUpgrader retrieves the v0 upgrader and runs it against rawState,
-// returning the response for assertion.
-func runUpgrader(t *testing.T, rawState tfsdk.State) *resource.UpgradeStateResponse {
-	t.Helper()
-	r := schedulingv1.NewPriorityClassV1()
-	upgraders := r.(interface {
-		UpgradeState(context.Context) map[int64]resource.StateUpgrader
-	}).UpgradeState(context.Background())
-
-	upgrader, ok := upgraders[0]
-	if !ok {
-		t.Fatal("expected upgrader registered at key 0")
-	}
-
-	req := resource.UpgradeStateRequest{State: &rawState}
-	resp := &resource.UpgradeStateResponse{
-		State: tfsdk.State{Schema: schedulingv1.PriorityClassV1Schema()},
-	}
-	upgrader.StateUpgrader(context.Background(), req, resp)
-	return resp
-}
-
-// readUpgradedModel reads the upgraded PriorityClassModel out of resp.State.
-func readUpgradedModel(t *testing.T, resp *resource.UpgradeStateResponse) schedulingv1.PriorityClassModel {
-	t.Helper()
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("upgrade produced errors: %s", resp.Diagnostics)
-	}
-	var m schedulingv1.PriorityClassModel
-	resp.Diagnostics.Append(resp.State.Get(context.Background(), &m)...)
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("reading upgraded state: %s", resp.Diagnostics)
-	}
-	if len(m.Metadata) != 1 {
-		t.Fatalf("metadata: got %d elements, want 1", len(m.Metadata))
-	}
-	return m
-}
 
 // sdkv2RawJSON produces raw JSON bytes that mirror what the SDKv2 provider
 // writes into terraform.tfstate for kubernetes_priority_class. Used by
@@ -145,12 +51,12 @@ func sdkv2RawJSON(id, name, generateName, description, preemptionPolicy string,
 		"labels":           labels,
 	}
 	state := map[string]interface{}{
-		"id":               id,
-		"value":            value,
-		"description":      description,
-		"global_default":   globalDefault,
+		"id":                id,
+		"value":             value,
+		"description":       description,
+		"global_default":    globalDefault,
 		"preemption_policy": preemptionPolicy,
-		"metadata":         []interface{}{meta},
+		"metadata":          []interface{}{meta},
 	}
 	raw, _ := json.Marshal(state)
 	return raw
@@ -193,194 +99,7 @@ func readMovedModel(t *testing.T, resp *resource.MoveStateResponse) schedulingv1
 	return m
 }
 
-// ─── A. UpgradeState tests (v0 → v1) ─────────────────────────────────────────
-
-// TestMigration_UpgradeState_handlersRegistered verifies the upgrader is wired
-// up at key 0 with a non-nil PriorSchema — a compile-time regression guard.
-func TestMigration_UpgradeState_handlersRegistered(t *testing.T) {
-	t.Parallel()
-	r := schedulingv1.NewPriorityClassV1()
-	upgraders := r.(interface {
-		UpgradeState(context.Context) map[int64]resource.StateUpgrader
-	}).UpgradeState(context.Background())
-
-	upgrader, ok := upgraders[0]
-	if !ok {
-		t.Fatal("expected upgrader registered at key 0")
-	}
-	if len(upgraders) != 1 {
-		t.Errorf("expected exactly 1 upgrader, got %d", len(upgraders))
-	}
-	if upgrader.PriorSchema == nil {
-		t.Error("PriorSchema must be non-nil so the framework can decode prior state")
-	}
-}
-
-// TestMigration_UpgradeState_basic covers the most common SDKv2 state: name
-// only, no generate_name, empty annotations/labels. Verifies that
-// generate_name is normalised to null (not "") to avoid perpetual plan diff.
-func TestMigration_UpgradeState_basic(t *testing.T) {
-	t.Parallel()
-
-	v0 := buildV0Value(
-		"my-pc", "my-pc", "",
-		"", "PreemptLowerPriority",
-		100, false,
-		map[string]tftypes.Value{}, map[string]tftypes.Value{},
-		"1000", "uid-001", 0,
-	)
-	r := schedulingv1.NewPriorityClassV1()
-	upgraders := r.(interface {
-		UpgradeState(context.Context) map[int64]resource.StateUpgrader
-	}).UpgradeState(context.Background())
-	upgrader := upgraders[0]
-
-	resp := runUpgrader(t, tfsdk.State{Schema: *upgrader.PriorSchema, Raw: v0})
-	got := readUpgradedModel(t, resp)
-
-	if got.ID.ValueString() != "my-pc" {
-		t.Errorf("id: got %q, want %q", got.ID.ValueString(), "my-pc")
-	}
-	if got.Metadata[0].Name.ValueString() != "my-pc" {
-		t.Errorf("name: got %q, want %q", got.Metadata[0].Name.ValueString(), "my-pc")
-	}
-	// generate_name was "" in SDKv2 — must become null in Framework
-	if !got.Metadata[0].GenerateName.IsNull() {
-		t.Errorf("generate_name: expected null, got %q", got.Metadata[0].GenerateName.ValueString())
-	}
-	// empty maps must remain nil — not empty map — to avoid plan diff
-	if got.Metadata[0].Annotations != nil {
-		t.Errorf("annotations: expected nil for empty map, got %v", got.Metadata[0].Annotations)
-	}
-	if got.Metadata[0].Labels != nil {
-		t.Errorf("labels: expected nil for empty map, got %v", got.Metadata[0].Labels)
-	}
-	if got.Value.ValueInt64() != 100 {
-		t.Errorf("value: got %d, want 100", got.Value.ValueInt64())
-	}
-	if got.PreemptionPolicy.ValueString() != "PreemptLowerPriority" {
-		t.Errorf("preemption_policy: got %q, want PreemptLowerPriority", got.PreemptionPolicy.ValueString())
-	}
-}
-
-// TestMigration_UpgradeState_withAnnotationsAndLabels verifies that non-empty
-// annotations and labels are preserved exactly after upgrade.
-func TestMigration_UpgradeState_withAnnotationsAndLabels(t *testing.T) {
-	t.Parallel()
-
-	annotations := map[string]tftypes.Value{
-		"example.com/note": tftypes.NewValue(tftypes.String, "hello"),
-	}
-	labels := map[string]tftypes.Value{
-		"env": tftypes.NewValue(tftypes.String, "staging"),
-	}
-	v0 := buildV0Value(
-		"pc-annot", "pc-annot", "",
-		"some description", "Never",
-		200, false,
-		annotations, labels,
-		"2000", "uid-002", 1,
-	)
-	r := schedulingv1.NewPriorityClassV1()
-	upgraders := r.(interface {
-		UpgradeState(context.Context) map[int64]resource.StateUpgrader
-	}).UpgradeState(context.Background())
-	upgrader := upgraders[0]
-
-	resp := runUpgrader(t, tfsdk.State{Schema: *upgrader.PriorSchema, Raw: v0})
-	got := readUpgradedModel(t, resp)
-
-	if got.Description.ValueString() != "some description" {
-		t.Errorf("description: got %q, want %q", got.Description.ValueString(), "some description")
-	}
-	if got.PreemptionPolicy.ValueString() != "Never" {
-		t.Errorf("preemption_policy: got %q, want Never", got.PreemptionPolicy.ValueString())
-	}
-	if got.Metadata[0].Annotations["example.com/note"].ValueString() != "hello" {
-		t.Errorf("annotations[example.com/note]: got %q, want %q",
-			got.Metadata[0].Annotations["example.com/note"].ValueString(), "hello")
-	}
-	if got.Metadata[0].Labels["env"].ValueString() != "staging" {
-		t.Errorf("labels[env]: got %q, want %q",
-			got.Metadata[0].Labels["env"].ValueString(), "staging")
-	}
-}
-
-// TestMigration_UpgradeState_withGenerateName verifies that a non-empty
-// generate_name is preserved (not nulled out) after upgrade.
-func TestMigration_UpgradeState_withGenerateName(t *testing.T) {
-	t.Parallel()
-
-	v0 := buildV0Value(
-		"pc-gen-xk9p2", "", "pc-gen-",
-		"", "PreemptLowerPriority",
-		50, false,
-		map[string]tftypes.Value{}, map[string]tftypes.Value{},
-		"3000", "uid-003", 0,
-	)
-	r := schedulingv1.NewPriorityClassV1()
-	upgraders := r.(interface {
-		UpgradeState(context.Context) map[int64]resource.StateUpgrader
-	}).UpgradeState(context.Background())
-	upgrader := upgraders[0]
-
-	resp := runUpgrader(t, tfsdk.State{Schema: *upgrader.PriorSchema, Raw: v0})
-	got := readUpgradedModel(t, resp)
-
-	if got.Metadata[0].GenerateName.IsNull() {
-		t.Error("generate_name: expected non-null for 'pc-gen-', got null")
-	}
-	if got.Metadata[0].GenerateName.ValueString() != "pc-gen-" {
-		t.Errorf("generate_name: got %q, want %q",
-			got.Metadata[0].GenerateName.ValueString(), "pc-gen-")
-	}
-}
-
-// TestMigration_UpgradeState_allScalarFields verifies description, global_default,
-// value, resource_version and uid are all preserved correctly.
-func TestMigration_UpgradeState_allScalarFields(t *testing.T) {
-	t.Parallel()
-
-	v0 := buildV0Value(
-		"pc-full", "pc-full", "",
-		"critical workloads", "Never",
-		1000, true,
-		map[string]tftypes.Value{}, map[string]tftypes.Value{},
-		"9999", "uid-full", 3,
-	)
-	r := schedulingv1.NewPriorityClassV1()
-	upgraders := r.(interface {
-		UpgradeState(context.Context) map[int64]resource.StateUpgrader
-	}).UpgradeState(context.Background())
-	upgrader := upgraders[0]
-
-	resp := runUpgrader(t, tfsdk.State{Schema: *upgrader.PriorSchema, Raw: v0})
-	got := readUpgradedModel(t, resp)
-
-	if got.Value.ValueInt64() != 1000 {
-		t.Errorf("value: got %d, want 1000", got.Value.ValueInt64())
-	}
-	if !got.GlobalDefault.ValueBool() {
-		t.Error("global_default: expected true")
-	}
-	if got.Description.ValueString() != "critical workloads" {
-		t.Errorf("description: got %q, want %q", got.Description.ValueString(), "critical workloads")
-	}
-	if got.PreemptionPolicy.ValueString() != "Never" {
-		t.Errorf("preemption_policy: got %q, want Never", got.PreemptionPolicy.ValueString())
-	}
-	if got.Metadata[0].ResourceVersion.ValueString() != "9999" {
-		t.Errorf("resource_version: got %q, want 9999", got.Metadata[0].ResourceVersion.ValueString())
-	}
-	if got.Metadata[0].UID.ValueString() != "uid-full" {
-		t.Errorf("uid: got %q, want uid-full", got.Metadata[0].UID.ValueString())
-	}
-	if got.Metadata[0].Generation.ValueInt64() != 3 {
-		t.Errorf("generation: got %d, want 3", got.Metadata[0].Generation.ValueInt64())
-	}
-}
-
-// ─── B. MoveState tests ───────────────────────────────────────────────────────
+// ─── MoveState tests ──────────────────────────────────────────────────────────
 
 // TestMigration_MoveState_handlersRegistered verifies the StateMover is wired
 // up — a compile-time regression guard.

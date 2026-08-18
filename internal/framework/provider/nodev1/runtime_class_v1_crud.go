@@ -106,6 +106,15 @@ func (r *RuntimeClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	// ResourceVersion is a computed server field not present in the plan.
+	// Read it from prior state so the Kubernetes API accepts the PUT.
+	var state RuntimeClassV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	plan.Metadata[0].ResourceVersion = state.Metadata[0].ResourceVersion
+
 	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())

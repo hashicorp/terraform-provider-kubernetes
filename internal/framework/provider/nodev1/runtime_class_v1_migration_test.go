@@ -19,7 +19,7 @@ import (
 // Step 1 of every migration test applies with this version to write real
 // SDKv2 state; step 2 switches to the local Framework binary to verify the
 // provider upgrade is transparent (empty plan, no destroy/recreate).
-const sdkv2RuntimeClassProviderVersion = "2.35.1"
+const sdkv2RuntimeClassProviderVersion = "3.2.1"
 
 // testAccRuntimeClassMigration is the shared helper for all migration sub-tests.
 //
@@ -120,7 +120,6 @@ func TestAccRuntimeClassV1_UpgradeFromSDKV2_withGenerateName(t *testing.T) {
 	prefix := fmt.Sprintf("tf-migration-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccRuntimeClassMigration(t, testAccRuntimeClassV1MigConfig_withGenerateName(prefix))
 }
-
 
 // TestAccRuntimeClassV1_UpgradeFromSDKV2_emptyMaps — both labels and annotations
 // declared as explicit empty maps {}.

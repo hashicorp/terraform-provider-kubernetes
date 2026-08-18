@@ -229,13 +229,12 @@ func TestAccRuntimeClassV1_importWithIdentity(t *testing.T) {
 				Config: testAccRuntimeClassV1Config_basic(name),
 			},
 			{
-				ResourceName:      "kubernetes_runtime_class_v1.test",
-				ImportState:       true,
-				ImportStateKind:   resource.ImportBlockWithResourceIdentity,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"metadata.0.resource_version",
-				},
+				ResourceName:    "kubernetes_runtime_class_v1.test",
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+				// ImportStateVerify is not supported with plannable import blocks
+				// (ImportBlockWithResourceIdentity). The import itself succeeding
+				// without error is the assertion.
 			},
 		},
 	})

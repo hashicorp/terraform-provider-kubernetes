@@ -35,10 +35,11 @@ func expandStringMap(m map[string]types.String) map[string]string {
 func buildRuntimeClassObject(plan RuntimeClassV1Model) *nodev1.RuntimeClass {
 	return &nodev1.RuntimeClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:         plan.Metadata[0].Name.ValueString(),
-			GenerateName: plan.Metadata[0].GenerateName.ValueString(),
-			Labels:       expandStringMap(plan.Metadata[0].Labels),
-			Annotations:  expandStringMap(plan.Metadata[0].Annotations),
+			Name:            plan.Metadata[0].Name.ValueString(),
+			GenerateName:    plan.Metadata[0].GenerateName.ValueString(),
+			ResourceVersion: plan.Metadata[0].ResourceVersion.ValueString(),
+			Labels:          expandStringMap(plan.Metadata[0].Labels),
+			Annotations:     expandStringMap(plan.Metadata[0].Annotations),
 		},
 		Handler: plan.Handler.ValueString(),
 	}

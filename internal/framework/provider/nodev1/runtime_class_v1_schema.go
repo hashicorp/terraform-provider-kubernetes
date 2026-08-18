@@ -71,10 +71,13 @@ func (r *RuntimeClassV1) Schema(_ context.Context, _ resource.SchemaRequest, res
 								stringvalidator.ExactlyOneOf(
 									path.MatchRelative().AtParent().AtName("name"),
 								),
+								// generate_name is a prefix — the server appends a random suffix,
+								// so a trailing hyphen is valid and expected. Use a looser regex
+								// than dnsLabelRegexp which rejects trailing hyphens.
 								stringvalidator.RegexMatches(
-									dnsLabelRegexp,
-									"must be a valid DNS label: lowercase alphanumeric characters or '-', "+
-										"must start and end with an alphanumeric character",
+									regexp.MustCompile(`^[a-z0-9][-a-z0-9]*$`),
+									"must start with a lowercase alphanumeric character and contain only "+
+										"lowercase alphanumeric characters or '-'",
 								),
 							},
 						},

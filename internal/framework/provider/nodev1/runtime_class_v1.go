@@ -52,7 +52,6 @@ func (r *RuntimeClassV1) Configure(_ context.Context, req resource.ConfigureRequ
 
 func (r *RuntimeClassV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = identityschema.Schema{
-		Version: 1,
 		Attributes: map[string]identityschema.Attribute{
 			"api_version": identityschema.StringAttribute{
 				RequiredForImport: true,

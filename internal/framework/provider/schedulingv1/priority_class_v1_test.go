@@ -5,6 +5,8 @@ package schedulingv1_test
 
 import (
 	"fmt"
+	"os/exec"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -205,6 +207,157 @@ func TestAccPriorityClassV1_moved(t *testing.T) {
 	})
 }
 
+// TestAccPriorityClassV1_valueRequiresReplace verifies that changing the
+// immutable 'value' field destroys the old resource and creates a new one
+// (RequiresReplace plan modifier).
+func TestAccPriorityClassV1_valueRequiresReplace(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+	resourceName := "kubernetes_priority_class_v1.test"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccPriorityClassV1Config_basic(name),
+				Check:  tfresource.TestCheckResourceAttr(resourceName, "value", "100"),
+			},
+			// Changing value must trigger destroy + create, not an in-place update.
+			{
+				Config: testAccPriorityClassV1Config_withValue(name, 200),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				Check: tfresource.TestCheckResourceAttr(resourceName, "value", "200"),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_preemptionPolicyRequiresReplace verifies that changing
+// preemption_policy also triggers a destroy + create.
+func TestAccPriorityClassV1_preemptionPolicyRequiresReplace(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+	resourceName := "kubernetes_priority_class_v1.test"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccPriorityClassV1Config_basic(name), // preemption_policy = "Never"
+				Check:  tfresource.TestCheckResourceAttr(resourceName, "preemption_policy", "Never"),
+			},
+			{
+				Config: testAccPriorityClassV1Config_withPreemptionPolicy(name, "PreemptLowerPriority"),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				Check: tfresource.TestCheckResourceAttr(resourceName, "preemption_policy", "PreemptLowerPriority"),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_globalDefault verifies that global_default can be
+// toggled true/false in-place without a destroy/recreate.
+func TestAccPriorityClassV1_globalDefault(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+	resourceName := "kubernetes_priority_class_v1.test"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccPriorityClassV1Config_basic(name),
+				Check:  tfresource.TestCheckResourceAttr(resourceName, "global_default", "false"),
+			},
+			// Enable global_default — must be an in-place update, not a replace.
+			{
+				Config: testAccPriorityClassV1Config_globalDefault(name, true),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: tfresource.TestCheckResourceAttr(resourceName, "global_default", "true"),
+			},
+			// Disable it again.
+			{
+				Config: testAccPriorityClassV1Config_basic(name),
+				Check:  tfresource.TestCheckResourceAttr(resourceName, "global_default", "false"),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_disappears verifies that if the PriorityClass is
+// deleted outside Terraform (e.g. kubectl delete), the next plan detects it
+// is gone and proposes to recreate it.
+func TestAccPriorityClassV1_disappears(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+	resourceName := "kubernetes_priority_class_v1.test"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			// Step 1: create the resource.
+			{
+				Config: testAccPriorityClassV1Config_basic(name),
+				Check:  tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+			},
+			// Step 2: delete out-of-band, then refresh state.
+			// RefreshState: true triggers a Read without applying config.
+			// Read returns 404 → provider calls RemoveResource → state cleared.
+			// The subsequent plan (ExpectNonEmptyPlan) then shows a create.
+			{
+				RefreshState:       true,
+				ExpectNonEmptyPlan: true,
+				PreConfig: func() {
+					// Delete the PriorityClass outside Terraform to simulate an
+					// out-of-band deletion. Errors are intentionally ignored —
+					// the object may already be gone.
+					_ = exec.Command("kubectl", "delete", "priorityclass", name, "--ignore-not-found").Run()
+				},
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_invalidValue verifies that value > 1,000,000,000
+// is rejected at plan time by the int64validator, not at apply time by the API.
+func TestAccPriorityClassV1_invalidValue(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccPriorityClassV1Config_withValue(name, 1_000_000_001),
+				ExpectError: regexp.MustCompile(`1000000001`),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_nameAndGenerateNameConflict verifies that setting
+// both name and generate_name is rejected at plan time by the ConflictsWith validator.
+func TestAccPriorityClassV1_nameAndGenerateNameConflict(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccPriorityClassV1Config_nameAndGenerateName(name, "tf-acc-pc-"),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
+			},
+		},
+	})
+}
+
 // ─── HCL config helpers ───────────────────────────────────────────────────────
 
 func testAccPriorityClassV1Config_basic(name string) string {
@@ -266,6 +419,59 @@ resource "kubernetes_priority_class" "test" {
   preemption_policy = "PreemptLowerPriority"
 }
 `, name)
+}
+
+func testAccPriorityClassV1Config_withValue(name string, value int) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  value             = %[2]d
+  preemption_policy = "Never"
+}
+`, name, value)
+}
+
+func testAccPriorityClassV1Config_withPreemptionPolicy(name, policy string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  value             = 100
+  preemption_policy = %[2]q
+}
+`, name, policy)
+}
+
+func testAccPriorityClassV1Config_globalDefault(name string, globalDefault bool) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  value             = 100
+  preemption_policy = "Never"
+  global_default    = %[2]t
+}
+`, name, globalDefault)
+}
+
+func testAccPriorityClassV1Config_nameAndGenerateName(name, prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name          = %[1]q
+    generate_name = %[2]q
+  }
+
+  value = 100
+}
+`, name, prefix)
 }
 
 // testAccPriorityClassV1Config_movedFrom contains the moved block that

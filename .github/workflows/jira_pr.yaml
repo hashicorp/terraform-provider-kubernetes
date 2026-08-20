@@ -75,6 +75,13 @@ jobs:
       - name: Search
         if: github.event.action != 'opened'
         id: search
+        # Upstream (tomhjp/gh-action-jira-search) still calls the deprecated
+        # Jira /rest/api/3/search endpoint, which Atlassian has removed
+        # (HTTP 410). continue-on-error keeps this housekeeping sync from
+        # blocking PR merges until upstream migrates to /rest/api/3/search/jql;
+        # downstream steps already gate on steps.search.outputs.issue, so they
+        # skip cleanly when this step fails without setting it.
+        continue-on-error: true
         uses: tomhjp/gh-action-jira-search@04700b457f317c3e341ce90da5a3ff4ce058f2fa # v0.2.2
         with:
           # cf[10089] is Issue Link (use JIRA API to retrieve)

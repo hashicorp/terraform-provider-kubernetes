@@ -1,0 +1,4 @@
+Internal CI-only change: no user-facing effect on the provider, so no release-note entry.
+Marks the "Jira sync" workflow's Search step as continue-on-error, since upstream
+(tomhjp/gh-action-jira-search) still calls a Jira REST endpoint Atlassian has removed,
+which was otherwise blocking PR merges on unrelated code changes.

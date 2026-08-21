@@ -101,5 +101,34 @@ func persistentVolumeClaimSpecFields() map[string]*schema.Schema {
 				string(corev1.PersistentVolumeFilesystem),
 			}, false),
 		},
+		"data_source": {
+			Type:        schema.TypeList,
+			Description: "Specifies the data source for the volume. This can be used to create a pre-populated volume from an existing volume snapshot, PVC, or other source.",
+			Optional:    true,
+			ForceNew:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"api_group": {
+						Type:        schema.TypeString,
+						Description: "The group for the resource being referenced. If not specified, the specified Kind must be in the core API group. For any other third-party types, the API group is required.",
+						Optional:    true,
+						ForceNew:    true,
+					},
+					"kind": {
+						Type:        schema.TypeString,
+						Description: "The type of resource being referenced. Valid values are 'PersistentVolumeClaim' or 'VolumeSnapshot'.",
+						Required:    true,
+						ForceNew:    true,
+					},
+					"name": {
+						Type:        schema.TypeString,
+						Description: "The name of the resource being referenced.",
+						Required:    true,
+						ForceNew:    true,
+					},
+				},
+			},
+		},
 	}
 }

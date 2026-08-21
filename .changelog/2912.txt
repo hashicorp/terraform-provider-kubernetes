@@ -1,0 +1,11 @@
+```release-note:improvement
+provider: Send the standard Terraform User-Agent to the Kubernetes API server, including the Terraform version, plugin SDK version, provider version, and any value set in `TF_APPEND_USER_AGENT`, which was previously ignored
+```
+
+```release-note:bug
+`resource/kubernetes_manifest`, `data_source/kubernetes_resource`, `data_source/kubernetes_resources`: Identify the provider in requests to the Kubernetes API server. These sent either `Go-http-client/1.1` or the `client-go` library default, neither of which names Terraform or the provider version
+```
+
+```release-note:bug
+provider: Report the real provider version in release builds; the `-X main.Version` linker flag was silently ignored because `Version` was declared as a constant
+```

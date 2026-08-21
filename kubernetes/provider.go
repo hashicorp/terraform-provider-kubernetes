@@ -22,6 +22,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/useragent"
+
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -467,7 +469,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		cfg = &restclient.Config{}
 	}
 
-	cfg.UserAgent = fmt.Sprintf("HashiCorp/1.0 Terraform/%s", terraformVersion)
+	cfg.UserAgent = useragent.Build(terraformVersion)
 
 	if logging.IsDebugOrHigher() {
 		log.Printf("[DEBUG] Enabling HTTP requests/responses tracing")

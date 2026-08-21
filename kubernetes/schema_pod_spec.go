@@ -819,7 +819,7 @@ func volumeSchema(isUpdatable bool) *schema.Resource {
 								Required:    true,
 								MaxItems:    1,
 								Elem: &schema.Resource{
-									Schema: persistentVolumeClaimSpecFields(),
+									Schema: persistentVolumeClaimSpecFields(isUpdatable),
 								},
 							},
 						},

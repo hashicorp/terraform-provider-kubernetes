@@ -50,6 +50,7 @@ Read-Only:
 - `external_ips` (Set of String)
 - `external_name` (String)
 - `external_traffic_policy` (String)
+- `traffic_distribution` (String)
 - `health_check_node_port` (Number)
 - `internal_traffic_policy` (String)
 - `ip_families` (List of String)

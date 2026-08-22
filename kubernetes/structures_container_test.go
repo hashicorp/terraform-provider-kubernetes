@@ -256,6 +256,70 @@ func TestExpandContainerEnv(t *testing.T) {
 	}
 }
 
+func TestFlattenLifeCycle(t *testing.T) {
+	sig := v1.SIGTERM
+
+	cases := []struct {
+		Input          *v1.Lifecycle
+		ExpectedOutput []interface{}
+	}{
+		{
+			&v1.Lifecycle{
+				StopSignal: &sig,
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"stop_signal": "SIGTERM",
+				},
+			},
+		},
+		{
+			&v1.Lifecycle{},
+			[]interface{}{map[string]interface{}{}},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenLifeCycle(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestExpandLifeCycle(t *testing.T) {
+	sig := v1.SIGTERM
+
+	cases := []struct {
+		Input          []interface{}
+		ExpectedOutput *v1.Lifecycle
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"stop_signal": "SIGTERM",
+				},
+			},
+			&v1.Lifecycle{
+				StopSignal: &sig,
+			},
+		},
+		{
+			[]interface{}{},
+			&v1.Lifecycle{},
+		},
+	}
+
+	for _, tc := range cases {
+		output := expandLifeCycle(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
 func TestFlattenContainerVolumeMounts_mountPropogation(t *testing.T) {
 	bidimode := v1.MountPropagationBidirectional
 

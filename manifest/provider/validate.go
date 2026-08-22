@@ -17,7 +17,7 @@ import (
 func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req *tfprotov5.ValidateResourceTypeConfigRequest) (*tfprotov5.ValidateResourceTypeConfigResponse, error) {
 	resp := &tfprotov5.ValidateResourceTypeConfigResponse{}
 	requiredKeys := []string{"apiVersion", "kind", "metadata"}
-	forbiddenKeys := []string{"status"}
+	forbiddenKeys := []string{}
 
 	rt, err := GetResourceType(req.TypeName)
 	if err != nil {

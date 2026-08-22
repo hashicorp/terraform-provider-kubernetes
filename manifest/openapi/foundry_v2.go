@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/getkin/kin-openapi/openapi2"
+	"github.com/getkin/kin-openapi/openapi2conv"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -34,8 +36,16 @@ func NewFoundryFromSpecV2(spec []byte) (Foundry, error) {
 		return nil, errors.New("spec has no type information")
 	}
 
+	// kin-openapi v0.144+ split openapi2.SchemaRef into its own type, distinct
+	// from openapi3.SchemaRef (previously an alias), so v2 definitions must be
+	// converted to their v3 equivalent before they can be resolved/typed by
+	// the shared resolveSchemaRef/getTypeFromSchema helpers in schema.go,
+	// which foundry_v3.go also relies on.
+	definitions := openapi2conv.ToV3Schemas(d)
+
 	f := foapiv2{
 		swagger:        &swg,
+		definitions:    definitions,
 		typeCache:      sync.Map{},
 		gkvIndex:       sync.Map{}, //reverse lookup index from GVK to OpenAPI definition IDs
 		recursionDepth: 50,         // arbitrarily large number - a type this deep will likely kill Terraform anyway
@@ -57,6 +67,7 @@ type Foundry interface {
 
 type foapiv2 struct {
 	swagger        *openapi2.T
+	definitions    map[string]*openapi3.SchemaRef // swagger.Definitions, converted to their v3 equivalent
 	typeCache      sync.Map
 	gkvIndex       sync.Map
 	recursionDepth uint64 // a last resort circuit-breaker for run-away recursion - hitting this will make for a bad day
@@ -90,7 +101,7 @@ func (f *foapiv2) GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[s
 }
 
 func (f *foapiv2) getTypeByID(id string, h map[string]string, ap tftypes.AttributePath) (tftypes.Type, error) {
-	swd, ok := f.swagger.Definitions[id]
+	swd, ok := f.definitions[id]
 
 	if !ok {
 		return nil, errors.New("invalid type identifier")
@@ -100,19 +111,19 @@ func (f *foapiv2) getTypeByID(id string, h map[string]string, ap tftypes.Attribu
 		return nil, errors.New("invalid type reference (nil)")
 	}
 
-	sch, err := resolveSchemaRef(swd, f.swagger.Definitions)
+	sch, err := resolveSchemaRef(swd, f.definitions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
+	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.definitions, ap, h)
 }
 
 // buildGvkIndex builds the reverse lookup index that associates each GVK
 // to its corresponding string key in the swagger.Definitions map
 func (f *foapiv2) buildGvkIndex() error {
-	for did, dRef := range f.swagger.Definitions {
-		def, err := resolveSchemaRef(dRef, f.swagger.Definitions)
+	for did, dRef := range f.definitions {
+		def, err := resolveSchemaRef(dRef, f.definitions)
 		if err != nil {
 			return err
 		}
@@ -121,7 +132,14 @@ func (f *foapiv2) buildGvkIndex() error {
 			continue
 		}
 		gvk := []schema.GroupVersionKind{}
-		err = json.Unmarshal(([]byte)(ex.(json.RawMessage)), &gvk)
+		// kin-openapi decodes Schema.Extensions values into plain `any` (not
+		// json.RawMessage as in older versions), so re-marshal before
+		// unmarshalling into the target type rather than type-asserting.
+		exBytes, err := json.Marshal(ex)
+		if err != nil {
+			return fmt.Errorf("failed to marshal GVK extension: %s", err)
+		}
+		err = json.Unmarshal(exBytes, &gvk)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshall GVK from OpenAPI schema extention: %v", err)
 		}

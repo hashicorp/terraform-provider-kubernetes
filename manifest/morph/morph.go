@@ -597,12 +597,14 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			elp := p.WithAttributeName(k)
 			nt, ok := t.(tftypes.Object).AttributeTypes[k]
 			if !ok {
-				diags = append(diags, &tfprotov5.Diagnostic{
-					Attribute: p,
-					Severity:  tfprotov5.DiagnosticSeverityWarning,
-					Summary:   "Attribute not found in schema",
-					Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", attributePathSummary(elp)),
-				})
+				if !v.IsNull() {
+					diags = append(diags, &tfprotov5.Diagnostic{
+						Attribute: p,
+						Severity:  tfprotov5.DiagnosticSeverityWarning,
+						Summary:   "Attribute not found in schema",
+						Detail:    fmt.Sprintf("Unable to find schema type for attribute:\n%s", attributePathSummary(elp)),
+					})
+				}
 				continue
 			}
 			nv, d := ValueToType(v, nt, elp)

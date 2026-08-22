@@ -21,8 +21,8 @@ func dataSourceKubernetesAllNamespaces() *schema.Resource {
 		ReadContext: dataSourceKubernetesAllNamespacesRead,
 		Schema: map[string]*schema.Schema{
 			"namespaces": {
-				Type:        schema.TypeList,
-				Description: "List of all namespaces in a cluster.",
+				Type:        schema.TypeSet,
+				Description: "Set of all namespaces in a cluster.",
 				Computed:    true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,

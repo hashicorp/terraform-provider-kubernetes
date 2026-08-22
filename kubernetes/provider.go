@@ -357,8 +357,7 @@ func Provider() *schema.Provider {
 			// authentication
 			"kubernetes_token_request_v1": resourceKubernetesTokenRequestV1(),
 
-			// node
-			"kubernetes_runtime_class_v1": resourceKubernetesRuntimeClassV1(),
+			// node — kubernetes_runtime_class_v1 migrated to Plugin Framework (internal/framework/provider/nodev1)
 		},
 	}
 
@@ -437,6 +436,9 @@ func (k providerMetadata) DynamicClient() (dynamic.Interface, error) {
 	}
 	return k.dynamicClient, nil
 }
+
+func (k providerMetadata) IgnoreAnnotationPatterns() []string { return k.IgnoreAnnotations }
+func (k providerMetadata) IgnoreLabelPatterns() []string      { return k.IgnoreLabels }
 
 func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error) {
 	if k.discoveryClient != nil {

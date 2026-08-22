@@ -1,0 +1,3 @@
+```release-note:note
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Document `restart_policy` attribute on `init_container` block for sidecar container support (Kubernetes 1.28+)
+```

@@ -607,8 +607,11 @@ func expandLocalObjectReferenceArray(in []interface{}) []api.LocalObjectReferenc
 	}
 	att = make([]api.LocalObjectReference, len(in))
 	for i, c := range in {
+		if c == nil {
+			continue
+		}
 		p := c.(map[string]interface{})
-		if name, ok := p["name"]; ok {
+		if name, ok := p["name"]; ok && name != nil {
 			att[i].Name = name.(string)
 		}
 	}

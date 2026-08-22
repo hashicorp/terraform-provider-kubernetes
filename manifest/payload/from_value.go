@@ -67,7 +67,7 @@ func FromTFValue(in tftypes.Value, th map[string]string, ap *tftypes.AttributePa
 			return nil, ap.NewErrorf("[%s] cannot extract contents of attribute: %s", ap.String(), err)
 		}
 		if len(l) == 0 {
-			return lv, nil
+			return []interface{}{}, nil
 		}
 		for k, le := range l {
 			nextAp := ap.WithElementKeyInt(k)

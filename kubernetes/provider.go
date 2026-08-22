@@ -334,9 +334,8 @@ func Provider() *schema.Provider {
 			"kubernetes_pod_disruption_budget":    resourceKubernetesPodDisruptionBudget(),
 			"kubernetes_pod_disruption_budget_v1": resourceKubernetesPodDisruptionBudgetV1(),
 
-			// scheduling
-			"kubernetes_priority_class":    resourceKubernetesPriorityClassV1("Deprecated; use kubernetes_priority_class_v1."),
-			"kubernetes_priority_class_v1": resourceKubernetesPriorityClassV1(""),
+			// scheduling (priority_class_v1 is now handled by the Plugin Framework resource)
+			"kubernetes_priority_class": resourceKubernetesPriorityClassV1("Deprecated; use kubernetes_priority_class_v1."),
 
 			// admission control
 			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfigurationV1Beta1("Deprecated; use kubernetes_validating_webhook_configuration_v1."),
@@ -379,6 +378,8 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
+	GetIgnoreAnnotations() []string
+	GetIgnoreLabels() []string
 }
 
 type providerMetadata struct {
@@ -451,6 +452,14 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 		k.discoveryClient = kc
 	}
 	return k.discoveryClient, nil
+}
+
+func (k providerMetadata) GetIgnoreAnnotations() []string {
+	return k.IgnoreAnnotations
+}
+
+func (k providerMetadata) GetIgnoreLabels() []string {
+	return k.IgnoreLabels
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

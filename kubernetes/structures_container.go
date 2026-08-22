@@ -52,6 +52,9 @@ func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 	if in.SELinuxOptions != nil {
 		att["se_linux_options"] = flattenSeLinuxOptions(in.SELinuxOptions)
 	}
+	if in.ProcMount != nil {
+		att["proc_mount"] = string(*in.ProcMount)
+	}
 	return []interface{}{att}
 }
 
@@ -658,6 +661,10 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 	}
 	if v, ok := in["se_linux_options"].([]interface{}); ok && len(v) > 0 {
 		obj.SELinuxOptions = expandSeLinuxOptions(v)
+	}
+	if v, ok := in["proc_mount"].(string); ok && v != "" {
+		procMount := v1.ProcMountType(v)
+		obj.ProcMount = &procMount
 	}
 
 	return &obj, nil

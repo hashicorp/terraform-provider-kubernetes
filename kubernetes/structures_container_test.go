@@ -312,3 +312,42 @@ func TestFlattenContainerVolumeMounts_mountPropogation(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenContainerSecurityContext_ProcMount(t *testing.T) {
+	procMount := v1.UnmaskedProcMount
+	input := &v1.SecurityContext{
+		ProcMount: &procMount,
+	}
+
+	output := flattenContainerSecurityContext(input)
+	if len(output) == 0 {
+		t.Fatal("Expected non-empty output")
+	}
+	m := output[0].(map[string]interface{})
+	got, ok := m["proc_mount"]
+	if !ok {
+		t.Fatal("proc_mount missing from flattened output")
+	}
+	if got != string(v1.UnmaskedProcMount) {
+		t.Fatalf("Expected proc_mount=%q, got %q", v1.UnmaskedProcMount, got)
+	}
+}
+
+func TestExpandContainerSecurityContext_ProcMount(t *testing.T) {
+	input := []interface{}{
+		map[string]interface{}{
+			"proc_mount": "Unmasked",
+		},
+	}
+
+	output, err := expandContainerSecurityContext(input)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if output.ProcMount == nil {
+		t.Fatal("Expected ProcMount to be set")
+	}
+	if *output.ProcMount != v1.UnmaskedProcMount {
+		t.Fatalf("Expected ProcMount=%q, got %q", v1.UnmaskedProcMount, *output.ProcMount)
+	}
+}

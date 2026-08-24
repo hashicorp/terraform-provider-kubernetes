@@ -220,7 +220,6 @@ func Provider() *schema.Provider {
 			"kubernetes_config_map":                 dataSourceKubernetesConfigMapV1("Deprecated; use kubernetes_config_map_v1."),
 			"kubernetes_config_map_v1":              dataSourceKubernetesConfigMapV1(""),
 			"kubernetes_namespace":                  dataSourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
-			"kubernetes_namespace_v1":               dataSourceKubernetesNamespaceV1(""),
 			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
 			"kubernetes_secret":                     dataSourceKubernetesSecretV1("Deprecated; use kubernetes_secret_v1."),
 			"kubernetes_secret_v1":                  dataSourceKubernetesSecretV1(""),

@@ -28,6 +28,10 @@ func expandCSIDriverV1Spec(l []interface{}) storage.CSIDriverSpec {
 		obj.VolumeLifecycleModes = expandCSIDriverV1VolumeLifecycleModes(v)
 	}
 
+	if v, ok := in["fs_group_policy"].(string); ok && v != "" {
+		obj.FSGroupPolicy = ptr.To(storage.FSGroupPolicy(v))
+	}
+
 	return obj
 }
 
@@ -50,6 +54,10 @@ func flattenCSIDriverV1Spec(in storage.CSIDriverSpec) []interface{} {
 
 	if len(in.VolumeLifecycleModes) > 0 {
 		att["volume_lifecycle_modes"] = in.VolumeLifecycleModes
+	}
+
+	if in.FSGroupPolicy != nil {
+		att["fs_group_policy"] = in.FSGroupPolicy
 	}
 
 	return []interface{}{att}
@@ -75,6 +83,13 @@ func patchCSIDriverV1Spec(keyPrefix, pathPrefix string, d *schema.ResourceData) 
 		ops = append(ops, &ReplaceOperation{
 			Path:  pathPrefix + "/volumeLifecycleModes",
 			Value: expandCSIDriverV1VolumeLifecycleModes(d.Get(keyPrefix + "volume_lifecycle_modes").([]interface{})),
+		})
+	}
+
+	if d.HasChange(keyPrefix + "fs_group_policy") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  pathPrefix + "/fsGroupPolicy",
+			Value: d.Get(keyPrefix + "fs_group_policy").(string),
 		})
 	}
 

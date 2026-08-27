@@ -217,11 +217,12 @@ func Provider() *schema.Provider {
 
 		DataSourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_config_map":                 dataSourceKubernetesConfigMapV1("Deprecated; use kubernetes_config_map_v1."),
-			"kubernetes_config_map_v1":              dataSourceKubernetesConfigMapV1(""),
-			"kubernetes_namespace":                  dataSourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
-			"kubernetes_namespace_v1":               dataSourceKubernetesNamespaceV1(""),
-			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
+			"kubernetes_config_map":    dataSourceKubernetesConfigMapV1("Deprecated; use kubernetes_config_map_v1."),
+			"kubernetes_config_map_v1": dataSourceKubernetesConfigMapV1(""),
+			"kubernetes_namespace":     dataSourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
+			"kubernetes_namespace_v1":  dataSourceKubernetesNamespaceV1(""),
+			// kubernetes_all_namespaces migrated to framework — registered in
+			// internal/framework/provider/corev1/all_namespaces.go
 			"kubernetes_secret":                     dataSourceKubernetesSecretV1("Deprecated; use kubernetes_secret_v1."),
 			"kubernetes_secret_v1":                  dataSourceKubernetesSecretV1(""),
 			"kubernetes_endpoints_v1":               dataSourceKubernetesEndpointsV1(),

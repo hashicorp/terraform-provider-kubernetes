@@ -6,7 +6,6 @@ package corev1
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -65,7 +64,7 @@ func typedStringMapToAttrMap(ctx context.Context, m map[string]types.String) (ty
 	}
 	elems := make(map[string]attr.Value, len(m))
 	for k, v := range m {
-		elems[k] = types.StringValue(fmt.Sprintf("%s", v.ValueString()))
+		elems[k] = types.StringValue(v.ValueString())
 	}
 	return types.MapValue(types.StringType, elems)
 }

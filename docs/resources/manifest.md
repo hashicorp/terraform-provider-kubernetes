@@ -53,7 +53,7 @@ Optional:
 
 Optional:
 
-- `condition` (Block List) (see [below for nested schema](#nestedblock--wait--condition))
+- `condition` (Block List) Wait for specific conditions to be met. Multiple condition blocks can be specified. (see [below for nested schema](#nestedblock--wait--condition))
 - `fields` (Map of String) A map of paths to fields to wait for a specific field value.
 - `rollout` (Boolean) Wait for rollout to complete on resources that support `kubectl rollout status`.
 
@@ -166,7 +166,7 @@ Note the import ID as the last argument to the import command. This ID points Te
 
 ## Using `wait` to block create and update calls
 
-The `kubernetes_manifest` resource supports the ability to block create and update calls until a field is set or has a particular value by specifying the `wait` block. This is useful for when you create resources like Jobs and Services when you want to wait for something to happen after the resource is created by the API server before Terraform should consider the resource created.
+The `kubernetes_manifest` resource supports the ability to block create and update calls until certain conditions are met by specifying the `wait` block. Multiple wait types can be combined in a single `wait` block, and they will be evaluated sequentially. This is useful for when you create resources like Jobs and Services when you want to wait for something to happen after the resource is created by the API server before Terraform should consider the resource created.
 
 `wait` supports supports a `fields` attribute which allows you specify a map of fields paths to regular expressions. You can also specify `*` if you just want to wait for a field to have any value.
 
@@ -230,6 +230,38 @@ resource "kubernetes_manifest" "test" {
   }
 }
 ```
+
+## Combining Multiple Wait Types
+
+You can combine `fields`, `condition`, and `rollout` in a single `wait` block. The provider will evaluate them sequentially in the order: rollout → conditions → fields.
+
+```terraform
+resource "kubernetes_manifest" "test" {
+  manifest = {
+    // ...
+  }
+
+  wait {
+    # Wait for specific field values
+    fields = {
+      "status.phase" = "Running"
+    }
+    
+
+    # Wait for multiple conditions
+    condition {
+      type   = "Ready"
+      status = "True"
+    }
+    
+    condition {
+      type   = "ContainersReady"
+      status = "True"
+    }
+  }
+}
+```
+
 
 ## Configuring `field_manager`
 

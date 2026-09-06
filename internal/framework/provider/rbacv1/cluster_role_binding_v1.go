@@ -46,6 +46,9 @@ func (r *ClusterRoleBinding) Configure(_ context.Context, req resource.Configure
 
 func (r *ClusterRoleBinding) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = identityschema.Schema{
+		// Version must match the SDKv2 resourceIdentitySchemaNonNamespaced Version: 1
+		// so that state written by the pre-migration provider is accepted without error.
+		Version: 1,
 		Attributes: map[string]identityschema.Attribute{
 			"api_version": identityschema.StringAttribute{
 				RequiredForImport: true,

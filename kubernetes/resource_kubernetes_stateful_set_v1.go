@@ -230,7 +230,6 @@ func resourceKubernetesStatefulSetV1Update(ctx context.Context, d *schema.Resour
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		return diag.Diagnostics{}
 	}
 
 	return resourceKubernetesStatefulSetV1Read(ctx, d, meta)

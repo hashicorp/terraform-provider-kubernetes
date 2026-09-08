@@ -100,19 +100,19 @@ func (f *foapiv2) getTypeByID(id string, h map[string]string, ap tftypes.Attribu
 		return nil, errors.New("invalid type reference (nil)")
 	}
 
-	sch, err := resolveSchemaRef(swd, f.swagger.Definitions)
+	sch, err := resolveSchemaRefV2(swd, f.swagger.Definitions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
+	return getTypeFromSchemaV2(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
 }
 
 // buildGvkIndex builds the reverse lookup index that associates each GVK
 // to its corresponding string key in the swagger.Definitions map
 func (f *foapiv2) buildGvkIndex() error {
 	for did, dRef := range f.swagger.Definitions {
-		def, err := resolveSchemaRef(dRef, f.swagger.Definitions)
+		def, err := resolveSchemaRefV2(dRef, f.swagger.Definitions)
 		if err != nil {
 			return err
 		}
@@ -121,9 +121,23 @@ func (f *foapiv2) buildGvkIndex() error {
 			continue
 		}
 		gvk := []schema.GroupVersionKind{}
-		err = json.Unmarshal(([]byte)(ex.(json.RawMessage)), &gvk)
+		// Extensions is now map[string]any instead of map[string]json.RawMessage
+		// Try to handle both json.RawMessage and direct slice
+		switch v := ex.(type) {
+		case json.RawMessage:
+			err = json.Unmarshal(([]byte)(v), &gvk)
+		case []interface{}:
+			// Already decoded, need to re-encode and decode
+			b, marshalErr := json.Marshal(v)
+			if marshalErr != nil {
+				return fmt.Errorf("failed to marshal GVK: %v", marshalErr)
+			}
+			err = json.Unmarshal(b, &gvk)
+		default:
+			return fmt.Errorf("unexpected type for x-kubernetes-group-version-kind: %T", v)
+		}
 		if err != nil {
-			return fmt.Errorf("failed to unmarshall GVK from OpenAPI schema extention: %v", err)
+			return fmt.Errorf("failed to unmarshall GVK from OpenAPI schema extension: %v", err)
 		}
 		for i := range gvk {
 			f.gkvIndex.Store(gvk[i], did)

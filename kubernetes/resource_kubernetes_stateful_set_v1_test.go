@@ -336,6 +336,40 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStatefulSetV1_waitForRolloutOnUpdate(t *testing.T) {
+	var conf1, conf2 appsv1.StatefulSet
+	imageName := busyboxImage
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_stateful_set_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInEks(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutUpdate(name, imageName, "true", "rev1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
+				),
+			},
+			{
+				// Change a pod template annotation (not the image/command) so
+				// the StatefulSet is updated in place via a real rolling
+				// update, without breaking the container's readiness, while
+				// wait_for_rollout stays "true".
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutUpdate(name, imageName, "true", "rev2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
+					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, false),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	var conf1, conf2 appsv1.StatefulSet
 	imageName := busyboxImage
@@ -1346,6 +1380,72 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
   wait_for_rollout = %s
 }
 `, name, imageName, waitForRollout)
+}
+
+func testAccKubernetesStatefulSetV1ConfigWaitForRolloutUpdate(name, imageName, waitForRollout, revision string) string {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  timeouts {
+    create = "10m"
+    read   = "10m"
+    update = "10m"
+    delete = "10m"
+  }
+
+  spec {
+    replicas = 2
+
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+
+    update_strategy {
+      type = "RollingUpdate"
+    }
+
+    service_name = "ss-test-service"
+
+    template {
+      metadata {
+        labels = {
+          app = "ss-test"
+        }
+        annotations = {
+          revision = "%s"
+        }
+      }
+
+      spec {
+        container {
+          name    = "ss-test"
+          image   = "%s"
+          command = ["/bin/httpd", "-f", "-p", "80"]
+          args    = ["test-webserver"]
+
+          port {
+            container_port = 80
+          }
+
+          readiness_probe {
+            initial_delay_seconds = 3
+            period_seconds        = 1
+            tcp_socket {
+              port = 80
+            }
+          }
+        }
+      }
+    }
+  }
+
+  wait_for_rollout = %s
+}
+`, name, revision, imageName, waitForRollout)
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicy(name, imageName string) string {

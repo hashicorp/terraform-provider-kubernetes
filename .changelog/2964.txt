@@ -1,0 +1,3 @@
+```release-note:note
+`resource/kubernetes_role_v1`: Migrated the resource to the Terraform Plugin Framework. This is an internal implementation change with no expected user-facing behavior differences.
+```

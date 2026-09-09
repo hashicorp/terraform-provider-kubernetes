@@ -133,6 +133,54 @@ func TestAccRole_resourceNames(t *testing.T) {
 	})
 }
 
+func TestAccRole_ruleTransitions(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_role_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRoleConfig_ruleTransitionsStep0(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.resources.*", "pods"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", "get"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.1.resources.*", "deployments"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.1.verbs.*", "list"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.2.resources.*", "cronjobs"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.2.verbs.*", "list"),
+				),
+			},
+			{
+				Config: testAccRoleConfig_ruleTransitionsStep1(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.resources.*", "deployments"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", "get"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", "list"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.1.resources.*", "jobs"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.1.verbs.*", "get"),
+				),
+			},
+			{
+				Config: testAccRoleConfig_ruleTransitionsStep2(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "rule.#", "4"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.resources.*", "pods"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", "list"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.1.resources.*", "deployments"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.1.verbs.*", "list"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.2.resources.*", "cronjobs"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.2.verbs.*", "list"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.3.resources.*", "jobs"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "rule.3.verbs.*", "get"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccRole_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
@@ -357,6 +405,90 @@ resource "kubernetes_role_v1" "test" {
     api_groups = [""]
     resources  = ["pods"]
     verbs      = ["list"]
+  }
+}
+`, name)
+}
+
+func testAccRoleConfig_ruleTransitionsStep0(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods"]
+    verbs      = ["get"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["deployments"]
+    verbs      = ["list"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["cronjobs"]
+    verbs      = ["list"]
+  }
+}
+`, name)
+}
+
+func testAccRoleConfig_ruleTransitionsStep1(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["deployments"]
+    verbs      = ["get", "list"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["jobs"]
+    verbs      = ["get"]
+  }
+}
+`, name)
+}
+
+func testAccRoleConfig_ruleTransitionsStep2(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods"]
+    verbs      = ["list"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["deployments"]
+    verbs      = ["list"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["cronjobs"]
+    verbs      = ["list"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["jobs"]
+    verbs      = ["get"]
   }
 }
 `, name)

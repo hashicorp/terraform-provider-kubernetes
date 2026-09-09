@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	rbacAPIVersion = "rbac.authorization.k8s.io/v1"
-	roleKind       = "Role"
+	rbacAPIVersion   = "rbac.authorization.k8s.io/v1"
+	roleKind         = "Role"
+	defaultNamespace = "default"
 )
 
 func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -263,6 +264,9 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 			return
 		}
 		namespace = identityData.Namespace.ValueString()
+		if namespace == "" {
+			namespace = defaultNamespace
+		}
 		name = identityData.Name.ValueString()
 	}
 

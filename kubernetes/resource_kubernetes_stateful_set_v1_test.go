@@ -348,7 +348,7 @@ func TestAccKubernetesStatefulSetV1_waitForRolloutOnUpdate(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutUpdate(name, imageName, "true", "rev1"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev1"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
@@ -359,7 +359,7 @@ func TestAccKubernetesStatefulSetV1_waitForRolloutOnUpdate(t *testing.T) {
 				// the StatefulSet is updated in place via a real rolling
 				// update, without breaking the container's readiness, while
 				// wait_for_rollout stays "true".
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutUpdate(name, imageName, "true", "rev2"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
@@ -383,14 +383,14 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev1"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName1, "false"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName1, "false", "rev2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "false"),
@@ -1319,70 +1319,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName 
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitForRollout string) string {
-	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
-  metadata {
-    name = "%s"
-  }
-
-  timeouts {
-    create = "10m"
-    read   = "10m"
-    update = "10m"
-    delete = "10m"
-  }
-
-  spec {
-    replicas = 2
-
-    selector {
-      match_labels = {
-        app = "ss-test"
-      }
-    }
-
-    update_strategy {
-      type = "RollingUpdate"
-    }
-
-    service_name = "ss-test-service"
-
-    template {
-      metadata {
-        labels = {
-          app = "ss-test"
-        }
-      }
-
-      spec {
-        container {
-          name    = "ss-test"
-          image   = "%s"
-          command = ["/bin/httpd", "-f", "-p", "80"]
-          args    = ["test-webserver"]
-
-          port {
-            container_port = 80
-          }
-
-          readiness_probe {
-            initial_delay_seconds = 3
-            period_seconds        = 1
-            tcp_socket {
-              port = 80
-            }
-          }
-        }
-      }
-    }
-  }
-
-  wait_for_rollout = %s
-}
-`, name, imageName, waitForRollout)
-}
-
-func testAccKubernetesStatefulSetV1ConfigWaitForRolloutUpdate(name, imageName, waitForRollout, revision string) string {
+func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitForRollout, revision string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     name = "%s"

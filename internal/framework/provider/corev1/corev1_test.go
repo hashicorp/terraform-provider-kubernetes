@@ -19,7 +19,7 @@ func sdkv2providerMeta() func() any {
 	return p.Meta
 }
 
-var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){	
+var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 
 	"kubernetes": providerserver.NewProtocol6WithError(provider.New("test", sdkv2providerMeta())),
 }

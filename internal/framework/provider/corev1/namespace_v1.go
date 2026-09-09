@@ -124,7 +124,8 @@ func (n *NamespaceV1) Schema(ctx context.Context, req resource.SchemaRequest, re
 		Description: "Kubernetes supports multiple virtual clusters backed by the same physical cluster. These virtual clusters are called namespaces. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Computed:      true,
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"wait_for_default_service_account": schema.BoolAttribute{
 				Description: "Terraform will wait for the default service account to be created.",
@@ -186,6 +187,7 @@ func (n *NamespaceV1) Schema(ctx context.Context, req resource.SchemaRequest, re
 							Optional:    true,
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
 								stringplanmodifier.RequiresReplace(),
 							},
 							Validators: []validator.String{

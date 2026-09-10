@@ -25,7 +25,6 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "The name of the ClusterRoleBinding.",
-				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -50,6 +49,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 							Description: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 							Optional:    true,
 							Validators: []validator.String{
+								clusterRoleBindingNameValidator{},
 								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("name")),
 							},
 							PlanModifiers: []planmodifier.String{
@@ -70,6 +70,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.String{
+								clusterRoleBindingNameValidator{},
 								stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("generate_name")),
 							},
 							PlanModifiers: []planmodifier.String{

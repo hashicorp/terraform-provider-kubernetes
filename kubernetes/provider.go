@@ -378,6 +378,8 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
+	GetIgnoreAnnotations() []string
+	GetIgnoreLabels() []string
 }
 
 type providerMetadata struct {
@@ -450,6 +452,14 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 		k.discoveryClient = kc
 	}
 	return k.discoveryClient, nil
+}
+
+func (k providerMetadata) GetIgnoreAnnotations() []string {
+	return k.IgnoreAnnotations
+}
+
+func (k providerMetadata) GetIgnoreLabels() []string {
+	return k.IgnoreLabels
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

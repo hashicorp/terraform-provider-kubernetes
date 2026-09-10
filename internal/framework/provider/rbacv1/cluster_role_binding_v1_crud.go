@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -15,6 +16,7 @@ import (
 	api "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgApi "k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -38,32 +40,66 @@ func (r *ClusterRoleBinding) identity(name string) ClusterRoleBindingIdentityMod
 	}
 }
 
-// applyState fully rebuilds a model from a fetched ClusterRoleBinding object.
-// It is used by Read and Import where there is no prior plan to preserve.
-func applyState(state *ClusterRoleBindingModel, out *api.ClusterRoleBinding) {
+// applyState fully rebuilds a model from a fetched ClusterRoleBinding object,
+// filtering internal and provider-ignored metadata keys that are not already
+// tracked in state. It is used by Read and ImportState.
+func applyState(
+	ctx context.Context,
+	state *ClusterRoleBindingModel,
+	out *api.ClusterRoleBinding,
+	ignoreAnnotations []string,
+	ignoreLabels []string,
+) diag.Diagnostics {
 	state.ID = types.StringValue(out.Name)
-	state.Metadata = flattenMetadata(out.ObjectMeta)
+
+	var currentMeta ClusterRoleBindingMetadataModel
+	if len(state.Metadata) > 0 {
+		currentMeta = state.Metadata[0]
+	}
+
+	metadata, diags := flattenMetadata(ctx, out.ObjectMeta, currentMeta, ignoreAnnotations, ignoreLabels)
+	if diags.HasError() {
+		return diags
+	}
+
+	state.Metadata = metadata
 	state.RoleRef = flattenRoleRef(out.RoleRef)
 	state.Subject = flattenSubjects(out.Subjects)
+
+	return nil
 }
 
-// applyPlanResult updates a plan-derived model after a Create/Update with the
-// server response. It preserves the configured (non-computed) metadata and
-// role_ref values to avoid "inconsistent result after apply" errors, filling in
-// only the computed fields. Subjects are taken from the response because their
-// api_group and namespace fields are computed.
-func applyPlanResult(plan *ClusterRoleBindingModel, out *api.ClusterRoleBinding) {
+// applyPlanResult updates a plan-derived model after a Create/Update using the
+// server response, filtering metadata using the planned state as the "current"
+// reference so that provider-ignored keys do not cause plan drift. Subjects are
+// taken from the response because their api_group and namespace fields are
+// computed. The server-assigned name is always echoed back (required for
+// generate_name).
+func applyPlanResult(
+	ctx context.Context,
+	plan *ClusterRoleBindingModel,
+	out *api.ClusterRoleBinding,
+	ignoreAnnotations []string,
+	ignoreLabels []string,
+) diag.Diagnostics {
 	plan.ID = types.StringValue(out.Name)
 
-	m := &plan.Metadata[0]
-	// name is Optional+Computed: this echoes the configured name, or the
-	// server-generated name when generate_name is used.
-	m.Name = types.StringValue(out.Name)
-	m.Generation = types.Int64Value(out.Generation)
-	m.ResourceVersion = types.StringValue(out.ResourceVersion)
-	m.UID = types.StringValue(string(out.UID))
+	var currentMeta ClusterRoleBindingMetadataModel
+	if len(plan.Metadata) > 0 {
+		currentMeta = plan.Metadata[0]
+	}
 
+	metadata, diags := flattenMetadata(ctx, out.ObjectMeta, currentMeta, ignoreAnnotations, ignoreLabels)
+	if diags.HasError() {
+		return diags
+	}
+
+	plan.Metadata = metadata
+	// name is Optional+Computed: echo the server value to handle generate_name.
+	plan.Metadata[0].Name = types.StringValue(out.Name)
 	plan.Subject = flattenSubjects(out.Subjects)
+
+	return nil
 }
 
 func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -105,7 +141,10 @@ func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	applyPlanResult(&plan, out)
+	resp.Diagnostics.Append(applyPlanResult(ctx, &plan, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
@@ -142,14 +181,18 @@ func (r *ClusterRoleBinding) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	applyState(&state, out)
+	resp.Diagnostics.Append(applyState(ctx, &state, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
 
 func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan ClusterRoleBindingModel
+	var plan, state ClusterRoleBindingModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -166,38 +209,82 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 	}
 
 	name := plan.ID.ValueString()
-	cur, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"read before update failed",
-			fmt.Sprintf("Failed to read ClusterRoleBinding %q before update: %s", name, err.Error()),
-		)
-		return
+
+	// Guard metadata access — schema requires one block but avoids a panic on
+	// incomplete state.
+	var stateMetadata, planMetadata ClusterRoleBindingMetadataModel
+	if len(state.Metadata) > 0 {
+		stateMetadata = state.Metadata[0]
+	}
+	if len(plan.Metadata) > 0 {
+		planMetadata = plan.Metadata[0]
 	}
 
-	// role_ref is immutable (ForceNew / RequiresReplace) so it is never updated
-	// here. Only metadata labels/annotations and subjects can change.
-	labels, d := expandStringMap(ctx, plan.Metadata[0].Labels)
-	resp.Diagnostics.Append(d...)
-	annotations, d := expandStringMap(ctx, plan.Metadata[0].Annotations)
+	// Build the patch from prior Terraform state → plan so that only
+	// Terraform-managed keys are modified. Externally added and
+	// provider-ignored keys are absent from Terraform state (filtered during
+	// Read) and therefore never appear in the diff.
+	ops, d := buildMetadataPatch(ctx, stateMetadata, planMetadata)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	cur.ObjectMeta.Labels = labels
-	cur.ObjectMeta.Annotations = annotations
-	cur.Subjects = expandSubjects(plan.Subject)
 
-	out, err := conn.RbacV1().ClusterRoleBindings().Update(ctx, cur, metav1.UpdateOptions{})
+	// role_ref is immutable (RequiresReplace) — only subjects can change here.
+	// Replace /subjects atomically with one operation to avoid per-index
+	// ordering and stale-entry bugs.
+	if !subjectsEqual(state.Subject, plan.Subject) {
+		ops = append(ops, &kubernetes.ReplaceOperation{
+			Path:  "/subjects",
+			Value: expandSubjects(plan.Subject),
+		})
+	}
+
+	// No-op update: nothing changed — fetch current state to refresh computed
+	// fields without sending an empty patch (which the API rejects).
+	if len(ops) == 0 {
+		out, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"error reading ClusterRoleBinding",
+				fmt.Sprintf("Failed to read ClusterRoleBinding %q: %s", name, err.Error()),
+			)
+			return
+		}
+		resp.Diagnostics.Append(applyPlanResult(ctx, &plan, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
+		return
+	}
+
+	patchBytes, err := ops.MarshalJSON()
+	if err != nil {
+		resp.Diagnostics.AddError("failed to marshal patch", err.Error())
+		return
+	}
+
+	out, err := conn.RbacV1().ClusterRoleBindings().Patch(
+		ctx,
+		name,
+		pkgApi.JSONPatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error updating ClusterRoleBinding",
-			fmt.Sprintf("Failed to update ClusterRoleBinding %q: %s", name, err.Error()),
+			fmt.Sprintf("Failed to patch ClusterRoleBinding %q: %s", name, err.Error()),
 		)
 		return
 	}
 
-	applyPlanResult(&plan, out)
+	resp.Diagnostics.Append(applyPlanResult(ctx, &plan, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
@@ -265,7 +352,10 @@ func (r *ClusterRoleBinding) ImportState(ctx context.Context, req resource.Impor
 	}
 
 	var state ClusterRoleBindingModel
-	applyState(&state, out)
+	resp.Diagnostics.Append(applyState(ctx, &state, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }

@@ -336,42 +336,8 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStatefulSetV1_waitForRolloutOnUpdate(t *testing.T) {
-	var conf1, conf2 appsv1.StatefulSet
-	imageName := busyboxImage
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_stateful_set_v1.test"
-
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInEks(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev1"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
-					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
-				),
-			},
-			{
-				// Change a pod template annotation (not the image/command) so
-				// the StatefulSet is updated in place via a real rolling
-				// update, without breaking the container's readiness, while
-				// wait_for_rollout stays "true".
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev2"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
-					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, false),
-				),
-			},
-		},
-	})
-}
-
 func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
-	var conf1, conf2 appsv1.StatefulSet
+	var conf1, conf2, conf3 appsv1.StatefulSet
 	imageName := busyboxImage
 	imageName1 := agnhostImage
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -390,11 +356,19 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName1, "false", "rev2"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "false"),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName1, "false", "rev2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf3),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "false"),
+					testAccCheckKubernetesStatefulSetForceNew(&conf2, &conf3, false),
 				),
 			},
 		},

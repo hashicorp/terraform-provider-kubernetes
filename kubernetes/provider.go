@@ -313,14 +313,13 @@ func Provider() *schema.Provider {
 			"kubernetes_certificate_signing_request_v1": resourceKubernetesCertificateSigningRequestV1(),
 
 			// rbac
-			"kubernetes_role":                    resourceKubernetesRoleV1("Deprecated; use kubernetes_role_v1."),
-			"kubernetes_role_v1":                 resourceKubernetesRoleV1(""),
-			"kubernetes_role_binding":            resourceKubernetesRoleBindingV1("Deprecated; use kubernetes_role_binding_v1."),
-			"kubernetes_role_binding_v1":         resourceKubernetesRoleBindingV1(""),
-			"kubernetes_cluster_role":            resourceKubernetesClusterRoleV1("Deprecated; use kubernetes_cluster_role_v1."),
-			"kubernetes_cluster_role_v1":         resourceKubernetesClusterRoleV1(""),
-			"kubernetes_cluster_role_binding":    resourceKubernetesClusterRoleBindingV1("Deprecated; use kubernetes_cluster_role_binding_v1."),
-			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBindingV1(""),
+			"kubernetes_role":                 resourceKubernetesRoleV1("Deprecated; use kubernetes_role_v1."),
+			"kubernetes_role_v1":              resourceKubernetesRoleV1(""),
+			"kubernetes_role_binding":         resourceKubernetesRoleBindingV1("Deprecated; use kubernetes_role_binding_v1."),
+			"kubernetes_role_binding_v1":      resourceKubernetesRoleBindingV1(""),
+			"kubernetes_cluster_role":         resourceKubernetesClusterRoleV1("Deprecated; use kubernetes_cluster_role_v1."),
+			"kubernetes_cluster_role_v1":      resourceKubernetesClusterRoleV1(""),
+			"kubernetes_cluster_role_binding": resourceKubernetesClusterRoleBindingV1("Deprecated; use kubernetes_cluster_role_binding_v1."),
 
 			// networking
 			"kubernetes_ingress":           resourceKubernetesIngressV1Beta1("Deprecated; use kubernetes_ingress_v1."),
@@ -379,6 +378,8 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
+	GetIgnoreAnnotations() []string
+	GetIgnoreLabels() []string
 }
 
 type providerMetadata struct {
@@ -451,6 +452,14 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 		k.discoveryClient = kc
 	}
 	return k.discoveryClient, nil
+}
+
+func (k providerMetadata) GetIgnoreAnnotations() []string {
+	return k.IgnoreAnnotations
+}
+
+func (k providerMetadata) GetIgnoreLabels() []string {
+	return k.IgnoreLabels
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

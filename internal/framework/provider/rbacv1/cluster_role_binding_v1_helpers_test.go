@@ -230,9 +230,9 @@ func TestDiffStringMap(t *testing.T) {
 		name      string
 		oldValues map[string]string
 		newValues map[string]string
-		wantOps   []patchOp   // each must be present
-		wantNone  []patchOp   // none of these must appear
-		wantLen   int         // exact op count, -1 to skip
+		wantOps   []patchOp // each must be present
+		wantNone  []patchOp // none of these must appear
+		wantLen   int       // exact op count, -1 to skip
 	}{
 		{
 			name:      "add new key",

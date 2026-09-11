@@ -14,7 +14,7 @@ Kubernetes supports multiple virtual clusters backed by the same physical cluste
 
 ### Required
 
-- `metadata` (Block List, Min: 1, Max: 1) Standard namespace's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
+- `metadata` (Single Nested Attribute) Standard namespace's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
 
 ### Optional
 
@@ -75,6 +75,27 @@ resource "kubernetes_namespace_v1" "example" {
 `kubernetes_namespace_v1` provides the following [Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
 
 - `delete` - Default `5 minutes`
+
+## Migration from `kubernetes_namespace`
+
+If you previously used the deprecated `kubernetes_namespace` resource type, you can migrate your state to `kubernetes_namespace_v1` without destroying and recreating the namespace by adding a `moved` block (requires Terraform 1.8+):
+
+```terraform
+moved {
+  from = kubernetes_namespace.example
+  to   = kubernetes_namespace_v1.example
+}
+
+resource "kubernetes_namespace_v1" "example" {
+  metadata {
+    name = "terraform-example-namespace"
+  }
+}
+```
+
+Running `terraform plan` after adding the `moved` block should show no changes.
+
+Note: Attribute paths have changed from the SDKv2 form (`metadata.0.name`) to the Plugin Framework form (`metadata.name`). Update any `terraform_remote_state` data source references or `precondition`/`postcondition` expressions accordingly.
 
 ## Import
 

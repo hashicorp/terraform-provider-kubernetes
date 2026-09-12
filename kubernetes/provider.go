@@ -238,6 +238,9 @@ func Provider() *schema.Provider {
 			"kubernetes_nodes":                      dataSourceKubernetesNodes(),
 			"kubernetes_server_version":             dataSourceKubernetesServerVersion(),
 
+			// oidc
+			"kubernetes_service_account_issuer": dataSourceKubernetesServiceAccountIssuer(),
+
 			// networking
 			"kubernetes_ingress":    dataSourceKubernetesIngress(),
 			"kubernetes_ingress_v1": dataSourceKubernetesIngressV1(),

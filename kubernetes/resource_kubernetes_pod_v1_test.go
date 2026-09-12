@@ -3448,7 +3448,7 @@ resource "kubernetes_cluster_role_binding_v1" "volume_scheduler" {
   }
 }
 
-resource "kubernetes_role_binding_v1" "authentication_reader" {
+resource "kubernetes_role_binding" "authentication_reader" {
   metadata {
     name      = "${var.scheduler_name}-extension-apiserver-authentication-reader"
     namespace = var.namespace

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/core/v1"
+	nodev1 "k8s.io/api/node/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -1544,22 +1545,33 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
-	runtimeHandler := fmt.Sprintf("runc-%s", name)
+	// runc is the built-in handler that every KinD/containerd node registers,
+	// so no extra RuntimeClass object needs to be Terraform-managed here.
+	// kubernetes_runtime_class_v1 has moved to the Framework provider and
+	// cannot be declared in configs that use the SDKv2 ProviderFactories.
+	runtimeClassName := name
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
 			skipIfRunningInEks(t)
+			// Create the RuntimeClass directly via the Kubernetes API so this
+			// SDKv2 test does not need to reference kubernetes_runtime_class_v1
+			// as a Terraform resource (which is now Framework-only).
+			testAccCreateRuntimeClass(t, runtimeClassName, "runc")
 		},
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesPodV1Destroy,
+			testAccDeleteRuntimeClass(runtimeClassName),
+		),
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeHandler),
+				Config: testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeClassName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.runtime_class_name", runtimeHandler),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.runtime_class_name", runtimeClassName),
 				),
 			},
 			{
@@ -1570,6 +1582,39 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 			},
 		},
 	})
+}
+
+// testAccCreateRuntimeClass creates a RuntimeClass directly via the Kubernetes API.
+// Used by tests in the SDKv2 package that need a RuntimeClass but cannot use the
+// Framework-only kubernetes_runtime_class_v1 Terraform resource.
+func testAccCreateRuntimeClass(t *testing.T, name, handler string) {
+	t.Helper()
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		t.Fatalf("failed to get kubernetes client: %v", err)
+	}
+	rc := &nodev1.RuntimeClass{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Handler:    handler,
+	}
+	_, err = conn.NodeV1().RuntimeClasses().Create(context.Background(), rc, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("failed to create RuntimeClass %q: %v", name, err)
+	}
+}
+
+// testAccDeleteRuntimeClass returns a TestCheckFunc that deletes the named RuntimeClass.
+// Used as a CheckDestroy hook to clean up imperatively created RuntimeClasses.
+func testAccDeleteRuntimeClass(name string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return fmt.Errorf("failed to get kubernetes client: %w", err)
+		}
+		return conn.NodeV1().RuntimeClasses().Delete(
+			context.Background(), name, metav1.DeleteOptions{},
+		)
+	}
 }
 
 func TestAccKubernetesPodV1_with_ephemeral_storage(t *testing.T) {
@@ -3372,27 +3417,20 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfigMinDomains(podName, ima
 `, podName, imageName)
 }
 
-func testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeHandler string) string {
-	return fmt.Sprintf(`resource "kubernetes_runtime_class_v1" "test" {
-  metadata {
-    name = %[3]q
-  }
-  handler = "runc"
-}
-
-resource "kubernetes_pod_v1" "test" {
+func testAccKubernetesPodV1ConfigRuntimeClassName(name, imageName, runtimeClassName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = %[1]q
   }
   spec {
-    runtime_class_name = kubernetes_runtime_class_v1.test.metadata.0.name
+    runtime_class_name = %[3]q
     container {
       image = %[2]q
       name  = "containername"
     }
   }
 }
-`, name, imageName, runtimeHandler)
+`, name, imageName, runtimeClassName)
 }
 
 func testAccKubernetesCustomScheduler(name string) string {

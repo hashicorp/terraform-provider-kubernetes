@@ -12,7 +12,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     name: Jira sync
-    steps:    
+    steps:
       - name: Login
         uses: atlassian/gajira-login@ca13f8850ea309cf44a6e4e0c49d9aa48ac3ca4c # v3
         env:
@@ -24,7 +24,7 @@ jobs:
         id: set-ticket-type
         run: |
           echo "TYPE=GH Issue" >> $GITHUB_OUTPUT
-          
+
       - name: Set ticket labels
         if: github.event.action == 'opened'
         id: set-ticket-labels
@@ -56,7 +56,7 @@ jobs:
 
       - name: Create ticket if a PR is opened
         if: ( github.event.action == 'opened')
-        uses: tomhjp/gh-action-jira-create@3ed1789cad3521292e591a7cfa703215ec1348bf # v0.2.1
+        uses: hashicorp/gh-action-jira-create@84c84ad564106f548729912dbda38d66ef117bb7 # v0.3.0
         with:
           project: TFECO
           issuetype: "${{ steps.set-ticket-type.outputs.TYPE }}"
@@ -71,18 +71,18 @@ jobs:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-  
+
       - name: Search
         if: github.event.action != 'opened'
         id: search
-        uses: tomhjp/gh-action-jira-search@04700b457f317c3e341ce90da5a3ff4ce058f2fa # v0.2.2
+        uses: hashicorp/gh-action-jira-search@96aebbb9218932983bfbe6984e4c1e3ec3bf710e # v0.3.1
         with:
           # cf[10089] is Issue Link (use JIRA API to retrieve)
           jql: 'issuetype = "${{ steps.set-ticket-type.outputs.TYPE }}" and cf[10089] = "${{ github.event.issue.html_url || github.event.pull_request.html_url }}"'
 
       - name: Sync comment
         if: github.event.action == 'created' && steps.search.outputs.issue
-        uses: tomhjp/gh-action-jira-comment@6eb6b9ead70221916b6badd118c24535ed220bd9 # v0.2.0
+        uses: hashicorp/gh-action-jira-comment@9e4a11098f8bd0d12745708d4d4b63c5a81df2fc # v0.3.0
         with:
           issue: ${{ steps.search.outputs.issue }}
           comment: "${{ github.actor }} ${{ github.event.review.state || 'commented' }}:\n\n${{ github.event.comment.body || github.event.review.body }}\n\n${{ github.event.comment.html_url || github.event.review.html_url }}"

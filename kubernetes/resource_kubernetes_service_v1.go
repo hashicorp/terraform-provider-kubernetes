@@ -155,10 +155,9 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 						ForceNew:    true,
 					},
 					"load_balancer_ip": {
-						Type:         schema.TypeString,
-						Description:  "Only applies to `type = LoadBalancer`. LoadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying this field when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature.",
-						Optional:     true,
-						ValidateFunc: validation.IsIPAddress,
+						Type:        schema.TypeString,
+						Description: "Only applies to `type = LoadBalancer`. LoadBalancer will get created with the IP specified in this field. This feature depends on whether the underlying cloud-provider supports specifying this field when a load balancer is created. This field will be ignored if the cloud-provider does not support the feature. Set to an empty string or `None` to clear a previously assigned IP.",
+						Optional:    true,
 					},
 					"load_balancer_source_ranges": {
 						Type:        schema.TypeSet,

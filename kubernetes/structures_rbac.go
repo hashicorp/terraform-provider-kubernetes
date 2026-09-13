@@ -47,8 +47,13 @@ func expandRBACSubjects(in []interface{}) []api.Subject {
 		if v, ok := m["name"]; ok {
 			subject.Name = v.(string)
 		}
-		if v, ok := m["namespace"]; ok {
-			subject.Namespace = v.(string)
+		if v, ok := m["namespace"].(string); ok && v != "" {
+			subject.Namespace = v
+		} else if subject.Kind == api.ServiceAccountKind {
+			// ServiceAccount subjects are namespaced and the API requires a namespace,
+			// so keep the historical provider default. User and Group subjects are not
+			// namespaced and must be sent without one.
+			subject.Namespace = metav1.NamespaceDefault
 		}
 		subjects = append(subjects, subject)
 	}

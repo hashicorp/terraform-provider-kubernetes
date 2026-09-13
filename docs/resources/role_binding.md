@@ -59,7 +59,7 @@ Required:
 Optional:
 
 - `api_group` (String) The API group of the subject resource.
-- `namespace` (String) The Namespace of the subject resource.
+- `namespace` (String) The Namespace of the subject resource. Only applicable to subjects of kind `ServiceAccount`, for which it defaults to `default`. Leave it unset for `User` and `Group` subjects, which are not namespaced.
 
 
 

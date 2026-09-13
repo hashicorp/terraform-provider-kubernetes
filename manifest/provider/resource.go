@@ -93,7 +93,9 @@ func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.G
 	// check if GVK is from a CRD
 	crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk)
 	if err != nil {
-		return nil, hints, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
+		// Log the error but don't fail - fallback to OpenAPI spec
+		fmt.Printf("failed to look up GVK [%s] in CRDs: %s, trying OpenAPI\n", gvk.String(), err)
+		crdSchema = nil // ensure fallback to OpenAPI
 	}
 	if crdSchema != nil {
 		js, err := json.Marshal(openapi.SchemaToSpec("", crdSchema.(map[string]interface{})))

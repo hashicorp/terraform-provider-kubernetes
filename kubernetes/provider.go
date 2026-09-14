@@ -344,11 +344,10 @@ func Provider() *schema.Provider {
 			"kubernetes_mutating_webhook_configuration":      resourceKubernetesMutatingWebhookConfiguration(),
 			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
 
-			// storage
-			"kubernetes_storage_class":    resourceKubernetesStorageClassV1("Deprecated; use kubernetes_storage_class_v1."),
-			"kubernetes_storage_class_v1": resourceKubernetesStorageClassV1(""),
-			"kubernetes_csi_driver":       resourceKubernetesCSIDriverV1Beta1("Deprecated; use kubernetes_csi_driver_v1."),
-			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(""),
+			// storage (kubernetes_storage_class_v1 is now handled by the Plugin Framework resource)
+			"kubernetes_storage_class": resourceKubernetesStorageClassV1("Deprecated; use kubernetes_storage_class_v1."),
+			"kubernetes_csi_driver":    resourceKubernetesCSIDriverV1Beta1("Deprecated; use kubernetes_csi_driver_v1."),
+			"kubernetes_csi_driver_v1": resourceKubernetesCSIDriverV1(""),
 
 			// provider helper resources
 			"kubernetes_labels":      resourceKubernetesLabels(),
@@ -379,6 +378,8 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
+	GetIgnoreAnnotations() []string
+	GetIgnoreLabels() []string
 }
 
 type providerMetadata struct {
@@ -451,6 +452,14 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 		k.discoveryClient = kc
 	}
 	return k.discoveryClient, nil
+}
+
+func (k providerMetadata) GetIgnoreAnnotations() []string {
+	return k.IgnoreAnnotations
+}
+
+func (k providerMetadata) GetIgnoreLabels() []string {
+	return k.IgnoreLabels
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

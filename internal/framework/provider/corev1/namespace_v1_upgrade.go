@@ -13,13 +13,20 @@ import (
 // UpgradeState carries SDKv2-written state forward to schema version 1.
 //
 // The stored TYPE does not change — `metadata` was and remains a list of
-// objects with the same seven attributes — only the value conventions do. SDKv2
-// zero-filled every leaf of a block it wrote, so a namespace whose
-// configuration omitted `annotations`, `labels` or `generate_name` still holds
-// `{}`, `{}` and `""` in state. The Framework plans null for those same
-// configurations. Left unconverted, every existing namespace would plan
-// `annotations: {} -> null` on the first plan after upgrading, on configuration
-// nobody touched.
+// objects with the same seven attributes — only the value conventions do.
+//
+// Measured against released provider 3.2.1 on kind v1.34.0 (do the measurement;
+// this is not derivable by argument): a namespace created with only a name
+// persists `generate_name: ""` but `annotations: null` and `labels: null`.
+// SDKv2 zero-fills the SCALAR leaves of a block it writes, while an empty
+// TypeMap becomes null rather than `{}`. So `generate_name` is the field that
+// actually needs converting here — the Framework plans null for it, and left at
+// "" every existing namespace would plan `"" -> null` on its first plan after
+// upgrading, on configuration nobody touched.
+//
+// The maps are normalised anyway. They cost nothing when already null, and
+// SDKv2's map handling is not uniform across resources: the pod measurement
+// recorded in the domain pack's inbox found `{}`.
 //
 // Because the type is unchanged, PriorSchema can be the current schema and the
 // conversion works on decoded values rather than on raw JSON. That is

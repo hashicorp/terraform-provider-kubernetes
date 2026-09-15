@@ -32,24 +32,35 @@ Applicable domain rules: `K8S-MIGRATE-001`, `-002`, `-003`, `-004`, `-007`, `-00
 **SDKv2 persisted a known zero where the Framework will plan `null`. How is that reconciled without
 a permanent diff for existing users?**
 
-Measured contract (`knowledge/inbox/2026-09-13-measured-null-vs-empty-contract.md`, released 3.2.1):
+**Measured 2026-09-15**, by applying with `hashicorp/kubernetes v3.2.1` from the registry against
+kind v1.34.0 and reading `terraform.tfstate` — not predicted from the pack:
 
-| Field | SDKv2 flags | Released state holds | Framework plans for omitted config |
-| --- | --- | --- | --- |
-| `metadata.0.annotations` | Optional | `{}` — flattener always writes the key | `null` |
-| `metadata.0.labels` | Optional | `{}` — flattener always writes the key | `null` |
-| `metadata.0.generate_name` | Optional | `""` — scalar leaf inside a block is zero-filled | `null` |
-| `metadata.0.name` | Optional + Computed | API value | API value (`UseStateForUnknown`) |
+| Field | SDKv2 flags | Released 3.2.1 state holds | Framework plans for omitted config | Needs conversion |
+| --- | --- | --- | --- | --- |
+| `metadata.0.generate_name` | Optional | **`""`** — scalar leaves of a block are zero-filled | `null` | **yes** |
+| `metadata.0.annotations` | Optional | **`null`** | `null` | no |
+| `metadata.0.labels` | Optional | **`null`** | `null` | no |
+| `metadata.0.name` | Optional + Computed | API value | API value (`UseStateForUnknown`) | no |
 
-This is not theoretical for namespaces: Kubernetes ≥1.21 always stamps the label
-`kubernetes.io/metadata.name`, which `removeInternalKeys` strips, leaving a non-nil **empty** map on
-every single namespace. Every user is in the affected case.
+> **This corrects the premise this document was originally written on.** The first draft asserted,
+> on the strength of `knowledge/inbox/2026-09-13-measured-null-vs-empty-contract.md`, that SDKv2
+> stored `{}` for an omitted `annotations`/`labels`. That note's rule — "TypeMap written by the
+> flattener → `{}`" — was measured on `kubernetes_pod_v1` and **does not generalise**: for
+> `kubernetes_namespace_v1`, SDKv2 persists `null` for an empty TypeMap whether the flattener handed
+> it a nil map or a non-nil empty one. Notably the labels map *is* non-nil-but-empty here —
+> Kubernetes ≥1.21 stamps `kubernetes.io/metadata.name` and `removeInternalKeys` deletes it — and it
+> still lands in state as `null`.
+>
+> The design does not change: `generate_name` alone requires the version bump and the upgrader, and
+> every conclusion below still holds. But the maps were the expected problem and were not one, and
+> the only reason that is known is that the state file was actually read. The measurement takes one
+> apply; the argument took considerably longer and was wrong.
 
 | Option | Before/after HCL | Stored type and converters | Ownership/default/output changes | Expected API effects | Feasibility/evidence | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- |
-| **A — `ListNestedBlock`, zero⇒null in state writers, `SchemaVersion: 1` + `UpgradeState(0)`** | unchanged | `list(object)` unchanged; upgrader rewrites `{}`→null, `""`→null | omitted maps become `null` instead of `{}` in *state*; config unchanged | none — state-only conversion, no API call | pod_v1 proved the identical rule against 3.2.1 on kind; upgrader runs because stored version 0 < 1 | **Selected** |
+| **A — `ListNestedBlock`, zero⇒null in state writers, `SchemaVersion: 1` + `UpgradeState(0)`** | unchanged | `list(object)` unchanged; upgrader rewrites `""`→null (and `{}`→null defensively) | omitted maps become `null` instead of `{}` in *state*; config unchanged | none — state-only conversion, no API call | pod_v1 proved the identical rule against 3.2.1 on kind; upgrader runs because stored version 0 < 1 | **Selected** |
 | B — make `annotations`/`labels`/`generate_name` `Optional + Computed` | unchanged | unchanged; no upgrader | removal semantics change: dropping `annotations` from config would no longer delete them | would stop deleting annotations the user removed | violates `K8S-MIGRATE-007`/`-022`; breaks `_noLists` test | Rejected |
-| C — zero⇒null in state writers only, keep `SchemaVersion: 0` | unchanged | unchanged; no upgrader | none intended | none | **permadiff**: prior state `{}` vs planned `null` on the very first plan after upgrade | Rejected |
+| C — zero⇒null in state writers only, keep `SchemaVersion: 0` | unchanged | unchanged; no upgrader | none intended | none | **permadiff**: prior state `generate_name: ""` vs planned `null` on the very first plan after upgrade | Rejected |
 | D — defer the resource | n/a | n/a | n/a | n/a | the task is to migrate it | Rejected |
 
 ### Why B lost
@@ -71,11 +82,13 @@ upgrade and `ExpectEmptyPlan` fails. C is A minus the only mechanism that makes 
 
 ### Residual ambiguity, recorded not hidden (`K8S-MIGRATE-013`)
 
-A user who wrote `annotations = {}` **explicitly** stored exactly the same `{}` as a user who
+A user who wrote `annotations = {}` **explicitly** stored exactly the same `null` as a user who
 omitted it — SDKv2 cannot tell them apart, and neither can the upgrader. After upgrade the explicit
 writer sees one in-place update planning `null -> {}`; it converges in one apply and issues no API
 call, because `expandMetadata` only sends a non-empty map. The omitted case is the overwhelmingly
-common one and is the one kept diff-free. This is stated in the changelog entry.
+common one and is the one kept diff-free. This is stated in the changelog entry and asserted by
+`TestAccKubernetesNamespaceV1_migration_explicitEmptyMaps`, which requires exactly one in-place
+update, an unchanged UID, and an empty plan on the step after.
 
 Other viable alternatives, or reasons an option does not apply: `SingleNestedBlock` for `metadata`
 is excluded outright — it renders as a protocol Object where SDKv2 renders NestingList, and at an
@@ -152,3 +165,71 @@ Not adopted: `wait_for_default_service_account` is **not** force-set on import. 
 there, but it is already in the pre-existing `ImportStateVerifyIgnore` list, so writing it would be
 a behaviour change rather than parity — and `K8S-MIGRATE-020` only forbids *growing* that list,
 which this does not.
+
+---
+
+## Live verification (kind v1.34.0, 2026-09-15)
+
+Cluster: disposable kind `tfp-k8s`, Kubernetes v1.34.0, via `~/.kube/cluster-kind/env.sh`.
+
+| Test | Result |
+| --- | --- |
+| `TestAccKubernetesNamespaceV1_basic` | PASS — 6 steps incl. import, add/shrink/remove annotations and labels |
+| `TestAccKubernetesNamespaceV1_explicitEmptyMaps` | PASS |
+| `TestAccKubernetesNamespaceV1_identity` | PASS (after the import fix below) |
+| `TestAccKubernetesNamespaceV1_default_service_account` | PASS |
+| `TestAccKubernetesNamespaceV1_generatedName` | PASS — incl. the second-plan `ExpectEmptyPlan` guard |
+| `TestAccKubernetesNamespaceV1_withSpecialCharacters` | PASS |
+| `TestAccKubernetesNamespaceV1_deleteTimeout` | PASS |
+| `TestAccKubernetesNamespaceV1_validation` | PASS — all 5 ported validators + required block + ConflictsWith |
+| `TestAccKubernetesNamespaceV1_migration_*` (5 tests) | PASS against genuine registry `v3.2.1` |
+
+No namespaces leaked; `kubectl get ns` is back to the five cluster defaults.
+
+### Two defects the cluster found that inspection did not
+
+**1. Identity import planned an update.** `TestAccKubernetesNamespaceV1_identity` failed with
+
+    Step 2/2 error running import: importing resource kubernetes_namespace_v1.test:
+    expected a no-op import operation, got ["update"] action with plan
+
+`ImportState` left `wait_for_default_service_account` null; the schema `Default` then planned
+`null -> false`. SDKv2 zero-filled it, because `ResourceData.State()` wrote `d.Get` for every
+top-level field. The reviewer raised exactly this and it was declined on the grounds that the
+attribute was already in `ImportStateVerifyIgnore` — **that reasoning was wrong**:
+`ImportStateVerifyIgnore` only relaxes the legacy `ImportStateVerify` comparison and has no effect on
+the `import`-block path, which requires a genuine no-op plan. Fixed by setting it to `false` on
+import, which is parity with SDKv2 rather than a behaviour change.
+
+**2. The released baseline was not the released provider.** The first run of the migration tests
+passed while silently testing nothing, because `~/.terraformrc` on this machine carries
+
+    provider_installation {
+      dev_overrides {
+        "hashicorp/kubernetes" = "/Users/prabuddha/codes/terraform-provider-kubernetes/bin"
+      }
+      direct {}
+    }
+
+`ExternalProviders` performs a real `terraform init`, which honours that override, so the "3.2.1"
+step was served by a 2026-07-03 build of another branch. Every migration result above was re-run with
+`TF_CLI_CONFIG_FILE` pointed at a clean config; `terraform init` then reports
+`Installed hashicorp/kubernetes v3.2.1 (signed by HashiCorp)`. The developer's `~/.terraformrc` was
+not modified.
+
+### Manual released-to-local upgrade, with plan JSON
+
+Created with genuine 3.2.1, then planned against a `dev_overrides` build of this worktree
+(`Provider development overrides are in effect` confirmed in the transcript):
+
+    resource_changes: NONE (no-op)
+    resource_drift  : NONE
+    schema_version  : 0 -> 1
+    uid             : 6a0ade65-29b5-40cd-b776-fe0bb736f4c2  (unchanged; matches the live namespace)
+    generate_name   : ""  -> null
+    annotations     : null -> null
+    labels          : null -> null
+    outputs         : {'ns_id': 'tf-upgrade-probe'}
+
+`resource_drift` is checked separately from `resource_changes` because an empty action plan can
+still sit on top of a refresh-time normalisation. There is none.

@@ -326,7 +326,17 @@ func (r *NamespaceV1) ImportState(ctx context.Context, req resource.ImportStateR
 				"delete": types.StringType,
 			}),
 		},
-		Metadata: []NamespaceMetadataModel{{}},
+		// SDKv2 zero-filled this on import: ResourceData.State() wrote d.Get for
+		// every top-level field, and the zero of a bool is false. Leaving it
+		// null is NOT equivalent — the schema default then plans null -> false,
+		// and an `import` block, which requires the post-import plan to be a
+		// genuine no-op, fails with
+		//   expected a no-op import operation, got ["update"] action
+		// ImportStateVerifyIgnore does not cover that path; it only relaxes the
+		// legacy ImportStateVerify comparison, so the pre-existing ignore entry
+		// hid this in the older tests but the identity import test caught it.
+		WaitForDefaultServiceAccount: types.BoolValue(false),
+		Metadata:                     []NamespaceMetadataModel{{}},
 	}
 
 	found, diags := r.refreshModel(ctx, conn, name, &state, ignoreAnnotations, ignoreLabels)
@@ -453,11 +463,10 @@ func setNamespaceIdentity(ctx context.Context, identity *tfsdk.ResourceIdentity,
 // mapOrPrior decides what to store for an Optional, non-Computed metadata map
 // whose filtered live value is empty.
 //
-// SDKv2 persisted `{}` for such a map because its flatteners always wrote the
-// key and d.Set zero-filled it; the Framework plans null for the same omitted
-// configuration. Writing the wrong one is not cosmetic: on Create and Update it
-// is "Provider produced inconsistent result after apply", and on refresh it is a
-// diff the practitioner cannot resolve.
+// Writing the wrong one is not cosmetic: on Create and Update it is "Provider
+// produced inconsistent result after apply", and on refresh it is a diff the
+// practitioner cannot resolve. Released 3.2.1 persists null for an omitted map,
+// so null is also what keeps an upgraded namespace's plan empty.
 //
 // So an empty live value keeps the prior KNOWN empty when there is one — the
 // planned value on Create and Update, the state value on refresh — and becomes

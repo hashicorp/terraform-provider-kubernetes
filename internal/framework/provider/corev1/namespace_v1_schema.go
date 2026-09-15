@@ -23,15 +23,23 @@ import (
 // namespaceSchemaVersion is 1 where the SDKv2 resource was 0.
 //
 // The bump is not cosmetic and is not a type change: it is the only mechanism
-// that lets UpgradeState run at all. State written by the SDKv2 implementation
-// holds a known empty map for an omitted `annotations`/`labels` and an empty
-// string for an omitted `generate_name`, because SDKv2 zero-fills every leaf of
-// a block it writes. The Framework plans null for those same configurations, so
-// without a one-time conversion every existing namespace would plan
-// `annotations: {} -> null` on the first plan after upgrade.
+// that lets UpgradeState run at all, and UpgradeState is only consulted when the
+// STORED version is lower than the current one.
 //
-// UpgradeState is only consulted when the STORED version is lower than the
-// current one, so keeping version 0 would mean the conversion never runs.
+// What actually needs converting, measured against released provider 3.2.1 on
+// kind v1.34.0 rather than reasoned about:
+//
+//	metadata.generate_name  ""    -> null   SDKv2 zero-fills scalar leaves of a block
+//	metadata.annotations    null          already null; no conversion needed
+//	metadata.labels         null          already null; no conversion needed
+//
+// The maps were the expected problem and turned out not to be one: SDKv2
+// persists null for an empty TypeMap, not `{}`. `generate_name` is the real
+// case, and it is enough on its own — the Framework plans null for an omitted
+// Optional attribute, so without this upgrade every existing namespace created
+// without generate_name would plan `"" -> null` on its first plan after
+// upgrading. The upgrader still normalises `{}` defensively, because SDKv2's map
+// handling is not uniform across resources.
 const namespaceSchemaVersion = 1
 
 func namespaceV1Schema(ctx context.Context) schema.Schema {

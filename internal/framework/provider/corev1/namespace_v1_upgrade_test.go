@@ -21,11 +21,41 @@ import (
 // transformation, so it can be proven without a cluster. The acceptance tests in
 // this package need a real API server; these do not, and should stay that way.
 
-// sdkv2StateV0 is the state SDKv2 writes for a namespace whose configuration
-// gave only a name. annotations and labels are `{}` and generate_name is `""`
-// because SDKv2's flatteners always write those keys and d.Set zero-fills the
-// rest of the block.
+// sdkv2StateV0 is the state released provider 3.2.1 actually writes for a
+// namespace whose configuration gave only a name.
+//
+// MEASURED, not assumed — captured from `terraform.tfstate` after applying with
+// hashicorp/kubernetes v3.2.1 from the registry against kind v1.34.0 on
+// 2026-09-15. The maps are **null**, not `{}`: SDKv2 persists null for an empty
+// TypeMap whether the flattener handed it a nil map or a non-nil empty one. Only
+// the scalar `generate_name` is zero-filled to "".
+//
+// That distinction is the whole reason this upgrader exists, so the fixture has
+// to be the measured shape. An earlier version of this file used `{}` here,
+// which made the test pass for a reason the real world does not supply.
 const sdkv2StateV0 = `{
+  "id": "tf-acc-test-ns",
+  "metadata": [
+    {
+      "annotations": null,
+      "generate_name": "",
+      "generation": 0,
+      "labels": null,
+      "name": "tf-acc-test-ns",
+      "resource_version": "12345",
+      "uid": "8f3a6a7c-1b2c-4d5e-8f90-0123456789ab"
+    }
+  ],
+  "timeouts": null,
+  "wait_for_default_service_account": false
+}`
+
+// sdkv2StateV0EmptyMaps is the defensive case: `{}` rather than null. It is not
+// what 3.2.1 was observed to write for this resource, but SDKv2's map handling
+// is not uniform across resources — the pod measurement in the domain pack's
+// inbox recorded `{}` — and state from an older release or a hand-edited file
+// may still carry it. The upgrader must normalise it either way.
+const sdkv2StateV0EmptyMaps = `{
   "id": "tf-acc-test-ns",
   "metadata": [
     {
@@ -113,7 +143,20 @@ func upgradeV0(t *testing.T, rawJSON string) corev1.NamespaceV1Model {
 }
 
 func TestNamespaceV1UpgradeState_nullsSDKv2ZeroValues(t *testing.T) {
-	got := upgradeV0(t, sdkv2StateV0)
+	for _, tc := range []struct {
+		name string
+		raw  string
+	}{
+		{"measured 3.2.1 state (null maps)", sdkv2StateV0},
+		{"defensive: empty maps", sdkv2StateV0EmptyMaps},
+	} {
+		t.Run(tc.name, func(t *testing.T) { assertUpgradedToNulls(t, tc.raw) })
+	}
+}
+
+func assertUpgradedToNulls(t *testing.T, raw string) {
+	t.Helper()
+	got := upgradeV0(t, raw)
 
 	if len(got.Metadata) != 1 {
 		t.Fatalf("metadata block count = %d, want 1", len(got.Metadata))
@@ -121,7 +164,7 @@ func TestNamespaceV1UpgradeState_nullsSDKv2ZeroValues(t *testing.T) {
 	meta := got.Metadata[0]
 
 	if !meta.Annotations.IsNull() {
-		t.Errorf("annotations = %v, want null; SDKv2's {} left in place makes every existing namespace plan `annotations: {} -> null`", meta.Annotations)
+		t.Errorf("annotations = %v, want null", meta.Annotations)
 	}
 	if !meta.Labels.IsNull() {
 		t.Errorf("labels = %v, want null", meta.Labels)

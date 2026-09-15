@@ -1,5 +1,9 @@
 ```release-note:note
-`kubernetes_namespace_v1`: the resource is now implemented with the Terraform Plugin Framework. Configuration syntax, state layout and import behaviour are unchanged, and no user action is required. A one-time state upgrade replaces the empty `metadata.annotations` / `metadata.labels` maps and empty `metadata.generate_name` that the previous implementation stored for omitted arguments with null. Configurations that set `annotations = {}` or `labels = {}` explicitly will see a single in-place update restoring the empty map; it makes no call to the Kubernetes API and the namespace is not replaced.
+`kubernetes_namespace_v1`: the resource is now implemented with the Terraform Plugin Framework. Configuration syntax, state layout and import behaviour are unchanged, and no user action is required. A one-time state upgrade replaces the empty `metadata.generate_name` that the previous implementation stored for namespaces created without it with null, so that unchanged configurations continue to plan clean.
+```
+
+```release-note:note
+`kubernetes_namespace_v1`: configurations that set `metadata.annotations = {}` or `metadata.labels = {}` explicitly will see a single in-place update after upgrading, restoring the empty map in state. It makes no call to the Kubernetes API and the namespace is not replaced.
 ```
 
 ```release-note:note

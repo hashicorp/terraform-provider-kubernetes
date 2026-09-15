@@ -1,5 +1,9 @@
+```release-note:feature
+`kubernetes_namespace_v1`: adds `moved` block support from the deprecated `kubernetes_namespace` alias, so the un-versioned name can be retired without hand-editing state and without recreating the namespace. Requires Terraform 1.8 or later.
+```
+
 ```release-note:note
-`kubernetes_namespace_v1`: the resource is now implemented with the Terraform Plugin Framework. Configuration syntax, state layout and import behaviour are unchanged, and no user action is required. A one-time state upgrade replaces the empty `metadata.generate_name` that the previous implementation stored for namespaces created without it with null, so that unchanged configurations continue to plan clean.
+`kubernetes_namespace_v1`: the resource is now implemented with the Terraform Plugin Framework, which is what makes the `moved` support above possible. Configuration syntax, state layout and import behaviour are unchanged, and no user action is required. A one-time state upgrade replaces the empty `metadata.generate_name` that the previous implementation stored for namespaces created without it with null, so that unchanged configurations continue to plan clean.
 ```
 
 ```release-note:note

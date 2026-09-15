@@ -507,6 +507,16 @@ func isKnownEmptyMap(v types.Map) bool {
 // m["name"] straight out of the block, and an unset Optional+Computed field is
 // "" there. During Create the Framework marks that same field unknown, so both
 // null and unknown have to collapse to "" for the API payload to be identical.
+// stringMapValue converts a decoded JSON map into a Framework map, preserving
+// the null/known distinction: a missing key decodes to a nil map and must stay
+// null, while a present but empty one is a known empty map.
+func stringMapValue(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
+	if m == nil {
+		return types.MapNull(types.StringType), nil
+	}
+	return types.MapValueFrom(ctx, types.StringType, m)
+}
+
 func stringOrEmpty(v types.String) string {
 	if v.IsNull() || v.IsUnknown() {
 		return ""

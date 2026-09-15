@@ -19,6 +19,7 @@ var (
 	_ resource.ResourceWithIdentity     = (*NamespaceV1)(nil)
 	_ resource.ResourceWithImportState  = (*NamespaceV1)(nil)
 	_ resource.ResourceWithUpgradeState = (*NamespaceV1)(nil)
+	_ resource.ResourceWithMoveState    = (*NamespaceV1)(nil)
 )
 
 // NamespaceV1 is the Plugin Framework implementation of kubernetes_namespace_v1.

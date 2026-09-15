@@ -233,3 +233,56 @@ Created with genuine 3.2.1, then planned against a `dev_overrides` build of this
 
 `resource_drift` is checked separately from `resource_changes` because an empty action plan can
 still sit on top of a refresh-time normalisation. There is none.
+
+---
+
+## Moved-block support (added 2026-09-15)
+
+The migration's original scope omitted `ResourceWithMoveState`, on the strength of `K8S-MIGRATE-010`
+("a same-name migration needs neither a `moved` block nor a `MoveState` handler"). That rule is
+correct about `kubernetes_namespace_v1` → `kubernetes_namespace_v1` and irrelevant to what this
+programme is for, which is the cross-name move `kubernetes_namespace` → `kubernetes_namespace_v1`.
+Without a mover the migration errored on exactly the use case that motivated it:
+
+    Error: Unable to Move Resource State
+    The target resource implementation does not include move resource state support.
+    Source Resource Type: kubernetes_namespace
+    Target Resource Type: kubernetes_namespace_v1
+
+`namespace_v1_move.go` implements it, gated on all three of source provider address (by **suffix**,
+so mirrors and private registries still work), source type name, and source schema version. A
+mismatch returns no state and no diagnostics, which is how the framework is told to try the next
+mover rather than having this resource claim a move it cannot perform.
+
+**The mover repeats the upgrader's normalisation, deliberately.** A moved state lands at the
+target's current `SchemaVersion` and no `UpgradeState` runs afterwards, so `generate_name: ""` would
+survive into the moved state and diff on the practitioner's first plan. The two paths must agree;
+`TestNamespaceV1MoveState_movesFromDeprecatedAlias` asserts it in the moved state directly.
+
+Verified on kind v1.34.0 — create under `kubernetes_namespace`, then `moved`:
+
+    Plan: 0 to add, 0 to change, 0 to destroy.
+    uid before : 2289a0ec-1e78-4479-96c5-f620c7945d57
+    uid after  : 2289a0ec-1e78-4479-96c5-f620c7945d57   (unchanged; not recreated)
+    state type : kubernetes_namespace_v1
+    schema_version  : 1
+    generate_name   : null            (normalised by the MOVER, not an upgrader)
+    identity        : v1 {api_version: v1, kind: Namespace, name: tf-moved-probe}
+
+### Relationship to community PR #2853
+
+That PR reaches the same user-visible outcome for 26 alias pairs without migrating anything: it
+wraps the SDKv2 server and answers the `MoveResourceState` RPC with a raw state passthrough. It is
+sound for its chosen set, because every pair it includes shares one Go constructor and therefore one
+schema — and it correctly excludes the eight pairs that do not (`kubernetes_ingress` is
+`resourceKubernetesIngressV1Beta1`, `kubernetes_ingress_v1` is `resourceKubernetesIngressV1`).
+
+The two approaches are **mutually exclusive per resource**, because `tf6muxserver` routes
+`MoveResourceState` by `TargetTypeName`. Once `kubernetes_namespace_v1` is served by the Framework,
+the PR's map entry for it is unreachable — silently, with no error. So if both land, every migrated
+resource must carry its own mover or it regresses from the PR's behaviour. That is now
+`K8S-MIGRATE-010`.
+
+Two gaps in the PR worth raising upstream: it ignores `SourceSchemaVersion` (seven of its mapped
+resources carry `SchemaVersion: 1` **and** `StateUpgraders`, so stale state passes through
+unupgraded), and it ignores `SourceProviderAddress` entirely.

@@ -145,4 +145,3 @@ func PriorityClassV1Schema() schema.Schema {
 		},
 	}
 }
-

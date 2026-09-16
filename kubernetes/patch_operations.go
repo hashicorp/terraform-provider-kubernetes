@@ -155,4 +155,3 @@ func (o *RemoveOperation) String() string {
 	b, _ := o.MarshalJSON()
 	return string(b)
 }
-

@@ -212,7 +212,6 @@ func IgnoreKey(key string, expressions []string) bool {
 	return false
 }
 
-
 func flattenByteMapToBase64Map(m map[string][]byte) map[string]string {
 	result := make(map[string]string)
 	for k, v := range m {

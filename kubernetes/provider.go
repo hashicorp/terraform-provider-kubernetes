@@ -223,7 +223,6 @@ func Provider() *schema.Provider {
 			"kubernetes_namespace_v1":               dataSourceKubernetesNamespaceV1(""),
 			"kubernetes_all_namespaces":             dataSourceKubernetesAllNamespaces(),
 			"kubernetes_secret":                     dataSourceKubernetesSecretV1("Deprecated; use kubernetes_secret_v1."),
-			"kubernetes_secret_v1":                  dataSourceKubernetesSecretV1(""),
 			"kubernetes_endpoints_v1":               dataSourceKubernetesEndpointsV1(),
 			"kubernetes_endpoint_slice_v1":          dataSourceKubernetesEndpointSliceV1(),
 			"kubernetes_service":                    dataSourceKubernetesServiceV1("Deprecated; use kubernetes_service_v1."),

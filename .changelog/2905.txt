@@ -1,0 +1,3 @@
+```release-note:feature
+New function `env_from_map` converts a map of strings into a sorted list of `{ name, value }` objects, useful for populating container `env` blocks in a `kubernetes_manifest` resource
+```

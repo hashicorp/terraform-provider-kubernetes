@@ -3244,11 +3244,11 @@ func testAccKubernetesPodV1ConfigEmptyBlocks(name, imageName string) string {
 }
 
 func testAccKubernetesPodV1ConfigWithVolume(name, imageName, serviceAccount string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
-  metadata {
-    name = "test"
-  }
-  storage_provisioner = "k8s.io/minikube-hostpath"
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+	 metadata {
+	   name = "test"
+	 }
+	 storage_provisioner = "k8s.io/minikube-hostpath"
 }
 
 resource "kubernetes_service_account_v1" "test" {
@@ -3266,7 +3266,7 @@ resource "kubernetes_persistent_volume_v1" "test" {
       storage = "1Gi"
     }
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class.test.metadata.0.name
     persistent_volume_source {
       host_path {
         path = "/mnt/minikube"
@@ -3283,7 +3283,7 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
   }
   spec {
     access_modes       = ["ReadWriteOnce"]
-    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
+    storage_class_name = kubernetes_storage_class.test.metadata.0.name
     volume_name        = kubernetes_persistent_volume_v1.test.metadata.0.name
     resources {
       requests = {
@@ -3581,7 +3581,7 @@ func testAccKubernetesPodV1EphemeralStorage(podName, imageName, volumeName strin
 }
 
 func testAccKubernetesPodV1EphemeralStorageClass(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
   metadata {
     name = %[1]q
   }

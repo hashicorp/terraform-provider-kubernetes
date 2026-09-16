@@ -1,3 +1,10 @@
+## 3.2.1 (Jun 30, 2026)
+
+BUG FIXES:
+
+* `resource/*`: Fix `Unexpected Identity Change` error after apply when a resource takes a long time to become ready; bump `terraform-plugin-sdk` to v2.38.2 [[GH-2859](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2859)]
+* `resource/kubernetes_secret_v1`: Fix `Missing Resource Identity After Create` error when using `data_wo` or `binary_data_wo` write-only attributes [[GH-2859](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2859)]
+
 ## 3.2.0 (Jun 4, 2026)
 
 ENHANCEMENTS:

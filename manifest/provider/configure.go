@@ -94,7 +94,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		}
 		if err != nil {
 			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   fmt.Sprintf("'config_path' refers to an invalid path: %q: %v", configPathAbs, err),
 			})
@@ -132,7 +132,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 			}
 			if err != nil {
 				diags = append(diags, &tfprotov5.Diagnostic{
-					Severity: tfprotov5.DiagnosticSeverityInvalid,
+					Severity: tfprotov5.DiagnosticSeverityError,
 					Summary:  "Invalid attribute in provider configuration",
 					Detail:   fmt.Sprintf("'config_paths' refers to an invalid path: %q: %v", absPath, err),
 				})
@@ -149,7 +149,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		err = providerConfig["client_certificate"].As(&clientCertificate)
 		if err != nil {
 			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_certificate' type cannot be asserted: " + err.Error(),
 			})
@@ -162,7 +162,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		ccPEM, _ := pem.Decode([]byte(clientCertificate))
 		if ccPEM == nil || ccPEM.Type != "CERTIFICATE" {
 			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_certificate' is not a valid PEM encoded certificate",
 			})
@@ -191,7 +191,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		ca, _ := pem.Decode([]byte(clusterCaCertificate))
 		if ca == nil || ca.Type != "CERTIFICATE" {
 			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'cluster_ca_certificate' is not a valid PEM encoded certificate",
 			})
@@ -217,7 +217,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		iv, err := strconv.ParseBool(insecureEnv)
 		if err != nil {
 			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid provider configuration",
 				Detail:   "Environment variable KUBE_INSECURE contains invalid value: " + err.Error(),
 			})
@@ -271,7 +271,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		_, err = url.ParseRequestURI(host)
 		if err != nil {
 			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'host' is not a valid URL",
 			})
@@ -279,7 +279,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		hostURL, _, err := rest.DefaultServerURL(host, "", apimachineryschema.GroupVersion{}, defaultTLS)
 		if err != nil {
 			response.Diagnostics = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "Invalid value for 'host': " + err.Error(),
 			})
@@ -313,7 +313,7 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		ck, _ := pem.Decode([]byte(clientKey))
 		if ck == nil || !strings.Contains(ck.Type, "PRIVATE KEY") {
 			diags = append(diags, &tfprotov5.Diagnostic{
-				Severity: tfprotov5.DiagnosticSeverityInvalid,
+				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Invalid attribute in provider configuration",
 				Detail:   "'client_key' is not a valid PEM encoded private key",
 			})

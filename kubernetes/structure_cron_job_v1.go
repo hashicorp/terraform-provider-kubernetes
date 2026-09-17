@@ -45,7 +45,13 @@ func flattenCronJobSpecV1(in batch.CronJobSpec, d *schema.ResourceData, meta int
 func flattenJobTemplateV1(in batch.JobTemplateSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 
-	att["metadata"] = flattenMetadataFields(in.ObjectMeta)
+	att["metadata"] = flattenMetadataFiltered(
+		in.ObjectMeta,
+		d.Get("spec.0.job_template.0.metadata.0.annotations").(map[string]interface{}),
+		d.Get("spec.0.job_template.0.metadata.0.labels").(map[string]interface{}),
+		meta.(providerMetadata).IgnoreAnnotations,
+		meta.(providerMetadata).IgnoreLabels,
+	)
 
 	jobSpec, err := flattenJobV1Spec(in.Spec, d, meta, "spec.0.job_template.0.spec.0.template.0.")
 	if err != nil {

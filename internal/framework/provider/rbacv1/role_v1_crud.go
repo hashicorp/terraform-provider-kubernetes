@@ -19,9 +19,8 @@ import (
 )
 
 const (
-	rbacAPIVersion   = "rbac.authorization.k8s.io/v1"
-	roleKind         = "Role"
-	defaultNamespace = "default"
+	rbacAPIVersion = "rbac.authorization.k8s.io/v1"
+	roleKind       = "Role"
 )
 
 func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -31,9 +30,6 @@ func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *res
 		return
 	}
 
-	// The metadata ListNestedBlock's listvalidator.SizeBetween(1, 1) has
-	// already rejected any config with zero or multiple metadata blocks
-	// before Create runs.
 	planMeta := plan.Metadata[0]
 
 	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
@@ -265,7 +261,13 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 		}
 		namespace = identityData.Namespace.ValueString()
 		if namespace == "" {
-			namespace = defaultNamespace
+			resp.Diagnostics.AddError(
+				"invalid identity import",
+				"namespace is required when importing by identity; "+
+					"provide a namespace in the identity block or use the "+
+					"string import format: namespace/name",
+			)
+			return
 		}
 		name = identityData.Name.ValueString()
 	}
@@ -288,8 +290,6 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 
 	var state RoleModel
 	state.ID = types.StringValue(buildID(role.Namespace, role.Name))
-	// Nothing is "already managed" yet on a fresh import, so internal keys
-	// and ignore_annotations/ignore_labels matches are always filtered out.
 	state.Metadata = []MetadataModel{*flattenMetadata(role.ObjectMeta, MetadataModel{}, meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())}
 
 	rules, diags := flattenPolicyRules(role.Rules)

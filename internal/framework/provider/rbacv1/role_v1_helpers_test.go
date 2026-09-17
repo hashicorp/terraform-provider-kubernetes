@@ -10,7 +10,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	rbacv1api "k8s.io/api/rbac/v1"
 )
 
@@ -21,6 +24,40 @@ func makeStringSet(values []string) types.Set {
 	}
 	set, _ := types.SetValue(types.StringType, elements)
 	return set
+}
+
+func TestMetadataMapValidatorsNullValues(t *testing.T) {
+	for _, v := range []struct {
+		name      string
+		validator validator.Map
+	}{
+		{name: "labels", validator: labelValidator{}},
+		{name: "annotations", validator: annotationKeyValidator{}},
+	} {
+		for _, tc := range []struct {
+			name      string
+			key       string
+			value     types.String
+			wantError bool
+		}{
+			{name: "null value", key: "optional", value: types.StringNull()},
+			{name: "null omits invalid API key", key: "Invalid Key!", value: types.StringNull()},
+			{name: "unknown value", key: "optional", value: types.StringUnknown()},
+			{name: "non-null invalid API key", key: "Invalid Key!", value: types.StringValue("present"), wantError: true},
+		} {
+			t.Run(v.name+"/"+tc.name, func(t *testing.T) {
+				req := validator.MapRequest{
+					Path:        path.Root(v.name),
+					ConfigValue: types.MapValueMust(types.StringType, map[string]attr.Value{tc.key: tc.value}),
+				}
+				var resp validator.MapResponse
+				v.validator.ValidateMap(context.Background(), req, &resp)
+				if resp.Diagnostics.HasError() != tc.wantError {
+					t.Fatalf("HasError() = %t, want %t: %v", resp.Diagnostics.HasError(), tc.wantError, resp.Diagnostics)
+				}
+			})
+		}
+	}
 }
 
 func TestExpandStringSet(t *testing.T) {
@@ -56,8 +93,8 @@ func TestFlattenStringSet(t *testing.T) {
 		expected types.Set
 	}{
 		{"normal slice", []string{"a", "b", "c"}, makeStringSet([]string{"a", "b", "c"})},
-		{"nil slice", nil, types.SetNull(types.StringType)},
-		{"empty slice", []string{}, types.SetNull(types.StringType)},
+		{"nil slice", nil, makeStringSet(nil)},
+		{"empty slice", []string{}, makeStringSet(nil)},
 	}
 
 	for _, tt := range tests {
@@ -218,8 +255,8 @@ func TestExpandFlattenStringMap(t *testing.T) {
 	if expandStringMap(nil) != nil {
 		t.Errorf("expandStringMap(nil) should be nil")
 	}
-	if flattenStringMap(nil) != nil {
-		t.Errorf("flattenStringMap(nil) should be nil")
+	if got := flattenStringMap(nil); got == nil || len(got) != 0 {
+		t.Errorf("flattenStringMap(nil) = %v, want non-nil empty map", got)
 	}
 }
 
@@ -310,5 +347,115 @@ func TestBuildMetadataPatch(t *testing.T) {
 	same := buildMetadataPatch(state, state)
 	if len(same) != 0 {
 		t.Errorf("expected no patch operations for unchanged metadata, got %d", len(same))
+	}
+}
+
+func TestParseIDNamespace(t *testing.T) {
+
+	t.Run("parseID rejects missing namespace separator", func(t *testing.T) {
+		_, _, err := parseID("name-only")
+		if err == nil {
+			t.Fatal("parseID: expected error for ID without namespace, got nil")
+		}
+	})
+
+	t.Run("parseID accepts namespace/name", func(t *testing.T) {
+		ns, name, err := parseID("default/my-role")
+		if err != nil {
+			t.Fatalf("parseID: unexpected error: %v", err)
+		}
+		if ns != "default" || name != "my-role" {
+			t.Fatalf("parseID: got ns=%q name=%q, want default/my-role", ns, name)
+		}
+	})
+}
+
+func TestFlattenMetadataMapNullValues(t *testing.T) {
+	current := map[string]types.String{
+		"keep":                         types.StringValue("retained"),
+		"optional":                     types.StringNull(),
+		"ignored.example.com/optional": types.StringNull(),
+	}
+	for _, tc := range []struct {
+		name   string
+		remote map[string]string
+		want   map[string]types.String
+	}{
+		{
+			name:   "absent keys retain null markers",
+			remote: map[string]string{"keep": "retained"},
+			want:   current,
+		},
+		{
+			name:   "remote values reveal drift",
+			remote: map[string]string{"keep": "retained", "optional": "drift"},
+			want: map[string]types.String{
+				"keep":                         types.StringValue("retained"),
+				"optional":                     types.StringValue("drift"),
+				"ignored.example.com/optional": types.StringNull(),
+			},
+		},
+		{
+			name:   "null entries do not claim ignored keys",
+			remote: map[string]string{"keep": "retained", "ignored.example.com/optional": "external"},
+			want:   current,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := flattenMetadataMap(tc.remote, current, []string{`^ignored\.example\.com/`})
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("metadata mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+	if got := flattenMetadataMap(nil, nil, nil); got == nil || len(got) != 0 {
+		t.Errorf("import without prior metadata = %v, want empty map", got)
+	}
+}
+
+func TestDiffStringMapNullValues(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		old  map[string]types.String
+		new  map[string]types.String
+		want kubernetes.PatchOperations
+	}{
+		{
+			name: "new null marker does not patch Kubernetes",
+			new:  map[string]types.String{"optional": types.StringNull()},
+			want: kubernetes.PatchOperations{},
+		},
+		{
+			name: "removing a null marker does not remove an absent API key",
+			old:  map[string]types.String{"optional": types.StringNull()},
+			want: kubernetes.PatchOperations{},
+		},
+		{
+			name: "string to null removes the API key",
+			old:  map[string]types.String{"example.com/key": types.StringValue("present")},
+			new:  map[string]types.String{"example.com/key": types.StringNull()},
+			want: kubernetes.PatchOperations{&kubernetes.RemoveOperation{Path: "/metadata/labels/example.com~1key"}},
+		},
+		{
+			name: "null to string creates a missing API map",
+			old:  map[string]types.String{"optional": types.StringNull()},
+			new:  map[string]types.String{"optional": types.StringValue("present")},
+			want: kubernetes.PatchOperations{&kubernetes.AddOperation{
+				Path: "/metadata/labels", Value: map[string]string{"optional": "present"},
+			}},
+		},
+		{
+			name: "null markers do not mask updates to other keys",
+			old:  map[string]types.String{"optional": types.StringNull(), "keep": types.StringValue("old")},
+			new:  map[string]types.String{"optional": types.StringNull(), "keep": types.StringValue("new")},
+			want: kubernetes.PatchOperations{&kubernetes.ReplaceOperation{Path: "/metadata/labels/keep", Value: "new"}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := diffStringMap("/metadata/labels", tc.old, tc.new)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("patch mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }

@@ -20,8 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ID helpers, matching the namespace/name format used by the SDKv2 resource.
-
 func buildID(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
@@ -33,8 +31,6 @@ func parseID(id string) (namespace, name string, err error) {
 	}
 	return parts[0], parts[1], nil
 }
-
-// String map helpers (labels, annotations).
 
 func expandStringMap(m map[string]types.String) map[string]string {
 	if len(m) == 0 {
@@ -50,17 +46,12 @@ func expandStringMap(m map[string]types.String) map[string]string {
 }
 
 func flattenStringMap(m map[string]string) map[string]types.String {
-	if len(m) == 0 {
-		return nil
-	}
 	result := make(map[string]types.String, len(m))
 	for k, v := range m {
 		result[k] = types.StringValue(v)
 	}
 	return result
 }
-
-// String set helpers (api_groups, resources, resource_names, verbs).
 
 func expandStringSet(ctx context.Context, set types.Set) ([]string, diag.Diagnostics) {
 	if set.IsNull() || set.IsUnknown() {
@@ -83,10 +74,6 @@ func expandStringSet(ctx context.Context, set types.Set) ([]string, diag.Diagnos
 }
 
 func flattenStringSet(slice []string) (types.Set, diag.Diagnostics) {
-	if len(slice) == 0 {
-		return types.SetNull(types.StringType), nil
-	}
-
 	elements := make([]attr.Value, len(slice))
 	for i, v := range slice {
 		elements[i] = types.StringValue(v)
@@ -94,8 +81,6 @@ func flattenStringSet(slice []string) (types.Set, diag.Diagnostics) {
 
 	return types.SetValue(types.StringType, elements)
 }
-
-// Metadata helpers.
 
 func expandMetadata(m MetadataModel) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
@@ -107,46 +92,42 @@ func expandMetadata(m MetadataModel) metav1.ObjectMeta {
 	}
 }
 
-// flattenMetadata converts a Kubernetes ObjectMeta into MetadataModel,
-// filtering internal Kubernetes-managed keys and user-configured
-// ignore_annotations/ignore_labels patterns out of annotations/labels —
-// unless the key is already present in `current` (i.e. explicitly managed
-// by this Terraform config), matching SDKv2's flattenMetadata
-// (kubernetes/structures.go: removeInternalKeys/removeKeys). `current` is
-// the metadata already known to Terraform before this read (the prior
-// state in Read, the plan in Create/Update); pass a zero MetadataModel
-// (nothing yet managed) when there is none, such as during ImportState.
 func flattenMetadata(meta metav1.ObjectMeta, current MetadataModel, ignoreAnnotations, ignoreLabels []string) *MetadataModel {
 	m := &MetadataModel{
 		Generation:      types.Int64Value(meta.Generation),
 		Name:            types.StringValue(meta.Name),
 		ResourceVersion: types.StringValue(meta.ResourceVersion),
 		UID:             types.StringValue(string(meta.UID)),
-		Annotations:     flattenStringMap(filterManagedMetadataKeys(meta.Annotations, current.Annotations, ignoreAnnotations)),
-		Labels:          flattenStringMap(filterManagedMetadataKeys(meta.Labels, current.Labels, ignoreLabels)),
+		Annotations:     flattenMetadataMap(meta.Annotations, current.Annotations, ignoreAnnotations),
+		Labels:          flattenMetadataMap(meta.Labels, current.Labels, ignoreLabels),
 	}
-	if meta.GenerateName != "" {
-		m.GenerateName = types.StringValue(meta.GenerateName)
-	} else {
-		m.GenerateName = types.StringNull()
-	}
+	m.GenerateName = types.StringValue(meta.GenerateName)
 	if meta.Namespace != "" {
 		m.Namespace = types.StringValue(meta.Namespace)
 	}
 	return m
 }
 
-// filterManagedMetadataKeys drops keys from `m` that look like internal
-// Kubernetes keys or match an ignore_annotations/ignore_labels pattern,
-// unless that key is already present in `current` (already managed by this
-// Terraform config, so keep tracking it regardless of the patterns above).
+func flattenMetadataMap(m map[string]string, current map[string]types.String, ignorePatterns []string) map[string]types.String {
+	result := flattenStringMap(filterManagedMetadataKeys(m, current, ignorePatterns))
+	// Null entries are configuration-only markers, not Kubernetes metadata.
+	// Keep actual remote values when present so refresh can detect drift.
+	for key, value := range current {
+		if _, exists := result[key]; !exists && value.IsNull() {
+			result[key] = value
+		}
+	}
+	return result
+}
+
 func filterManagedMetadataKeys(m map[string]string, current map[string]types.String, ignorePatterns []string) map[string]string {
 	if len(m) == 0 {
 		return nil
 	}
 	result := make(map[string]string, len(m))
 	for k, v := range m {
-		if _, managed := current[k]; !managed && (isInternalMetadataKey(k) || matchesIgnorePattern(k, ignorePatterns)) {
+		value, managed := current[k]
+		if (!managed || value.IsNull()) && (isInternalMetadataKey(k) || matchesIgnorePattern(k, ignorePatterns)) {
 			continue
 		}
 		result[k] = v
@@ -154,7 +135,6 @@ func filterManagedMetadataKeys(m map[string]string, current map[string]types.Str
 	return result
 }
 
-// isInternalMetadataKey mirrors kubernetes.isInternalKey (kubernetes/structures.go).
 func isInternalMetadataKey(key string) bool {
 	u, err := url.Parse("//" + key)
 	if err != nil {
@@ -183,7 +163,6 @@ func isInternalMetadataKey(key string) bool {
 	return false
 }
 
-// matchesIgnorePattern mirrors kubernetes.ignoreKey (kubernetes/structures.go).
 func matchesIgnorePattern(key string, patterns []string) bool {
 	for _, p := range patterns {
 		if ok, _ := regexp.MatchString(p, key); ok {
@@ -192,8 +171,6 @@ func matchesIgnorePattern(key string, patterns []string) bool {
 	}
 	return false
 }
-
-// PolicyRule helpers.
 
 func expandPolicyRules(ctx context.Context, rules []RuleModel) ([]rbacv1api.PolicyRule, diag.Diagnostics) {
 	var allDiags diag.Diagnostics
@@ -251,8 +228,6 @@ func flattenPolicyRules(rules []rbacv1api.PolicyRule) ([]RuleModel, diag.Diagnos
 	return result, allDiags
 }
 
-// rulesEqual reports whether two rule lists are identical, treating each
-// rule's set-typed fields with set semantics (order-independent).
 func rulesEqual(a, b []RuleModel) bool {
 	if len(a) != len(b) {
 		return false
@@ -268,9 +243,6 @@ func rulesEqual(a, b []RuleModel) bool {
 	return true
 }
 
-// JSON-patch helpers for Update, mirroring kubernetes.patchMetadata/diffStringMap
-// so that the generated patches are identical to the SDKv2 implementation.
-
 func buildMetadataPatch(plan, state MetadataModel) kubernetes.PatchOperations {
 	var ops kubernetes.PatchOperations
 	ops = append(ops, diffStringMap("/metadata/annotations", state.Annotations, plan.Annotations)...)
@@ -281,20 +253,22 @@ func buildMetadataPatch(plan, state MetadataModel) kubernetes.PatchOperations {
 func diffStringMap(pathPrefix string, oldV, newV map[string]types.String) kubernetes.PatchOperations {
 	ops := make(kubernetes.PatchOperations, 0)
 	pathPrefix = strings.TrimRight(pathPrefix, "/")
+	oldValues := expandStringMap(oldV)
+	newValues := expandStringMap(newV)
 
-	if len(oldV) == 0 {
-		if len(newV) == 0 {
+	if len(oldValues) == 0 {
+		if len(newValues) == 0 {
 			return ops
 		}
 		ops = append(ops, &kubernetes.AddOperation{
 			Path:  pathPrefix,
-			Value: expandStringMap(newV),
+			Value: newValues,
 		})
 		return ops
 	}
 
-	for k := range oldV {
-		if _, ok := newV[k]; ok {
+	for k := range oldValues {
+		if _, ok := newValues[k]; ok {
 			continue
 		}
 		ops = append(ops, &kubernetes.RemoveOperation{
@@ -302,11 +276,9 @@ func diffStringMap(pathPrefix string, oldV, newV map[string]types.String) kubern
 		})
 	}
 
-	for k, v := range newV {
-		newValue := v.ValueString()
-
-		if oldValue, ok := oldV[k]; ok {
-			if oldValue.ValueString() == newValue {
+	for k, newValue := range newValues {
+		if oldValue, ok := oldValues[k]; ok {
+			if oldValue == newValue {
 				continue
 			}
 			ops = append(ops, &kubernetes.ReplaceOperation{
@@ -325,8 +297,6 @@ func diffStringMap(pathPrefix string, oldV, newV map[string]types.String) kubern
 	return ops
 }
 
-// escapeJSONPointer escapes a string per RFC 6901 so it can be used as a
-// path segment in JSON patch operations.
 func escapeJSONPointer(path string) string {
 	path = strings.ReplaceAll(path, "~", "~0")
 	path = strings.ReplaceAll(path, "/", "~1")

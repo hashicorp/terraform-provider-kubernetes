@@ -7,11 +7,12 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -37,6 +38,7 @@ func (r *Role) Schema(_ context.Context, _ resource.SchemaRequest, resp *resourc
 					Attributes: metadataSchemaAttributes(),
 				},
 				Validators: []validator.List{
+					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
 				},
 			},
@@ -46,6 +48,7 @@ func (r *Role) Schema(_ context.Context, _ resource.SchemaRequest, resp *resourc
 					Attributes: policyRuleSchemaAttributes(),
 				},
 				Validators: []validator.List{
+					listvalidator.IsRequired(),
 					listvalidator.SizeAtLeast(1),
 				},
 			},
@@ -59,13 +62,19 @@ func metadataSchemaAttributes() map[string]schema.Attribute {
 			MarkdownDescription: "An unstructured key value map stored with the role that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations",
 			ElementType:         types.StringType,
 			Optional:            true,
+			Computed:            true,
+			Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
+			Validators: []validator.Map{
+				annotationKeyValidator{},
+			},
 		},
 		"generate_name": schema.StringAttribute{
 			MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:            true,
+			Computed:            true,
+			Default:             stringdefault.StaticString(""),
 			Validators: []validator.String{
 				rbacNameValidator{},
-				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("name")),
 			},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
@@ -79,6 +88,11 @@ func metadataSchemaAttributes() map[string]schema.Attribute {
 			MarkdownDescription: "Map of string keys and values that can be used to organize and categorize (scope and select) the role. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels",
 			ElementType:         types.StringType,
 			Optional:            true,
+			Computed:            true,
+			Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
+			Validators: []validator.Map{
+				labelValidator{},
+			},
 		},
 		"name": schema.StringAttribute{
 			MarkdownDescription: "Name of the role, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
@@ -86,7 +100,6 @@ func metadataSchemaAttributes() map[string]schema.Attribute {
 			Computed:            true,
 			Validators: []validator.String{
 				rbacNameValidator{},
-				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("generate_name")),
 			},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
@@ -100,6 +113,7 @@ func metadataSchemaAttributes() map[string]schema.Attribute {
 			Default:             stringdefault.StaticString("default"),
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
+				stringplanmodifier.UseStateForUnknown(),
 			},
 		},
 		"resource_version": schema.StringAttribute{
@@ -129,6 +143,8 @@ func policyRuleSchemaAttributes() map[string]schema.Attribute {
 			MarkdownDescription: "White list of names that the rule applies to",
 			ElementType:         types.StringType,
 			Optional:            true,
+			Computed:            true,
+			Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
 		},
 		"verbs": schema.SetAttribute{
 			MarkdownDescription: "List of Verbs that apply to ALL the ResourceKinds and AttributeRestrictions contained in this rule",

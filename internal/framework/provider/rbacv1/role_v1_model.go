@@ -37,3 +37,27 @@ type RoleIdentityModel struct {
 	Namespace  types.String `tfsdk:"namespace"`
 	Name       types.String `tfsdk:"name"`
 }
+
+type RoleSourceState struct {
+	ID       string                 `json:"id"`
+	Metadata []roleSourceMetadata   `json:"metadata"`
+	Rule     []roleSourcePolicyRule `json:"rule"`
+}
+
+type roleSourceMetadata struct {
+	Annotations     map[string]string `json:"annotations"`
+	GenerateName    string            `json:"generate_name"`
+	Generation      int64             `json:"generation"`
+	Labels          map[string]string `json:"labels"`
+	Name            string            `json:"name"`
+	Namespace       string            `json:"namespace"`
+	ResourceVersion string            `json:"resource_version"`
+	UID             string            `json:"uid"`
+}
+
+type roleSourcePolicyRule struct {
+	APIGroups     []string `json:"api_groups"`
+	Resources     []string `json:"resources"`
+	ResourceNames []string `json:"resource_names"`
+	Verbs         []string `json:"verbs"`
+}

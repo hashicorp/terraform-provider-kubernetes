@@ -1,3 +1,3 @@
 ```release-note:note
-`resource/kubernetes_role_v1`: Migrated the resource to the Terraform Plugin Framework. This is an internal implementation change with no expected user-facing behavior differences.
+`resource/kubernetes_role_v1`: Migrated the resource to the Terraform Plugin Framework, preserving block syntax, empty metadata and rule values, and configurations specifying both `name` and `generate_name`. Existing configurations do not require edits or manual state migration. Added support for moving from the deprecated `kubernetes_role` resource using a `moved` block with Terraform 1.8 or later.
 ```

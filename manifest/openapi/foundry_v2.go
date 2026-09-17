@@ -36,7 +36,6 @@ func NewFoundryFromSpecV2(spec []byte) (Foundry, error) {
 
 	f := foapiv2{
 		swagger:        &swg,
-		typeCache:      sync.Map{},
 		gkvIndex:       sync.Map{}, //reverse lookup index from GVK to OpenAPI definition IDs
 		recursionDepth: 50,         // arbitrarily large number - a type this deep will likely kill Terraform anyway
 		gate:           sync.Mutex{},
@@ -57,7 +56,6 @@ type Foundry interface {
 
 type foapiv2 struct {
 	swagger        *openapi2.T
-	typeCache      sync.Map
 	gkvIndex       sync.Map
 	recursionDepth uint64 // a last resort circuit-breaker for run-away recursion - hitting this will make for a bad day
 	gate           sync.Mutex
@@ -105,7 +103,7 @@ func (f *foapiv2) getTypeByID(id string, h map[string]string, ap tftypes.Attribu
 		return nil, fmt.Errorf("failed to resolve schema: %s", err)
 	}
 
-	return getTypeFromSchema(sch, f.recursionDepth, &(f.typeCache), f.swagger.Definitions, ap, h)
+	return getTypeFromSchema(sch, f.recursionDepth, f.swagger.Definitions, ap, h)
 }
 
 // buildGvkIndex builds the reverse lookup index that associates each GVK

@@ -134,13 +134,13 @@ func TestAccPriorityClassV1_upgradeFromSDKv2(t *testing.T) {
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
 		Steps: []tfresource.TestStep{
-			// Step 1: provision with the last SDKv2 release.
+			// Step 1: provision with the last SDKv2 release (3.2.1).
 			// Writes state at schema version 0 with TypeList metadata.
 			{
 				ExternalProviders: map[string]tfresource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.0.1",
+						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccPriorityClassV1Config_basic(name),
@@ -181,12 +181,12 @@ func TestAccPriorityClassV1_moved(t *testing.T) {
 	tfresource.ParallelTest(t, tfresource.TestCase{
 		Steps: []tfresource.TestStep{
 			// Step 1: provision kubernetes_priority_class (deprecated type) with
-			// the last SDKv2 release. Writes state at schema version 0.
+			// the last SDKv2 release (3.2.1). Writes state at schema version 0.
 			{
 				ExternalProviders: map[string]tfresource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.0.1",
+						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccPriorityClassConfig_deprecated(name),

@@ -63,6 +63,10 @@ func metadataBlockAttrs() map[string]schema.Attribute {
 				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("generate_name")),
 			},
 			PlanModifiers: []planmodifier.String{
+				// UseStateForUnknown preserves the server-assigned name when generate_name is
+				// used and name is not in config — prevents spurious replacement on secondary
+				// changes (labels, annotations, description) after first apply.
+				stringplanmodifier.UseStateForUnknown(),
 				stringplanmodifier.RequiresReplace(),
 			},
 		},

@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package corev1
+package common
 
 import (
 	"context"
@@ -130,7 +130,7 @@ func TestExpandMetadata(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, diags := expandMetadata(context.Background(), tc.in)
+			got, diags := ExpandMetadata(context.Background(), tc.in)
 			if diags.HasError() {
 				t.Fatalf("unexpected diagnostics: %v", diags)
 			}
@@ -166,7 +166,7 @@ func TestExpandMapForPatch(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := expandMapForPatch(tc.in)
+			got := ExpandMapForPatch(tc.in)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("got %#v, want %#v", got, tc.want)
 			}
@@ -345,7 +345,7 @@ func TestFlattenMetadata(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, diags := flattenMetadata(context.Background(), tc.obj, tc.prior,
+			got, diags := FlattenMetadata(context.Background(), tc.obj, tc.prior,
 				tc.ignoreAnnotations, tc.ignoreLabels)
 			if diags.HasError() {
 				t.Fatalf("unexpected diagnostics: %v", diags)
@@ -392,7 +392,7 @@ func TestFlattenMetadataScalarFields(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, diags := flattenMetadata(context.Background(), tc.obj, nil, nil, nil)
+			got, diags := FlattenMetadata(context.Background(), tc.obj, nil, nil, nil)
 			if diags.HasError() {
 				t.Fatalf("unexpected diagnostics: %v", diags)
 			}

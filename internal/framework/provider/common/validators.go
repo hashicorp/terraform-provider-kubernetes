@@ -1,12 +1,14 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package corev1
+package common
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -14,6 +16,13 @@ import (
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
+// Every diagnostic here is built with validatordiag.InvalidAttributeValueDiagnostic, the
+// helper the framework's own validators use. The attribute is taken from req.Path rather
+// than named in the message, so these validators report correctly wherever they are
+// reused. It renders as:
+//
+//	Invalid Attribute Value
+//	Attribute metadata[0].generate_name <reason>, got: "<value>"
 var (
 	_ validator.String = dnsSubdomainNameValidator{}
 	_ validator.String = dnsLabelPrefixValidator{}
@@ -21,9 +30,10 @@ var (
 	_ validator.Map    = labelsValidator{}
 )
 
-// dnsSubdomainName validates metadata.name. Ports validateName from
+// DNSSubdomainNameValidator returns a validator that checks a string is a valid DNS
+// subdomain name, as Kubernetes requires for most object names. Ports validateName from
 // kubernetes/validators.go.
-func dnsSubdomainName() validator.String {
+func DNSSubdomainNameValidator() validator.String {
 	return dnsSubdomainNameValidator{}
 }
 
@@ -42,14 +52,16 @@ func (v dnsSubdomainNameValidator) ValidateString(_ context.Context, req validat
 		return
 	}
 	for _, msg := range apiValidation.NameIsDNSSubdomain(req.ConfigValue.ValueString(), false) {
-		resp.Diagnostics.AddAttributeError(req.Path, "Invalid name", msg)
+		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+			req.Path, msg, req.ConfigValue.String()))
 	}
 }
 
-// dnsLabelPrefix validates metadata.generate_name. Ports validateGenerateName.
-// The trailing `true` tells apimachinery the value is a name *prefix*, so it is
-// validated as such rather than as a complete name.
-func dnsLabelPrefix() validator.String {
+// DNSLabelPrefixValidator returns a validator that checks a string is a valid DNS label
+// prefix, as used by metadata.generate_name. Ports validateGenerateName from
+// kubernetes/validators.go. The trailing `true` tells apimachinery the value is a name
+// *prefix*, so it is validated as such rather than as a complete name.
+func DNSLabelPrefixValidator() validator.String {
 	return dnsLabelPrefixValidator{}
 }
 
@@ -68,12 +80,15 @@ func (v dnsLabelPrefixValidator) ValidateString(_ context.Context, req validator
 		return
 	}
 	for _, msg := range apiValidation.NameIsDNSLabel(req.ConfigValue.ValueString(), true) {
-		resp.Diagnostics.AddAttributeError(req.Path, "Invalid generate_name", msg)
+		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+			req.Path, msg, req.ConfigValue.String()))
 	}
 }
 
-// annotationKeys validates metadata.annotations. Ports validateAnnotations.
-func annotationKeys() validator.Map {
+// AnnotationsValidator returns a validator that checks every annotation key is a
+// qualified name. Ports validateAnnotations from kubernetes/validators.go, which checks
+// keys only.
+func AnnotationsValidator() validator.Map {
 	return annotationsValidator{}
 }
 
@@ -93,17 +108,17 @@ func (v annotationsValidator) ValidateMap(_ context.Context, req validator.MapRe
 	}
 	for k := range req.ConfigValue.Elements() {
 		// SDKv2's validateAnnotations lowercases the key before checking;
-		// validateLabels does not. Inconsistent, but it is shipped behaviour and
-		// changing it here would reject configs that currently apply.
 		for _, msg := range utilValidation.IsQualifiedName(strings.ToLower(k)) {
-			resp.Diagnostics.AddAttributeError(req.Path.AtMapKey(k), "Invalid annotation key", msg)
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				req.Path.AtMapKey(k), "key "+msg, fmt.Sprintf("%q", k)))
 		}
 	}
 }
 
-// labelKeyValues validates metadata.labels. Ports validateLabels, which checks
-// both the key and the value.
-func labelKeyValues() validator.Map {
+// LabelsValidator returns a validator that checks every label key is a qualified name
+// and every value is a non-null, valid label value. Ports validateLabels from
+// kubernetes/validators.go.
+func LabelsValidator() validator.Map {
 	return labelsValidator{}
 }
 
@@ -123,15 +138,25 @@ func (v labelsValidator) ValidateMap(_ context.Context, req validator.MapRequest
 	}
 	for k, raw := range req.ConfigValue.Elements() {
 		for _, msg := range utilValidation.IsQualifiedName(k) {
-			resp.Diagnostics.AddAttributeError(req.Path.AtMapKey(k), "Invalid label key", msg)
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				req.Path.AtMapKey(k), "key "+msg, fmt.Sprintf("%q", k)))
 		}
 
 		val, ok := raw.(types.String)
-		if !ok || val.IsNull() || val.IsUnknown() {
+		if !ok {
+			continue // unreachable: the schema declares ElementType: types.StringType
+		}
+		if val.IsUnknown() {
+			continue
+		}
+		if val.IsNull() {
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				req.Path.AtMapKey(k), "value must be a string", val.String()))
 			continue
 		}
 		for _, msg := range utilValidation.IsValidLabelValue(val.ValueString()) {
-			resp.Diagnostics.AddAttributeError(req.Path.AtMapKey(k), "Invalid label value", msg)
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				req.Path.AtMapKey(k), "value "+msg, val.String()))
 		}
 	}
 }

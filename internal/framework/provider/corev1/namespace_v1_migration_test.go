@@ -86,7 +86,7 @@ const sdkv2ProviderVersion = "3.2.1"
 // the upgrade produces no changes.
 //
 // Step 2 refreshes state written by step 1 through the framework Read, so these tests
-// exercise flattenMetadata and filterMetadataMap rather than Create. The two configs
+// exercise common.FlattenMetadata and its filtering rather than Create. The two configs
 // must stay byte-identical: any difference makes a non-empty plan ambiguous.
 func testAccNamespaceMigration(t *testing.T, config string) {
 	t.Helper()

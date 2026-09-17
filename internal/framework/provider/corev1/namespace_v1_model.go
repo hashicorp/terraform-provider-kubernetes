@@ -6,6 +6,7 @@ package corev1
 import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 type NamespaceV1Model struct {
@@ -14,18 +15,8 @@ type NamespaceV1Model struct {
 	// Metadata is a slice because the schema declares metadata as a
 	// ListNestedBlock. The SizeAtMost(1) validator constrains the value, not the
 	// type — so this stays a list and callers index [0] after a length check.
-	Metadata []MetadataModel `tfsdk:"metadata"`
-	Timeouts timeouts.Value  `tfsdk:"timeouts"`
-}
-
-type MetadataModel struct {
-	Annotations     types.Map    `tfsdk:"annotations"`
-	GenerateName    types.String `tfsdk:"generate_name"`
-	Generation      types.Int64  `tfsdk:"generation"`
-	Labels          types.Map    `tfsdk:"labels"`
-	Name            types.String `tfsdk:"name"`
-	ResourceVersion types.String `tfsdk:"resource_version"`
-	UID             types.String `tfsdk:"uid"`
+	Metadata []common.MetadataModel `tfsdk:"metadata"`
+	Timeouts timeouts.Value         `tfsdk:"timeouts"`
 }
 
 type NamespaceResourceIdentity struct {

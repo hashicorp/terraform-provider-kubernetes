@@ -253,7 +253,7 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			// core
 			"kubernetes_namespace":                  resourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
-			// "kubernetes_namespace_v1":               resourceKubernetesNamespaceV1(""),
+			"kubernetes_namespace_v1":               resourceKubernetesNamespaceV1(""),
 			"kubernetes_service":                    resourceKubernetesServiceV1("Deprecated; use kubernetes_service_v1."),
 			"kubernetes_service_v1":                 resourceKubernetesServiceV1(""),
 			"kubernetes_service_account":            resourceKubernetesServiceAccountV1("Deprecated; use kubernetes_service_account_v1."),

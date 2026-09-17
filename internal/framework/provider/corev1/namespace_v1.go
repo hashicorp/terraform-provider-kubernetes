@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
@@ -18,10 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	v1 "k8s.io/api/core/v1"
@@ -138,76 +136,7 @@ func (n *NamespaceV1) Schema(ctx context.Context, req resource.SchemaRequest, re
 			},
 		},
 		Blocks: map[string]schema.Block{
-			// SDKv2 declares metadata as TypeList{Required: true, MaxItems: 1}, which
-			// serializes as a one-element array. ListNestedBlock reproduces that shape;
-			// SingleNestedBlock would produce a bare object and break existing state.
-			"metadata": schema.ListNestedBlock{
-				Description: "Standard namespace's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata",
-				Validators: []validator.List{
-					listvalidator.SizeAtLeast(1), // SDKv2 Required: true
-					listvalidator.SizeAtMost(1),  // SDKv2 MaxItems: 1
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"annotations": schema.MapAttribute{
-							Description: "An unstructured key value map stored with the namespace that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/",
-							ElementType: types.StringType,
-							Optional:    true,
-							Validators: []validator.Map{
-								annotationKeys(),
-							},
-						},
-						"generate_name": schema.StringAttribute{
-							Description: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-							Optional:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(
-									path.MatchRelative().AtParent().AtName("name"),
-								),
-								dnsLabelPrefix(),
-							},
-						},
-						"generation": schema.Int64Attribute{
-							Description: "A sequence number representing a specific generation of the desired state.",
-							Computed:    true,
-						},
-						"labels": schema.MapAttribute{
-							Description: "Map of string keys and values that can be used to organize and categorize (scope and select) the namespace. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/",
-							ElementType: types.StringType,
-							Optional:    true,
-							Validators: []validator.Map{
-								labelKeyValues(),
-							},
-						},
-						"name": schema.StringAttribute{
-							Description: "Name of the namespace, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
-							Optional:    true,
-							Computed:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-								stringplanmodifier.RequiresReplace(),
-							},
-							Validators: []validator.String{
-								stringvalidator.ConflictsWith(
-									path.MatchRelative().AtParent().AtName("generate_name"),
-								),
-								dnsSubdomainName(),
-							},
-						},
-						"resource_version": schema.StringAttribute{
-							Description: "An opaque value that represents the internal version of this namespace that can be used by clients to determine when namespace has changed. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
-							Computed:    true,
-						},
-						"uid": schema.StringAttribute{
-							Description: "The unique in time and space value for this namespace. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
-							Computed:    true,
-						},
-					},
-				},
-			},
+			"metadata": common.MetadataSchema("namespace"),
 			// SDKv2 declares only a Delete timeout, so only Delete is user-settable.
 			// timeouts.BlockAll would add create/update/read and change the schema.
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Delete: true}),
@@ -246,7 +175,7 @@ func (n *NamespaceV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	metadata, diags := expandMetadata(ctx, plan.Metadata)
+	metadata, diags := common.ExpandMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -374,7 +303,6 @@ func (n *NamespaceV1) Delete(ctx context.Context, req resource.DeleteRequest, re
 	}
 }
 
-// Read implements [resource.Resource].
 func (n *NamespaceV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state NamespaceV1Model
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -407,7 +335,7 @@ func (n *NamespaceV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	// Prior state is the filtering reference. On import it is empty, which is the
 	// correct baseline: nothing was declared, so nothing is exempt from filtering.
-	metadata, diags := flattenMetadata(ctx, namespace.ObjectMeta, state.Metadata,
+	metadata, diags := common.FlattenMetadata(ctx, namespace.ObjectMeta, state.Metadata,
 		n.filters().GetIgnoreAnnotations(), n.filters().GetIgnoreLabels())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -429,7 +357,6 @@ func (n *NamespaceV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 }
 
-// Update implements [resource.Resource].
 func (n *NamespaceV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// if name or generate_name then delete existing one and create new one,
 	//  but we don't have delete yet
@@ -462,9 +389,9 @@ func (n *NamespaceV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	// that keys managed outside Terraform are left untouched.
 	ops := kubernetes.PatchOperations{}
 	ops = append(ops, kubernetes.DiffStringMap("/metadata/annotations",
-		expandMapForPatch(stateMeta.Annotations), expandMapForPatch(planMeta.Annotations))...)
+		common.ExpandMapForPatch(stateMeta.Annotations), common.ExpandMapForPatch(planMeta.Annotations))...)
 	ops = append(ops, kubernetes.DiffStringMap("/metadata/labels",
-		expandMapForPatch(stateMeta.Labels), expandMapForPatch(planMeta.Labels))...)
+		common.ExpandMapForPatch(stateMeta.Labels), common.ExpandMapForPatch(planMeta.Labels))...)
 
 	data, err := ops.MarshalJSON()
 	if err != nil {

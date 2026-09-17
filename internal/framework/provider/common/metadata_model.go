@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package corev1
+package common
 
 import (
 	"context"
@@ -13,11 +13,25 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// expandMetadata converts the Terraform model into a Kubernetes ObjectMeta.
+// MetadataModel is the model for the block built by MetadataSchema: metadata for a
+// cluster-scoped object whose name may be server-generated. It mirrors
+// metadataSchema(objectName, true) from kubernetes/schema_metadata.go.
 //
-// Null and unknown values are left as the zero value rather than written through,
-// so that an omitted attribute produces an absent field rather than an empty one.
-func expandMetadata(ctx context.Context, in []MetadataModel) (metav1.ObjectMeta, diag.Diagnostics) {
+// Every field must correspond to an attribute in MetadataSchema, or the framework fails
+// to decode. Namespaced objects, and objects without generate_name, need their own
+// variants of both.
+type MetadataModel struct {
+	Annotations     types.Map    `tfsdk:"annotations"`
+	GenerateName    types.String `tfsdk:"generate_name"`
+	Generation      types.Int64  `tfsdk:"generation"`
+	Labels          types.Map    `tfsdk:"labels"`
+	Name            types.String `tfsdk:"name"`
+	ResourceVersion types.String `tfsdk:"resource_version"`
+	UID             types.String `tfsdk:"uid"`
+}
+
+// ExpandMetadata converts the Terraform model into a Kubernetes ObjectMeta.
+func ExpandMetadata(ctx context.Context, in []MetadataModel) (metav1.ObjectMeta, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	meta := metav1.ObjectMeta{}
@@ -46,17 +60,11 @@ func expandMetadata(ctx context.Context, in []MetadataModel) (metav1.ObjectMeta,
 	return meta, diags
 }
 
-// expandMapForPatch converts a types.Map into the map[string]interface{} shape that
+// ExpandMapForPatch converts a types.Map into the map[string]interface{} shape that
 // kubernetes.DiffStringMap expects.
-//
-// The values matter here, unlike the `declared` set in filterMetadataMap where only
-// key presence is consulted: DiffStringMap asserts v.(string) without comma-ok when
-// building Add and Replace operations, so a nil value panics, and it compares old
-// against new values to decide between add and replace.
-//
 // A null or unknown map yields an empty map, which DiffStringMap treats as "no prior
 // keys" — emitting a single Add for the whole object rather than per-key operations.
-func expandMapForPatch(m types.Map) map[string]interface{} {
+func ExpandMapForPatch(m types.Map) map[string]interface{} {
 	if m.IsNull() || m.IsUnknown() {
 		return map[string]interface{}{}
 	}
@@ -74,14 +82,11 @@ func expandMapForPatch(m types.Map) map[string]interface{} {
 	return out
 }
 
-// flattenMetadata converts a Kubernetes ObjectMeta into the Terraform model, applying
-// the two filtering rules documented in MIGRATION_FINDINGS_namespace_v1.md §2.
-//
-// prior is the previous state for this resource, used as the config-membership
-// reference: a key the practitioner declared survives both rules. It is a slice to
-// mirror expandMetadata and the ListNestedBlock it maps to; an empty slice (the
-// import case) yields an all-null baseline, so nothing is exempt from filtering.
-func flattenMetadata(ctx context.Context, k8MetaObj metav1.ObjectMeta, prior []MetadataModel, ignoreAnnotations, ignoreLabels []string) ([]MetadataModel, diag.Diagnostics) {
+// FlattenMetadata converts a Kubernetes ObjectMeta into the Terraform model.
+// Annotations and labels are filtered by removing internal and ignored keys. The API server and other
+// controllers add keys the practitioner never wrote, and recording them would show a
+// permanent diff. A key present in prior state is never removed. 
+func FlattenMetadata(ctx context.Context, k8MetaObj metav1.ObjectMeta, prior []MetadataModel, ignoreAnnotations, ignoreLabels []string) ([]MetadataModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var newMeta MetadataModel
 
@@ -114,16 +119,8 @@ func flattenMetadata(ctx context.Context, k8MetaObj metav1.ObjectMeta, prior []M
 	return []MetadataModel{newMeta}, diags
 }
 
-// filterMetadataMap applies both removal rules to one metadata map and converts the
-// result to a types.Map.
-//
-// The removals always run, including when prior is null. That is the case that
-// matters most: a namespace with no declared labels still comes back from the API
-// carrying kubernetes.io/metadata.name, and skipping the filter there would write
-// it into state.
+
 func filterMetadataMap(ctx context.Context, fromAPI map[string]string, prior types.Map, ignore []string) (types.Map, diag.Diagnostics) {
-	// Keys the practitioner declared. Only presence is consulted (isKeyInMap), so
-	// the values are irrelevant. Empty when prior is null or unknown.
 	declared := map[string]interface{}{}
 	if !prior.IsNull() && !prior.IsUnknown() {
 		for k := range prior.Elements() {
@@ -141,16 +138,9 @@ func filterMetadataMap(ctx context.Context, fromAPI map[string]string, prior typ
 	kubernetes.RemoveInternalKeys(filtered, declared)
 	kubernetes.RemoveKeys(filtered, declared, ignore)
 
-	// Mirror prior state's null-ness when nothing survives. Go leaves a non-nil,
-	// zero-length map after deleting the last key, and types.MapValueFrom would turn
-	// that into a known empty map — which differs from null and produces a permanent
-	// diff. See MIGRATION_FINDINGS_namespace_v1.md §3.
 	if len(filtered) == 0 && prior.IsNull() {
 		return types.MapNull(types.StringType), nil
 	}
 
-	// MapValueFrom cannot actually fail for map[string]string into StringType, but
-	// its diagnostics are propagated rather than discarded so a future change to the
-	// element type surfaces as an error instead of a silent wrong value.
 	return types.MapValueFrom(ctx, types.StringType, filtered)
 }

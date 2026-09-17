@@ -57,10 +57,7 @@ func (v dnsSubdomainNameValidator) ValidateString(_ context.Context, req validat
 	}
 }
 
-// DNSLabelPrefixValidator returns a validator that checks a string is a valid DNS label
-// prefix, as used by metadata.generate_name. Ports validateGenerateName from
-// kubernetes/validators.go. The trailing `true` tells apimachinery the value is a name
-// *prefix*, so it is validated as such rather than as a complete name.
+// DNSLabelPrefixValidator ports validateGenerateName from kubernetes/validators.go.
 func DNSLabelPrefixValidator() validator.String {
 	return dnsLabelPrefixValidator{}
 }
@@ -85,9 +82,8 @@ func (v dnsLabelPrefixValidator) ValidateString(_ context.Context, req validator
 	}
 }
 
-// AnnotationsValidator returns a validator that checks every annotation key is a
-// qualified name. Ports validateAnnotations from kubernetes/validators.go, which checks
-// keys only.
+// AnnotationsValidator Ports validateAnnotations from kubernetes/validators.go.
+// Returns a validator that checks every annotation key is a qualified name and every value is non-null.
 func AnnotationsValidator() validator.Map {
 	return annotationsValidator{}
 }
@@ -106,18 +102,34 @@ func (v annotationsValidator) ValidateMap(_ context.Context, req validator.MapRe
 	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
 		return
 	}
-	for k := range req.ConfigValue.Elements() {
+	for k, raw := range req.ConfigValue.Elements() {
 		// SDKv2's validateAnnotations lowercases the key before checking;
 		for _, msg := range utilValidation.IsQualifiedName(strings.ToLower(k)) {
 			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 				req.Path.AtMapKey(k), "key "+msg, fmt.Sprintf("%q", k)))
 		}
+
+		val, ok := raw.(types.String)
+		if !ok {
+			continue // unreachable: the schema declares ElementType: types.StringType
+		}
+		if val.IsUnknown() {
+			continue
+		}
+		// Terraform passes `annotations = { a = null }` through to the provider. Without
+		// this check, Create fails at apply with a Value Conversion Error that blames the
+		// provider, and Update silently drops the key while state keeps `a = null`,
+		// producing a permanent diff. SDKv2's validateAnnotations checks keys only, so
+		// this is a deliberate tightening;
+		if val.IsNull() {
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				req.Path.AtMapKey(k), "value must be a string", val.String()))
+		}
 	}
 }
 
-// LabelsValidator returns a validator that checks every label key is a qualified name
-// and every value is a non-null, valid label value. Ports validateLabels from
-// kubernetes/validators.go.
+// LabelsValidator ports validateLabels from kubernetes/validators.go.
+// Returns a validator that checks every label key is a qualified name and every value is a non-null, valid label value.
 func LabelsValidator() validator.Map {
 	return labelsValidator{}
 }

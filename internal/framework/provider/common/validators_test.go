@@ -155,3 +155,43 @@ func TestValidatorDiagnosticFormat(t *testing.T) {
 		})
 	}
 }
+
+// TestAnnotationsValidator covers the null-value rejection added for bug 3. SDKv2's
+// validateAnnotations checks keys only; Terraform passes null elements through, and an
+// unchecked null causes a misleading apply error on Create and a permanent diff on Update.
+func TestAnnotationsValidator(t *testing.T) {
+	t.Parallel()
+
+	annotations := func(elems map[string]attr.Value) types.Map {
+		return types.MapValueMust(types.StringType, elems)
+	}
+
+	cases := []struct {
+		name       string
+		value      types.Map
+		wantErrors int
+	}{
+		{"null map is not validated", types.MapNull(types.StringType), 0},
+		{"unknown map is not validated", types.MapUnknown(types.StringType), 0},
+		{"valid key and value", annotations(map[string]attr.Value{"owner": types.StringValue("platform")}), 0},
+		{"unknown value is deferred to apply", annotations(map[string]attr.Value{"owner": types.StringUnknown()}), 0},
+		{"null value is rejected", annotations(map[string]attr.Value{"owner": types.StringNull()}), 1},
+		{"invalid key is rejected", annotations(map[string]attr.Value{"bad key!": types.StringValue("x")}), 1},
+		// Annotation values are not otherwise constrained: unlike labels, any string is legal.
+		{"long value is allowed", annotations(map[string]attr.Value{"owner": types.StringValue("a very long value, spaces and all")}), 0},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := validator.MapRequest{Path: path.Root("annotations"), ConfigValue: tc.value}
+			resp := &validator.MapResponse{}
+			AnnotationsValidator().ValidateMap(context.Background(), req, resp)
+
+			if got := resp.Diagnostics.ErrorsCount(); got != tc.wantErrors {
+				t.Errorf("got %d errors, want %d: %v", got, tc.wantErrors, resp.Diagnostics)
+			}
+		})
+	}
+}

@@ -85,7 +85,7 @@ func ExpandMapForPatch(m types.Map) map[string]interface{} {
 // FlattenMetadata converts a Kubernetes ObjectMeta into the Terraform model.
 // Annotations and labels are filtered by removing internal and ignored keys. The API server and other
 // controllers add keys the practitioner never wrote, and recording them would show a
-// permanent diff. A key present in prior state is never removed. 
+// permanent diff. A key present in prior state is never removed.
 func FlattenMetadata(ctx context.Context, k8MetaObj metav1.ObjectMeta, prior []MetadataModel, ignoreAnnotations, ignoreLabels []string) ([]MetadataModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var newMeta MetadataModel
@@ -118,7 +118,6 @@ func FlattenMetadata(ctx context.Context, k8MetaObj metav1.ObjectMeta, prior []M
 
 	return []MetadataModel{newMeta}, diags
 }
-
 
 func filterMetadataMap(ctx context.Context, fromAPI map[string]string, prior types.Map, ignore []string) (types.Map, diag.Diagnostics) {
 	declared := map[string]interface{}{}

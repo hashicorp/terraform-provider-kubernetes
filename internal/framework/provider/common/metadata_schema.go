@@ -30,7 +30,7 @@ func MetadataSchema(objectName string) schema.ListNestedBlock {
 		Validators: []validator.List{
 			listvalidator.SizeAtLeast(1), // SDKv2 Required: true
 			listvalidator.IsRequired(),
-			listvalidator.SizeAtMost(1),  // SDKv2 MaxItems: 1
+			listvalidator.SizeAtMost(1), // SDKv2 MaxItems: 1
 		},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
@@ -92,6 +92,9 @@ func MetadataSchema(objectName string) schema.ListNestedBlock {
 				"uid": schema.StringAttribute{
 					Description: fmt.Sprintf("The unique in time and space value for this %s. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids", objectName),
 					Computed:    true,
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+					},
 				},
 			},
 		},

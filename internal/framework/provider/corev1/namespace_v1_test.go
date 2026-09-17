@@ -193,10 +193,15 @@ func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            namespaceResourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+				ResourceName:      namespaceResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				// wait_for_default_service_account is ignored here, and only here. It is
+				// practitioner intent for Create and is never stored on the server, so an
+				// import cannot recover `true` — ImportState seeds the schema default,
+				// false. The other import tests deliberately do NOT ignore it: with an
+				// omitted attribute they prove import yields false rather than null.
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_default_service_account"},
 			},
 		},
 	})

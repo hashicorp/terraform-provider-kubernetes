@@ -46,6 +46,9 @@ type NamespaceV1 struct {
 // ImportState implements [resource.ResourceWithImportState].
 func (n *NamespaceV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughWithIdentity(ctx, path.Root("id"), path.Root("name"), req, resp)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // namespaceAPIVersion and namespaceKind are hardcoded because client-go's typed
@@ -344,7 +347,12 @@ func (n *NamespaceV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	state.ID = types.StringValue(namespace.Name)
 	state.Metadata = metadata
-
+	
+	// server does not store and return this field, hence this field was left as null during import, 
+	// etting its default schema value in such scenario.
+	if state.WaitForDefaultServiceAccount.IsNull() {
+		state.WaitForDefaultServiceAccount = types.BoolValue(false)
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, NamespaceResourceIdentity{

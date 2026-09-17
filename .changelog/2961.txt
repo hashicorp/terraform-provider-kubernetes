@@ -1,0 +1,3 @@
+```release-note:note
+`data-source/kubernetes_config_map_v1`: Migrated from SDKv2 to the Plugin Framework
+```

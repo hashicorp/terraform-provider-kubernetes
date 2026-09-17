@@ -7,5 +7,6 @@ resource "kubernetes_csi_driver" "example" {
     attach_required        = true
     pod_info_on_mount      = true
     volume_lifecycle_modes = ["Ephemeral"]
+    fs_group_policy        = "File"
   }
 }

@@ -22,3 +22,43 @@ Role can be imported using the namespace and name, e.g.
 ```
 $ terraform import kubernetes_role_v1.example default/terraform-example
 ```
+
+## Migrating from `kubernetes_role`
+
+With Terraform 1.8 or later, rename the deprecated `kubernetes_role` resource type
+to `kubernetes_role_v1`, retain its configuration, and add:
+
+```terraform
+moved {
+  from = kubernetes_role.example
+  to   = kubernetes_role_v1.example
+}
+```
+
+Terraform records the address change without replacing the Role. A move-only
+plan may return exit code 2 with `-detailed-exitcode`, even with no infrastructure
+changes. After applying the move, an unchanged configuration plans no changes.
+
+Configurations specifying both `metadata.name` and `metadata.generate_name` remain
+supported: the explicit name takes precedence. Retain both values when migrating;
+removing or changing `generate_name` requires replacement, as before.
+
+Existing `kubernetes_role_v1` configurations do not need a `moved` block when
+upgrading the provider. Omitted `labels` and `annotations` default to empty maps,
+`resource_names` to an empty set, and `generate_name` to an empty string. Removing
+previously configured labels, annotations, or resource names clears those values.
+
+### Null-valued metadata entries
+
+An individual label or annotation value of `null` is omitted from Kubernetes
+metadata, including when changing a previously configured string to `null`.
+Terraform retains the entry with its `null` value in state and outputs. This
+differs from the SDKv2 implementation, which omitted these entries from state:
+expressions such as `keys()` or `length()` on these maps can therefore change.
+
+After upgrading, moving, or importing a Role, a configuration containing null-valued
+entries may initially plan an in-place update to record them in state. If these
+entries are the only difference and are already absent from Kubernetes, applying
+that update does not modify or replace the Kubernetes Role. Subsequent unchanged
+plans are empty. Import cannot reconstruct these configuration-only entries from
+the Kubernetes API.

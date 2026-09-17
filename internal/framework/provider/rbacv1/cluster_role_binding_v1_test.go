@@ -531,6 +531,101 @@ func TestAccFrameworkClusterRoleBindingV1_invalidMetadataGenerateName(t *testing
 	})
 }
 
+// TestAccFrameworkClusterRoleBindingV1_missingMetadata verifies that omitting
+// the required metadata block is rejected during Terraform validation by
+// listvalidator.IsRequired(), rather than deferring the failure to apply.
+func TestAccFrameworkClusterRoleBindingV1_missingMetadata(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_missingMetadata(),
+				ExpectError: regexp.MustCompile(`must have a configuration value`),
+			},
+		},
+	})
+}
+
+// TestAccFrameworkClusterRoleBindingV1_missingRoleRef verifies that omitting
+// the required role_ref block is rejected during Terraform validation by
+// listvalidator.IsRequired().
+func TestAccFrameworkClusterRoleBindingV1_missingRoleRef(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_missingRoleRef(),
+				ExpectError: regexp.MustCompile(`must have a configuration value`),
+			},
+		},
+	})
+}
+
+// TestAccFrameworkClusterRoleBindingV1_missingSubject verifies that omitting
+// the required subject block is rejected during Terraform validation by
+// listvalidator.IsRequired().
+func TestAccFrameworkClusterRoleBindingV1_missingSubject(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_missingSubject(),
+				ExpectError: regexp.MustCompile(`must have a configuration value`),
+			},
+		},
+	})
+}
+
+func testAccKubernetesClusterRoleBindingV1Config_missingMetadata() string {
+	return `
+resource "kubernetes_cluster_role_binding_v1" "test" {
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`
+}
+
+func testAccKubernetesClusterRoleBindingV1Config_missingRoleRef() string {
+	return `
+resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = "tf-acc-test-missing-role-ref"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`
+}
+
+func testAccKubernetesClusterRoleBindingV1Config_missingSubject() string {
+	return `
+resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = "tf-acc-test-missing-subject"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+}
+`
+}
+
 func testAccKubernetesClusterRoleBindingV1Config_invalidName() string {
 	return `
 resource "kubernetes_cluster_role_binding_v1" "test" {

@@ -36,6 +36,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "Standard cluster role binding's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata",
 				Validators: []validator.List{
 					// Required, MaxItems: 1 in SDKv2 -> exactly one block.
+					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
 				},
 				NestedObject: schema.NestedBlockObject{
@@ -93,6 +94,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "RoleRef references the Cluster Role for this binding",
 				Validators: []validator.List{
 					// Required, MaxItems: 1 in SDKv2 -> exactly one block.
+					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
 				},
 				PlanModifiers: []planmodifier.List{
@@ -126,6 +128,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "Subjects defines the entities to bind a ClusterRole to.",
 				Validators: []validator.List{
 					// Required, MinItems: 1 in SDKv2.
+					listvalidator.IsRequired(),
 					listvalidator.SizeAtLeast(1),
 				},
 				NestedObject: schema.NestedBlockObject{

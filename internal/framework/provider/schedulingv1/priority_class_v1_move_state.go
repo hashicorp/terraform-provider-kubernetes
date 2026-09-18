@@ -64,6 +64,11 @@ func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resour
 		return
 	}
 
+	if req.SourceRawState == nil {
+		resp.Diagnostics.AddError("state move failed", "source raw state is nil")
+		return
+	}
+
 	var raw sdkv2PriorityClassStateV0
 	if err := json.Unmarshal(req.SourceRawState.JSON, &raw); err != nil {
 		resp.Diagnostics.AddError(

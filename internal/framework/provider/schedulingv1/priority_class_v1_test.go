@@ -263,11 +263,16 @@ func TestAccPriorityClassV1_preemptionPolicyRequiresReplace(t *testing.T) {
 
 // TestAccPriorityClassV1_globalDefault verifies that global_default can be
 // toggled true/false in-place without a destroy/recreate.
+//
+// NOTE: this test is intentionally non-parallel. Setting global_default = true
+// changes the default priority for ALL pods on the cluster for the duration of
+// the test, which can corrupt scheduling behaviour in concurrently running tests.
+// The original SDKv2 test was also serial for the same reason.
 func TestAccPriorityClassV1_globalDefault(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-pc")
 	resourceName := "kubernetes_priority_class_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	tfresource.Test(t, tfresource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
 			{

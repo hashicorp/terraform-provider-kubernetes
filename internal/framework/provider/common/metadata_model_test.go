@@ -15,8 +15,7 @@ import (
 )
 
 // tfMap builds a types.Map for tests. A nil argument yields a null map; a non-nil
-// but empty argument yields a known empty map. The distinction is load-bearing —
-// see MIGRATION_FINDINGS_namespace_v1.md §3.
+// but empty argument yields a known empty map.
 func tfMap(kv map[string]string) types.Map {
 	if kv == nil {
 		return types.MapNull(types.StringType)

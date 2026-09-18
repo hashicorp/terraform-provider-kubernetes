@@ -11,6 +11,7 @@ import (
 	sdkv2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
@@ -49,32 +50,11 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
+// The baseline shape: name only, both metadata maps absent. Exercises the filtering
+// that strips the API server's kubernetes.io/metadata.name back out on Read.
 func TestAccNamespace_UpgradeFromSDKV2(t *testing.T) {
 	nsName := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Steps: []resource.TestStep{
-			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {
-						VersionConstraint: "3.2.1",
-						Source:            "hashicorp/kubernetes",
-					},
-				},
-				Config: testAccKubernetesNamespaceV1Config_basic(nsName),
-				Check:  resource.ComposeTestCheckFunc(),
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccKubernetesNamespaceV1Config_basic(nsName),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
+	testAccNamespaceMigration(t, testAccKubernetesNamespaceV1Config_basic(nsName))
 }
 
 // sdkv2ProviderVersion is the last release that served kubernetes_namespace_v1 from
@@ -93,6 +73,9 @@ func testAccNamespaceMigration(t *testing.T, config string) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
+		// Without this a failed run leaks namespaces, and the next run collides on the
+		// same generated names.
+		CheckDestroy: testAccCheckKubernetesNamespaceV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
@@ -128,6 +111,9 @@ func testAccNamespaceMigrationExpectingUpdate(t *testing.T, config string) {
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
+		// Without this a failed run leaks namespaces, and the next run collides on the
+		// same generated names.
+		CheckDestroy: testAccCheckKubernetesNamespaceV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
@@ -395,4 +381,178 @@ func testAccKubernetesNamespaceV1Config_completeGeneratedName(prefix string) str
   }
 }
 `, prefix)
+}
+
+// testAccNamespaceMoveState applies a kubernetes_namespace under the released SDKv2
+// provider, then switches to kubernetes_namespace_v1 under the local framework build with
+// a `moved` block, and asserts the upgrade plans nothing.
+//
+//	moved {
+//	  from = kubernetes_namespace.test
+//	  to   = kubernetes_namespace_v1.test
+//	}
+//
+// An empty plan proves MoveState produced state this provider already considers correct.
+// Without MoveState these fail outright — Terraform cannot move state across resource types
+// unless the destination provider implements it. Cross-type `moved` needs Terraform 1.8+,
+// a lower floor than the 1.12 the identity tests need.
+//
+// CheckDestroy matches both type names: a failure at step 2 leaves state under the old
+// address, which would otherwise leak a namespace silently.
+func testAccNamespaceMoveState(t *testing.T, sourceConfig, movedConfig string) {
+	t.Helper()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_8_0),
+		},
+		CheckDestroy: testAccCheckKubernetesNamespaceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {
+						VersionConstraint: sdkv2ProviderVersion,
+						Source:            "hashicorp/kubernetes",
+					},
+				},
+				Config: sourceConfig,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   movedConfig,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
+// The baseline shape: a named namespace with labels and annotations.
+func TestAccNamespace_MoveStateFromUnversioned(t *testing.T) {
+	nsName := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccNamespaceMoveState(t,
+		testAccKubernetesNamespaceConfig_unversioned(nsName),
+		testAccKubernetesNamespaceConfig_movedToV1(nsName))
+}
+
+// generate_name: metadata.name is server-assigned, and is Optional+Computed with both
+// UseStateForUnknown and RequiresReplace. If the move mishandled it — dropping it, or
+// leaving it unknown — the plan would be a replacement rather than empty, destroying the
+// namespace. This is also the shape where SDKv2 stores a real generate_name value rather
+// than the "" it writes when the field was never set.
+func TestAccNamespace_MoveStateFromUnversioned_generateName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-migration-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccNamespaceMoveState(t,
+		testAccKubernetesNamespaceConfig_unversionedGenerateName(prefix),
+		testAccKubernetesNamespaceConfig_movedToV1GenerateName(prefix))
+}
+
+// timeouts is the one attribute whose type cannot be eyeballed — SDKv2 injects it as a
+// single-nested block of strings (helper/schema/core_schema.go:328), and a MoveState
+// implementation that rebuilds it by hand can easily get the attribute set wrong or drop
+// it entirely. Dropping it leaves state null against a config that sets it, so the plan is
+// not empty and this fails. The other move tests declare no timeouts block and would pass
+// either way.
+func TestAccNamespace_MoveStateFromUnversioned_deleteTimeout(t *testing.T) {
+	nsName := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccNamespaceMoveState(t,
+		testAccKubernetesNamespaceConfig_unversionedDeleteTimeout(nsName),
+		testAccKubernetesNamespaceConfig_movedToV1DeleteTimeout(nsName))
+}
+
+func testAccKubernetesNamespaceConfig_unversioned(nsName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+    }
+
+    labels = {
+      TestLabelOne = "one"
+    }
+
+    name = "%s"
+  }
+}
+`, nsName)
+}
+
+func testAccKubernetesNamespaceConfig_movedToV1(nsName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+    }
+
+    labels = {
+      TestLabelOne = "one"
+    }
+
+    name = "%s"
+  }
+}
+
+moved {
+  from = kubernetes_namespace.test
+  to   = kubernetes_namespace_v1.test
+}
+`, nsName)
+}
+
+func testAccKubernetesNamespaceConfig_unversionedGenerateName(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+}
+`, prefix)
+}
+
+func testAccKubernetesNamespaceConfig_movedToV1GenerateName(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    generate_name = "%s"
+  }
+}
+
+moved {
+  from = kubernetes_namespace.test
+  to   = kubernetes_namespace_v1.test
+}
+`, prefix)
+}
+
+func testAccKubernetesNamespaceConfig_unversionedDeleteTimeout(nsName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  timeouts {
+    delete = "20s"
+  }
+}
+`, nsName)
+}
+
+func testAccKubernetesNamespaceConfig_movedToV1DeleteTimeout(nsName string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  timeouts {
+    delete = "20s"
+  }
+}
+
+moved {
+  from = kubernetes_namespace.test
+  to   = kubernetes_namespace_v1.test
+}
+`, nsName)
 }

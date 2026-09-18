@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
@@ -208,7 +209,7 @@ func TestAccKubernetesNamespaceV1_default_service_account(t *testing.T) {
 }
 
 func TestAccKubernetesNamespaceV1_generatedName(t *testing.T) {
-	var conf k8sv1.Namespace
+	var conf, afterUpdate k8sv1.Namespace
 	prefix := "tf-acc-test-gen-"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -237,6 +238,20 @@ func TestAccKubernetesNamespaceV1_generatedName(t *testing.T) {
 				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesNamespaceV1Config_generatedNameWithLabels(prefix),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(namespaceResourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesNamespaceV1Exists(namespaceResourceName, &afterUpdate),
+					resource.TestCheckResourceAttr(namespaceResourceName, "metadata.0.labels.env", "demo"),
+					resource.TestMatchResourceAttr(namespaceResourceName, "metadata.0.name", regexp.MustCompile("^"+prefix)),
+					testAccCheckNamespaceNotRecreated(&conf, &afterUpdate),
+				),
 			},
 		},
 	})
@@ -316,7 +331,10 @@ func testAccCheckKubernetesNamespaceV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_namespace_v1" {
+		// Both type names: a MoveState test that fails partway leaves state under the
+		// old unversioned address, and matching only the versioned one would let that
+		// leak pass silently.
+		if rs.Type != "kubernetes_namespace_v1" && rs.Type != "kubernetes_namespace" {
 			continue
 		}
 
@@ -347,6 +365,18 @@ func testAccCheckKubernetesNamespaceV1Exists(n string, obj *k8sv1.Namespace) res
 		}
 
 		*obj = *out
+		return nil
+	}
+}
+
+// testAccCheckNamespaceNotRecreated fails if the namespace was replaced rather than
+// updated in place. UID is assigned by the API server and is stable for an object's
+// lifetime, so a change means delete+create.
+func testAccCheckNamespaceNotRecreated(before, after *k8sv1.Namespace) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		if before.UID != after.UID {
+			return fmt.Errorf("namespace was recreated: uid %s -> %s", before.UID, after.UID)
+		}
 		return nil
 	}
 }
@@ -442,4 +472,17 @@ func testAccKubernetesNamespaceV1Config_waitForDefaultServiceAccount(nsName stri
   wait_for_default_service_account = true
 }
 `, nsName)
+}
+
+func testAccKubernetesNamespaceV1Config_generatedNameWithLabels(prefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    generate_name = "%s"
+
+    labels = {
+      env = "demo"
+    }
+  }
+}
+`, prefix)
 }

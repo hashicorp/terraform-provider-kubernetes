@@ -16,20 +16,48 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// MetadataSchema returns the metadata block for a cluster-scoped object whose name may be
-// server-generated. It reproduces metadataSchema(objectName, true) from
-// kubernetes/schema_metadata.go, including its descriptions, so migrated resources keep
-// identical documentation. objectName is interpolated into those descriptions, e.g.
-// "namespace". Decode it into MetadataModel.
-func MetadataSchema(objectName string) schema.ListNestedBlock {
+// MetadataSchema returns the metadata block for a cluster-scoped object. It reproduces
+// metadataSchema(objectName, generatableName) from kubernetes/schema_metadata.go,
+// including its descriptions, so migrated resources keep identical documentation.
+// objectName is interpolated into those descriptions, e.g. "namespace".
+//
+// The signature mirrors SDKv2's deliberately: a migrated call site is a literal
+// transcription of the one it replaces, so parity can be checked by reading the two
+// side by side.
+//
+// generatableName adds the generate_name attribute, and with it the name/generate_name
+// ConflictsWith pair — SDKv2 declares that conflict only in the same branch. Resources
+// generally pass true; data sources vary (the SDKv2 namespace and config_map data
+// sources pass false, secret passes true), and the value must match the SDKv2 schema
+// exactly, because it decides what appears in state.
+//
+// The model must match what is returned: decode into MetadataModel when generatableName
+// is true, and into a model without GenerateName when it is false. A struct field with
+// no corresponding attribute fails at decode time, not at compile time.
+func MetadataSchema(objectName string, generatableName bool) schema.ListNestedBlock {
+	// ConflictsWith comes before the syntax validator so an error names the conflict
+	// rather than complaining about a value the user is about to remove.
+	nameValidators := []validator.String{}
+	if generatableName {
+		nameValidators = append(nameValidators, stringvalidator.ConflictsWith(
+			path.MatchRelative().AtParent().AtName("generate_name"),
+		))
+	}
+	nameValidators = append(nameValidators, DNSSubdomainNameValidator())
+
 	// SDKv2 declares metadata as TypeList{Required: true, MaxItems: 1}, which serializes as
 	// a one-element array. ListNestedBlock reproduces that shape; SingleNestedBlock would
 	// produce a bare object and break existing state.
-	return schema.ListNestedBlock{
-		Description: fmt.Sprintf("Standard %s's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata", objectName),
+	block := schema.ListNestedBlock{
+		// "Exactly one" is stated in the description because tfplugindocs cannot see it
+		// otherwise. Framework blocks have no Required field, so required-ness lives in the
+		// validators below, which the docs generator does not read — without this sentence
+		// the published schema reads "Optional" where SDKv2 rendered
+		// "Required ... Min: 1, Max: 1".
+		Description: fmt.Sprintf("Standard %s's metadata. Exactly one metadata block is required. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata", objectName),
 		Validators: []validator.List{
-			listvalidator.SizeAtLeast(1), // SDKv2 Required: true
-			listvalidator.IsRequired(),
+			listvalidator.SizeAtLeast(1),
+			listvalidator.IsRequired(),  // SDKv2 Required: true
 			listvalidator.SizeAtMost(1), // SDKv2 MaxItems: 1
 		},
 		NestedObject: schema.NestedBlockObject{
@@ -40,19 +68,6 @@ func MetadataSchema(objectName string) schema.ListNestedBlock {
 					Optional:    true,
 					Validators: []validator.Map{
 						AnnotationsValidator(),
-					},
-				},
-				"generate_name": schema.StringAttribute{
-					Description: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-					Optional:    true,
-					PlanModifiers: []planmodifier.String{
-						stringplanmodifier.RequiresReplace(),
-					},
-					Validators: []validator.String{
-						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtParent().AtName("name"),
-						),
-						DNSLabelPrefixValidator(),
 					},
 				},
 				"generation": schema.Int64Attribute{
@@ -78,12 +93,7 @@ func MetadataSchema(objectName string) schema.ListNestedBlock {
 						stringplanmodifier.UseStateForUnknown(),
 						stringplanmodifier.RequiresReplace(),
 					},
-					Validators: []validator.String{
-						stringvalidator.ConflictsWith(
-							path.MatchRelative().AtParent().AtName("generate_name"),
-						),
-						DNSSubdomainNameValidator(),
-					},
+					Validators: nameValidators,
 				},
 				"resource_version": schema.StringAttribute{
 					Description: fmt.Sprintf("An opaque value that represents the internal version of this %s that can be used by clients to determine when %s has changed. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency", objectName, objectName),
@@ -99,4 +109,22 @@ func MetadataSchema(objectName string) schema.ListNestedBlock {
 			},
 		},
 	}
+
+	if generatableName {
+		block.NestedObject.Attributes["generate_name"] = schema.StringAttribute{
+			Description: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
+			Optional:    true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
+			Validators: []validator.String{
+				stringvalidator.ConflictsWith(
+					path.MatchRelative().AtParent().AtName("name"),
+				),
+				DNSLabelPrefixValidator(),
+			},
+		}
+	}
+
+	return block
 }

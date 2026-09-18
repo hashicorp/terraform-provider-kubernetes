@@ -8,14 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -28,134 +21,18 @@ import (
 	k8Types "k8s.io/apimachinery/pkg/types"
 )
 
-var (
-	_ resource.Resource                = (*NamespaceV1)(nil)
-	_ resource.ResourceWithConfigure   = (*NamespaceV1)(nil)
-	_ resource.ResourceWithIdentity    = (*NamespaceV1)(nil)
-	_ resource.ResourceWithImportState = (*NamespaceV1)(nil)
-)
-
-type NamespaceV1 struct {
-	// SDKv2Meta must stay func() any: that is the concrete type stored in
-	// ProviderData by internal/framework/provider/provider_configure.go. Go
-	// function types are invariant, so asserting to func() kubernetes.KubeClientsets
-	// compiles but panics at runtime. Assert the *result* instead — see meta().
-	SDKv2Meta func() any
-}
-
-// ImportState implements [resource.ResourceWithImportState].
-func (n *NamespaceV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughWithIdentity(ctx, path.Root("id"), path.Root("name"), req, resp)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-
-// namespaceAPIVersion and namespaceKind are hardcoded because client-go's typed
-// clients do not populate TypeMeta on responses — the decoder clears apiVersion and
-// kind for typed objects, so out.APIVersion and out.Kind are always "". SDKv2 does the
-// same at resource_kubernetes_namespace_v1.go:115.
 const (
 	namespaceAPIVersion = "v1"
 	namespaceKind       = "Namespace"
+
+	// defaultDeleteTimeout matches SDKv2's `Delete: schema.DefaultTimeout(5 * time.Minute)`.
+	// It is only the fallback — this one IS user-settable via the timeouts block.
+	defaultDeleteTimeout = 5 * time.Minute
+
+	// defaultCreateTimeout is not user-settable — matching SDKv2, where Create was not a declared timeout
+	// either and d.Timeout(schema.TimeoutCreate) fell through to the SDK's 20m default.
+	defaultCreateTimeout = 20 * time.Minute
 )
-
-// IdentitySchema implements [resource.ResourceWithIdentity].
-func (n *NamespaceV1) IdentitySchema(ctx context.Context, req resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = identityschema.Schema{
-		// Must match resourceIdentitySchemaNonNamespaced() in
-		// kubernetes/resourceidentity.go. State written by the SDKv2 resource records
-		// identity schema version 1; declaring 0 here asks Terraform to downgrade.
-		Version: 1,
-		Attributes: map[string]identityschema.Attribute{
-			"name": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"kind": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"api_version": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-		},
-	}
-}
-
-// Configure implements [resource.ResourceWithConfigure].
-func (n *NamespaceV1) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	sdkv2Meta, ok := req.ProviderData.(func() any)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected provider data",
-			fmt.Sprintf("Expected func() any, got %T. This is a bug in the provider.", req.ProviderData),
-		)
-		return
-	}
-	n.SDKv2Meta = sdkv2Meta
-}
-
-// meta resolves the SDKv2 provider metadata as API clients. The call is deferred
-// until now rather than made in Configure because the SDKv2 provider is configured
-// independently by the mux server, and its meta is not populated until that happens.
-func (n *NamespaceV1) meta() kubernetes.KubeClientsets {
-	return n.SDKv2Meta().(kubernetes.KubeClientsets)
-}
-
-// filters resolves the same metadata as the provider-level ignore lists.
-func (n *NamespaceV1) filters() kubernetes.MetadataFilters {
-	return n.SDKv2Meta().(kubernetes.MetadataFilters)
-}
-
-func NewNamespaceV1() resource.Resource {
-	return &NamespaceV1{}
-}
-
-// Metadata implements [resource.Resource].
-func (n *NamespaceV1) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_namespace_v1"
-}
-
-// Schema implements [resource.Resource].
-func (n *NamespaceV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		Description: "Kubernetes supports multiple virtual clusters backed by the same physical cluster. These virtual clusters are called namespaces. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/.",
-		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			},
-			"wait_for_default_service_account": schema.BoolAttribute{
-				Description: "Terraform will wait for the default service account to be created.",
-				Optional:    true,
-				// Optional+Computed+Default is how the framework spells SDKv2's
-				// `Default: false`. All three are required, or a config that omits
-				// the field lands as null in state instead of false.
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
-			},
-		},
-		Blocks: map[string]schema.Block{
-			"metadata": common.MetadataSchema("namespace"),
-			// SDKv2 declares only a Delete timeout, so only Delete is user-settable.
-			// timeouts.BlockAll would add create/update/read and change the schema.
-			"timeouts": timeouts.Block(ctx, timeouts.Opts{Delete: true}),
-		},
-	}
-}
-
-// defaultDeleteTimeout matches SDKv2's `Delete: schema.DefaultTimeout(5 * time.Minute)`.
-// It is only the fallback — this one IS user-settable via the timeouts block.
-// const defaultDeleteTimeout = 5 * time.Minute
-const defaultDeleteTimeout = 10 * time.Second
-
-// defaultTimeout bounds Create. The schema declares only a Delete timeout, so
-// this is not user-settable — matching SDKv2, where Create was not a declared timeout
-// either and d.Timeout(schema.TimeoutCreate) fell through to the SDK's 20m default.
-const defaultTimeout = 20 * time.Minute
 
 // Create implements [resource.Resource].
 func (n *NamespaceV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -169,7 +46,7 @@ func (n *NamespaceV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	ctx, cancel := context.WithTimeout(ctx, defaultCreateTimeout)
 	defer cancel()
 
 	conn, err := n.meta().MainClientset()
@@ -196,11 +73,7 @@ func (n *NamespaceV1) Create(ctx context.Context, req resource.CreateRequest, re
 	// State is built from the plan, with only server-assigned fields overwritten from
 	// the response. Labels and annotations are deliberately left as the plan wrote them:
 	// the API server adds keys of its own, and echoing those back would not match the
-	// plan. Filtering them is Read's job. See MIGRATION_FINDINGS_namespace_v1.md §3.
-	// Indexing [0] without a guard is safe: the metadata block is validated with
-	// SizeAtLeast(1)/SizeAtMost(1), and the plan is derived from validated config.
-	// Name is Computed, and unknown in the plan whenever generate_name is used, so
-	// it always comes from the response.
+	// plan. Filtering them is Read's job.
 	plan.ID = types.StringValue(out.Name)
 	plan.Metadata[0].Name = types.StringValue(out.Name)
 	plan.Metadata[0].UID = types.StringValue(string(out.UID))
@@ -228,11 +101,7 @@ func (n *NamespaceV1) Create(ctx context.Context, req resource.CreateRequest, re
 
 	tflog.Debug(ctx, "Waiting for default service account", map[string]any{"namespace": out.Name})
 
-	// NOTE: helper/retry is an SDKv2 package, which CLAUDE.md otherwise keeps out of
-	// internal/framework. Deliberate exception: it is standalone (no schema coupling),
-	// already exercised throughout this provider, and the framework ships no
-	// equivalent. Revisit when the framework gains a wait helper.
-	err = retry.RetryContext(ctx, defaultTimeout, func() *retry.RetryError {
+	err = retry.RetryContext(ctx, defaultCreateTimeout, func() *retry.RetryError {
 		_, err := conn.CoreV1().ServiceAccounts(out.Name).Get(ctx, "default", metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -250,58 +119,6 @@ func (n *NamespaceV1) Create(ctx context.Context, req resource.CreateRequest, re
 			"Error waiting for default service account",
 			fmt.Sprintf("Namespace %q was created, but its default service account did not appear: %s", out.Name, err),
 		)
-		return
-	}
-}
-
-// Delete implements [resource.Resource].
-func (n *NamespaceV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state NamespaceV1Model
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	conn, err := n.meta().MainClientset()
-	if err != nil {
-		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
-		return
-	}
-
-	deleteTimeout, d := state.Timeouts.Delete(ctx, defaultDeleteTimeout)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	name := state.ID.ValueString()
-	err = conn.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
-	if err != nil {
-		// Already gone is success. Erroring here would leave the practitioner
-		// unable to destroy a namespace that was removed out of band.
-		if apierrors.IsNotFound(err) {
-			return
-		}
-		resp.Diagnostics.AddError("Kubernetes delete error", err.Error())
-		return
-	}
-	stateChangePoller := retry.StateChangeConf{
-		Pending: []string{"Terminating"},
-		Target:  []string{},
-		Timeout: deleteTimeout,
-		Refresh: func() (result interface{}, state string, err error) {
-			ns, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
-			if err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil, "", nil
-				}
-				return nil, "Error", err
-			}
-			return ns, string(ns.Status.Phase), nil
-		},
-	}
-	_, err = stateChangePoller.WaitForStateContext(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Kubernetes delete error", err.Error())
 		return
 	}
 }
@@ -338,8 +155,9 @@ func (n *NamespaceV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	// Prior state is the filtering reference. On import it is empty, which is the
 	// correct baseline: nothing was declared, so nothing is exempt from filtering.
+	metadataFilters := n.SDKv2Meta().(kubernetes.MetadataFilters)
 	metadata, diags := common.FlattenMetadata(ctx, namespace.ObjectMeta, state.Metadata,
-		n.filters().GetIgnoreAnnotations(), n.filters().GetIgnoreLabels())
+		metadataFilters.GetIgnoreAnnotations(), metadataFilters.GetIgnoreLabels())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -347,8 +165,8 @@ func (n *NamespaceV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	state.ID = types.StringValue(namespace.Name)
 	state.Metadata = metadata
-	
-	// server does not store and return this field, hence this field was left as null during import, 
+
+	// server does not store and return this field, hence this field was left as null during import,
 	// etting its default schema value in such scenario.
 	if state.WaitForDefaultServiceAccount.IsNull() {
 		state.WaitForDefaultServiceAccount = types.BoolValue(false)
@@ -430,6 +248,58 @@ func (n *NamespaceV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		Name:       types.StringValue(out.Name),
 	})...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// Delete implements [resource.Resource].
+func (n *NamespaceV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state NamespaceV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := n.meta().MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	deleteTimeout, d := state.Timeouts.Delete(ctx, defaultDeleteTimeout)
+	resp.Diagnostics.Append(d...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	name := state.ID.ValueString()
+	err = conn.CoreV1().Namespaces().Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		// Already gone is success. Erroring here would leave the practitioner
+		// unable to destroy a namespace that was removed out of band.
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		resp.Diagnostics.AddError("Kubernetes delete error", err.Error())
+		return
+	}
+	stateChangePoller := retry.StateChangeConf{
+		Pending: []string{"Terminating"},
+		Target:  []string{},
+		Timeout: deleteTimeout,
+		Refresh: func() (result interface{}, state string, err error) {
+			ns, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil, "", nil
+				}
+				return nil, "Error", err
+			}
+			return ns, string(ns.Status.Phase), nil
+		},
+	}
+	_, err = stateChangePoller.WaitForStateContext(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes delete error", err.Error())
 		return
 	}
 }

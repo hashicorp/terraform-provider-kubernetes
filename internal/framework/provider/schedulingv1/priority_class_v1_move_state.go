@@ -64,6 +64,13 @@ func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resour
 		return
 	}
 
+	// Guard against state move requests from a different provider — e.g., a
+	// fork or a test provider that happens to use the same type name.
+	const canonicalProvider = "registry.terraform.io/hashicorp/kubernetes"
+	if req.SourceProviderAddress != "" && req.SourceProviderAddress != canonicalProvider {
+		return
+	}
+
 	if req.SourceRawState == nil {
 		resp.Diagnostics.AddError("state move failed", "source raw state is nil")
 		return

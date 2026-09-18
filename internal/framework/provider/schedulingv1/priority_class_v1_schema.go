@@ -5,9 +5,7 @@ package schedulingv1
 
 import (
 	"context"
-	"math"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -99,13 +97,6 @@ func PriorityClassV1Schema() schema.Schema {
 				Required:            true,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.RequiresReplace(),
-				},
-				Validators: []validator.Int64{
-					// Kubernetes enforces: user-defined priority classes must not exceed
-					// HighestUserDefinablePriority (1,000,000,000). Values above that are
-					// reserved for system-critical classes (system-* prefix).
-					// Lower bound is int32 min since the API field is int32.
-					int64validator.Between(math.MinInt32, 1_000_000_000),
 				},
 			},
 			"description": schema.StringAttribute{

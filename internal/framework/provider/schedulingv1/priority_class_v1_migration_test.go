@@ -313,6 +313,148 @@ func TestMigration_MoveState_nilSourceRawState(t *testing.T) {
 	}
 }
 
+// TestMigration_MoveState_wrongSourceProviderAddressIsIgnored verifies that
+// the handler returns early without error or writing any state when
+// SourceProviderAddress does not match registry.terraform.io/hashicorp/kubernetes.
+// This prevents state move from a fork that happens to use the same type name.
+func TestMigration_MoveState_wrongSourceProviderAddressIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	r := schedulingv1.NewPriorityClassV1()
+	movers := r.(interface {
+		MoveState(context.Context) []resource.StateMover
+	}).MoveState(context.Background())
+
+	if len(movers) == 0 {
+		t.Fatal("expected at least 1 StateMover")
+	}
+
+	raw := sdkv2RawJSON(
+		"my-pc", "my-pc", "",
+		"", "PreemptLowerPriority", 100, false,
+		nil, nil, "1", "uid-x", 0,
+	)
+
+	req := resource.MoveStateRequest{
+		SourceTypeName:        "kubernetes_priority_class",
+		SourceProviderAddress: "registry.terraform.io/example/kubernetes-fork",
+		SourceRawState:        &tfprotov6.RawState{JSON: raw},
+	}
+	resp := &resource.MoveStateResponse{
+		TargetState: tfsdk.State{Schema: schedulingv1.PriorityClassV1Schema()},
+	}
+
+	movers[0].StateMover(context.Background(), req, resp)
+
+	// No errors expected — handler must silently return
+	if resp.Diagnostics.HasError() {
+		t.Errorf("expected no errors for wrong provider address, got: %s",
+			resp.Diagnostics)
+	}
+
+	// TargetState must be empty — handler must not have written anything
+	var m schedulingv1.PriorityClassModel
+	diags := resp.TargetState.Get(context.Background(), &m)
+	if !diags.HasError() && m.ID.ValueString() != "" {
+		t.Errorf("expected empty target state for wrong provider address, got id=%q",
+			m.ID.ValueString())
+	}
+}
+
+// TestMigration_MoveState_canonicalProviderAddressAccepted verifies that the
+// handler proceeds normally when SourceProviderAddress matches the canonical
+// registry.terraform.io/hashicorp/kubernetes address.
+func TestMigration_MoveState_canonicalProviderAddressAccepted(t *testing.T) {
+	t.Parallel()
+
+	r := schedulingv1.NewPriorityClassV1()
+	movers := r.(interface {
+		MoveState(context.Context) []resource.StateMover
+	}).MoveState(context.Background())
+
+	if len(movers) == 0 {
+		t.Fatal("expected at least 1 StateMover")
+	}
+
+	raw := sdkv2RawJSON(
+		"my-pc", "my-pc", "",
+		"Demo", "PreemptLowerPriority", 100, false,
+		nil, nil, "1", "uid-y", 0,
+	)
+
+	req := resource.MoveStateRequest{
+		SourceTypeName:        "kubernetes_priority_class",
+		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
+		SourceRawState:        &tfprotov6.RawState{JSON: raw},
+	}
+	resp := &resource.MoveStateResponse{
+		TargetState: tfsdk.State{Schema: schedulingv1.PriorityClassV1Schema()},
+	}
+
+	movers[0].StateMover(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("expected no errors for canonical provider address, got: %s",
+			resp.Diagnostics)
+	}
+
+	var m schedulingv1.PriorityClassModel
+	resp.Diagnostics.Append(resp.TargetState.Get(context.Background(), &m)...)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("reading moved state: %s", resp.Diagnostics)
+	}
+	if m.ID.ValueString() != "my-pc" {
+		t.Errorf("id: got %q, want my-pc", m.ID.ValueString())
+	}
+}
+
+// TestMigration_MoveState_emptyProviderAddressAccepted verifies that the
+// handler proceeds when SourceProviderAddress is empty (older Terraform
+// versions that do not populate this field).
+func TestMigration_MoveState_emptyProviderAddressAccepted(t *testing.T) {
+	t.Parallel()
+
+	r := schedulingv1.NewPriorityClassV1()
+	movers := r.(interface {
+		MoveState(context.Context) []resource.StateMover
+	}).MoveState(context.Background())
+
+	if len(movers) == 0 {
+		t.Fatal("expected at least 1 StateMover")
+	}
+
+	raw := sdkv2RawJSON(
+		"my-pc2", "my-pc2", "",
+		"", "PreemptLowerPriority", 50, false,
+		nil, nil, "1", "uid-z", 0,
+	)
+
+	req := resource.MoveStateRequest{
+		SourceTypeName:        "kubernetes_priority_class",
+		SourceProviderAddress: "", // empty — older Terraform
+		SourceRawState:        &tfprotov6.RawState{JSON: raw},
+	}
+	resp := &resource.MoveStateResponse{
+		TargetState: tfsdk.State{Schema: schedulingv1.PriorityClassV1Schema()},
+	}
+
+	movers[0].StateMover(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("expected no errors for empty provider address, got: %s",
+			resp.Diagnostics)
+	}
+
+	var m schedulingv1.PriorityClassModel
+	resp.Diagnostics.Append(resp.TargetState.Get(context.Background(), &m)...)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("reading moved state: %s", resp.Diagnostics)
+	}
+	if m.ID.ValueString() != "my-pc2" {
+		t.Errorf("id: got %q, want my-pc2", m.ID.ValueString())
+	}
+}
+
 // TestMigration_MoveState_explicitEmptyAnnotations verifies that an SDKv2
 // state with an explicit empty annotations map (annotations = {}) is preserved
 // as a non-nil empty map in the target state, preventing a perpetual plan diff

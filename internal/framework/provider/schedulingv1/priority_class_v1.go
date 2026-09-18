@@ -5,7 +5,11 @@ package schedulingv1
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 )
@@ -59,11 +63,16 @@ func (r *PriorityClassV1) MoveState(_ context.Context) []resource.StateMover {
 }
 
 // ConfigValidators enforces that exactly one metadata block is present at plan
-// time. ListNestedBlock validators fire at apply; this catches the missing block
-// before Create/Update/Read are reached, matching SDKv2's Required:true behaviour.
+// time, and that user-defined PriorityClasses do not exceed the Kubernetes
+// maximum of 1,000,000,000.
+//
+// The value cap is applied as a ConfigValidator (not an attribute validator) so
+// that it can inspect the name: built-in system classes (system-cluster-critical,
+// system-node-critical) use values above the cap and must be importable.
 func (r *PriorityClassV1) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		&metadataRequiredValidator{},
+		&userDefinedValueValidator{},
 	}
 }
 
@@ -91,5 +100,74 @@ func (v *metadataRequiredValidator) ValidateResource(ctx context.Context, req re
 			"A metadata block is required for kubernetes_priority_class_v1. "+
 				"Add a metadata { name = \"...\" } block to your configuration.",
 		)
+	}
+}
+
+// userDefinedValueValidator enforces the Kubernetes HighestUserDefinablePriority
+// cap (1,000,000,000) for user-defined PriorityClasses. Built-in system classes
+// whose names start with "system-" are exempt because they legitimately use values
+// above the cap (system-cluster-critical = 2,000,000,000).
+//
+// The lower bound is math.MinInt32: the Kubernetes API field is int32, so values
+// below −2,147,483,648 are rejected by the API anyway.
+type userDefinedValueValidator struct{}
+
+func (v *userDefinedValueValidator) Description(_ context.Context) string {
+	return "user-defined priority class value must be between -2147483648 and 1000000000"
+}
+
+func (v *userDefinedValueValidator) MarkdownDescription(_ context.Context) string {
+	return "user-defined priority class `value` must be between `-2147483648` and `1000000000`"
+}
+
+func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config PriorityClassModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Cannot validate if value is unknown (e.g. computed from another resource).
+	if config.Value.IsUnknown() || config.Value.IsNull() {
+		return
+	}
+
+	val := config.Value.ValueInt64()
+
+	// Lower bound: int32 minimum — the Kubernetes API uses an int32 field.
+	if val < math.MinInt32 {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("value"),
+			"Invalid Priority Class Value",
+			fmt.Sprintf("value must be at least %d (int32 minimum), got: %d", math.MinInt32, val),
+		)
+		return
+	}
+
+	// Upper bound: only enforced for user-defined classes.
+	// System classes (system-cluster-critical, system-node-critical) exceed the cap
+	// and must remain importable. Skip the check when name starts with "system-".
+	if val > 1_000_000_000 {
+		// Determine the effective name: use name if set, fall back to generate_name prefix.
+		name := ""
+		if len(config.Metadata) > 0 {
+			if !config.Metadata[0].Name.IsNull() && !config.Metadata[0].Name.IsUnknown() {
+				name = config.Metadata[0].Name.ValueString()
+			} else if !config.Metadata[0].GenerateName.IsNull() && !config.Metadata[0].GenerateName.IsUnknown() {
+				name = config.Metadata[0].GenerateName.ValueString()
+			}
+		}
+		if !strings.HasPrefix(name, "system-") {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("value"),
+				"Invalid Priority Class Value",
+				fmt.Sprintf(
+					"value must be at most 1000000000 for user-defined priority classes, got: %d. "+
+						"Values above 1,000,000,000 are reserved for system-critical classes "+
+						"(names starting with \"system-\").",
+					val,
+				),
+			)
+		}
 	}
 }

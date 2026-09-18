@@ -163,7 +163,7 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		}
 		d := tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
-			Summary:  fmt.Sprintf("Cannot GET resource %s", dump(co)),
+			Summary:  "Cannot GET resource",
 			Detail:   err.Error(),
 		}
 		resp.Diagnostics = append(resp.Diagnostics, &d)

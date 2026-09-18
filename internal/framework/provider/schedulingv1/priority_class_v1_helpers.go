@@ -40,6 +40,12 @@ func flattenStringMap(m map[string]string) map[string]types.String {
 // flattenPriorityClassMetadata converts a Kubernetes ObjectMeta to MetadataModel,
 // filtering out internal Kubernetes keys and user-configured ignore patterns.
 // current holds the existing Terraform-managed metadata (used to preserve user-managed keys).
+//
+// Map shape rule (K8S-MIGRATE-013): when the caller configured an explicit empty
+// map (annotations = {} or labels = {}), current will be a non-nil empty map.
+// We must write a non-nil empty map back into state so that the next plan sees
+// no difference.  Only when the attribute was fully omitted from config (current
+// is nil) do we leave the result nil.
 func flattenPriorityClassMetadata(meta metav1.ObjectMeta, current MetadataModel, ignoreAnnotations, ignoreLabels []string) MetadataModel {
 	result := MetadataModel{
 		Name:            types.StringValue(meta.Name),
@@ -58,11 +64,17 @@ func flattenPriorityClassMetadata(meta metav1.ObjectMeta, current MetadataModel,
 	filtered := filterIgnoredMetadataKeys(meta.Annotations, current.Annotations, ignoreAnnotations)
 	if len(filtered) > 0 {
 		result.Annotations = flattenStringMap(filtered)
+	} else if current.Annotations != nil {
+		// Config had an explicit empty map — preserve the shape to avoid a plan diff.
+		result.Annotations = map[string]types.String{}
 	}
 
 	filtered = filterIgnoredMetadataKeys(meta.Labels, current.Labels, ignoreLabels)
 	if len(filtered) > 0 {
 		result.Labels = flattenStringMap(filtered)
+	} else if current.Labels != nil {
+		// Config had an explicit empty map — preserve the shape to avoid a plan diff.
+		result.Labels = map[string]types.String{}
 	}
 
 	return result

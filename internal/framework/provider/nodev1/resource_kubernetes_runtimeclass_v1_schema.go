@@ -109,6 +109,7 @@ func (r *RuntimeClassV1) Schema(_ context.Context, _ resource.SchemaRequest, res
 							Optional: true,
 							Computed: true,
 							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
 								stringplanmodifier.RequiresReplace(),
 							},
 							Validators: []validator.String{

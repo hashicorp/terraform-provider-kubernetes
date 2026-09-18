@@ -118,7 +118,7 @@ func TestAccKubernetesDefaultServiceAccountV1_automountServiceAccountToken(t *te
 }
 
 func testAccKubernetesDefaultServiceAccountV1Config_basic(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -126,7 +126,7 @@ func testAccKubernetesDefaultServiceAccountV1Config_basic(namespace string) stri
 
 resource "kubernetes_default_service_account_v1" "test" {
   metadata {
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
 
     annotations = {
       TestAnnotationOne = "one"
@@ -144,7 +144,7 @@ resource "kubernetes_default_service_account_v1" "test" {
 }
 
 func testAccKubernetesDefaultServiceAccountV1Config_secrets(namespace string, name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -152,7 +152,7 @@ func testAccKubernetesDefaultServiceAccountV1Config_secrets(namespace string, na
 
 resource "kubernetes_default_service_account_v1" "test" {
   metadata {
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   secret {
@@ -167,21 +167,21 @@ resource "kubernetes_default_service_account_v1" "test" {
 resource "kubernetes_secret_v1" "one" {
   metadata {
     name      = "%s-one"
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 
 resource "kubernetes_secret_v1" "two" {
   metadata {
     name      = "%s-two"
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 `, namespace, name, name)
 }
 
 func testAccKubernetesDefaultServiceAccountV1Config_automountServiceAccountToken(namespace string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -189,7 +189,7 @@ func testAccKubernetesDefaultServiceAccountV1Config_automountServiceAccountToken
 
 resource "kubernetes_default_service_account_v1" "test" {
   metadata {
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   automount_service_account_token = false

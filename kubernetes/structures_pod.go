@@ -92,6 +92,10 @@ func flattenPodSpec(in v1.PodSpec, isTemplate bool) ([]interface{}, error) {
 	att["host_network"] = in.HostNetwork
 	att["host_pid"] = in.HostPID
 
+	if in.Resources != nil {
+		att["resources"] = flattenPodResourceRequirements(in.Resources)
+	}
+
 	if in.Hostname != "" {
 		att["hostname"] = in.Hostname
 	}
@@ -446,6 +450,17 @@ func flattenVolumes(volumes []v1.Volume) []interface{} {
 	return att
 }
 
+func flattenPodResourceRequirements(in *v1.ResourceRequirements) []interface{} {
+	att := make(map[string]interface{})
+	if len(in.Limits) > 0 {
+		att["limits"] = flattenResourceList(in.Limits)
+	}
+	if len(in.Requests) > 0 {
+		att["requests"] = flattenResourceList(in.Requests)
+	}
+	return []interface{}{att}
+}
+
 func flattenPersistentVolumeClaimVolumeSource(in *v1.PersistentVolumeClaimVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	if in.ClaimName != "" {
@@ -794,6 +809,10 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 
 	if v, ok := in["host_pid"]; ok {
 		obj.HostPID = v.(bool)
+	}
+
+	if v, ok := in["resources"].([]interface{}); ok && len(v) > 0 {
+		obj.Resources = expandPodResourceRequirements(v)
 	}
 
 	if v, ok := in["hostname"]; ok {
@@ -1148,6 +1167,27 @@ func expandDownwardAPIVolumeFile(in []interface{}) ([]v1.DownwardAPIVolumeFile, 
 		}
 	}
 	return dapivf, nil
+}
+
+func expandPodResourceRequirements(l []interface{}) *v1.ResourceRequirements {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.ResourceRequirements{}
+	if v, ok := in["limits"].(map[string]interface{}); ok && len(v) > 0 {
+		rl, err := expandMapToResourceList(v)
+		if err == nil {
+			obj.Limits = *rl
+		}
+	}
+	if v, ok := in["requests"].(map[string]interface{}); ok && len(v) > 0 {
+		rq, err := expandMapToResourceList(v)
+		if err == nil {
+			obj.Requests = *rq
+		}
+	}
+	return obj
 }
 
 func expandConfigMapVolumeSource(l []interface{}) (*v1.ConfigMapVolumeSource, error) {

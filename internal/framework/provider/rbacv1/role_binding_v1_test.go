@@ -6,12 +6,14 @@ package rbacv1_test
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
 	rbacv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
@@ -101,20 +103,35 @@ func TestAccRoleBindingV1_update(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_generateName creates a RoleBinding using generate_name
-// so the server assigns the full name with a unique suffix.
+// TestAccRoleBindingV1_generateName creates a RoleBinding using generate_name,
+// verifies server assigned name and that updating a secondary attribute (labels)
+// triggers an in-place update rather than a destroy/re-create (K8S-MIGRATE-025).
 func TestAccRoleBindingV1_generateName(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
+			// Step 1: create with generate_name
 			{
 				Config: testAccRoleBindingV1Config_generateName("tf-acc-rb-"),
 				Check: tfresource.ComposeAggregateTestCheckFunc(
 					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
 					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
 					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+				),
+			},
+			// Step 2: update secondary field (labels) — must update in-place without replacement
+			{
+				Config: testAccRoleBindingV1Config_generateName_updated("tf-acc-rb-"),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: tfresource.ComposeAggregateTestCheckFunc(
+					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
+					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "sec"),
 				),
 			},
 		},
@@ -285,6 +302,9 @@ func TestAccRoleBindingV1_moved(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_8_0),
+		},
 		Steps: []tfresource.TestStep{
 			// Step 1: provision kubernetes_role_binding (deprecated) with the
 			// last SDKv2 release. Writes state at schema version 0.
@@ -308,6 +328,116 @@ func TestAccRoleBindingV1_moved(t *testing.T) {
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
+			},
+		},
+	})
+}
+
+// ── Validation Acceptance Tests (Plan-time checks) ────────────────────────────
+
+// TestAccRoleBindingV1_validation_invalidAnnotationKey verifies that an invalid
+// annotation key is rejected at plan time.
+func TestAccRoleBindingV1_validation_invalidAnnotationKey(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_invalidAnnotationKey(name),
+				ExpectError: regexp.MustCompile(`(?i)invalid annotation key`),
+			},
+		},
+	})
+}
+
+// TestAccRoleBindingV1_validation_invalidLabelKey verifies that an invalid
+// label key is rejected at plan time.
+func TestAccRoleBindingV1_validation_invalidLabelKey(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_invalidLabelKey(name),
+				ExpectError: regexp.MustCompile(`(?i)invalid label key`),
+			},
+		},
+	})
+}
+
+// TestAccRoleBindingV1_validation_invalidLabelValue verifies that an invalid
+// label value is rejected at plan time.
+func TestAccRoleBindingV1_validation_invalidLabelValue(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_invalidLabelValue(name),
+				ExpectError: regexp.MustCompile(`(?i)invalid label value`),
+			},
+		},
+	})
+}
+
+// TestAccRoleBindingV1_validation_invalidName verifies that an invalid
+// name (not a valid path segment) is rejected at plan time.
+func TestAccRoleBindingV1_validation_invalidName(t *testing.T) {
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_basic("invalid/name"),
+				ExpectError: regexp.MustCompile(`(?i)invalid value`),
+			},
+		},
+	})
+}
+
+// TestAccRoleBindingV1_validation_missingMetadata verifies that omitting the
+// metadata block is rejected at plan time.
+func TestAccRoleBindingV1_validation_missingMetadata(t *testing.T) {
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_missingMetadata(),
+				ExpectError: regexp.MustCompile(`(?s)Block metadata must have a configuration value.*as required`),
+			},
+		},
+	})
+}
+
+// TestAccRoleBindingV1_validation_missingRoleRef verifies that omitting the
+// role_ref block is rejected at plan time.
+func TestAccRoleBindingV1_validation_missingRoleRef(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_missingRoleRef(name),
+				ExpectError: regexp.MustCompile(`(?s)Block role_ref must have a configuration value.*as required`),
+			},
+		},
+	})
+}
+
+// TestAccRoleBindingV1_validation_missingSubject verifies that omitting the
+// subject block is rejected at plan time.
+func TestAccRoleBindingV1_validation_missingSubject(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_missingSubject(name),
+				ExpectError: regexp.MustCompile(`(?s)Block subject must have a configuration value.*as required`),
 			},
 		},
 	})
@@ -386,6 +516,32 @@ resource "kubernetes_role_binding_v1" "test" {
   metadata {
     generate_name = %[1]q
     namespace     = "default"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, prefix)
+}
+
+func testAccRoleBindingV1Config_generateName_updated(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    generate_name = %[1]q
+    namespace     = "default"
+    labels = {
+      team = "sec"
+    }
   }
 
   role_ref {
@@ -523,6 +679,136 @@ resource "kubernetes_role_binding_v1" "test" {
     kind      = "User"
     name      = "notauser"
     api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_invalidAnnotationKey(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = "default"
+    annotations = {
+      "Not A Valid Key!" = "value"
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_invalidLabelKey(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = "default"
+    labels = {
+      "Not A Valid Label Key!" = "value"
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_invalidLabelValue(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = "default"
+    labels = {
+      "valid-key" = "Not A Valid Label Value!"
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_missingMetadata() string {
+	return `
+resource "kubernetes_role_binding_v1" "test" {
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`
+}
+
+func testAccRoleBindingV1Config_missingRoleRef(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = "default"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_missingSubject(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = "default"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
   }
 }
 `, name)

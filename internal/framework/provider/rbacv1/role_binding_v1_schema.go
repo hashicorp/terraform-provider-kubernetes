@@ -32,11 +32,15 @@ func namespacedMetadataBlockAttrs() map[string]schema.Attribute {
 			MarkdownDescription: "An unstructured key value map stored with the role binding that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations",
 			ElementType:         types.StringType,
 			Optional:            true,
+			Validators: []validator.Map{
+				annotationKeyValidator{},
+			},
 		},
 		"generate_name": schema.StringAttribute{
 			MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the name field has not been provided. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:            true,
 			Validators: []validator.String{
+				rbacNameValidator{},
 				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("name")),
 			},
 			PlanModifiers: []planmodifier.String{
@@ -51,16 +55,21 @@ func namespacedMetadataBlockAttrs() map[string]schema.Attribute {
 			MarkdownDescription: "Map of string keys and values that can be used to organize and categorize (scope and select) the role binding. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels",
 			ElementType:         types.StringType,
 			Optional:            true,
+			Validators: []validator.Map{
+				labelValidator{},
+			},
 		},
 		"name": schema.StringAttribute{
 			MarkdownDescription: "Name of the role binding, must be unique within the namespace. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
 			Optional:            true,
 			Computed:            true,
 			Validators: []validator.String{
+				rbacNameValidator{},
 				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("generate_name")),
 			},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
+				stringplanmodifier.UseStateForUnknown(),
 			},
 		},
 		"namespace": schema.StringAttribute{
@@ -104,6 +113,7 @@ func RoleBindingV1Schema() schema.Schema {
 			"metadata": schema.ListNestedBlock{
 				MarkdownDescription: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 				Validators: []validator.List{
+					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
 				},
 				NestedObject: schema.NestedBlockObject{
@@ -115,6 +125,7 @@ func RoleBindingV1Schema() schema.Schema {
 			"role_ref": schema.ListNestedBlock{
 				MarkdownDescription: "RoleRef references the Role or ClusterRole granting the permissions defined in this binding.",
 				Validators: []validator.List{
+					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
 				},
 				NestedObject: schema.NestedBlockObject{
@@ -153,6 +164,7 @@ func RoleBindingV1Schema() schema.Schema {
 			"subject": schema.ListNestedBlock{
 				MarkdownDescription: "Subjects defines the entities (users, service accounts, or groups) to bind the role to.",
 				Validators: []validator.List{
+					listvalidator.IsRequired(),
 					listvalidator.SizeAtLeast(1),
 				},
 				NestedObject: schema.NestedBlockObject{

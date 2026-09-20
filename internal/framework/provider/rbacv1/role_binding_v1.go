@@ -48,12 +48,11 @@ func (r *RoleBindingV1) Configure(_ context.Context, req resource.ConfigureReque
 }
 
 // IdentitySchema defines the identity attributes for kubernetes_role_binding_v1.
-// RoleBindings are namespaced so the identity carries api_version, kind, namespace, and name.
+// RoleBindings are namespaced, reproducing the SDKv2 resourceIdentitySchemaNamespaced
+// contract (Version: 1, namespace OptionalForImport, others RequiredForImport) to ensure
+// compatibility under K8S-MIGRATE-021.
 func (r *RoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = identityschema.Schema{
-		// Version must match the identity_schema_version written by the SDKv2
-		// provider (hashicorp/kubernetes@3.2.1) so that TestAccRoleBindingV1_upgradeFromSDKv2
-		// can read existing state without a version mismatch error.
 		Version: 1,
 		Attributes: map[string]identityschema.Attribute{
 			"api_version": identityschema.StringAttribute{
@@ -63,7 +62,7 @@ func (r *RoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySch
 				RequiredForImport: true,
 			},
 			"namespace": identityschema.StringAttribute{
-				RequiredForImport: true,
+				OptionalForImport: true,
 			},
 			"name": identityschema.StringAttribute{
 				RequiredForImport: true,

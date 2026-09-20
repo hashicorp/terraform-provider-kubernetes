@@ -7,9 +7,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+const (
+	deprecatedRoleBindingTypeName      = "kubernetes_role_binding"
+	deprecatedRoleBindingSchemaVersion = 0
+	providerAddressSuffix              = "hashicorp/kubernetes"
 )
 
 // ── MoveState support — moved block from kubernetes_role_binding ──────────────
@@ -77,7 +83,16 @@ type sdkv2RoleBindingStateV0 struct {
 //	  to   = kubernetes_role_binding_v1.example
 //	}
 func moveStateFromKubernetesRoleBindingHandler(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if req.SourceTypeName != "kubernetes_role_binding" {
+	if !strings.HasSuffix(req.SourceProviderAddress, providerAddressSuffix) {
+		return
+	}
+	if req.SourceTypeName != deprecatedRoleBindingTypeName {
+		return
+	}
+	if req.SourceSchemaVersion != deprecatedRoleBindingSchemaVersion {
+		return
+	}
+	if req.SourceRawState == nil {
 		return
 	}
 

@@ -82,8 +82,8 @@ func sdkv2RawJSON(
 	return raw
 }
 
-// runMoveState calls the MoveState handler with the given source type and raw JSON.
-func runMoveState(t *testing.T, sourceTypeName string, rawJSON []byte) *resource.MoveStateResponse {
+// runMoveStateWithReq calls the MoveState handler with a full MoveStateRequest.
+func runMoveStateWithReq(t *testing.T, req resource.MoveStateRequest) *resource.MoveStateResponse {
 	t.Helper()
 	r := rbacv1.NewRoleBindingV1()
 	movers := r.(interface {
@@ -94,15 +94,28 @@ func runMoveState(t *testing.T, sourceTypeName string, rawJSON []byte) *resource
 		t.Fatal("expected at least 1 StateMover")
 	}
 
-	req := resource.MoveStateRequest{
-		SourceTypeName: sourceTypeName,
-		SourceRawState: &tfprotov6.RawState{JSON: rawJSON},
-	}
 	resp := &resource.MoveStateResponse{
 		TargetState: tfsdk.State{Schema: rbacv1.RoleBindingV1Schema()},
 	}
 	movers[0].StateMover(context.Background(), req, resp)
 	return resp
+}
+
+// runMoveState calls the MoveState handler with the given source type and raw JSON,
+// using default provider address ("hashicorp/kubernetes") and schema version (0).
+func runMoveState(t *testing.T, sourceTypeName string, rawJSON []byte) *resource.MoveStateResponse {
+	t.Helper()
+	var rawState *tfprotov6.RawState
+	if rawJSON != nil {
+		rawState = &tfprotov6.RawState{JSON: rawJSON}
+	}
+	req := resource.MoveStateRequest{
+		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
+		SourceTypeName:        sourceTypeName,
+		SourceSchemaVersion:   0,
+		SourceRawState:        rawState,
+	}
+	return runMoveStateWithReq(t, req)
 }
 
 // readMovedModel reads the moved RoleBindingModel out of resp.TargetState.
@@ -361,5 +374,96 @@ func TestMigration_MoveState_wrongSourceTypeIsIgnored(t *testing.T) {
 	if !diags.HasError() && m.ID.ValueString() != "" {
 		t.Errorf("expected empty target state for unrecognised source type, got id=%q",
 			m.ID.ValueString())
+	}
+}
+
+// TestMigration_MoveState_wrongProviderAddressIsIgnored verifies that the handler
+// returns early without error or writing state when SourceProviderAddress does
+// not end with "hashicorp/kubernetes".
+func TestMigration_MoveState_wrongProviderAddressIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	raw := sdkv2RawJSON(
+		"default/my-binding", "my-binding", "", "default",
+		nil, nil, "1", "uid-7", 0,
+		"rbac.authorization.k8s.io", "Role", "admin",
+		[]map[string]string{
+			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
+		},
+	)
+
+	req := resource.MoveStateRequest{
+		SourceProviderAddress: "registry.terraform.io/other-org/other-provider",
+		SourceTypeName:        "kubernetes_role_binding",
+		SourceSchemaVersion:   0,
+		SourceRawState:        &tfprotov6.RawState{JSON: raw},
+	}
+	resp := runMoveStateWithReq(t, req)
+
+	if resp.Diagnostics.HasError() {
+		t.Errorf("expected no errors for wrong provider address, got: %s", resp.Diagnostics)
+	}
+
+	var m rbacv1.RoleBindingModel
+	diags := resp.TargetState.Get(context.Background(), &m)
+	if !diags.HasError() && m.ID.ValueString() != "" {
+		t.Errorf("expected empty target state for wrong provider address, got id=%q", m.ID.ValueString())
+	}
+}
+
+// TestMigration_MoveState_wrongSchemaVersionIsIgnored verifies that the handler
+// returns early without error or writing state when SourceSchemaVersion != 0.
+func TestMigration_MoveState_wrongSchemaVersionIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	raw := sdkv2RawJSON(
+		"default/my-binding", "my-binding", "", "default",
+		nil, nil, "1", "uid-8", 0,
+		"rbac.authorization.k8s.io", "Role", "admin",
+		[]map[string]string{
+			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
+		},
+	)
+
+	req := resource.MoveStateRequest{
+		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
+		SourceTypeName:        "kubernetes_role_binding",
+		SourceSchemaVersion:   1, // not 0
+		SourceRawState:        &tfprotov6.RawState{JSON: raw},
+	}
+	resp := runMoveStateWithReq(t, req)
+
+	if resp.Diagnostics.HasError() {
+		t.Errorf("expected no errors for wrong schema version, got: %s", resp.Diagnostics)
+	}
+
+	var m rbacv1.RoleBindingModel
+	diags := resp.TargetState.Get(context.Background(), &m)
+	if !diags.HasError() && m.ID.ValueString() != "" {
+		t.Errorf("expected empty target state for wrong schema version, got id=%q", m.ID.ValueString())
+	}
+}
+
+// TestMigration_MoveState_nilRawStateIsIgnored verifies that the handler
+// returns early without error or panic when SourceRawState is nil.
+func TestMigration_MoveState_nilRawStateIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	req := resource.MoveStateRequest{
+		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
+		SourceTypeName:        "kubernetes_role_binding",
+		SourceSchemaVersion:   0,
+		SourceRawState:        nil,
+	}
+	resp := runMoveStateWithReq(t, req)
+
+	if resp.Diagnostics.HasError() {
+		t.Errorf("expected no errors for nil raw state, got: %s", resp.Diagnostics)
+	}
+
+	var m rbacv1.RoleBindingModel
+	diags := resp.TargetState.Get(context.Background(), &m)
+	if !diags.HasError() && m.ID.ValueString() != "" {
+		t.Errorf("expected empty target state for nil raw state, got id=%q", m.ID.ValueString())
 	}
 }

@@ -31,6 +31,8 @@ func TestAccKubernetesDataSourceSecretV1_basic(t *testing.T) {
 				Config: testAccKubernetesDataSourceSecretV1Config_basic(name) +
 					testAccKubernetesDataSourceSecretV1Config_read(),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// Regression for K8S-MIGRATE-006: id must be present and equal namespace/name.
+					resource.TestCheckResourceAttr(datasourceName, "id", fmt.Sprintf("default/%s", name)),
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.name", resourceName, "metadata.0.name"),
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.namespace", resourceName, "metadata.0.namespace"),
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.generation", resourceName, "metadata.0.generation"),

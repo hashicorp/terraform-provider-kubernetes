@@ -9,6 +9,7 @@ import (
 
 // SecretV1Model is the top-level tfsdk model for data.kubernetes_secret_v1.
 type SecretV1Model struct {
+	ID         types.String            `tfsdk:"id"`
 	Metadata   []SecretV1MetadataModel `tfsdk:"metadata"`
 	Data       types.Map               `tfsdk:"data"`
 	BinaryData types.Map               `tfsdk:"binary_data"`

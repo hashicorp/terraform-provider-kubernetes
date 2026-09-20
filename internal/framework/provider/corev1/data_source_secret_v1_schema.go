@@ -71,6 +71,10 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 			},
 		},
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "The namespace/name path that identifies this secret.",
+				Computed:    true,
+			},
 			"data": schema.MapAttribute{
 				Description: "A map of the secret data.",
 				ElementType: types.StringType,

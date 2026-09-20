@@ -5,6 +5,7 @@ package corev1
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -64,6 +65,9 @@ func (d *SecretV1DataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 	log.Printf("[INFO] Received secret: %#v", secret.ObjectMeta)
+
+	// Set id to namespace/name — identical to the SDKv2 buildId value (K8S-MIGRATE-006).
+	model.ID = types.StringValue(fmt.Sprintf("%s/%s", secret.Namespace, secret.Name))
 
 	// Flatten metadata — use the local, unfiltered helper (not the provider-aware
 	// flattenMetadata) so ignore_annotations / ignore_labels are not applied.

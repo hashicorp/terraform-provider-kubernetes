@@ -14,14 +14,20 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 )
 
+// providerVersion is the last released version of hashicorp/kubernetes that served
+// kubernetes_secret_v1 as an SDKv2 data source. Pinned to an exact version (no ~> or >=)
+// so the migration baseline is deterministic across CI runs (K8S-MIGRATE-017).
+const providerVersion = "3.2.1"
+
 // TestAccKubernetesDataSourceSecretV1_migration is a two-step migration test that proves
-// identical HCL works across an external SDKv2 release and the local Framework provider:
+// identical HCL works across the last released SDKv2-backed provider and the local
+// Framework build:
 //
-//   - Step 1: Apply with the released SDKv2-based provider (hashicorp/kubernetes ~> 2.38).
-//     This is the last pure-SDKv2 major line, confirming the pre-migration baseline.
+//   - Step 1: Apply with the released provider pinned to providerVersion (3.2.1).
+//     This is the exact released state real users hold before upgrading.
 //   - Step 2: Apply the byte-for-byte identical HCL using the local mux provider.
-//     The Framework data source reads the same Secret; the plan must be empty
-//     (ExpectNonEmptyPlan: false), proving zero breaking change for users upgrading.
+//     The Framework data source reads the same Secret; the plan must be empty,
+//     proving zero breaking change for users upgrading from 3.2.1.
 func TestAccKubernetesDataSourceSecretV1_migration(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-mig-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	datasourceName := "data.kubernetes_secret_v1.test"
@@ -29,12 +35,12 @@ func TestAccKubernetesDataSourceSecretV1_migration(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
-				// Step 1: apply with the released SDKv2-based provider.
-				// hashicorp/kubernetes 2.38.x is the last pure-SDKv2 release line.
+				// Step 1: apply with the exact released provider (K8S-MIGRATE-017).
+				// providerVersion is the last release that served kubernetes_secret_v1 via SDKv2.
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "~> 2.38",
+						VersionConstraint: providerVersion,
 					},
 				},
 				Config: testAccKubernetesDataSourceSecretV1MigrationConfig(name),

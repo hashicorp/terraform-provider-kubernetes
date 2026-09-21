@@ -49,8 +49,7 @@ func (r *RoleBindingV1) Configure(_ context.Context, req resource.ConfigureReque
 
 // IdentitySchema defines the identity attributes for kubernetes_role_binding_v1.
 // RoleBindings are namespaced, reproducing the SDKv2 resourceIdentitySchemaNamespaced
-// contract (Version: 1, namespace OptionalForImport, others RequiredForImport) to ensure
-// compatibility under K8S-MIGRATE-021.
+// contract (Version: 1, namespace OptionalForImport, others RequiredForImport).
 func (r *RoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = identityschema.Schema{
 		Version: 1,

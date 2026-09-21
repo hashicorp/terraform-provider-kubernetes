@@ -337,7 +337,7 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 }
 
 func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
-	var conf1, conf2 appsv1.StatefulSet
+	var conf1, conf2, conf3 appsv1.StatefulSet
 	imageName := busyboxImage
 	imageName1 := agnhostImage
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -349,18 +349,26 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev1"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},
 			{
-				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName1, "false"),
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev2"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "false"),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 					testAccCheckKubernetesStatefulSetForceNew(&conf1, &conf2, false),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName1, "false", "rev2"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf3),
+					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "false"),
+					testAccCheckKubernetesStatefulSetForceNew(&conf2, &conf3, false),
 				),
 			},
 		},
@@ -1285,7 +1293,7 @@ func testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName 
 `, name, imageName)
 }
 
-func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitForRollout string) string {
+func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitForRollout, revision string) string {
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
     name = "%s"
@@ -1318,6 +1326,9 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
         labels = {
           app = "ss-test"
         }
+        annotations = {
+          revision = "%s"
+        }
       }
 
       spec {
@@ -1345,7 +1356,7 @@ func testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, waitFor
 
   wait_for_rollout = %s
 }
-`, name, imageName, waitForRollout)
+`, name, revision, imageName, waitForRollout)
 }
 
 func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPolicy(name, imageName string) string {

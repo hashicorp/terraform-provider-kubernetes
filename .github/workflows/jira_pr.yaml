@@ -1,9 +1,14 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
+# The pull_request_target trigger is disabled for now: the Search step
+# (tomhjp/gh-action-jira-search) calls Jira's /rest/api/3/search endpoint,
+# which Atlassian has removed (HTTP 410, migrate to /rest/api/3/search/jql).
+# Upstream shows no sign of fixing this. Re-enable the trigger below once
+# either upstream migrates to the new endpoint, or this workflow is updated
+# to call it directly. workflow_dispatch is kept so it can still be run
+# manually if needed in the meantime.
 on:
-  pull_request_target:
-    types: [opened, closed, reopened, edited]
   workflow_dispatch:
 
 name: Jira Community PR Sync

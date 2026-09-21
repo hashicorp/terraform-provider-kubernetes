@@ -405,9 +405,24 @@ func commonVolumeSources() map[string]*schema.Schema {
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
+					"chap_auth_discovery": {
+						Type:        schema.TypeBool,
+						Description: "Whether target supports iSCSI Discovery CHAP authentication.",
+						Optional:    true,
+					},
+					"chap_auth_session": {
+						Type:        schema.TypeBool,
+						Description: "Whether target supports iSCSI Session CHAP authentication.",
+						Optional:    true,
+					},
 					"fs_type": {
 						Type:        schema.TypeString,
 						Description: "Filesystem type of the volume that you want to mount. Tip: Ensure that the filesystem type is supported by the host operating system. Examples: \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified. More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi",
+						Optional:    true,
+					},
+					"initiator_name": {
+						Type:        schema.TypeString,
+						Description: "The custom iSCSI Initiator Name. If initiator_name is specified with iscsi_interface simultaneously, new iSCSI interface <target portal>:<volume name> will be created for the connection.",
 						Optional:    true,
 					},
 					"iqn": {
@@ -426,11 +441,18 @@ func commonVolumeSources() map[string]*schema.Schema {
 						Description: "iSCSI target lun number.",
 						Optional:    true,
 					},
+					"portals": {
+						Type:        schema.TypeList,
+						Description: "The iSCSI Target Portal List. The portal is either an IP or ip_addr:port if the port is other than default (typically TCP ports 860 and 3260).",
+						Optional:    true,
+						Elem:        &schema.Schema{Type: schema.TypeString},
+					},
 					"read_only": {
 						Type:        schema.TypeBool,
 						Description: "Whether to force the read-only setting in VolumeMounts. Defaults to false.",
 						Optional:    true,
 					},
+					"secret_ref": commonVolumeSourcesSecretRef("The CHAP Secret for iSCSI target and initiator authentication"),
 					"target_portal": {
 						Type:        schema.TypeString,
 						Description: "iSCSI target portal. The portal is either an IP or ip_addr:port if the port is other than default (typically TCP ports 860 and 3260).",

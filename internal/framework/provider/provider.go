@@ -211,6 +211,7 @@ func (p *KubernetesProvider) EphemeralResources(ctx context.Context) []func() ep
 
 func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
+		pfunctions.NewEnvFromMapFunction,
 		pfunctions.NewManifestDecodeFunction,
 		pfunctions.NewManifestDecodeMultiFunction,
 		pfunctions.NewManifestEncodeFunction,

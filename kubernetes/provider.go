@@ -345,10 +345,11 @@ func Provider() *schema.Provider {
 			"kubernetes_mutating_webhook_configuration_v1":   resourceKubernetesMutatingWebhookConfigurationV1(),
 
 			// storage
-			"kubernetes_storage_class":    resourceKubernetesStorageClassV1("Deprecated; use kubernetes_storage_class_v1."),
-			"kubernetes_storage_class_v1": resourceKubernetesStorageClassV1(""),
-			"kubernetes_csi_driver":       resourceKubernetesCSIDriverV1Beta1("Deprecated; use kubernetes_csi_driver_v1."),
-			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(""),
+			"kubernetes_storage_class":           resourceKubernetesStorageClassV1("Deprecated; use kubernetes_storage_class_v1."),
+			"kubernetes_storage_class_v1":        resourceKubernetesStorageClassV1(""),
+			"kubernetes_csi_driver":              resourceKubernetesCSIDriverV1Beta1("Deprecated; use kubernetes_csi_driver_v1."),
+			"kubernetes_csi_driver_v1":           resourceKubernetesCSIDriverV1(""),
+			"kubernetes_volume_attributes_class": resourceKubernetesVolumeAttributesClassV1(),
 
 			// provider helper resources
 			"kubernetes_labels":      resourceKubernetesLabels(),

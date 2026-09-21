@@ -15,11 +15,12 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*NamespaceV1)(nil)
-	_ resource.ResourceWithConfigure   = (*NamespaceV1)(nil)
-	_ resource.ResourceWithIdentity    = (*NamespaceV1)(nil)
-	_ resource.ResourceWithImportState = (*NamespaceV1)(nil)
-	_ resource.ResourceWithMoveState   = (*NamespaceV1)(nil)
+	_ resource.Resource                    = (*NamespaceV1)(nil)
+	_ resource.ResourceWithConfigure       = (*NamespaceV1)(nil)
+	_ resource.ResourceWithIdentity        = (*NamespaceV1)(nil)
+	_ resource.ResourceWithImportState     = (*NamespaceV1)(nil)
+	_ resource.ResourceWithMoveState       = (*NamespaceV1)(nil)
+	_ resource.ResourceWithUpgradeIdentity = (*NamespaceV1)(nil)
 )
 
 type NamespaceV1 struct {

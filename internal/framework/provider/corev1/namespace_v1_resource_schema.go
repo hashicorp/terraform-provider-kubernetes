@@ -5,6 +5,8 @@ package corev1
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
@@ -60,6 +63,65 @@ func (n *NamespaceV1) IdentitySchema(ctx context.Context, req resource.IdentityS
 			},
 			"api_version": identityschema.StringAttribute{
 				RequiredForImport: true,
+			},
+		},
+	}
+}
+
+// UpgradeIdentity implements [resource.ResourceWithUpgradeIdentity].
+//
+// The identity schema is version 1, matching SDKv2's resourceIdentitySchemaNonNamespaced().
+// Terraform asks for an upgrade whenever the identity stored in state carries a lower
+// version, and the framework returns "Unable to Upgrade Resource Identity" unless the
+// resource provides one. SDKv2 never needed this: its gRPC server upgrades identity
+// generically, decoding the raw identity and re-coercing it against the current schema
+// (helper/schema/grpc_provider.go:113).
+//
+// The attributes never changed, so this is a pass-through carrying the name across and
+// restating the two constants.
+//
+// PriorSchema is deliberately not set. The framework decodes RawIdentity against it
+// *before* calling this function and fails with "RawState had no JSON or flatmap data set"
+// when there is nothing to decode — which is the normal case for a resource that was
+// deferred and so never had an identity written. Reading RawIdentity directly lets that
+// case be handled here instead, guarded the same way SDKv2 guards it ("no resource
+// identity provided to upgrade", grpc_provider.go:146).
+func (n *NamespaceV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
+	return map[int64]resource.IdentityUpgrader{
+		0: {
+			IdentityUpgrader: func(ctx context.Context, req resource.UpgradeIdentityRequest, resp *resource.UpgradeIdentityResponse) {
+				if resp.Identity == nil {
+					return
+				}
+
+				// api_version and kind are constants for this resource, so only the name
+				// has to come from the stored identity. It stays null when there is none:
+				// a resource that was deferred never had an identity written. SDKv2 returns
+				// an empty response in that case; the framework cannot, because it rejects
+				// one with "Missing Upgraded Resource Identity", so a null name is the
+				// closest equivalent. Read repopulates it once the object exists.
+				name := types.StringNull()
+				if req.RawIdentity != nil && len(req.RawIdentity.JSON) > 0 {
+					var prior struct {
+						Name string `json:"name"`
+					}
+					if err := json.Unmarshal(req.RawIdentity.JSON, &prior); err != nil {
+						resp.Diagnostics.AddError(
+							"Unable to upgrade kubernetes_namespace_v1 identity",
+							fmt.Sprintf("Could not decode the stored identity: %s", err),
+						)
+						return
+					}
+					if prior.Name != "" {
+						name = types.StringValue(prior.Name)
+					}
+				}
+
+				resp.Diagnostics.Append(resp.Identity.Set(ctx, NamespaceResourceIdentity{
+					APIVersion: types.StringValue(namespaceAPIVersion),
+					Kind:       types.StringValue(namespaceKind),
+					Name:       name,
+				})...)
 			},
 		},
 	}

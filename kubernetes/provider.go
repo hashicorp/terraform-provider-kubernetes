@@ -252,8 +252,6 @@ func Provider() *schema.Provider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			// core
-			"kubernetes_namespace":                  resourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
-			"kubernetes_namespace_v1":               resourceKubernetesNamespaceV1(""),
 			"kubernetes_service":                    resourceKubernetesServiceV1("Deprecated; use kubernetes_service_v1."),
 			"kubernetes_service_v1":                 resourceKubernetesServiceV1(""),
 			"kubernetes_service_account":            resourceKubernetesServiceAccountV1("Deprecated; use kubernetes_service_account_v1."),
@@ -379,6 +377,8 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
+	GetIgnoreAnnotations() []string
+	GetIgnoreLabels() []string
 }
 
 type providerMetadata struct {
@@ -452,6 +452,9 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 	}
 	return k.discoveryClient, nil
 }
+
+func (k providerMetadata) GetIgnoreAnnotations() []string { return k.IgnoreAnnotations }
+func (k providerMetadata) GetIgnoreLabels() []string      { return k.IgnoreLabels }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization

@@ -120,6 +120,9 @@ func StorageClassV1Schema() schema.Schema {
 				Validators: []validator.String{
 					stringvalidator.OneOf("Delete", "Retain", "Recycle"),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"allow_volume_expansion": schema.BoolAttribute{
 				MarkdownDescription: "Indicates whether the storage class allows volume expansion.",
@@ -165,6 +168,7 @@ func StorageClassV1Schema() schema.Schema {
 			"metadata": schema.ListNestedBlock{
 				MarkdownDescription: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
 				Validators: []validator.List{
+					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
 				},
 				NestedObject: schema.NestedBlockObject{

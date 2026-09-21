@@ -14,6 +14,7 @@ import (
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
 	sdkv2terraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -112,7 +113,6 @@ func TestAccStorageClassV1_basic(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 			// Step 2: update mutable fields (metadata, reclaim_policy, allow_volume_expansion).
@@ -290,7 +290,6 @@ func TestAccStorageClassV1_generateName(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -446,6 +445,9 @@ func TestAccStorageClassV1_moved(t *testing.T) {
 	provisioner := "rancher.io/local-path"
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_8_0),
+		},
 		Steps: []tfresource.TestStep{
 			// Step 1: provision kubernetes_storage_class (deprecated type) with
 			// the last SDKv2 release.
@@ -453,7 +455,7 @@ func TestAccStorageClassV1_moved(t *testing.T) {
 				ExternalProviders: map[string]tfresource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.0.1",
+						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccStorageClassConfig_deprecated(name, provisioner),

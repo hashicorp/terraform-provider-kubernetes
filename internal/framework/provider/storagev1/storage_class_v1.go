@@ -6,6 +6,7 @@ package storagev1
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 )
@@ -21,6 +22,7 @@ var (
 	_ resource.ResourceWithImportState = (*StorageClassV1)(nil)
 	_ resource.ResourceWithIdentity    = (*StorageClassV1)(nil)
 	_ resource.ResourceWithMoveState   = (*StorageClassV1)(nil)
+	_ resource.ResourceWithModifyPlan  = (*StorageClassV1)(nil)
 )
 
 func NewStorageClassV1() resource.Resource {
@@ -56,4 +58,23 @@ func (r *StorageClassV1) IdentitySchema(_ context.Context, _ resource.IdentitySc
 
 func (r *StorageClassV1) MoveState(_ context.Context) []resource.StateMover {
 	return moveStateHandlers()
+}
+
+func (r *StorageClassV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// If creating or destroying, no plan modification needed
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	var state, plan StorageClassModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If allowed_topologies block count or content changed, force replacement
+	if len(state.AllowedTopologies) != len(plan.AllowedTopologies) {
+		resp.RequiresReplace.Append(path.Root("allowed_topologies"))
+	}
 }

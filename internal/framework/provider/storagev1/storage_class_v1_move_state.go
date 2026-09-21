@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -77,7 +78,13 @@ type sdkv2StorageClassStateV0 struct {
 //	  to   = kubernetes_storage_class_v1.example
 //	}
 func moveStateFromKubernetesStorageClassHandler(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+	if req.SourceProviderAddress != "" && !strings.HasSuffix(req.SourceProviderAddress, "hashicorp/kubernetes") {
+		return
+	}
 	if req.SourceTypeName != "kubernetes_storage_class" {
+		return
+	}
+	if req.SourceSchemaVersion != 0 {
 		return
 	}
 

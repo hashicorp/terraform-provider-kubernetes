@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -262,10 +261,7 @@ func (r *StorageClassV1) ImportState(ctx context.Context, req resource.ImportSta
 	var state StorageClassModel
 	state.ID = types.StringValue(out.Name)
 	state.Metadata = []MetadataModel{flatMeta}
-	// Initialise mount_options to a typed empty set so setComputedFields has
-	// a non-null baseline to work from. Import has no prior plan state, so
-	// we must pre-populate optional Set attributes with their zero value.
-	state.MountOptions = types.SetValueMust(types.StringType, []attr.Value{})
+	state.MountOptions = types.SetNull(types.StringType)
 	setComputedFields(ctx, &state, out)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)

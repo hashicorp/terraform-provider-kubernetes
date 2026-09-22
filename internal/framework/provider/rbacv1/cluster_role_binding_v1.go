@@ -15,6 +15,7 @@ var (
 	_ resource.ResourceWithConfigure   = (*ClusterRoleBinding)(nil)
 	_ resource.ResourceWithImportState = (*ClusterRoleBinding)(nil)
 	_ resource.ResourceWithIdentity    = (*ClusterRoleBinding)(nil)
+	_ resource.ResourceWithMoveState   = (*ClusterRoleBinding)(nil)
 )
 
 // ClusterRoleBinding is the Plugin Framework implementation of the

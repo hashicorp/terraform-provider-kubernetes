@@ -410,3 +410,270 @@ resource "kubernetes_cluster_role_binding_v1" "test" {
 }
 `, name)
 }
+
+// ---------------------------------------------------------------------------
+// MoveState tests — cross-type rename via moved { } block
+//
+// These tests exercise the ResourceWithMoveState implementation added to
+// kubernetes_cluster_role_binding_v1.  The scenario is:
+//
+//  1. The practitioner has existing state for the deprecated resource type
+//     kubernetes_cluster_role_binding (bare name, SDKv2 only).
+//  2. They add a moved { } block in their configuration to rename it to
+//     kubernetes_cluster_role_binding_v1 (the Framework resource).
+//  3. Terraform calls MoveResourceState on the new provider.
+//  4. The Framework MoveState implementation copies state directly — schemas
+//     are identical because ClusterRoleBinding is non-namespaced.
+//  5. The post-move plan must be empty (no destroy/recreate).
+// ---------------------------------------------------------------------------
+
+// TestAccMoveStateClusterRoleBindingV1_basic verifies that a binding created
+// as kubernetes_cluster_role_binding can be moved to
+// kubernetes_cluster_role_binding_v1 via a moved block with no diff.
+func TestAccMoveStateClusterRoleBindingV1_basic(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: testAccKubernetesClusterRoleBindingV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				// Step 1 — create with the released SDKv2 provider using the
+				// deprecated kubernetes_cluster_role_binding resource type.
+				ExternalProviders: releasedKubernetesProvider(),
+				Config:            testAccKubernetesClusterRoleBindingConfig_deprecatedType(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"kubernetes_cluster_role_binding.test",
+						"metadata.0.name", name,
+					),
+					resource.TestCheckResourceAttr(
+						"kubernetes_cluster_role_binding.test",
+						"subject.#", "1",
+					),
+				),
+			},
+			{
+				// Step 2 — switch to the local Framework provider with a
+				// moved block renaming the resource type.  The plan must be
+				// empty: MoveState copies state in place with no changes.
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						clusterRoleBindingResourceName,
+						"metadata.0.name", name,
+					),
+					resource.TestCheckResourceAttr(
+						clusterRoleBindingResourceName,
+						"subject.#", "1",
+					),
+					resource.TestCheckResourceAttr(
+						clusterRoleBindingResourceName,
+						"role_ref.0.name", "cluster-admin",
+					),
+				),
+			},
+			{
+				// Step 3 — idempotency after the move: plan must still be
+				// empty on the Framework provider.
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
+// TestAccMoveStateClusterRoleBindingV1_multipleSubjects verifies the move
+// with a binding that has multiple subjects of different kinds, exercising
+// the computed api_group and namespace defaulting across the move boundary.
+func TestAccMoveStateClusterRoleBindingV1_multipleSubjects(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: testAccKubernetesClusterRoleBindingV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: releasedKubernetesProvider(),
+				Config:            testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						"kubernetes_cluster_role_binding.test",
+						"subject.#", "3",
+					),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
+						clusterRoleBindingResourceName,
+						"subject.#", "3",
+					),
+					resource.TestCheckResourceAttr(
+						clusterRoleBindingResourceName,
+						"subject.0.kind", "User",
+					),
+					resource.TestCheckResourceAttr(
+						clusterRoleBindingResourceName,
+						"subject.1.kind", "ServiceAccount",
+					),
+					resource.TestCheckResourceAttr(
+						clusterRoleBindingResourceName,
+						"subject.2.kind", "Group",
+					),
+				),
+			},
+		},
+	})
+}
+
+// testAccKubernetesClusterRoleBindingConfig_deprecatedType returns HCL that
+// creates a ClusterRoleBinding using the deprecated
+// kubernetes_cluster_role_binding resource type (SDKv2 bare name).
+func testAccKubernetesClusterRoleBindingConfig_deprecatedType(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+// testAccKubernetesClusterRoleBindingConfig_movedToV1 returns HCL that moves
+// the kubernetes_cluster_role_binding.test resource to
+// kubernetes_cluster_role_binding_v1.test using a moved { } block.
+// The resource configuration itself is identical — only the type changes.
+func testAccKubernetesClusterRoleBindingConfig_movedToV1(name string) string {
+	return fmt.Sprintf(`
+moved {
+  from = kubernetes_cluster_role_binding.test
+  to   = kubernetes_cluster_role_binding_v1.test
+}
+
+resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+// testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject returns
+// HCL for a binding with three subjects, using the deprecated type.
+func testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    api_group = ""
+    namespace = "kube-system"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "system:masters"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+// testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject is the
+// moved-block equivalent of testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject.
+func testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject(name string) string {
+	return fmt.Sprintf(`
+moved {
+  from = kubernetes_cluster_role_binding.test
+  to   = kubernetes_cluster_role_binding_v1.test
+}
+
+resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    api_group = ""
+    namespace = "kube-system"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "system:masters"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}

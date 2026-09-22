@@ -83,6 +83,20 @@ func lifecycleHandlerFields() map[string]*schema.Schema {
 				},
 			},
 		},
+		"sleep": {
+			Type:        schema.TypeList,
+			Optional:    true,
+			Description: "Sleep represents a duration that the container should sleep.",
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"seconds": {
+						Type:         schema.TypeString,
+						Required:     true,
+						Description:  "Seconds is the number of seconds to sleep.",
+					},
+				},
+			},
+		},
 		"tcp_socket": {
 			Type:        schema.TypeList,
 			Optional:    true,

@@ -1,0 +1,3 @@
+```release-note:feature
+`kubernetes_role_binding_v1`: Migrate resource from SDKv2 to the Terraform Plugin Framework. Existing state is compatible with no configuration changes required. Users of the deprecated `kubernetes_role_binding` resource type may migrate to `kubernetes_role_binding_v1` using a `moved` block.
+```

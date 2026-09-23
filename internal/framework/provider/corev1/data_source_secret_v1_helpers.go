@@ -31,9 +31,12 @@ func flattenSecretV1Metadata(meta metav1.ObjectMeta) SecretV1MetadataModel {
 
 // flattenStringMap converts a plain Go map[string]string into a
 // map[string]types.String suitable for Framework model fields.
+// Returns nil when m is nil so that the state stores null — matching the SDKv2
+// flattenMetadataFields behaviour and preventing null→{} drift on upgrade
+// (K8S-MIGRATE-005).
 func flattenStringMap(m map[string]string) map[string]types.String {
 	if m == nil {
-		return map[string]types.String{}
+		return nil
 	}
 	result := make(map[string]types.String, len(m))
 	for k, v := range m {

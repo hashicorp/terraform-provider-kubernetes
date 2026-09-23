@@ -6,8 +6,11 @@ package corev1
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -31,6 +34,12 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Description: "Name of the secret, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 							Optional:    true,
 							Computed:    true,
+							Validators: []validator.String{
+								dnsSubdomainValidator{},
+								stringvalidator.ConflictsWith(
+									path.MatchRelative().AtParent().AtName("generate_name"),
+								),
+							},
 						},
 						"namespace": schema.StringAttribute{
 							Description: "Namespace defines the space within which name of the secret must be unique.",
@@ -41,18 +50,30 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Description: "Prefix, used by the server, to generate a unique name ONLY IF the Name field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 							Optional:    true,
 							Computed:    true,
+							Validators: []validator.String{
+								dnsLabelValidator{},
+								stringvalidator.ConflictsWith(
+									path.MatchRelative().AtParent().AtName("name"),
+								),
+							},
 						},
 						"annotations": schema.MapAttribute{
 							Description: "An unstructured key value map stored with the secret that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/",
 							ElementType: types.StringType,
 							Optional:    true,
 							Computed:    true,
+							Validators: []validator.Map{
+								annotationKeysValidator{},
+							},
 						},
 						"labels": schema.MapAttribute{
 							Description: "Map of string keys and values that can be used to organize and categorize (scope and select) the secret. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/",
 							ElementType: types.StringType,
 							Optional:    true,
 							Computed:    true,
+							Validators: []validator.Map{
+								labelKeysAndValuesValidator{},
+							},
 						},
 						"generation": schema.Int64Attribute{
 							Description: "A sequence number representing a specific generation of the desired state.",

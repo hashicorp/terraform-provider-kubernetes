@@ -4,14 +4,11 @@
 package corev1_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 )
 
 // providerVersion is the last released version of hashicorp/kubernetes that served
@@ -53,7 +50,7 @@ func TestAccKubernetesDataSourceSecretV1_migration(t *testing.T) {
 			{
 				// Step 2: same config, served by the local Framework/mux provider.
 				// Data sources carry no persisted state, so the plan must be empty.
-				ProtoV6ProviderFactories: testAccMuxProviderFactories,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesDataSourceSecretV1MigrationConfig(name),
 				ExpectNonEmptyPlan:       false,
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -64,12 +61,6 @@ func TestAccKubernetesDataSourceSecretV1_migration(t *testing.T) {
 			},
 		},
 	})
-}
-
-var testAccMuxProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"kubernetes": func() (tfprotov6.ProviderServer, error) {
-		return mux.MuxServer(context.Background(), "test")
-	},
 }
 
 // testAccKubernetesDataSourceSecretV1MigrationConfig is shared verbatim between both

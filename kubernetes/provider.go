@@ -394,7 +394,7 @@ type providerMetadata struct {
 	IgnoreLabels      []string
 }
 
-func (k providerMetadata) MainClientset() (*kubernetes.Clientset, error) {
+func (k *providerMetadata) MainClientset() (*kubernetes.Clientset, error) {
 	if k.mainClientset != nil {
 		return k.mainClientset, nil
 	}
@@ -409,7 +409,7 @@ func (k providerMetadata) MainClientset() (*kubernetes.Clientset, error) {
 	return k.mainClientset, nil
 }
 
-func (k providerMetadata) AggregatorClientset() (*aggregator.Clientset, error) {
+func (k *providerMetadata) AggregatorClientset() (*aggregator.Clientset, error) {
 	if k.aggregatorClientset != nil {
 		return k.aggregatorClientset, nil
 	}
@@ -423,7 +423,7 @@ func (k providerMetadata) AggregatorClientset() (*aggregator.Clientset, error) {
 	return k.aggregatorClientset, nil
 }
 
-func (k providerMetadata) DynamicClient() (dynamic.Interface, error) {
+func (k *providerMetadata) DynamicClient() (dynamic.Interface, error) {
 	if k.dynamicClient != nil {
 		return k.dynamicClient, nil
 	}
@@ -438,7 +438,7 @@ func (k providerMetadata) DynamicClient() (dynamic.Interface, error) {
 	return k.dynamicClient, nil
 }
 
-func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error) {
+func (k *providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error) {
 	if k.discoveryClient != nil {
 		return k.discoveryClient, nil
 	}
@@ -493,7 +493,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 		IgnoreAnnotations:   ignoreAnnotations,
 		IgnoreLabels:        ignoreLabels,
 	}
-	return m, diag.Diagnostics{}
+	return &m, diag.Diagnostics{}
 }
 
 func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {

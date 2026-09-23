@@ -138,11 +138,11 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 	metadataAnnotations := d.Get("metadata.0.annotations").(map[string]interface{})
 	metadataLabels := d.Get("metadata.0.labels").(map[string]interface{})
 
-	ignoreAnnotations := providerMeta.(providerMetadata).IgnoreAnnotations
+	ignoreAnnotations := providerMeta.(*providerMetadata).IgnoreAnnotations
 	removeInternalKeys(meta.Annotations, metadataAnnotations)
 	removeKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
 
-	ignoreLabels := providerMeta.(providerMetadata).IgnoreLabels
+	ignoreLabels := providerMeta.(*providerMetadata).IgnoreLabels
 	removeInternalKeys(meta.Labels, metadataLabels)
 	removeKeys(meta.Labels, metadataLabels, ignoreLabels)
 

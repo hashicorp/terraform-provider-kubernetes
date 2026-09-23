@@ -444,6 +444,7 @@ Read-Only:
 
 - `post_start` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--post_start))
 - `pre_stop` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--lifecycle--pre_stop))
+- `stop_signal` (String)
 
 <a id="nestedobjatt--spec--container--lifecycle--post_start"></a>
 ### Nested Schema for `spec.container.lifecycle.post_start`
@@ -965,6 +966,7 @@ Read-Only:
 
 - `post_start` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--post_start))
 - `pre_stop` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--lifecycle--pre_stop))
+- `stop_signal` (String)
 
 <a id="nestedobjatt--spec--init_container--lifecycle--post_start"></a>
 ### Nested Schema for `spec.init_container.lifecycle.post_start`

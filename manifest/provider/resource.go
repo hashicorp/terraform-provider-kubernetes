@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
@@ -197,6 +198,18 @@ func RemoveServerSideFields(in map[string]interface{}) map[string]interface{} {
 	// TODO: we should be filtering API responses based on the contents of 'managedFields'
 	// and only retain the attributes for which the manager is Terraform
 	delete(meta, "managedFields")
+
+	// Remove server-managed annotations that cause perpetual diffs
+	if annotations, ok := meta["annotations"].(map[string]interface{}); ok {
+		for k := range annotations {
+			if strings.HasPrefix(k, "kubectl.kubernetes.io/") {
+				delete(annotations, k)
+			}
+			if strings.Contains(k, "deprecated.daemonset.template.generation") {
+				delete(annotations, k)
+			}
+		}
+	}
 
 	return in
 }

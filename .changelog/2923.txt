@@ -1,0 +1,3 @@
+```release-note:feature
+Added support for `data_source` blocks in all resources leveraging `PersistentVolumeClaim` (pods, cronjobs, deploymentsets, etc.)
+```

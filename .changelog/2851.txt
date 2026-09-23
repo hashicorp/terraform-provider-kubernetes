@@ -1,0 +1,3 @@
+```release-note:enhancement
+resource/kubernetes_manifest: Allow multiple wait types (fields, condition, rollout) to be used together in the wait block
+```

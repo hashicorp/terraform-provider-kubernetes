@@ -23,6 +23,16 @@ func dataSourceKubernetesServiceV1(deprecationMessage string) *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service", false),
+			"label_selector": {
+				Type:        schema.TypeString,
+				Description: "A label query to select services by. If name is not set in metadata, this is used to look up services.",
+				Optional:    true,
+			},
+			"field_selector": {
+				Type:        schema.TypeString,
+				Description: "A field query to select services by. If name is not set in metadata, this is used to look up services.",
+				Optional:    true,
+			},
 			"spec": {
 				Type:        schema.TypeList,
 				Description: "Spec defines the behavior of a service. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
@@ -256,21 +266,53 @@ func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceDa
 
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
 
-	om := metav1.ObjectMeta{
-		Namespace: metadata.Namespace,
-		Name:      metadata.Name,
-	}
-	d.SetId(buildId(om))
+	var svc *corev1.Service
 
-	log.Printf("[INFO] Reading service %s", metadata.Name)
-	svc, err := conn.CoreV1().Services(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
+	if metadata.Name != "" {
+		om := metav1.ObjectMeta{
+			Namespace: metadata.Namespace,
+			Name:      metadata.Name,
+		}
+		d.SetId(buildId(om))
+
+		log.Printf("[INFO] Reading service %s", metadata.Name)
+		svc, err = conn.CoreV1().Services(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			log.Printf("[DEBUG] Received error: %#v", err)
+			return diag.FromErr(err)
+		}
+	} else {
+		labelSelector := d.Get("label_selector").(string)
+		fieldSelector := d.Get("field_selector").(string)
+
+		listOptions := metav1.ListOptions{
+			LabelSelector: labelSelector,
+			FieldSelector: fieldSelector,
+		}
+
+		log.Printf("[INFO] Listing services with label_selector=%q field_selector=%q", labelSelector, fieldSelector)
+		svcs, err := conn.CoreV1().Services(metadata.Namespace).List(ctx, listOptions)
+		if err != nil {
+			log.Printf("[DEBUG] Received error: %#v", err)
+			return diag.FromErr(err)
+		}
+
+		if len(svcs.Items) == 0 {
 			return nil
 		}
-		log.Printf("[DEBUG] Received error: %#v", err)
-		return diag.FromErr(err)
+
+		svc = &svcs.Items[0]
+
+		om := metav1.ObjectMeta{
+			Namespace: svc.Namespace,
+			Name:      svc.Name,
+		}
+		d.SetId(buildId(om))
 	}
+
 	log.Printf("[INFO] Received service: %#v", svc)
 
 	err = d.Set("metadata", flattenMetadataFields(svc.ObjectMeta))

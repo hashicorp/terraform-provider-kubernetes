@@ -240,6 +240,58 @@ func TestAccKubernetesIngressV1_InternalKey(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesIngressV1_updatePreservesFinalizers(t *testing.T) {
+	var conf networking.Ingress
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_ingress_v1.test"
+	finalizer := "example.com/controller-cleanup"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.22.0")
+		},
+
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesIngressV1Config_finalizers(name, "one", 443),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotation", "one"),
+				),
+			},
+			{
+				// Simulate a controller adding a finalizer that Terraform does not manage,
+				// then update both metadata and spec in place.
+				PreConfig: func() {
+					testAccSetKubernetesIngressV1Finalizers(t, name, []string{finalizer})
+				},
+				Config: testAccKubernetesIngressV1Config_finalizers(name, "two", 8443),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesIngressV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.TestAnnotation", "two"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.default_backend.0.service.0.port.0.number", "8443"),
+					func(s *terraform.State) error {
+						if len(conf.Finalizers) != 1 || conf.Finalizers[0] != finalizer {
+							return fmt.Errorf("expected finalizers to be [%s], got %v", finalizer, conf.Finalizers)
+						}
+						return nil
+					},
+				),
+			},
+			{
+				// Remove the finalizer so the Ingress can be destroyed.
+				PreConfig: func() {
+					testAccSetKubernetesIngressV1Finalizers(t, name, nil)
+				},
+				Config: testAccKubernetesIngressV1Config_finalizers(name, "two", 8443),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesIngressV1_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 	var conf networking.Ingress
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -469,6 +521,24 @@ func testAccCheckKubernetesIngressV1Exists(n string, obj *networking.Ingress) re
 	}
 }
 
+func testAccSetKubernetesIngressV1Finalizers(t *testing.T, name string, finalizers []string) {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.TODO()
+
+	ingress, err := conn.NetworkingV1().Ingresses("default").Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ingress.Finalizers = finalizers
+	_, err = conn.NetworkingV1().Ingresses("default").Update(ctx, ingress, metav1.UpdateOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func testAccKubernetesIngressV1Config_serviceBackend(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
   metadata {
@@ -682,6 +752,27 @@ func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
     }
   }
 }`, name)
+}
+
+func testAccKubernetesIngressV1Config_finalizers(name, annotation string, port int) string {
+	return fmt.Sprintf(`resource "kubernetes_ingress_v1" "test" {
+  metadata {
+    name = %q
+    annotations = {
+      TestAnnotation = %q
+    }
+  }
+  spec {
+    default_backend {
+      service {
+        name = "app1"
+        port {
+          number = %d
+        }
+      }
+    }
+  }
+}`, name, annotation, port)
 }
 
 func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {

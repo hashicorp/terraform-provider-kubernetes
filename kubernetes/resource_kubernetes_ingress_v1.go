@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func resourceKubernetesIngressV1(deprecationMessage string) *schema.Resource {
@@ -289,26 +290,30 @@ func resourceKubernetesIngressV1Update(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	namespace, _, err := idParts(d.Id())
+	namespace, name, err := idParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	spec := expandIngressV1Spec(d.Get("spec").([]interface{}))
+	// Use a JSON patch rather than a full update so that fields the schema
+	// does not manage, such as finalizers and owner references, are preserved.
+	ops := patchMetadata("metadata.0.", "/metadata/", d)
 
-	if metadata.Namespace == "" {
-		metadata.Namespace = "default"
+	if d.HasChange("spec") {
+		ops = append(ops, &ReplaceOperation{
+			Path:  "/spec",
+			Value: expandIngressV1Spec(d.Get("spec").([]interface{})),
+		})
 	}
 
-	ingress := &networking.Ingress{
-		ObjectMeta: metadata,
-		Spec:       spec,
-	}
-
-	out, err := conn.NetworkingV1().Ingresses(namespace).Update(ctx, ingress, metav1.UpdateOptions{})
+	data, err := ops.MarshalJSON()
 	if err != nil {
-		return diag.Errorf("Failed to update Ingress %s because: %s", buildId(ingress.ObjectMeta), err)
+		return diag.Errorf("Failed to marshal update operations: %s", err)
+	}
+	log.Printf("[INFO] Updating ingress %q: %v", name, string(data))
+	out, err := conn.NetworkingV1().Ingresses(namespace).Patch(ctx, name, types.JSONPatchType, data, metav1.PatchOptions{})
+	if err != nil {
+		return diag.Errorf("Failed to update Ingress %s because: %s", d.Id(), err)
 	}
 	log.Printf("[INFO] Submitted updated ingress: %#v", out)
 

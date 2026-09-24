@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_ingress_v1`: Preserve finalizers, owner references and other fields not managed by Terraform when updating an Ingress in place.
+```

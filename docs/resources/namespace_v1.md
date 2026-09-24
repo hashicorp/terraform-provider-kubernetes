@@ -76,6 +76,43 @@ resource "kubernetes_namespace_v1" "example" {
 
 - `delete` - Default `5 minutes`
 
+## Migration to Plugin Framework
+
+`kubernetes_namespace_v1` is implemented using the Terraform Plugin Framework. Existing state written by the SDKv2 implementation is supported without re-importing the namespace or manually editing state. If you already use `kubernetes_namespace_v1`, a `moved` block is not needed for the provider upgrade.
+
+ No changes to the configuration syntax are required. References such as `kubernetes_namespace_v1.example.metadata[0].name` remain valid. See the behavior notes below for plan-time differences.
+
+Review the following behavior notes. Before upgrading, run `terraform plan` with your current provider version and confirm it reports no changes.
+
+## Behavior notes
+
+- **Empty metadata maps:** The framework distinguishes an omitted or `null` map from an explicitly empty map (`{}`). SDKv2 could store `annotations = {}` or `labels = {}` as `null`. The first plan after upgrading or moving state can therefore show a one-time in-place update to reconcile these values. This difference does not require replacing the namespace and should settle after applying the update. For maps stored as `{}` by an earlier import, omitting them from configuration can produce an in-place change from `{}` to `null`.
+- **Computed metadata:** During an update, `metadata[0].generation` and `metadata[0].resource_version` can appear as `(known after apply)`. Their values are read from the Kubernetes API response; these planned unknown values do not themselves indicate replacement.
+- **Null map entries:** Annotation and label values must be non-null strings. For example, `annotations = { owner = null }` is rejected during validation, although SDKv2 accepted null annotation entries. Configurations with these entries must omit them or provide string values before planning, applying, or destroying the resource. Omitting the entire map or setting the entire map to `null` remains supported.
+
+## Migration from `kubernetes_namespace`
+
+To migrate an existing namespace managed by the deprecated `kubernetes_namespace` resource, change its resource type to `kubernetes_namespace_v1` and add a `moved` block (requires Terraform 1.8+).
+
+Keep the resource's configuration unchanged. For example, for an existing namespace named `terraform-example-namespace`:
+
+```terraform
+moved {
+  from = kubernetes_namespace.example
+  to   = kubernetes_namespace_v1.example
+}
+
+resource "kubernetes_namespace_v1" "example" {
+  metadata {
+    name = "terraform-example-namespace"
+  }
+}
+```
+
+Replace the old resource block rather than keeping both declarations, and update references to its Terraform address.
+
+Run `terraform plan` to verify the address move and review any in-place updates described in the [behavior notes](#behavior-notes). Investigate any proposed replacement before applying the plan to record the move.
+
 ## Import
 
 Namespaces can be imported using their name, e.g.
@@ -83,3 +120,5 @@ Namespaces can be imported using their name, e.g.
 ```
 $ terraform import kubernetes_namespace_v1.n terraform-example-namespace
 ```
+
+`wait_for_default_service_account` is not stored in Kubernetes and cannot be imported. A configuration that sets it to true therefore shows one in-place update on the first plan after import; Applying the update records the configured value but does not repeat the create time service-account wait. Earlier provider versions behave the same way.

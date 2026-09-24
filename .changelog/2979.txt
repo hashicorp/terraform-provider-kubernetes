@@ -1,0 +1,7 @@
+```release-note:note
+`resource/kubernetes_namespace_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax. `moved` blocks from the deprecated `kubernetes_namespace` resource are supported. Explicitly empty metadata maps may produce a one-time in-place update after upgrading.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_namespace_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions silently dropped such entries; they are now rejected during plan. Remove the key or give it a string value.
+```

@@ -8,15 +8,19 @@ on:
     paths:
       - "manifest/**/*.go"
       - 'kubernetes/**/*.go'
+      - "internal/framework/**/*.go"
+      - "internal/mux/**/*.go"
       - "go.mod"
+      - "go.sum"
+      - ".github/workflows/acceptance_test_dfa.yaml"
   workflow_dispatch:
     inputs:
       terraformVersion:
         description: Terraform version
-        default: 1.12.0-alpha20250312
+        default: 1.13.0-alpha20250521
 
 env:
-  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.12.0-alpha20250312' }}
+  TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.13.0-alpha20250521' }}
 
 jobs:
   acceptance_tests:

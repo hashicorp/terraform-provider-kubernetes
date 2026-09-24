@@ -21,7 +21,12 @@ on:
       - v3-major-release
     paths:
       - 'kubernetes/*.go'
+      - 'internal/framework/**/*.go'
+      - 'internal/mux/**/*.go'
       - 'go.mod'
+      - 'go.sum'
+      - 'GNUmakefile'
+      - '.github/workflows/acceptance_tests_kind.yaml'
   schedule:
     - cron: '0 21 * * *'
 

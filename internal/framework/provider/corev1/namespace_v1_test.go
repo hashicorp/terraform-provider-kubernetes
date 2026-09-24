@@ -47,6 +47,7 @@ func TestAccKubernetesDataSourceNamespaceV1_basic(t *testing.T) {
 			{
 				Config: testNamespaceConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "id", "kube-system"),
 					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", "kube-system"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(dataSourceName, "metadata.0.resource_version"),
@@ -77,6 +78,9 @@ data "kubernetes_namespace_v1" "test" {
   }
 }`, name),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					// id must equal the requested name even when the namespace does not
+					// exist — this matches the SDKv2 behaviour (d.SetId before GET).
+					resource.TestCheckResourceAttr(dataSourceName, "id", name),
 					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(dataSourceName, "spec.#", "0"),
 				),

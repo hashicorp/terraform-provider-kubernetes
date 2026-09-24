@@ -7,12 +7,21 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// specElementType is the tftypes object shape for a single spec element.
+// It must match the NestedObject defined in Schema.
+var specElementType = types.ObjectType{
+	AttrTypes: map[string]attr.Type{
+		"finalizers": types.ListType{ElemType: types.StringType},
+	},
+}
 
 // Read is the framework equivalent of dataSourceKubernetesNamespaceV1Read in
 // data_source_kubernetes_namespace_v1.go. The Kubernetes API call is identical;
@@ -51,12 +60,21 @@ func (d *NamespaceV1DataSource) Read(
 	}
 	name := model.Metadata[0].Name.ValueString()
 
-	// 4. Call the Kubernetes API — identical to the SDKv2 implementation.
+	// 4. Set the synthetic ID now — before the API call — so that if the namespace
+	//    is not found (404) we still persist the requested name as the ID.
+	//    This matches the SDKv2 behaviour where d.SetId(metadata.Name) is called
+	//    before conn.CoreV1().Namespaces().Get(...).
+	model.ID = types.StringValue(name)
+
+	// 5. Call the Kubernetes API — identical to the SDKv2 implementation.
 	ns, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Preserve the SDKv2 behaviour: silently return without error when
-			// the namespace is not found, leaving state empty.
+			// the namespace is not found. Write the partial model (ID set, metadata
+			// name set from config, spec empty) so that id and name are accessible.
+			model.Spec = types.ListValueMust(specElementType, []attr.Value{})
+			resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 			return
 		}
 		resp.Diagnostics.AddError(
@@ -66,12 +84,9 @@ func (d *NamespaceV1DataSource) Read(
 		return
 	}
 
-	// 5. Map the API response onto our model.
+	// 6. Map the API response onto our model.
 	//    In SDKv2 this was done via d.Set("metadata", flattenMetadataFields(...))
 	//    and d.Set("spec", flattenNamespaceV1Spec(...)).
-
-	// Set the synthetic id — equivalent to d.SetId(metadata.Name) in SDKv2.
-	model.ID = types.StringValue(ns.Name)
 
 	// Populate metadata fields from the live ObjectMeta.
 	annotations := make(map[string]types.String, len(ns.Annotations))
@@ -93,18 +108,27 @@ func (d *NamespaceV1DataSource) Read(
 		},
 	}
 
-	// Populate the spec block — equivalent to flattenNamespaceV1Spec in SDKv2.
+	// Populate the spec attribute — equivalent to flattenNamespaceV1Spec in SDKv2.
+	// spec is a ListNestedAttribute so we build a types.List of object values.
 	if len(ns.Spec.Finalizers) > 0 {
-		finalizers := make([]types.String, len(ns.Spec.Finalizers))
+		finVals := make([]attr.Value, len(ns.Spec.Finalizers))
 		for i, f := range ns.Spec.Finalizers {
-			finalizers[i] = types.StringValue(string(f))
+			finVals[i] = types.StringValue(string(f))
 		}
-		model.Spec = []NamespaceSpecModel{{Finalizers: finalizers}}
+		finList := types.ListValueMust(types.StringType, finVals)
+		specObj, diags := types.ObjectValue(specElementType.AttrTypes, map[string]attr.Value{
+			"finalizers": finList,
+		})
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		model.Spec = types.ListValueMust(specElementType, []attr.Value{specObj})
 	} else {
-		model.Spec = []NamespaceSpecModel{}
+		model.Spec = types.ListValueMust(specElementType, []attr.Value{})
 	}
 
-	// 6. Write the populated model into state.
+	// 7. Write the populated model into state.
 	//    In SDKv2 this happened implicitly through d.Set calls.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }

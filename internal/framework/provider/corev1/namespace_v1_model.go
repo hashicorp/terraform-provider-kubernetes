@@ -8,10 +8,14 @@ import "github.com/hashicorp/terraform-plugin-framework/types"
 // NamespaceV1DataSourceModel is the top-level state model for the
 // kubernetes_namespace_v1 data source. Every field maps 1:1 to a schema
 // attribute or block via the tfsdk struct tag.
+//
+// Spec is types.List (not []NamespaceSpecModel) because spec is a
+// ListNestedAttribute in the schema. Framework decodes ListNestedAttribute
+// into types.List; slices are used for ListNestedBlock only.
 type NamespaceV1DataSourceModel struct {
-	ID       types.String         `tfsdk:"id"`
-	Metadata []MetadataModel      `tfsdk:"metadata"`
-	Spec     []NamespaceSpecModel `tfsdk:"spec"`
+	ID       types.String    `tfsdk:"id"`
+	Metadata []MetadataModel `tfsdk:"metadata"`
+	Spec     types.List      `tfsdk:"spec"`
 }
 
 // MetadataModel mirrors the fields produced by metadataSchema("namespace", false)
@@ -27,8 +31,8 @@ type MetadataModel struct {
 	UID             types.String            `tfsdk:"uid"`
 }
 
-// NamespaceSpecModel mirrors the spec block from the SDKv2 data source schema.
-// finalizers is a list of strings populated by the Kubernetes API.
+// NamespaceSpecModel is the element type for the spec ListNestedAttribute.
+// Framework uses it as the element object type when encoding/decoding types.List.
 type NamespaceSpecModel struct {
 	Finalizers []types.String `tfsdk:"finalizers"`
 }

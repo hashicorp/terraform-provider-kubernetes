@@ -20,9 +20,13 @@ import (
 // Key translation decisions:
 //   - metadata uses ListNestedBlock (not SingleNestedAttribute) to preserve the
 //     SDKv2 state path metadata[0].* — required for state compatibility.
-//   - metadata.name is Required; all other metadata fields are Computed because
-//     they are populated by the Kubernetes API, not by the user.
-//   - spec uses ListNestedBlock with Computed:true for the same reason.
+//   - metadata.name is Required; all other metadata fields are Computed so the
+//     API fills them in, but annotations and labels are also Optional to preserve
+//     the SDKv2 contract (users were allowed to set them in config).
+//   - spec uses ListNestedAttribute (not ListNestedBlock) with Computed:true so
+//     that Terraform can plan the collection as unknown on a deferred read and
+//     avoid a "Provider produced inconsistent final plan" error when name is
+//     unknown at plan time.
 func (d *NamespaceV1DataSource) Schema(
 	_ context.Context,
 	_ datasource.SchemaRequest,
@@ -33,6 +37,24 @@ func (d *NamespaceV1DataSource) Schema(
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+			},
+			// spec is a ListNestedAttribute (not a Block) so that Terraform can plan it
+			// as unknown when the data source has unknown inputs and the read is deferred
+			// to apply time. A ListNestedBlock would be planned as a known empty list,
+			// causing an "inconsistent final plan" error when Read populates finalizers.
+			// This mirrors the SDKv2 schema where spec is a Computed TypeList.
+			"spec": schema.ListNestedAttribute{
+				Description: "Spec defines the behavior of the Namespace.",
+				Computed:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"finalizers": schema.ListAttribute{
+							Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
+							ElementType: types.StringType,
+							Computed:    true,
+						},
+					},
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -51,10 +73,14 @@ func (d *NamespaceV1DataSource) Schema(
 							Description: "Name of the namespace, must be unique. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
 							Required:    true,
 						},
-						// All remaining fields are filled in by the API after the read.
+						// annotations and labels are Optional+Computed: Optional preserves
+						// the SDKv2 contract (users could set them in config); Computed lets
+						// the API overwrite them on every read, which is the correct
+						// data-source behaviour.
 						"annotations": schema.MapAttribute{
 							Description: "An unstructured key value map stored with the namespace that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/",
 							ElementType: types.StringType,
+							Optional:    true,
 							Computed:    true,
 						},
 						"generation": schema.Int64Attribute{
@@ -64,6 +90,7 @@ func (d *NamespaceV1DataSource) Schema(
 						"labels": schema.MapAttribute{
 							Description: "Map of string keys and values that can be used to organize and categorize the namespace. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/",
 							ElementType: types.StringType,
+							Optional:    true,
 							Computed:    true,
 						},
 						"resource_version": schema.StringAttribute{
@@ -72,19 +99,6 @@ func (d *NamespaceV1DataSource) Schema(
 						},
 						"uid": schema.StringAttribute{
 							Description: "The unique in time and space value for this namespace. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids",
-							Computed:    true,
-						},
-					},
-				},
-			},
-			// spec mirrors the spec block in dataSourceKubernetesNamespaceV1.
-			"spec": schema.ListNestedBlock{
-				Description: "Spec defines the behavior of the Namespace.",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"finalizers": schema.ListAttribute{
-							Description: "Finalizers is an opaque list of values that must be empty to permanently remove object from storage.",
-							ElementType: types.StringType,
 							Computed:    true,
 						},
 					},

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	api "k8s.io/api/core/v1"
+	storageapi "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +27,7 @@ func resourceKubernetesPersistentVolumeClaimV1(deprecationMessage string) *schem
 	// so adding it on top of the standard PVC fields which are re-usable for other resources.
 	fields["wait_until_bound"] = &schema.Schema{
 		Type:        schema.TypeBool,
-		Description: "Whether to wait for the claim to reach `Bound` state (to find volume in which to claim the space)",
+		Description: "Whether to wait for the claim to reach `Bound` state (to find volume in which to claim the space). The wait is skipped when the claim's storage class has `volume_binding_mode` set to `WaitForFirstConsumer`, since such a claim is only bound once a pod uses it.",
 		Optional:    true,
 		Default:     true,
 	}
@@ -114,7 +115,18 @@ func resourceKubernetesPersistentVolumeClaimV1Create(ctx context.Context, d *sch
 	d.SetId(buildId(out.ObjectMeta))
 	name := out.ObjectMeta.Name
 
-	if d.Get("wait_until_bound").(bool) {
+	waitUntilBound := d.Get("wait_until_bound").(bool)
+	if waitUntilBound && out.Spec.VolumeName == "" && out.Spec.StorageClassName != nil && *out.Spec.StorageClassName != "" {
+		sc, err := conn.StorageV1().StorageClasses().Get(ctx, *out.Spec.StorageClassName, metav1.GetOptions{})
+		if err != nil {
+			log.Printf("[WARN] Could not read storage class %q of persistent volume claim %s: %v", *out.Spec.StorageClassName, name, err)
+		} else if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode == storageapi.VolumeBindingWaitForFirstConsumer {
+			log.Printf("[INFO] Not waiting for persistent volume claim %s to be bound: storage class %q binds on first consumer", name, sc.Name)
+			waitUntilBound = false
+		}
+	}
+
+	if waitUntilBound {
 		stateConf := &retry.StateChangeConf{
 			Target:  []string{"Bound"},
 			Pending: []string{"Pending"},

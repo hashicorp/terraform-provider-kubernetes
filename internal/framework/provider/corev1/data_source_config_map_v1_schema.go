@@ -54,6 +54,10 @@ func (d *ConfigMapV1DataSource) Schema(_ context.Context, _ datasource.SchemaReq
 			},
 		},
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Description: "The unique ID for this terraform resource",
+				Computed:    true,
+			},
 			"data": schema.MapAttribute{
 				Description: "A map of the config map data.",
 				ElementType: types.StringType,

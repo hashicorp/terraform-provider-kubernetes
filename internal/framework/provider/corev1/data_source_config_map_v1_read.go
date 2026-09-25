@@ -31,6 +31,7 @@ func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadReq
 	if namespace == "" {
 		namespace = "default"
 	}
+	model.Metadata[0].Namespace = types.StringValue(namespace)
 
 	conn, err := d.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
@@ -92,6 +93,8 @@ func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadReq
 		immutable = *cfgMap.Immutable
 	}
 	model.Immutable = types.BoolValue(immutable)
+
+	model.ID = types.StringValue(namespace + "/" + name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }

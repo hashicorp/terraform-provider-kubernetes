@@ -28,7 +28,7 @@ func TestAccKubernetesDataSourceConfigMapV1_migration(t *testing.T) {
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "~> 2.0",
+						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccKubernetesDataSourceConfigMapV1_migrationConfig(name),
@@ -45,7 +45,22 @@ func TestAccKubernetesDataSourceConfigMapV1_migration(t *testing.T) {
 				ExpectNonEmptyPlan:       false,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.namespace", "default"),
 					resource.TestCheckResourceAttr(dataSourceName, "data.one", "first"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "id"),
+				),
+			},
+			{
+				// Step 3: verify convergence after the Framework apply.
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccKubernetesDataSourceConfigMapV1_migrationConfig(name),
+				PlanOnly:                 true,
+				ExpectNonEmptyPlan:       false,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(dataSourceName, "metadata.0.namespace", "default"),
+					resource.TestCheckResourceAttr(dataSourceName, "data.one", "first"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "id"),
 				),
 			},
 		},

@@ -8,6 +8,7 @@ import (
 )
 
 type ConfigMapV1Model struct {
+	ID         types.String             `tfsdk:"id"`
 	Metadata   []ConfigMapMetadataModel `tfsdk:"metadata"`
 	Data       types.Map                `tfsdk:"data"`
 	BinaryData types.Map                `tfsdk:"binary_data"`

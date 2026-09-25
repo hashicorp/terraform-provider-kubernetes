@@ -553,6 +553,28 @@ func TestAccKubernetesPersistentVolumeClaimV1_volumeMode(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPersistentVolumeClaimV1_waitForFirstConsumer(t *testing.T) {
+	var conf corev1.PersistentVolumeClaim
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_persistent_volume_claim_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPersistentVolumeClaimV1Config_waitForFirstConsumer(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPersistentVolumeClaimV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "wait_until_bound", "true"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.storage_class_name", name),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesPersistentVolumeClaimV1Destroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
@@ -1227,4 +1249,30 @@ func testAccCheckKubernetesPersistentVolumeClaimV1ForceNew(old, new *corev1.Pers
 		}
 		return nil
 	}
+}
+
+func testAccKubernetesPersistentVolumeClaimV1Config_waitForFirstConsumer(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+  storage_provisioner = "kubernetes.io/no-provisioner"
+  volume_binding_mode = "WaitForFirstConsumer"
+}
+
+resource "kubernetes_persistent_volume_claim_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
+    resources {
+      requests = {
+        storage = "1Gi"
+      }
+    }
+  }
+}
+`, name)
 }

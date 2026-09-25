@@ -92,7 +92,7 @@ func (n *NamespaceV1) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, NamespaceResourceIdentity{
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue(namespaceAPIVersion),
 		Kind:       types.StringValue(namespaceKind),
 		Name:       types.StringValue(out.Name),
@@ -183,7 +183,7 @@ func (n *NamespaceV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, NamespaceResourceIdentity{
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue(namespaceAPIVersion),
 		Kind:       types.StringValue(namespaceKind),
 		Name:       types.StringValue(namespace.Name),
@@ -202,13 +202,7 @@ func (n *NamespaceV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// metadata.name and generate_name are RequiresReplace, so the only server-side change
-	// Update can see is to labels or annotations; anything else is a replacement Terraform
-	// performs before reaching here. It can still be called with nothing to send, when the
-	// change was to an attribute Kubernetes does not store — see below.
-	//
-	// [0] is safe on both: the block is validated with SizeAtLeast(1)/SizeAtMost(1),
-	// and prior state came from an apply that passed the same validation.
+	// Only labels and annotations are mutable in Kubernetes; provider-only changes need no patch.
 	planMeta, stateMeta := plan.Metadata[0], state.Metadata[0]
 
 	ops := common.MetadataPatchOps("/metadata/", stateMeta, planMeta)
@@ -225,21 +219,26 @@ func (n *NamespaceV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	data, err := ops.MarshalJSON()
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to marshal update json patch", err.Error())
-		return
+	var out *v1.Namespace
+	if len(ops) == 0 {
+		out, err = conn.CoreV1().Namespaces().Get(ctx, plan.ID.ValueString(), metav1.GetOptions{})
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to read namespace during update", err.Error())
+			return
+		}
+	} else {
+		data, err := ops.MarshalJSON()
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to marshal update json patch", err.Error())
+			return
+		}
+		out, err = conn.CoreV1().Namespaces().Patch(ctx, plan.ID.ValueString(), k8Types.JSONPatchType, data, metav1.PatchOptions{})
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to execute jsonPatch update", err.Error())
+			return
+		}
 	}
-	out, err := conn.CoreV1().Namespaces().Patch(ctx, plan.ID.ValueString(), k8Types.JSONPatchType, data, metav1.PatchOptions{})
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to execute jsonPatch update", err.Error())
-		return
-	}
-	// As in Create, state is the plan with only server-assigned fields overwritten.
-	// The response is NOT filtered and folded back in: labels and annotations are
-	// Optional but not Computed, so their planned values must be returned
-	// byte-for-byte or Terraform rejects the apply. Filtering happens only in Read,
-	// which has no plan to be consistent with.
+	// Preserve planned maps; only server-assigned fields come from the response.
 	plan.ID = types.StringValue(out.Name)
 	plan.Metadata[0].Name = types.StringValue(out.Name)
 	plan.Metadata[0].UID = types.StringValue(string(out.UID))
@@ -248,7 +247,7 @@ func (n *NamespaceV1) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, NamespaceResourceIdentity{
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue(namespaceAPIVersion),
 		Kind:       types.StringValue(namespaceKind),
 		Name:       types.StringValue(out.Name),

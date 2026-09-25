@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +30,95 @@ func tfMap(kv map[string]string) types.Map {
 	return types.MapValueMust(types.StringType, elems)
 }
 
+func TestBaseMetadataConversion(t *testing.T) {
+	ctx := context.Background()
+	apiMetadata := metav1.ObjectMeta{
+		Name: "example", Namespace: "team", GenerateName: "example-",
+		Generation: 3, ResourceVersion: "42", UID: "uid-1",
+		Labels:      map[string]string{"env": "test"},
+		Annotations: map[string]string{"owner": "team"},
+	}
+	metadata, diags := FlattenBaseMetadata(ctx, apiMetadata, MetadataBase{}, nil, nil)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	want := MetadataBase{
+		Name: types.StringValue("example"), Generation: types.Int64Value(3),
+		ResourceVersion: types.StringValue("42"), UID: types.StringValue("uid-1"),
+		Labels:      tfMap(apiMetadata.Labels),
+		Annotations: tfMap(apiMetadata.Annotations),
+	}
+	if !reflect.DeepEqual(metadata, want) {
+		t.Fatalf("metadata = %#v, want %#v", metadata, want)
+	}
+	state := tfsdk.State{Schema: schema.Schema{
+		Attributes: MetadataSchema("thing", false).NestedObject.Attributes,
+	}}
+	if diags := state.Set(ctx, metadata); diags.HasError() {
+		t.Fatalf("base schema rejected flattened metadata: %v", diags)
+	}
+	expanded, diags := ExpandBaseMetadata(ctx, metadata)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	wantExpanded := metav1.ObjectMeta{
+		Name: "example", Labels: apiMetadata.Labels, Annotations: apiMetadata.Annotations,
+	}
+	if !reflect.DeepEqual(expanded, wantExpanded) {
+		t.Errorf("ObjectMeta = %#v, want %#v", expanded, wantExpanded)
+	}
+}
+
+func TestExpandMetadataStringStates(t *testing.T) {
+	for _, testCase := range []struct {
+		name  string
+		value types.String
+		want  string
+	}{
+		{"null", types.StringNull(), ""},
+		{"unknown", types.StringUnknown(), ""},
+		{"empty", types.StringValue(""), ""},
+		{"known", types.StringValue("example"), "example"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			input := []NamespacedMetadataModel{{
+				MetadataModel: MetadataModel{
+					MetadataBase: MetadataBase{Name: testCase.value},
+					GenerateName: testCase.value,
+				},
+				Namespace: testCase.value,
+			}}
+			expanded, diags := ExpandNamespacedMetadata(context.Background(), input)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			payload, err := json.Marshal(expanded)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(payload, &fields); err != nil {
+				t.Fatal(err)
+			}
+			for field, value := range map[string]types.String{
+				"name": input[0].Name, "generateName": input[0].GenerateName, "namespace": input[0].Namespace,
+			} {
+				if !value.Equal(testCase.value) {
+					t.Errorf("expansion changed Terraform %s: %v", field, value)
+				}
+				encoded, exists := fields[field]
+				if testCase.want == "" {
+					if exists {
+						t.Errorf("%s must be omitted from JSON, got %s", field, encoded)
+					}
+				} else if string(encoded) != `"`+testCase.want+`"` {
+					t.Errorf("%s = %s, want %q", field, encoded, testCase.want)
+				}
+			}
+		})
+	}
+}
+
 func TestExpandMetadata(t *testing.T) {
 	t.Parallel()
 
@@ -43,20 +134,20 @@ func TestExpandMetadata(t *testing.T) {
 		},
 		{
 			name: "name only, no labels or annotations",
-			in: []MetadataModel{{
+			in: []MetadataModel{{MetadataBase: MetadataBase{
 				Name:        types.StringValue("demo"),
 				Labels:      tfMap(nil),
 				Annotations: tfMap(nil),
-			}},
+			}}},
 			want: metav1.ObjectMeta{Name: "demo"},
 		},
 		{
 			name: "labels, no annotations",
-			in: []MetadataModel{{
+			in: []MetadataModel{{MetadataBase: MetadataBase{
 				Name:        types.StringValue("demo"),
 				Labels:      tfMap(map[string]string{"env": "demo"}),
 				Annotations: tfMap(nil),
-			}},
+			}}},
 			want: metav1.ObjectMeta{
 				Name:   "demo",
 				Labels: map[string]string{"env": "demo"},
@@ -64,11 +155,11 @@ func TestExpandMetadata(t *testing.T) {
 		},
 		{
 			name: "annotations, no labels",
-			in: []MetadataModel{{
+			in: []MetadataModel{{MetadataBase: MetadataBase{
 				Name:        types.StringValue("demo"),
 				Labels:      tfMap(nil),
 				Annotations: tfMap(map[string]string{"owner": "platform"}),
-			}},
+			}}},
 			want: metav1.ObjectMeta{
 				Name:        "demo",
 				Annotations: map[string]string{"owner": "platform"},
@@ -76,11 +167,11 @@ func TestExpandMetadata(t *testing.T) {
 		},
 		{
 			name: "labels and annotations",
-			in: []MetadataModel{{
+			in: []MetadataModel{{MetadataBase: MetadataBase{
 				Name:        types.StringValue("demo"),
 				Labels:      tfMap(map[string]string{"env": "demo", "team": "infra"}),
 				Annotations: tfMap(map[string]string{"owner": "platform"}),
-			}},
+			}}},
 			want: metav1.ObjectMeta{
 				Name:        "demo",
 				Labels:      map[string]string{"env": "demo", "team": "infra"},
@@ -90,20 +181,24 @@ func TestExpandMetadata(t *testing.T) {
 		{
 			name: "generate_name and no name",
 			in: []MetadataModel{{
-				Name:         types.StringNull(),
+				MetadataBase: MetadataBase{
+					Name:        types.StringNull(),
+					Labels:      tfMap(nil),
+					Annotations: tfMap(nil),
+				},
 				GenerateName: types.StringValue("demo-"),
-				Labels:       tfMap(nil),
-				Annotations:  tfMap(nil),
 			}},
 			want: metav1.ObjectMeta{GenerateName: "demo-"},
 		},
 		{
 			name: "unknown name is not written through",
 			in: []MetadataModel{{
-				Name:         types.StringUnknown(),
+				MetadataBase: MetadataBase{
+					Name:        types.StringUnknown(),
+					Labels:      tfMap(nil),
+					Annotations: tfMap(nil),
+				},
 				GenerateName: types.StringValue("demo-"),
-				Labels:       tfMap(nil),
-				Annotations:  tfMap(nil),
 			}},
 			want: metav1.ObjectMeta{GenerateName: "demo-"},
 		},
@@ -113,11 +208,11 @@ func TestExpandMetadata(t *testing.T) {
 			// non-nil-but-empty here. ObjectMeta tags both as omitempty, so the two
 			// serialise identically and the API cannot tell them apart.
 			name: "explicit empty maps produce empty, not nil",
-			in: []MetadataModel{{
+			in: []MetadataModel{{MetadataBase: MetadataBase{
 				Name:        types.StringValue("demo"),
 				Labels:      tfMap(map[string]string{}),
 				Annotations: tfMap(map[string]string{}),
-			}},
+			}}},
 			want: metav1.ObjectMeta{
 				Name:        "demo",
 				Labels:      map[string]string{},
@@ -192,7 +287,7 @@ func TestFlattenMetadata(t *testing.T) {
 		{
 			name:            "no annotations and no labels",
 			obj:             metav1.ObjectMeta{Name: "ns"},
-			prior:           []MetadataModel{{Labels: tfMap(nil), Annotations: tfMap(nil)}},
+			prior:           []MetadataModel{{MetadataBase: MetadataBase{Labels: tfMap(nil), Annotations: tfMap(nil)}}},
 			wantLabels:      tfMap(nil),
 			wantAnnotations: tfMap(nil),
 		},
@@ -203,7 +298,7 @@ func TestFlattenMetadata(t *testing.T) {
 				Labels:      map[string]string{internalLabel: "ns"},
 				Annotations: map[string]string{lastApplied: "{}"},
 			},
-			prior:           []MetadataModel{{Labels: tfMap(nil), Annotations: tfMap(nil)}},
+			prior:           []MetadataModel{{MetadataBase: MetadataBase{Labels: tfMap(nil), Annotations: tfMap(nil)}}},
 			wantLabels:      tfMap(nil),
 			wantAnnotations: tfMap(nil),
 		},
@@ -215,10 +310,10 @@ func TestFlattenMetadata(t *testing.T) {
 				Labels:      map[string]string{internalLabel: "ns", "other.kubernetes.io/x": "y"},
 				Annotations: map[string]string{lastApplied: "{}", "extra.kubernetes.io/a": "b"},
 			},
-			prior: []MetadataModel{{
+			prior: []MetadataModel{{MetadataBase: MetadataBase{
 				Labels:      tfMap(map[string]string{internalLabel: "ns"}),
 				Annotations: tfMap(map[string]string{lastApplied: "{}"}),
-			}},
+			}}},
 			wantLabels:      tfMap(map[string]string{internalLabel: "ns"}),
 			wantAnnotations: tfMap(map[string]string{lastApplied: "{}"}),
 		},
@@ -231,10 +326,10 @@ func TestFlattenMetadata(t *testing.T) {
 				Labels:      map[string]string{"env": "demo", internalLabel: "ns", "owner": "platform"},
 				Annotations: map[string]string{"team": "infra", lastApplied: "{}"},
 			},
-			prior: []MetadataModel{{
+			prior: []MetadataModel{{MetadataBase: MetadataBase{
 				Labels:      tfMap(map[string]string{"env": "demo"}),
 				Annotations: tfMap(map[string]string{"team": "infra"}),
-			}},
+			}}},
 			wantLabels:      tfMap(map[string]string{"env": "demo", "owner": "platform"}),
 			wantAnnotations: tfMap(map[string]string{"team": "infra"}),
 		},
@@ -245,7 +340,7 @@ func TestFlattenMetadata(t *testing.T) {
 				Labels:      map[string]string{"app.kubernetes.io/name": "web", internalLabel: "ns"},
 				Annotations: map[string]string{"service.beta.kubernetes.io/aws-load-balancer-type": "nlb"},
 			},
-			prior:           []MetadataModel{{Labels: tfMap(nil), Annotations: tfMap(nil)}},
+			prior:           []MetadataModel{{MetadataBase: MetadataBase{Labels: tfMap(nil), Annotations: tfMap(nil)}}},
 			wantLabels:      tfMap(map[string]string{"app.kubernetes.io/name": "web"}),
 			wantAnnotations: tfMap(map[string]string{"service.beta.kubernetes.io/aws-load-balancer-type": "nlb"}),
 		},
@@ -256,10 +351,10 @@ func TestFlattenMetadata(t *testing.T) {
 				Labels:      map[string]string{"env": "demo", "cost-center": "x"},
 				Annotations: map[string]string{"keep": "1", "drop-me": "2"},
 			},
-			prior: []MetadataModel{{
+			prior: []MetadataModel{{MetadataBase: MetadataBase{
 				Labels:      tfMap(map[string]string{"env": "demo"}),
 				Annotations: tfMap(map[string]string{"keep": "1"}),
-			}},
+			}}},
 			ignoreLabels:      []string{"cost-center"},
 			ignoreAnnotations: []string{"drop-me"},
 			wantLabels:        tfMap(map[string]string{"env": "demo"}),
@@ -272,10 +367,10 @@ func TestFlattenMetadata(t *testing.T) {
 				Name:   "ns",
 				Labels: map[string]string{"env": "demo", "cost-center": "x"},
 			},
-			prior: []MetadataModel{{
+			prior: []MetadataModel{{MetadataBase: MetadataBase{
 				Labels:      tfMap(map[string]string{"env": "demo", "cost-center": "x"}),
 				Annotations: tfMap(nil),
-			}},
+			}}},
 			ignoreLabels:    []string{"cost-center"},
 			wantLabels:      tfMap(map[string]string{"env": "demo", "cost-center": "x"}),
 			wantAnnotations: tfMap(nil),
@@ -288,10 +383,10 @@ func TestFlattenMetadata(t *testing.T) {
 				Name:   "ns",
 				Labels: map[string]string{"env": "demo", "environment": "prod"},
 			},
-			prior: []MetadataModel{{
+			prior: []MetadataModel{{MetadataBase: MetadataBase{
 				Labels:      tfMap(map[string]string{"env": "demo"}),
 				Annotations: tfMap(nil),
-			}},
+			}}},
 			ignoreLabels:    []string{"env"},
 			wantLabels:      tfMap(map[string]string{"env": "demo"}),
 			wantAnnotations: tfMap(nil),
@@ -304,7 +399,7 @@ func TestFlattenMetadata(t *testing.T) {
 				Name:   "ns",
 				Labels: map[string]string{"owner": "platform", internalLabel: "ns"},
 			},
-			prior:           []MetadataModel{{Labels: tfMap(nil), Annotations: tfMap(nil)}},
+			prior:           []MetadataModel{{MetadataBase: MetadataBase{Labels: tfMap(nil), Annotations: tfMap(nil)}}},
 			wantLabels:      tfMap(map[string]string{"owner": "platform"}),
 			wantAnnotations: tfMap(nil),
 		},
@@ -316,10 +411,10 @@ func TestFlattenMetadata(t *testing.T) {
 				Name:   "ns",
 				Labels: map[string]string{internalLabel: "ns"},
 			},
-			prior: []MetadataModel{{
+			prior: []MetadataModel{{MetadataBase: MetadataBase{
 				Labels:      tfMap(map[string]string{}),
 				Annotations: tfMap(nil),
-			}},
+			}}},
 			wantLabels:      tfMap(map[string]string{}),
 			wantAnnotations: tfMap(nil),
 		},
@@ -468,8 +563,8 @@ func TestMetadataPatchOps(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			state := MetadataModel{Annotations: tc.stateAnn, Labels: tc.stateLbl}
-			plan := MetadataModel{Annotations: tc.planAnn, Labels: tc.planLbl}
+			state := MetadataModel{MetadataBase: MetadataBase{Annotations: tc.stateAnn, Labels: tc.stateLbl}}
+			plan := MetadataModel{MetadataBase: MetadataBase{Annotations: tc.planAnn, Labels: tc.planLbl}}
 
 			result, err := MetadataPatchOps("/metadata/", state, plan).MarshalJSON()
 			if err != nil {
@@ -489,5 +584,173 @@ func TestMetadataPatchOps(t *testing.T) {
 				t.Errorf("patch = %s, expected %s", result, tc.expected)
 			}
 		})
+	}
+}
+
+func TestNamespacedSchemaMatchesClusterScoped(t *testing.T) {
+	for _, generatable := range []bool{true, false} {
+		clusterAttrs := MetadataSchema("thing", generatable).NestedObject.Attributes
+		nsAttrs := NamespacedMetadataSchema("thing", generatable).NestedObject.Attributes
+
+		if _, ok := nsAttrs["namespace"]; !ok {
+			t.Fatalf("generatable=%v: namespaced schema is missing the namespace attribute", generatable)
+		}
+		if len(nsAttrs) != len(clusterAttrs)+1 {
+			t.Fatalf("generatable=%v: namespaced schema has %d attributes, want %d (cluster-scoped + namespace)",
+				generatable, len(nsAttrs), len(clusterAttrs)+1)
+		}
+		for name := range clusterAttrs {
+			if _, ok := nsAttrs[name]; !ok {
+				t.Errorf("generatable=%v: namespaced schema is missing %q", generatable, name)
+			}
+		}
+
+		// generate_name is a variant of both, so it must track the flag on both paths.
+		_, clusterHas := clusterAttrs["generate_name"]
+		_, nsHas := nsAttrs["generate_name"]
+		if clusterHas != generatable || nsHas != generatable {
+			t.Errorf("generatable=%v: generate_name present cluster=%v namespaced=%v, want %v on both",
+				generatable, clusterHas, nsHas, generatable)
+		}
+	}
+}
+
+func TestMetadataModelsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	for _, variant := range []struct {
+		name  string
+		block schema.ListNestedBlock
+		model any
+	}{
+		{"base", MetadataSchema("thing", false), new(MetadataBase)},
+		{"generated", MetadataSchema("thing", true), new(MetadataModel)},
+		{"namespaced", NamespacedMetadataSchema("thing", true), new(NamespacedMetadataModel)},
+	} {
+		for mapName, mapValue := range map[string]types.Map{
+			"populated": tfMap(map[string]string{"owner": "test"}),
+			"null":      tfMap(nil),
+			"empty":     tfMap(map[string]string{}),
+			"unknown":   types.MapUnknown(types.StringType),
+		} {
+			t.Run(variant.name+"/"+mapName, func(t *testing.T) {
+				values := map[string]attr.Value{
+					"annotations":      mapValue,
+					"generation":       types.Int64Value(7),
+					"labels":           mapValue,
+					"name":             types.StringValue("thing"),
+					"resource_version": types.StringValue("123"),
+					"uid":              types.StringValue("uid-1"),
+				}
+				attributes := variant.block.NestedObject.Attributes
+				if _, exists := attributes["generate_name"]; exists {
+					values["generate_name"] = types.StringValue("prefix-")
+				}
+				if _, exists := attributes["namespace"]; exists {
+					values["namespace"] = types.StringValue("team-a")
+				}
+				attributeTypes := make(map[string]attr.Type, len(attributes))
+				for name, attribute := range attributes {
+					attributeTypes[name] = attribute.GetType()
+				}
+				object, diags := types.ObjectValue(attributeTypes, values)
+				if diags.HasError() {
+					t.Fatal(diags)
+				}
+				raw, err := object.ToTerraformValue(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				state := tfsdk.State{Schema: schema.Schema{Attributes: attributes}, Raw: raw}
+				if diags := state.Get(ctx, variant.model); diags.HasError() {
+					t.Fatalf("decode: %v", diags)
+				}
+				if diags := state.Set(ctx, variant.model); diags.HasError() {
+					t.Fatalf("encode: %v", diags)
+				}
+				if !state.Raw.Equal(raw) {
+					t.Errorf("round trip = %s, want %s", state.Raw, raw)
+				}
+			})
+		}
+	}
+}
+
+func TestExpandNamespacedMetadata(t *testing.T) {
+	testCases := []struct {
+		name  string
+		in    []NamespacedMetadataModel
+		want  string
+		wantN string
+	}{
+		{"empty input", nil, "", ""},
+		{
+			"namespace set",
+			[]NamespacedMetadataModel{{MetadataModel: MetadataModel{MetadataBase: MetadataBase{Name: types.StringValue("r")}}, Namespace: types.StringValue("team-a")}},
+			"r", "team-a",
+		},
+		{
+			"namespace null leaves ObjectMeta.Namespace empty",
+			[]NamespacedMetadataModel{{MetadataModel: MetadataModel{MetadataBase: MetadataBase{Name: types.StringValue("r")}}, Namespace: types.StringNull()}},
+			"r", "",
+		},
+		{
+			"namespace unknown leaves ObjectMeta.Namespace empty",
+			[]NamespacedMetadataModel{{MetadataModel: MetadataModel{MetadataBase: MetadataBase{Name: types.StringValue("r")}}, Namespace: types.StringUnknown()}},
+			"r", "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, diags := ExpandNamespacedMetadata(context.Background(), tc.in)
+			if diags.HasError() {
+				t.Fatalf("unexpected diagnostics: %v", diags)
+			}
+			if got.Name != tc.want {
+				t.Errorf("Name = %q, want %q", got.Name, tc.want)
+			}
+			if got.Namespace != tc.wantN {
+				t.Errorf("Namespace = %q, want %q", got.Namespace, tc.wantN)
+			}
+		})
+	}
+}
+
+func TestFlattenNamespacedMetadata(t *testing.T) {
+	objMeta := metav1.ObjectMeta{
+		Name:      "r",
+		Namespace: "team-a",
+		Labels: map[string]string{
+			"env":                         "demo",
+			"kubernetes.io/metadata.name": "team-a", // internal: filtered unless declared
+		},
+	}
+
+	got, diags := FlattenNamespacedMetadata(context.Background(), objMeta, nil, nil, nil)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d elements, want 1", len(got))
+	}
+	if got[0].Namespace != types.StringValue("team-a") {
+		t.Errorf("Namespace = %v, want %q", got[0].Namespace, "team-a")
+	}
+	// Filtering is FlattenMetadata's job; this asserts the delegation actually happened.
+	if !got[0].Labels.Equal(tfMap(map[string]string{"env": "demo"})) {
+		t.Errorf("Labels = %v, want the internal key filtered out", got[0].Labels)
+	}
+
+	prior := []NamespacedMetadataModel{{MetadataModel: MetadataModel{MetadataBase: MetadataBase{
+		Labels:      tfMap(map[string]string{"kubernetes.io/metadata.name": "team-a"}),
+		Annotations: tfMap(map[string]string{}),
+	}}}}
+	objMeta.Annotations = map[string]string{"ignored": "external"}
+	got, diags = FlattenNamespacedMetadata(context.Background(), objMeta, prior, []string{"ignored"}, []string{"env"})
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !got[0].Labels.Equal(prior[0].Labels) || !got[0].Annotations.Equal(prior[0].Annotations) {
+		t.Errorf("prior metadata or ignore filters were not preserved: %v", got[0])
 	}
 }

@@ -5,10 +5,17 @@ package corev1_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -21,6 +28,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
@@ -28,9 +37,140 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const namespaceResourceName = "kubernetes_namespace_v1.test"
+
+type namespaceUpdateClientsets struct {
+	kubernetes.KubeClientsets
+	client *k8sclient.Clientset
+}
+
+func (clients namespaceUpdateClientsets) MainClientset() (*k8sclient.Clientset, error) {
+	return clients.client, nil
+}
+
+func (namespaceUpdateClientsets) GetIgnoreAnnotations() []string { return nil }
+func (namespaceUpdateClientsets) GetIgnoreLabels() []string      { return nil }
+
+func TestNamespaceUpdateNoPatch(t *testing.T) {
+	ctx := context.Background()
+	for _, testCase := range []struct {
+		name       string
+		labels     types.Map
+		wait       bool
+		wantMethod string
+		getFails   bool
+	}{
+		{"provider-only setting", types.MapNull(types.StringType), true, http.MethodGet, false},
+		{"null to empty map", types.MapValueMust(types.StringType, nil), false, http.MethodGet, false},
+		{"metadata change", types.MapValueMust(types.StringType, map[string]attr.Value{"env": types.StringValue("test")}), false, http.MethodPatch, false},
+		{"GET error preserves state", types.MapNull(types.StringType), true, http.MethodGet, true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			requests := make(chan string, 4)
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				requests <- request.Method
+				if request.URL.Path != "/api/v1/namespaces/test" {
+					t.Errorf("unexpected request path: %s", request.URL.Path)
+				}
+				if request.Method != testCase.wantMethod || testCase.getFails {
+					http.Error(writer, "request forbidden", http.StatusForbidden)
+					return
+				}
+				writer.Header().Set("Content-Type", "application/json")
+				if err := json.NewEncoder(writer).Encode(&k8sv1.Namespace{
+					TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test", UID: "uid-1", ResourceVersion: "20", Generation: 2,
+						Labels:      map[string]string{"external": "label"},
+						Annotations: map[string]string{"external": "annotation"},
+					},
+				}); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer server.Close()
+			client, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+			if err != nil {
+				t.Fatal(err)
+			}
+			namespace := &corev1.NamespaceV1{SDKv2Meta: func() any {
+				return namespaceUpdateClientsets{client: client}
+			}}
+			var schemaResponse fwresource.SchemaResponse
+			namespace.Schema(ctx, fwresource.SchemaRequest{}, &schemaResponse)
+			if schemaResponse.Diagnostics.HasError() {
+				t.Fatal(schemaResponse.Diagnostics)
+			}
+			raw := tfprotov6.RawState{JSON: []byte(`{
+				"id":"test", "wait_for_default_service_account":false, "timeouts":null,
+				"metadata":[{"annotations":null,"labels":null,"generate_name":null,
+				"name":"test","generation":1,"resource_version":"10","uid":"uid-1"}]
+			}`)}
+			stateValue, err := raw.Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
+			if err != nil {
+				t.Fatal(err)
+			}
+			state := tfsdk.State{Schema: schemaResponse.Schema, Raw: stateValue}
+			var planModel corev1.NamespaceV1Model
+			if diags := state.Get(ctx, &planModel); diags.HasError() {
+				t.Fatal(diags)
+			}
+			planModel.WaitForDefaultServiceAccount = types.BoolValue(testCase.wait)
+			planModel.Metadata[0].Labels = testCase.labels
+			planModel.Metadata[0].Generation = types.Int64Unknown()
+			planModel.Metadata[0].ResourceVersion = types.StringUnknown()
+			planState := tfsdk.State{Schema: schemaResponse.Schema}
+			if diags := planState.Set(ctx, &planModel); diags.HasError() {
+				t.Fatal(diags)
+			}
+			identity := &tfsdk.ResourceIdentity{Schema: common.IdentitySchema()}
+			wantIdentity := common.ResourceIdentity{
+				APIVersion: types.StringValue("v1"), Kind: types.StringValue("Namespace"), Name: types.StringValue("test"),
+			}
+			if diags := identity.Set(ctx, wantIdentity); diags.HasError() {
+				t.Fatal(diags)
+			}
+			response := fwresource.UpdateResponse{State: state, Identity: identity}
+			namespace.Update(ctx, fwresource.UpdateRequest{
+				State: state,
+				Plan:  tfsdk.Plan{Schema: schemaResponse.Schema, Raw: planState.Raw},
+			}, &response)
+			if len(requests) != 1 {
+				t.Fatalf("made %d requests, want 1", len(requests))
+			}
+			if method := <-requests; method != testCase.wantMethod {
+				t.Errorf("request method = %s, want %s", method, testCase.wantMethod)
+			}
+			if testCase.getFails {
+				if !response.Diagnostics.HasError() || !response.State.Raw.Equal(state.Raw) {
+					t.Fatalf("GET failure must preserve state and return diagnostics: %v", response.Diagnostics)
+				}
+				return
+			}
+			if response.Diagnostics.HasError() {
+				t.Fatal(response.Diagnostics)
+			}
+			planModel.Metadata[0].Generation = types.Int64Value(2)
+			planModel.Metadata[0].ResourceVersion = types.StringValue("20")
+			if diags := planState.Set(ctx, &planModel); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !response.State.Raw.Equal(planState.Raw) {
+				t.Errorf("state = %s, want planned values with resolved computed fields: %s", response.State.Raw, planState.Raw)
+			}
+			var gotIdentity common.ResourceIdentity
+			if diags := response.Identity.Get(ctx, &gotIdentity); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if gotIdentity != wantIdentity {
+				t.Errorf("identity = %v, want %v", gotIdentity, wantIdentity)
+			}
+		})
+	}
+}
 
 // mainClientset resolves a Kubernetes client the same way the resource does at runtime:
 // through the SDKv2 provider meta that the framework provider is handed at configure

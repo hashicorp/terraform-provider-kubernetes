@@ -18,9 +18,3 @@ type NamespaceV1Model struct {
 	Metadata []common.MetadataModel `tfsdk:"metadata"`
 	Timeouts timeouts.Value         `tfsdk:"timeouts"`
 }
-
-type NamespaceResourceIdentity struct {
-	APIVersion types.String `tfsdk:"api_version"`
-	Kind       types.String `tfsdk:"kind"`
-	Name       types.String `tfsdk:"name"`
-}

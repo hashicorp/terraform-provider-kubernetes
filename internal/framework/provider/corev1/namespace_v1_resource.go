@@ -203,10 +203,12 @@ func (n *NamespaceV1) MoveState(ctx context.Context) []resource.StateMover {
 
 				var diags diag.Diagnostics
 				meta := common.MetadataModel{
-					Name:            types.StringValue(m.Name),
-					Generation:      types.Int64Value(m.Generation),
-					ResourceVersion: types.StringValue(m.ResourceVersion),
-					UID:             types.StringValue(m.UID),
+					MetadataBase: common.MetadataBase{
+						Name:            types.StringValue(m.Name),
+						Generation:      types.Int64Value(m.Generation),
+						ResourceVersion: types.StringValue(m.ResourceVersion),
+						UID:             types.StringValue(m.UID),
+					},
 				}
 				meta.Labels, diags = sdkv2MapToFramework(ctx, m.Labels)
 				resp.Diagnostics.Append(diags...)
@@ -242,7 +244,7 @@ func (n *NamespaceV1) MoveState(ctx context.Context) []resource.StateMover {
 				// Build the identity rather than decoding req.SourceIdentity: api_version and
 				// kind are constants, and the name is in the state just moved. This also
 				// covers state written before identity existed.
-				resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, NamespaceResourceIdentity{
+				resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, common.ResourceIdentity{
 					APIVersion: types.StringValue(namespaceAPIVersion),
 					Kind:       types.StringValue(namespaceKind),
 					Name:       types.StringValue(m.Name),
@@ -301,60 +303,11 @@ func sdkv2TimeoutsToFramework(attrTypes map[string]attr.Type, t *sdkv2NamespaceT
 
 // UpgradeIdentity implements [resource.ResourceWithUpgradeIdentity].
 //
-// The identity schema is version 1, matching SDKv2's resourceIdentitySchemaNonNamespaced().
-// Terraform asks for an upgrade whenever the identity stored in state carries a lower
-// version, and the framework returns "Unable to Upgrade Resource Identity" unless the
-// resource provides one. SDKv2 never needed this: its gRPC server upgrades identity
-// generically, decoding the raw identity and re-coercing it against the current schema
-// (helper/schema/grpc_provider.go:113).
-//
-// The attributes never changed, so this is a pass-through carrying the name across and
-// restating the two constants.
-//
-// PriorSchema is deliberately not set. The framework decodes RawIdentity against it
-// *before* calling this function and fails with "RawState had no JSON or flatmap data set"
-// when there is nothing to decode — which is the normal case for a resource that was
-// deferred and so never had an identity written. Reading RawIdentity directly lets that
-// case be handled here instead, guarded the same way SDKv2 guards it ("no resource
-// identity provided to upgrade", grpc_provider.go:146).
+// SDKv2 never needed this: its gRPC server upgrades identity generically. The framework
+// requires every resource to supply one, and Terraform asks for an upgrade whenever the
+// stored version differs from the declared one — including for objects created before
+// 2.38.0, which carry version 0 and no identity at all. common.UpgradeIdentity handles
+// both cases; see its documentation for why an all-null result is required for the second.
 func (n *NamespaceV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
-	return map[int64]resource.IdentityUpgrader{
-		0: {
-			IdentityUpgrader: func(ctx context.Context, req resource.UpgradeIdentityRequest, resp *resource.UpgradeIdentityResponse) {
-				if resp.Identity == nil {
-					return
-				}
-
-				// Pre-2.38.0 state has no identity. The framework rejects an empty
-				// response, so return an object with every attribute null.
-				// Framework v1.16.1+ lets Read populate it; setting any field here
-				// would trigger "Unexpected Identity Change" when Read adds the name.
-				if req.RawIdentity == nil || len(req.RawIdentity.JSON) == 0 {
-					resp.Diagnostics.Append(resp.Identity.Set(ctx, NamespaceResourceIdentity{
-						APIVersion: types.StringNull(),
-						Kind:       types.StringNull(),
-						Name:       types.StringNull(),
-					})...)
-					return
-				}
-
-				var prior struct {
-					Name string `json:"name"`
-				}
-				if err := json.Unmarshal(req.RawIdentity.JSON, &prior); err != nil {
-					resp.Diagnostics.AddError(
-						"Unable to upgrade kubernetes_namespace_v1 identity",
-						fmt.Sprintf("Could not decode the stored identity: %s", err),
-					)
-					return
-				}
-
-				resp.Diagnostics.Append(resp.Identity.Set(ctx, NamespaceResourceIdentity{
-					APIVersion: types.StringValue(namespaceAPIVersion),
-					Kind:       types.StringValue(namespaceKind),
-					Name:       types.StringValue(prior.Name),
-				})...)
-			},
-		},
-	}
+	return common.UpgradeIdentity(namespaceKind, namespaceAPIVersion)
 }

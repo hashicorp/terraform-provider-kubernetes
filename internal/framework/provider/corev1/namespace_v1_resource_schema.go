@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -45,22 +44,10 @@ func (n *NamespaceV1) Schema(ctx context.Context, req resource.SchemaRequest, re
 }
 
 // IdentitySchema implements [resource.ResourceWithIdentity].
+//
+// common.IdentitySchema reproduces resourceIdentitySchemaNonNamespaced() from
+// kubernetes/resourceidentity.go, including Version 1 — state written by the SDKv2
+// resource records identity schema version 1, and declaring 0 asks Terraform to downgrade.
 func (n *NamespaceV1) IdentitySchema(ctx context.Context, req resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = identityschema.Schema{
-		// Must match resourceIdentitySchemaNonNamespaced() in
-		// kubernetes/resourceidentity.go. State written by the SDKv2 resource records
-		// identity schema version 1; declaring 0 here asks Terraform to downgrade.
-		Version: 1,
-		Attributes: map[string]identityschema.Attribute{
-			"name": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"kind": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"api_version": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-		},
-	}
+	resp.IdentitySchema = common.IdentitySchema()
 }

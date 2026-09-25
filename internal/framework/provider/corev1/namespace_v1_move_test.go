@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	k8sv1 "k8s.io/api/core/v1"
 )
@@ -320,7 +321,7 @@ func TestNamespaceMoveState(t *testing.T) {
 				t.Errorf("moved state mismatch\nwant: %s\ngot:  %s", expected, response.TargetState.Raw)
 			}
 			if response.TargetIdentity != nil {
-				var identity corev1.NamespaceResourceIdentity
+				var identity common.ResourceIdentity
 				if diags := response.TargetIdentity.Get(ctx, &identity); diags.HasError() {
 					t.Fatal(diags)
 				}

@@ -72,7 +72,8 @@ errcheck:
 	@./scripts/errcheck.sh
 
 test: fmtcheck vet
-	go test $(TEST) -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout=30s
+	env TF_ACC= go test $(TEST) -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout=30s
+	env TF_ACC= go test $(PROVIDER_FRAMEWORK_DIR) -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout=30s
 
 testacc: fmtcheck vet
 	TF_ACC=1 go test $(TEST) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h

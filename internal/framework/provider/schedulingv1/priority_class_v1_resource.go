@@ -5,6 +5,7 @@ package schedulingv1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var (
@@ -20,6 +22,7 @@ var (
 	_ resource.ResourceWithImportState      = (*PriorityClassV1)(nil)
 	_ resource.ResourceWithIdentity         = (*PriorityClassV1)(nil)
 	_ resource.ResourceWithMoveState        = (*PriorityClassV1)(nil)
+	_ resource.ResourceWithUpgradeIdentity  = (*PriorityClassV1)(nil)
 	_ resource.ResourceWithConfigValidators = (*PriorityClassV1)(nil)
 )
 
@@ -44,6 +47,7 @@ func (r *PriorityClassV1) Configure(_ context.Context, req resource.ConfigureReq
 
 func (r *PriorityClassV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = identityschema.Schema{
+		Version: 1,
 		Attributes: map[string]identityschema.Attribute{
 			"api_version": identityschema.StringAttribute{
 				RequiredForImport: true,
@@ -53,6 +57,44 @@ func (r *PriorityClassV1) IdentitySchema(_ context.Context, _ resource.IdentityS
 			},
 			"name": identityschema.StringAttribute{
 				RequiredForImport: true,
+			},
+		},
+	}
+}
+
+// UpgradeIdentity handles version-0 identity from provider versions before 2.38.0
+// (e.g. v2.37.1) where identity_schema_version was 0 or identity was absent.
+func (r *PriorityClassV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
+	return map[int64]resource.IdentityUpgrader{
+		0: {
+			IdentityUpgrader: func(ctx context.Context, req resource.UpgradeIdentityRequest, resp *resource.UpgradeIdentityResponse) {
+				if resp.Identity == nil {
+					return
+				}
+
+				identity := PriorityClassIdentityModel{
+					Name:       types.StringNull(),
+					Kind:       types.StringNull(),
+					APIVersion: types.StringNull(),
+				}
+
+				if req.RawIdentity != nil && len(req.RawIdentity.JSON) > 0 {
+					var prior struct {
+						Name string `json:"name"`
+					}
+					if err := json.Unmarshal(req.RawIdentity.JSON, &prior); err != nil {
+						resp.Diagnostics.AddError(
+							"Unable to upgrade resource identity",
+							fmt.Sprintf("Could not decode the stored identity: %s", err),
+						)
+						return
+					}
+					identity.Name = types.StringValue(prior.Name)
+					identity.Kind = types.StringValue("PriorityClass")
+					identity.APIVersion = types.StringValue("scheduling.k8s.io/v1")
+				}
+
+				resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 			},
 		},
 	}

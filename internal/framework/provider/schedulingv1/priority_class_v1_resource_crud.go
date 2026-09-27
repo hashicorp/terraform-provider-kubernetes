@@ -129,6 +129,23 @@ func (r *PriorityClassV1) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if resp.Identity == nil {
+		return
+	}
+
+	var currentIdentity PriorityClassIdentityModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If current identity is null/empty (e.g. during an upgrade from a provider version
+	// that did not write resource identity into state), do not write a new identity during Read.
+	// Terraform checks identity during refresh, and mutating identity during Read triggers
+	// "Unexpected Identity Change".
+	if currentIdentity.Name.IsNull() || currentIdentity.Name.ValueString() == "" {
+		return
+	}
 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, PriorityClassIdentityModel{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),

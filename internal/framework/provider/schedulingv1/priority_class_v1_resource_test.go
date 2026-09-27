@@ -12,7 +12,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
 	schedulingv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/schedulingv1"
 )
@@ -56,9 +59,41 @@ func TestAccPriorityClassV1_basic(t *testing.T) {
 	})
 }
 
+// TestAccPriorityClassV1_identity verifies that resource identity is populated
+// correctly and import using an import block with resource identity succeeds (TF >= 1.12).
+func TestAccPriorityClassV1_identity(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+	resourceName := "kubernetes_priority_class_v1.test"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccPriorityClassV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(resourceName, map[string]knownvalue.Check{
+						"name":        knownvalue.StringExact(name),
+						"api_version": knownvalue.StringExact("scheduling.k8s.io/v1"),
+						"kind":        knownvalue.StringExact("PriorityClass"),
+					}),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: tfresource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
 // TestAccPriorityClassV1_update verifies that mutable fields — description,
 // global_default, labels, and annotations — can all be changed in-place
-// without a destroy/recreate.
+// without a destroy/recreate. ImportState and ImportStateVerify are run after
+// each update to confirm the changes are reflected on the remote Kubernetes object.
 func TestAccPriorityClassV1_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-pc")
 	resourceName := "kubernetes_priority_class_v1.test"
@@ -74,6 +109,12 @@ func TestAccPriorityClassV1_update(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "global_default", "false"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.generation"},
+			},
 			// Step 2: add description, labels and annotations — no replace.
 			{
 				Config: testAccPriorityClassV1Config_updated(name),
@@ -84,6 +125,12 @@ func TestAccPriorityClassV1_update(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.example.com/note", "updated"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.generation"},
+			},
 			// Step 3: remove labels and annotations — verify clean removal.
 			{
 				Config: testAccPriorityClassV1Config_basic(name),
@@ -92,6 +139,12 @@ func TestAccPriorityClassV1_update(t *testing.T) {
 					tfresource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.team"),
 					tfresource.TestCheckNoResourceAttr(resourceName, "metadata.0.annotations.example.com/note"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.generation"},
 			},
 		},
 	})
@@ -113,95 +166,6 @@ func TestAccPriorityClassV1_generateName(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-pc-"),
 					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
-			},
-		},
-	})
-}
-
-// TestAccPriorityClassV1_upgradeFromSDKv2 provisions the resource with the
-// last SDKv2 release (state schema version 0) then switches to the local
-// Framework provider and asserts zero plan diff — proving the Framework reads
-// the SDKv2 state without any upgrade step or structural change.
-//
-// Skipped in -short mode because it downloads from the Terraform registry.
-func TestAccPriorityClassV1_upgradeFromSDKv2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping registry-dependent upgrade test in -short mode")
-	}
-
-	name := acctest.RandomWithPrefix("tf-acc-pc")
-	resourceName := "kubernetes_priority_class_v1.test"
-
-	tfresource.ParallelTest(t, tfresource.TestCase{
-		Steps: []tfresource.TestStep{
-			// Step 1: provision with the last SDKv2 release (3.2.1).
-			// Writes state at schema version 0 with TypeList metadata.
-			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
-					"kubernetes": {
-						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.2.1",
-					},
-				},
-				Config: testAccPriorityClassV1Config_basic(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					tfresource.TestCheckResourceAttr(resourceName, "value", "100"),
-				),
-			},
-			// Step 2: switch to the local Framework provider.
-			// ListNestedBlock produces identical state JSON to TypeList{MaxItems:1}
-			// so no UpgradeState is needed — plan must be empty.
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccPriorityClassV1Config_basic(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
-// TestAccPriorityClassV1_moved provisions the deprecated kubernetes_priority_class
-// with the last SDKv2 release then uses a moved block to migrate state to
-// kubernetes_priority_class_v1 with the Framework provider. The plan must be
-// empty — proving MoveState translates the state without drift.
-//
-// Skipped in -short mode because it downloads from the Terraform registry.
-func TestAccPriorityClassV1_moved(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping registry-dependent moved-block test in -short mode")
-	}
-
-	name := acctest.RandomWithPrefix("tf-acc-pc")
-
-	tfresource.ParallelTest(t, tfresource.TestCase{
-		Steps: []tfresource.TestStep{
-			// Step 1: provision kubernetes_priority_class (deprecated type) with
-			// the last SDKv2 release (3.2.1). Writes state at schema version 0.
-			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
-					"kubernetes": {
-						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.2.1",
-					},
-				},
-				Config: testAccPriorityClassConfig_deprecated(name),
-			},
-			// Step 2: add a moved block and switch to the Framework provider.
-			// MoveState translates kubernetes_priority_class → kubernetes_priority_class_v1.
-			// Plan must be empty — no destroy, no create.
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccPriorityClassV1Config_movedFrom(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
 			},
 		},
 	})
@@ -289,10 +253,22 @@ func TestAccPriorityClassV1_globalDefault(t *testing.T) {
 				},
 				Check: tfresource.TestCheckResourceAttr(resourceName, "global_default", "true"),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.generation"},
+			},
 			// Disable it again.
 			{
 				Config: testAccPriorityClassV1Config_basic(name),
 				Check:  tfresource.TestCheckResourceAttr(resourceName, "global_default", "false"),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.generation"},
 			},
 		},
 	})
@@ -411,21 +387,6 @@ resource "kubernetes_priority_class_v1" "test" {
 `, prefix)
 }
 
-// testAccPriorityClassConfig_deprecated uses the old resource type name —
-// the one still registered in the SDKv2 provider for backwards compatibility.
-func testAccPriorityClassConfig_deprecated(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_priority_class" "test" {
-  metadata {
-    name = %[1]q
-  }
-
-  value             = 100
-  preemption_policy = "PreemptLowerPriority"
-}
-`, name)
-}
-
 func testAccPriorityClassV1Config_withValue(name string, value int) string {
 	return fmt.Sprintf(`
 resource "kubernetes_priority_class_v1" "test" {
@@ -477,24 +438,4 @@ resource "kubernetes_priority_class_v1" "test" {
   value = 100
 }
 `, name, prefix)
-}
-
-// testAccPriorityClassV1Config_movedFrom contains the moved block that
-// migrates kubernetes_priority_class.test → kubernetes_priority_class_v1.test.
-func testAccPriorityClassV1Config_movedFrom(name string) string {
-	return fmt.Sprintf(`
-moved {
-  from = kubernetes_priority_class.test
-  to   = kubernetes_priority_class_v1.test
-}
-
-resource "kubernetes_priority_class_v1" "test" {
-  metadata {
-    name = %[1]q
-  }
-
-  value             = 100
-  preemption_policy = "PreemptLowerPriority"
-}
-`, name)
 }

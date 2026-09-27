@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -66,8 +67,8 @@ func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resour
 
 	// Guard against state move requests from a different provider — e.g., a
 	// fork or a test provider that happens to use the same type name.
-	const canonicalProvider = "registry.terraform.io/hashicorp/kubernetes"
-	if req.SourceProviderAddress != "" && req.SourceProviderAddress != canonicalProvider {
+	const sdkv2ProviderAddressSuffix = "/hashicorp/kubernetes"
+	if req.SourceProviderAddress != "" && !strings.HasSuffix(req.SourceProviderAddress, sdkv2ProviderAddressSuffix) {
 		return
 	}
 
@@ -137,4 +138,13 @@ func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resour
 	}
 
 	resp.Diagnostics.Append(resp.TargetState.Set(ctx, &moved)...)
+	if resp.Diagnostics.HasError() || resp.TargetIdentity == nil {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, PriorityClassIdentityModel{
+		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
+		Kind:       types.StringValue("PriorityClass"),
+		Name:       types.StringValue(m.Name),
+	})...)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	rbacv1api "k8s.io/api/rbac/v1"
@@ -30,8 +31,6 @@ func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *res
 		return
 	}
 
-	planMeta := plan.Metadata[0]
-
 	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
 	conn, err := meta.MainClientset()
 	if err != nil {
@@ -39,9 +38,10 @@ func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *res
 		return
 	}
 
-	metadata := expandMetadata(planMeta)
-	rules, diags := expandPolicyRules(ctx, plan.Rule)
+	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
+	rules, ruleDiags := expandPolicyRules(ctx, plan.Rule)
+	resp.Diagnostics.Append(ruleDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -60,16 +60,16 @@ func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *res
 		return
 	}
 
-	plan.ID = types.StringValue(buildID(out.Namespace, out.Name))
-	plan.Metadata = []MetadataModel{*flattenMetadata(out.ObjectMeta, planMeta, meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())}
-
+	populateIDAndMetadataFromResponse(&plan, out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
-	identity := RoleIdentityModel{
-		APIVersion: types.StringValue(rbacAPIVersion),
-		Kind:       types.StringValue(roleKind),
-		Namespace:  types.StringValue(out.Namespace),
-		Name:       types.StringValue(out.Name),
+	identity := common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(rbacAPIVersion),
+			Kind:       types.StringValue(roleKind),
+			Name:       types.StringValue(out.Name),
+		},
+		Namespace: types.StringValue(out.Namespace),
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
@@ -88,7 +88,7 @@ func (r *Role) Read(ctx context.Context, req resource.ReadRequest, resp *resourc
 		return
 	}
 
-	namespace, name, err := parseID(state.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("invalid resource ID", err.Error())
 		return
@@ -107,13 +107,13 @@ func (r *Role) Read(ctx context.Context, req resource.ReadRequest, resp *resourc
 		return
 	}
 
-	var currentMeta MetadataModel
-	if len(state.Metadata) > 0 {
-		currentMeta = state.Metadata[0]
-	}
+	filters := r.SDKv2Meta().(kubernetes.MetadataFilters)
+	currentMeta := state.Metadata
 
-	state.ID = types.StringValue(buildID(role.Namespace, role.Name))
-	state.Metadata = []MetadataModel{*flattenMetadata(role.ObjectMeta, currentMeta, meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())}
+	state.ID = types.StringValue(kubernetes.BuildId(role.ObjectMeta))
+	flattened, metaDiags := common.FlattenNamespacedMetadata(ctx, role.ObjectMeta, currentMeta, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	resp.Diagnostics.Append(metaDiags...)
+	state.Metadata = flattened
 
 	rules, diags := flattenPolicyRules(role.Rules)
 	resp.Diagnostics.Append(diags...)
@@ -124,11 +124,13 @@ func (r *Role) Read(ctx context.Context, req resource.ReadRequest, resp *resourc
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
-	identity := RoleIdentityModel{
-		APIVersion: types.StringValue(rbacAPIVersion),
-		Kind:       types.StringValue(roleKind),
-		Namespace:  types.StringValue(role.Namespace),
-		Name:       types.StringValue(role.Name),
+	identity := common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(rbacAPIVersion),
+			Kind:       types.StringValue(roleKind),
+			Name:       types.StringValue(role.Name),
+		},
+		Namespace: types.StringValue(role.Namespace),
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
@@ -148,19 +150,19 @@ func (r *Role) Update(ctx context.Context, req resource.UpdateRequest, resp *res
 		return
 	}
 
-	namespace, name, err := parseID(state.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("invalid resource ID", err.Error())
 		return
 	}
 
 	planMeta := plan.Metadata[0]
-	var stateMeta MetadataModel
+	var stateMeta common.NamespacedMetadataModel
 	if len(state.Metadata) > 0 {
 		stateMeta = state.Metadata[0]
 	}
 
-	ops := buildMetadataPatch(planMeta, stateMeta)
+	ops := common.MetadataPatchOps("/metadata/", stateMeta.MetadataModel, planMeta.MetadataModel)
 
 	if !rulesEqual(plan.Rule, state.Rule) {
 		rules, diags := expandPolicyRules(ctx, plan.Rule)
@@ -184,8 +186,7 @@ func (r *Role) Update(ctx context.Context, req resource.UpdateRequest, resp *res
 			)
 			return
 		}
-		plan.ID = types.StringValue(buildID(out.Namespace, out.Name))
-		plan.Metadata = []MetadataModel{*flattenMetadata(out.ObjectMeta, planMeta, meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())}
+		populateIDAndMetadataFromResponse(&plan, out)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
 	}
@@ -205,10 +206,22 @@ func (r *Role) Update(ctx context.Context, req resource.UpdateRequest, resp *res
 		return
 	}
 
-	plan.ID = types.StringValue(buildID(out.Namespace, out.Name))
-	plan.Metadata = []MetadataModel{*flattenMetadata(out.ObjectMeta, planMeta, meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())}
-
+	populateIDAndMetadataFromResponse(&plan, out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func populateIDAndMetadataFromResponse(plan *RoleModel, out *rbacv1api.Role) {
+	// State is built from the plan, with only server-assigned fields overwritten from the
+	// response. Labels and annotations are deliberately left as the plan wrote them: the
+	// API server and admission webhooks add keys of their own, and echoing those back
+	// would not match the plan, which Terraform rejects as an inconsistent result.
+	// Filtering them is Read's job.
+	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
+	plan.Metadata[0].Name = types.StringValue(out.Name)
+	plan.Metadata[0].Namespace = types.StringValue(out.Namespace)
+	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 }
 
 func (r *Role) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -224,7 +237,7 @@ func (r *Role) Delete(ctx context.Context, req resource.DeleteRequest, resp *res
 		return
 	}
 
-	namespace, name, err := parseID(state.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("invalid resource ID", err.Error())
 		return
@@ -245,7 +258,7 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 
 	if req.ID != "" {
 		var err error
-		namespace, name, err = parseID(req.ID)
+		namespace, name, err = kubernetes.IdParts(req.ID)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"invalid import ID",
@@ -254,7 +267,7 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 			return
 		}
 	} else {
-		var identityData RoleIdentityModel
+		var identityData common.NamespacedResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -273,6 +286,7 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 	}
 
 	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
+	filters := r.SDKv2Meta().(kubernetes.MetadataFilters)
 	conn, err := meta.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
@@ -289,8 +303,10 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 	}
 
 	var state RoleModel
-	state.ID = types.StringValue(buildID(role.Namespace, role.Name))
-	state.Metadata = []MetadataModel{*flattenMetadata(role.ObjectMeta, MetadataModel{}, meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())}
+	state.ID = types.StringValue(kubernetes.BuildId(role.ObjectMeta))
+	metadata, metaDiags := common.FlattenNamespacedMetadata(ctx, role.ObjectMeta, nil, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	resp.Diagnostics.Append(metaDiags...)
+	state.Metadata = metadata
 
 	rules, diags := flattenPolicyRules(role.Rules)
 	resp.Diagnostics.Append(diags...)
@@ -301,11 +317,13 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
-	identity := RoleIdentityModel{
-		APIVersion: types.StringValue(rbacAPIVersion),
-		Kind:       types.StringValue(roleKind),
-		Namespace:  types.StringValue(role.Namespace),
-		Name:       types.StringValue(role.Name),
+	identity := common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(rbacAPIVersion),
+			Kind:       types.StringValue(roleKind),
+			Name:       types.StringValue(role.Name),
+		},
+		Namespace: types.StringValue(role.Namespace),
 	}
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }

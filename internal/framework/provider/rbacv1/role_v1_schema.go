@@ -10,13 +10,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setdefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 func (r *Role) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -32,16 +32,10 @@ func (r *Role) Schema(_ context.Context, _ resource.SchemaRequest, resp *resourc
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"metadata": schema.ListNestedBlock{
-				MarkdownDescription: "(Required) Standard role's metadata. Exactly one `metadata` block must be present. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: metadataSchemaAttributes(),
-				},
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeBetween(1, 1),
-				},
-			},
+			// Role is namespaced, so this is the namespaced variant. common reproduces
+			// SDKv2's namespacedMetadataSchema("role", true) attribute for attribute,
+			// including the descriptions, so the generated docs do not churn.
+			"metadata": common.MetadataSchemaRBAC("role", true, true),
 			"rule": schema.ListNestedBlock{
 				MarkdownDescription: "(Required) Rule defining a set of permissions for the role. At least one `rule` block must be present.",
 				NestedObject: schema.NestedBlockObject{
@@ -52,77 +46,6 @@ func (r *Role) Schema(_ context.Context, _ resource.SchemaRequest, resp *resourc
 					listvalidator.SizeAtLeast(1),
 				},
 			},
-		},
-	}
-}
-
-func metadataSchemaAttributes() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"annotations": schema.MapAttribute{
-			MarkdownDescription: "An unstructured key value map stored with the role that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations",
-			ElementType:         types.StringType,
-			Optional:            true,
-			Computed:            true,
-			Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
-			Validators: []validator.Map{
-				annotationKeyValidator{},
-			},
-		},
-		"generate_name": schema.StringAttribute{
-			MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-			Optional:            true,
-			Computed:            true,
-			Default:             stringdefault.StaticString(""),
-			Validators: []validator.String{
-				rbacNameValidator{},
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-			},
-		},
-		"generation": schema.Int64Attribute{
-			MarkdownDescription: "A sequence number representing a specific generation of the desired state. Populated by the system. Read-only.",
-			Computed:            true,
-		},
-		"labels": schema.MapAttribute{
-			MarkdownDescription: "Map of string keys and values that can be used to organize and categorize (scope and select) the role. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels",
-			ElementType:         types.StringType,
-			Optional:            true,
-			Computed:            true,
-			Default:             mapdefault.StaticValue(types.MapValueMust(types.StringType, map[string]attr.Value{})),
-			Validators: []validator.Map{
-				labelValidator{},
-			},
-		},
-		"name": schema.StringAttribute{
-			MarkdownDescription: "Name of the role, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
-			Optional:            true,
-			Computed:            true,
-			Validators: []validator.String{
-				rbacNameValidator{},
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
-		"namespace": schema.StringAttribute{
-			MarkdownDescription: "Namespace defines the space within which name of the role must be unique.",
-			Optional:            true,
-			Computed:            true,
-			Default:             stringdefault.StaticString("default"),
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
-		"resource_version": schema.StringAttribute{
-			MarkdownDescription: "An opaque value that represents the internal version of this role that can be used by clients to determine when the role has changed. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
-			Computed:            true,
-		},
-		"uid": schema.StringAttribute{
-			MarkdownDescription: "The unique in time and space value for this role. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids",
-			Computed:            true,
 		},
 	}
 }

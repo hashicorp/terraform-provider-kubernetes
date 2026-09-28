@@ -151,7 +151,7 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 
 func RemoveInternalKeys(m map[string]string, d map[string]interface{}) {
 	for k := range m {
-		if isInternalKey(k) && !isKeyInMap(k, d) {
+		if IsInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
@@ -161,7 +161,7 @@ func RemoveInternalKeys(m map[string]string, d map[string]interface{}) {
 // In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
 func RemoveKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) {
 	for k := range m {
-		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
+		if IgnoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
@@ -172,7 +172,7 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 	return ok
 }
 
-func isInternalKey(annotationKey string) bool {
+func IsInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
 	if err != nil {
 		return false
@@ -200,9 +200,9 @@ func isInternalKey(annotationKey string) bool {
 	return false
 }
 
-// ignoreKey reports whether the Kubernetes metadata(annotations and labels) key contains
+// IgnoreKey reports whether the Kubernetes metadata(annotations and labels) key contains
 // any match of the regular expression pattern from the expressions slice.
-func ignoreKey(key string, expressions []string) bool {
+func IgnoreKey(key string, expressions []string) bool {
 	for _, e := range expressions {
 		if ok, _ := regexp.MatchString(e, key); ok {
 			return true

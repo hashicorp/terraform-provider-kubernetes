@@ -309,7 +309,7 @@ func testAccCheckKubernetesLimitRangeExists(n string, obj *api.LimitRange) resou
 }
 
 func testAccKubernetesLimitRangeV1Config_empty(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -318,14 +318,14 @@ func testAccKubernetesLimitRangeV1Config_empty(name string) string {
 resource "kubernetes_limit_range_v1" "test" {
   metadata {
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 }
 `, name)
 }
 
 func testAccKubernetesLimitRangeV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -344,7 +344,7 @@ resource "kubernetes_limit_range_v1" "test" {
     }
 
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {
@@ -367,7 +367,7 @@ resource "kubernetes_limit_range_v1" "test" {
 }
 
 func testAccKubernetesLimitRangeV1Config_metaModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -387,7 +387,7 @@ resource "kubernetes_limit_range_v1" "test" {
     }
 
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {
@@ -410,7 +410,7 @@ resource "kubernetes_limit_range_v1" "test" {
 }
 
 func testAccKubernetesLimitRangeV1Config_specModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -419,7 +419,7 @@ func testAccKubernetesLimitRangeV1Config_specModified(name string) string {
 resource "kubernetes_limit_range_v1" "test" {
   metadata {
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {
@@ -446,7 +446,7 @@ resource "kubernetes_limit_range_v1" "test" {
 }
 
 func testAccKubernetesLimitRangeV1Config_generatedName(prefix, ns string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -455,7 +455,7 @@ func testAccKubernetesLimitRangeV1Config_generatedName(prefix, ns string) string
 resource "kubernetes_limit_range_v1" "test" {
   metadata {
     generate_name = %[2]q
-    namespace     = kubernetes_namespace_v1.test.metadata.0.name
+    namespace     = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {
@@ -468,7 +468,7 @@ resource "kubernetes_limit_range_v1" "test" {
 }
 
 func testAccKubernetesLimitRangeV1Config_typeChange(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -477,7 +477,7 @@ func testAccKubernetesLimitRangeV1Config_typeChange(name string) string {
 resource "kubernetes_limit_range_v1" "test" {
   metadata {
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {
@@ -495,7 +495,7 @@ resource "kubernetes_limit_range_v1" "test" {
 }
 
 func testAccKubernetesLimitRangeV1Config_typeChangeModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -504,7 +504,7 @@ func testAccKubernetesLimitRangeV1Config_typeChangeModified(name string) string 
 resource "kubernetes_limit_range_v1" "test" {
   metadata {
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {
@@ -522,7 +522,7 @@ resource "kubernetes_limit_range_v1" "test" {
 }
 
 func testAccKubernetesLimitRangeV1Config_multipleLimits(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -531,7 +531,7 @@ func testAccKubernetesLimitRangeV1Config_multipleLimits(name string) string {
 resource "kubernetes_limit_range_v1" "test" {
   metadata {
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {

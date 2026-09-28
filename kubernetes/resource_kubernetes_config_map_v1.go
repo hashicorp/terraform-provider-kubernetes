@@ -160,13 +160,13 @@ func resourceKubernetesConfigMapV1Update(ctx context.Context, d *schema.Resource
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
 	if d.HasChange("binary_data") {
 		oldV, newV := d.GetChange("binary_data")
-		diffOps := diffStringMap("/binaryData/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
+		diffOps := DiffStringMap("/binaryData/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
 		ops = append(ops, diffOps...)
 	}
 
 	if d.HasChange("data") {
 		oldV, newV := d.GetChange("data")
-		diffOps := diffStringMap("/data/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
+		diffOps := DiffStringMap("/data/", oldV.(map[string]interface{}), newV.(map[string]interface{}))
 		ops = append(ops, diffOps...)
 	}
 

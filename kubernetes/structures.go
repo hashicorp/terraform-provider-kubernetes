@@ -72,12 +72,12 @@ func patchMetadata(keyPrefix, pathPrefix string, d *schema.ResourceData) PatchOp
 	ops := make([]PatchOperation, 0)
 	if d.HasChange(keyPrefix + "annotations") {
 		oldV, newV := d.GetChange(keyPrefix + "annotations")
-		diffOps := diffStringMap(pathPrefix+"annotations", oldV.(map[string]interface{}), newV.(map[string]interface{}))
+		diffOps := DiffStringMap(pathPrefix+"annotations", oldV.(map[string]interface{}), newV.(map[string]interface{}))
 		ops = append(ops, diffOps...)
 	}
 	if d.HasChange(keyPrefix + "labels") {
 		oldV, newV := d.GetChange(keyPrefix + "labels")
-		diffOps := diffStringMap(pathPrefix+"labels", oldV.(map[string]interface{}), newV.(map[string]interface{}))
+		diffOps := DiffStringMap(pathPrefix+"labels", oldV.(map[string]interface{}), newV.(map[string]interface{}))
 		ops = append(ops, diffOps...)
 	}
 	return ops
@@ -139,17 +139,17 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 	metadataLabels := d.Get("metadata.0.labels").(map[string]interface{})
 
 	ignoreAnnotations := providerMeta.(providerMetadata).IgnoreAnnotations
-	removeInternalKeys(meta.Annotations, metadataAnnotations)
-	removeKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
+	RemoveInternalKeys(meta.Annotations, metadataAnnotations)
+	RemoveKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
 
 	ignoreLabels := providerMeta.(providerMetadata).IgnoreLabels
-	removeInternalKeys(meta.Labels, metadataLabels)
-	removeKeys(meta.Labels, metadataLabels, ignoreLabels)
+	RemoveInternalKeys(meta.Labels, metadataLabels)
+	RemoveKeys(meta.Labels, metadataLabels, ignoreLabels)
 
 	return flattenMetadataFields(meta)
 }
 
-func removeInternalKeys(m map[string]string, d map[string]interface{}) {
+func RemoveInternalKeys(m map[string]string, d map[string]interface{}) {
 	for k := range m {
 		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
@@ -157,9 +157,9 @@ func removeInternalKeys(m map[string]string, d map[string]interface{}) {
 	}
 }
 
-// removeKeys removes given Kubernetes metadata(annotations and labels) keys.
+// RemoveKeys removes given Kubernetes metadata(annotations and labels) keys.
 // In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
-func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) {
+func RemoveKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) {
 	for k := range m {
 		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)

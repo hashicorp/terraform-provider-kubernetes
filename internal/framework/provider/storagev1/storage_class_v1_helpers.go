@@ -175,11 +175,15 @@ func flattenMetadata(meta metav1.ObjectMeta, current MetadataModel, ignoreAnnota
 	filtered := filterIgnoredMetadataKeys(meta.Annotations, current.Annotations, ignoreAnnotations)
 	if len(filtered) > 0 {
 		result.Annotations = flattenStringMap(filtered)
+	} else if current.Annotations != nil {
+		result.Annotations = make(map[string]types.String)
 	}
 
 	filtered = filterIgnoredMetadataKeys(meta.Labels, current.Labels, ignoreLabels)
 	if len(filtered) > 0 {
 		result.Labels = flattenStringMap(filtered)
+	} else if current.Labels != nil {
+		result.Labels = make(map[string]types.String)
 	}
 
 	return result

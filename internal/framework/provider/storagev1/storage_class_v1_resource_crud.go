@@ -114,6 +114,24 @@ func (r *StorageClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 	setComputedFields(ctx, &state, out)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	if resp.Identity == nil {
+		return
+	}
+
+	var currentIdentity StorageClassIdentityModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// If current identity is null/empty (e.g. during an upgrade from a provider version
+	// that did not write resource identity into state), do not write a new identity during Read.
+	// Terraform checks identity during refresh, and mutating identity during Read triggers
+	// "Unexpected Identity Change".
+	if currentIdentity.Name.IsNull() || currentIdentity.Name.ValueString() == "" {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, storageClassIdentity(out.Name))...)
 }
 
@@ -190,6 +208,20 @@ func (r *StorageClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 	setComputedFields(ctx, &plan, out)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Identity == nil {
+		return
+	}
+
+	var currentIdentity StorageClassIdentityModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if currentIdentity.Name.IsNull() || currentIdentity.Name.ValueString() == "" {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, storageClassIdentity(out.Name))...)
 }
 

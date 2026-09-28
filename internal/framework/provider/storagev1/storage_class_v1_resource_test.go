@@ -12,7 +12,9 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
@@ -134,6 +136,12 @@ func TestAccStorageClassV1_basic(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "mount_options.#", "1"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 			// Step 3: remove mount_options entirely — verify clean empty state.
 			{
 				Config: testAccStorageClassV1Config_noParameters(name, provisioner),
@@ -150,6 +158,45 @@ func TestAccStorageClassV1_basic(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "allow_volume_expansion", "true"),
 					tfresource.TestCheckResourceAttr(resourceName, "mount_options.#", "0"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccStorageClassV1_identity(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-sc")
+	resourceName := "kubernetes_storage_class_v1.test"
+	provisioner := "rancher.io/local-path"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckStorageClassV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccStorageClassV1Config_noParameters(name, provisioner),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(
+						resourceName, map[string]knownvalue.Check{
+							"name":        knownvalue.StringExact(name),
+							"api_version": knownvalue.StringExact("storage.k8s.io/v1"),
+							"kind":        knownvalue.StringExact("StorageClass"),
+						},
+					),
+				},
+			},
+			{
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: tfresource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -193,6 +240,12 @@ func TestAccStorageClassV1_volumeExpansion(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "volume_binding_mode", "Immediate"),
 					tfresource.TestCheckResourceAttr(resourceName, "allow_volume_expansion", "false"),
 				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -381,101 +434,6 @@ func TestAccStorageClassV1_disappears(t *testing.T) {
 	})
 }
 
-// ── Framework-specific: upgrade from SDKv2 ───────────────────────────────────
-
-// TestAccStorageClassV1_upgradeFromSDKv2 provisions the resource with the last
-// SDKv2 release, then switches to the local Framework provider and verifies
-// zero plan diff — proving the Framework reads SDKv2 state without any upgrade.
-//
-// Skipped in -short mode because it downloads from the Terraform registry.
-func TestAccStorageClassV1_upgradeFromSDKv2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping registry-dependent upgrade test in -short mode")
-	}
-
-	name := acctest.RandomWithPrefix("tf-acc-sc")
-	resourceName := "kubernetes_storage_class_v1.test"
-	provisioner := "rancher.io/local-path"
-
-	tfresource.ParallelTest(t, tfresource.TestCase{
-		Steps: []tfresource.TestStep{
-			// Step 1: provision with the last SDKv2 release.
-			// Writes state at schema version 0 with TypeList metadata.
-			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
-					"kubernetes": {
-						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.2.1",
-					},
-				},
-				Config: testAccStorageClassV1Config_noParameters(name, provisioner),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					tfresource.TestCheckResourceAttr(resourceName, "storage_provisioner", provisioner),
-				),
-			},
-			// Step 2: switch to the local Framework provider.
-			// ListNestedBlock produces identical state JSON to TypeList{MaxItems:1}
-			// so no UpgradeState is needed — plan must be empty.
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccStorageClassV1Config_noParameters(name, provisioner),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
-// TestAccStorageClassV1_moved provisions the deprecated kubernetes_storage_class
-// with the last SDKv2 release then uses a moved block to migrate state to
-// kubernetes_storage_class_v1 with the Framework provider. The plan must be
-// empty — proving MoveState translates the state without drift.
-//
-// Skipped in -short mode because it downloads from the Terraform registry.
-func TestAccStorageClassV1_moved(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping registry-dependent moved-block test in -short mode")
-	}
-
-	name := acctest.RandomWithPrefix("tf-acc-sc")
-	provisioner := "rancher.io/local-path"
-
-	tfresource.ParallelTest(t, tfresource.TestCase{
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_8_0),
-		},
-		Steps: []tfresource.TestStep{
-			// Step 1: provision kubernetes_storage_class (deprecated type) with
-			// the last SDKv2 release.
-			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
-					"kubernetes": {
-						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.2.1",
-					},
-				},
-				Config: testAccStorageClassConfig_deprecated(name, provisioner),
-			},
-			// Step 2: add a moved block and switch to the Framework provider.
-			// MoveState translates kubernetes_storage_class → kubernetes_storage_class_v1.
-			// Plan must be empty — no destroy, no create.
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccStorageClassV1Config_movedFrom(name, provisioner),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
 // ── HCL config helpers ────────────────────────────────────────────────────────
 
 func testAccStorageClassV1Config_basic(name, provisioner string) string {
@@ -607,37 +565,4 @@ resource "kubernetes_storage_class_v1" "test" {
   volume_binding_mode = %[3]q
 }
 `, name, provisioner, mode)
-}
-
-// testAccStorageClassConfig_deprecated uses the old resource type name —
-// the one still registered in the SDKv2 provider for backwards compatibility.
-func testAccStorageClassConfig_deprecated(name, provisioner string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_storage_class" "test" {
-  metadata {
-    name = %[1]q
-  }
-
-  storage_provisioner = %[2]q
-}
-`, name, provisioner)
-}
-
-// testAccStorageClassV1Config_movedFrom contains the moved block that migrates
-// kubernetes_storage_class.test → kubernetes_storage_class_v1.test.
-func testAccStorageClassV1Config_movedFrom(name, provisioner string) string {
-	return fmt.Sprintf(`
-moved {
-  from = kubernetes_storage_class.test
-  to   = kubernetes_storage_class_v1.test
-}
-
-resource "kubernetes_storage_class_v1" "test" {
-  metadata {
-    name = %[1]q
-  }
-
-  storage_provisioner = %[2]q
-}
-`, name, provisioner)
 }

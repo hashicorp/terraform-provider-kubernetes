@@ -168,6 +168,15 @@ func moveStateFromKubernetesStorageClassHandler(ctx context.Context, req resourc
 	}
 
 	resp.Diagnostics.Append(resp.TargetState.Set(ctx, &moved)...)
+	if resp.Diagnostics.HasError() || resp.TargetIdentity == nil {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, StorageClassIdentityModel{
+		APIVersion: types.StringValue("storage.k8s.io/v1"),
+		Kind:       types.StringValue("StorageClass"),
+		Name:       types.StringValue(m.Name),
+	})...)
 }
 
 // ── Move helpers ──────────────────────────────────────────────────────────────

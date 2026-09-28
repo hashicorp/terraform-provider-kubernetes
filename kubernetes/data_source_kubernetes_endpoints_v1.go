@@ -42,7 +42,7 @@ func dataSourceKubernetesEndpointsV1Read(ctx context.Context, d *schema.Resource
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading endpoints %s", metadata.Name)
 	ep, err := conn.CoreV1().Endpoints(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

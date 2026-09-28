@@ -43,7 +43,6 @@ func NamespacedMetadataSchema(objectName string, generatableName bool) schema.Li
 			stringplanmodifier.RequiresReplace(),
 		},
 	}
-
 	return metadataBlock(objectName, attributes)
 }
 
@@ -144,4 +143,57 @@ func metadataBlock(objectName string, attributes map[string]schema.Attribute) sc
 		},
 		NestedObject: schema.NestedBlockObject{Attributes: attributes},
 	}
+}
+
+// MetadataSchemaRBAC returns the metadata block for an RBAC object. It reproduces
+// metadataSchemaRBAC(objectName, generatableName, namespaced) from kubernetes/schema_rbac.go,
+// which takes the ordinary metadata schema and replaces the name and generate_name
+// validators with the RBAC one.
+//
+// The override exists because RBAC names are path segments rather than DNS subdomains:
+// "system:controller:foo" is a valid ClusterRole name. Applying the DNS rule would reject
+// names Kubernetes and every released provider version accept.
+//
+// SDKv2 can override just ValidateFunc and leave ConflictsWith alone, because they are
+// separate fields. In the framework both live in Validators, so the lists are rebuilt here
+// rather than filtered — keeping the conflict pair while swapping the syntax check.
+func MetadataSchemaRBAC(objectName string, generatableName, namespaced bool) schema.ListNestedBlock {
+	block := MetadataSchema(objectName, generatableName)
+	if namespaced {
+		block = NamespacedMetadataSchema(objectName, generatableName)
+	}
+
+	attributes := block.NestedObject.Attributes
+
+	name, ok := attributes["name"].(schema.StringAttribute)
+	if !ok {
+		panic(fmt.Sprintf("metadata name attribute is %T, want schema.StringAttribute", attributes["name"]))
+	}
+	name.Validators = rbacNameValidators(generatableName, "generate_name")
+	attributes["name"] = name
+
+	if generatableName {
+		generateName, ok := attributes["generate_name"].(schema.StringAttribute)
+		if !ok {
+			panic(fmt.Sprintf("metadata generate_name attribute is %T, want schema.StringAttribute", attributes["generate_name"]))
+		}
+		generateName.Validators = rbacNameValidators(true, "name")
+		attributes["generate_name"] = generateName
+	}
+
+	return block
+}
+
+// rbacNameValidators builds the validator list for an RBAC name attribute: the conflict with
+// its counterpart when generate_name is in play, then the RBAC syntax check. ConflictsWith
+// comes first so an error names the conflict rather than complaining about a value the
+// practitioner is about to remove.
+func rbacNameValidators(conflicts bool, counterpart string) []validator.String {
+	validators := []validator.String{}
+	if conflicts {
+		validators = append(validators, stringvalidator.ConflictsWith(
+			path.MatchRelative().AtParent().AtName(counterpart),
+		))
+	}
+	return append(validators, RBACNameValidator())
 }

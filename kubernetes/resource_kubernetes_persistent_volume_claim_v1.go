@@ -111,7 +111,7 @@ func resourceKubernetesPersistentVolumeClaimV1Create(ctx context.Context, d *sch
 	}
 	log.Printf("[INFO] Submitted new persistent volume claim: %#v", out)
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 	name := out.ObjectMeta.Name
 
 	if d.Get("wait_until_bound").(bool) {
@@ -172,7 +172,7 @@ func resourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -202,7 +202,7 @@ func resourceKubernetesPersistentVolumeClaimV1Update(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -241,7 +241,7 @@ func resourceKubernetesPersistentVolumeClaimV1Delete(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -284,7 +284,7 @@ func resourceKubernetesPersistentVolumeClaimV1Exists(ctx context.Context, d *sch
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

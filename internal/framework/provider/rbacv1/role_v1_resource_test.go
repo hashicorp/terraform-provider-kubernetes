@@ -10,6 +10,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -17,9 +25,195 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	client "k8s.io/client-go/kubernetes"
 )
+
+// Keep imports on the same provider release as the preceding apply. In particular,
+// importing the baseline with the local provider would invalidate the migration test.
+func roleImportSteps(resourceName string, steps []resource.TestStep) []resource.TestStep {
+	result := make([]resource.TestStep, 0, len(steps)*2)
+	for i, step := range steps {
+		result = append(result, step)
+		if step.Config == "" || step.ExpectError != nil || step.PlanOnly || step.ImportState {
+			continue
+		}
+		if i+1 < len(steps) && steps[i+1].ImportState {
+			continue
+		}
+		name := resourceName
+		if strings.Contains(step.Config, `resource "kubernetes_role" "test"`) {
+			name = "kubernetes_role.test"
+		}
+		result = append(result, resource.TestStep{
+			ResourceName:             name,
+			ImportState:              true,
+			ImportStateVerify:        true,
+			ExternalProviders:        step.ExternalProviders,
+			ProtoV6ProviderFactories: step.ProtoV6ProviderFactories,
+		})
+	}
+	return result
+}
+
+func testAccRoleWithImports(t *testing.T, tc resource.TestCase) {
+	t.Helper()
+	tc.Steps = roleImportSteps("kubernetes_role_v1.test", tc.Steps)
+	testAccRoleValidateAndRun(t, tc)
+}
+
+func testAccRoleValidateAndRun(t *testing.T, tc resource.TestCase) {
+	t.Helper()
+	for i, step := range tc.Steps {
+		if step.Config == "" {
+			continue
+		}
+		if _, diags := hclsyntax.ParseConfig([]byte(step.Config), "role.tf", hcl.InitialPos); diags.HasErrors() {
+			t.Fatalf("step %d has invalid HCL: %s", i, diags)
+		}
+	}
+	resource.ParallelTest(t, tc)
+}
+
+func testAccRoleClient() (*client.Clientset, error) {
+	meta, err := sdkv2providerMeta()
+	if err != nil {
+		return nil, err
+	}
+	return meta().(kubernetes.KubeClientsets).MainClientset()
+}
+
+func TestRoleImportSteps(t *testing.T) {
+	steps := roleImportSteps("kubernetes_role_v1.test", []resource.TestStep{
+		{Config: `resource "kubernetes_role" "test" {}`, ExternalProviders: roleExternalProvider(rolePreIdentityProviderVersion)},
+		{Config: `resource "kubernetes_role_v1" "test" {}`, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories},
+		{Config: `resource "kubernetes_role" "test" {}`, ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories},
+		{Config: "plan", PlanOnly: true},
+		{Config: "error", ExpectError: regexp.MustCompile("expected")},
+	})
+	if len(steps) != 8 || !steps[1].ImportState || !steps[1].ImportStateVerify ||
+		steps[1].ResourceName != "kubernetes_role.test" ||
+		steps[1].ExternalProviders["kubernetes"].VersionConstraint != rolePreIdentityProviderVersion {
+		t.Fatalf("incorrect import steps: %#v", steps)
+	}
+	for _, tc := range []struct {
+		index int
+		name  string
+		alias bool
+	}{
+		{3, "kubernetes_role_v1.test", false},
+		{5, "kubernetes_role.test", true},
+	} {
+		step := steps[tc.index]
+		if !step.ImportState || !step.ImportStateVerify || step.ResourceName != tc.name {
+			t.Fatalf("incorrect import step: %#v", step)
+		}
+		testRoleProviderSchema(t, step.ProtoV6ProviderFactories, tc.alias)
+	}
+}
+
+func TestRoleProviderFactories(t *testing.T) {
+	t.Run("framework", func(t *testing.T) {
+		testRoleProviderSchema(t, testAccProtoV6ProviderFactories, false)
+	})
+	t.Run("mux", func(t *testing.T) {
+		testRoleProviderSchema(t, testAccMuxProtoV6ProviderFactories, true)
+	})
+}
+
+func testRoleProviderSchema(t *testing.T, factories map[string]func() (tfprotov6.ProviderServer, error), alias bool) {
+	t.Helper()
+	for _, key := range []string{"KUBE_CONFIG_PATH", "KUBE_CONFIG_PATHS", "KUBE_CTX", "KUBE_CTX_AUTH_INFO", "KUBE_CTX_CLUSTER", "KUBE_HOST", "KUBE_CLIENT_CERT_DATA", "KUBE_CLIENT_KEY_DATA", "KUBE_CLUSTER_CA_CERT_DATA"} {
+		t.Setenv(key, "")
+	}
+	server, err := factories["kubernetes"]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := server.GetProviderSchema(context.Background(), &tfprotov6.GetProviderSchemaRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, diag := range resp.Diagnostics {
+		if diag.Severity == tfprotov6.DiagnosticSeverityError {
+			t.Fatalf("provider schema: %s: %s", diag.Summary, diag.Detail)
+		}
+	}
+	if resp.ResourceSchemas["kubernetes_role_v1"] == nil {
+		t.Fatal("provider does not register kubernetes_role_v1")
+	}
+	if got := resp.ResourceSchemas["kubernetes_role"] != nil; got != alias {
+		t.Fatalf("kubernetes_role registration = %t, want %t", got, alias)
+	}
+}
+
+func TestRoleProviderFactoryConfigureError(t *testing.T) {
+	t.Setenv("KUBE_CONFIG_PATH", "")
+	t.Setenv("KUBE_CONFIG_PATHS", "")
+	t.Setenv("KUBE_HOST", "https://[invalid")
+	server, err := testAccProtoV6ProviderFactories["kubernetes"]()
+	if err == nil || !strings.Contains(err.Error(), "Failed to parse value for host") || server != nil {
+		t.Fatalf("expected configuration error and no server, got server %T, error %v", server, err)
+	}
+}
+
+func TestRoleImportState(t *testing.T) {
+	ctx := context.Background()
+	r := &rbacv1.RoleV1{}
+	var schema frameworkresource.SchemaResponse
+	r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
+	for _, tc := range []struct {
+		name, id, namespace, want string
+		identity, wantError       bool
+	}{
+		{name: "id", id: "team/reader", want: "team/reader"},
+		{name: "emptyNamespaceID", id: "/reader", want: "/reader"},
+		{name: "invalidID", id: "reader", wantError: true},
+		{name: "missingImport", wantError: true},
+		{name: "identity", identity: true, namespace: "team", want: "team/reader"},
+		{name: "defaultNamespace", identity: true, want: "default/reader"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := frameworkresource.ImportStateRequest{ID: tc.id}
+			if tc.identity {
+				s := common.NamespacedIdentitySchema()
+				req.Identity = &tfsdk.ResourceIdentity{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}
+				namespace := types.StringNull()
+				if tc.namespace != "" {
+					namespace = types.StringValue(tc.namespace)
+				}
+				diags := req.Identity.Set(ctx, common.NamespacedResourceIdentity{
+					ResourceIdentity: common.ResourceIdentity{Name: types.StringValue("reader"), Kind: types.StringValue("Role"), APIVersion: types.StringValue("rbac.authorization.k8s.io/v1")},
+					Namespace:        namespace,
+				})
+				if diags.HasError() {
+					t.Fatal(diags)
+				}
+			}
+			resp := frameworkresource.ImportStateResponse{State: tfsdk.State{
+				Schema: schema.Schema, Raw: tftypes.NewValue(schema.Schema.Type().TerraformType(ctx), nil),
+			}}
+			r.ImportState(ctx, req, &resp)
+			if resp.Diagnostics.HasError() != tc.wantError {
+				t.Fatalf("diagnostics: %v", resp.Diagnostics)
+			}
+			if tc.wantError {
+				return
+			}
+			var id types.String
+			if diags := resp.State.GetAttribute(ctx, path.Root("id"), &id); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if id.ValueString() != tc.want {
+				t.Fatalf("ID = %q, want %q", id.ValueString(), tc.want)
+			}
+		})
+	}
+}
 
 func TestAccRole_basic(t *testing.T) {
 	// Colons are deliberate: RBAC names are path segments, not DNS subdomains, and SDKv2
@@ -28,7 +222,7 @@ func TestAccRole_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
 
-	resource.ParallelTest(t, resource.TestCase{
+	testAccRoleWithImports(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -101,7 +295,7 @@ func TestAccRole_generatedName(t *testing.T) {
 	resourceName := "kubernetes_role_v1.test"
 	var uid string
 
-	resource.ParallelTest(t, resource.TestCase{
+	testAccRoleWithImports(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -133,7 +327,7 @@ func TestAccRole_metadataUpdate(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
 
-	resource.ParallelTest(t, resource.TestCase{
+	testAccRoleWithImports(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -157,7 +351,7 @@ func TestAccRole_resourceNames(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
 
-	resource.ParallelTest(t, resource.TestCase{
+	testAccRoleWithImports(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -175,7 +369,7 @@ func TestAccRole_ruleTransitions(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
 
-	resource.ParallelTest(t, resource.TestCase{
+	testAccRoleWithImports(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -246,9 +440,10 @@ func TestAccRole_identity(t *testing.T) {
 				},
 			},
 			{
-				ResourceName:    resourceName,
-				ImportState:     true,
-				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateKind:   resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})
@@ -650,9 +845,10 @@ func TestAccRole_identityImportDefaultNamespace(t *testing.T) {
 			},
 			// Import by identity WITH explicit namespace — must succeed.
 			{
-				ResourceName:    resourceName,
-				ImportState:     true,
-				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateKind:   resource.ImportBlockWithResourceIdentity,
 			},
 		},
 	})

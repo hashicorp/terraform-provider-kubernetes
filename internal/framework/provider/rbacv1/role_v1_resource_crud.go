@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -24,7 +25,7 @@ const (
 	roleKind       = "Role"
 )
 
-func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *RoleV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan RoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -74,7 +75,7 @@ func (r *Role) Create(ctx context.Context, req resource.CreateRequest, resp *res
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
-func (r *Role) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *RoleV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state RoleModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -135,7 +136,7 @@ func (r *Role) Read(ctx context.Context, req resource.ReadRequest, resp *resourc
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
-func (r *Role) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *RoleV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan, state RoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -224,7 +225,7 @@ func populateIDAndMetadataFromResponse(plan *RoleModel, out *rbacv1api.Role) {
 	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 }
 
-func (r *Role) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *RoleV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state RoleModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -253,7 +254,7 @@ func (r *Role) Delete(ctx context.Context, req resource.DeleteRequest, resp *res
 	}
 }
 
-func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *RoleV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	var namespace, name string
 
 	if req.ID != "" {
@@ -267,6 +268,10 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 			return
 		}
 	} else {
+		if req.Identity == nil {
+			resp.Diagnostics.AddError("invalid identity import", "Provide an identity or an import ID in namespace/name format.")
+			return
+		}
 		var identityData common.NamespacedResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
@@ -274,56 +279,13 @@ func (r *Role) ImportState(ctx context.Context, req resource.ImportStateRequest,
 		}
 		namespace = identityData.Namespace.ValueString()
 		if namespace == "" {
-			resp.Diagnostics.AddError(
-				"invalid identity import",
-				"namespace is required when importing by identity; "+
-					"provide a namespace in the identity block or use the "+
-					"string import format: namespace/name",
-			)
-			return
+			namespace = metav1.NamespaceDefault
 		}
 		name = identityData.Name.ValueString()
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	filters := r.SDKv2Meta().(kubernetes.MetadataFilters)
-	conn, err := meta.MainClientset()
-	if err != nil {
-		resp.Diagnostics.AddError("kubernetes client error", err.Error())
-		return
-	}
-
-	role, err := conn.RbacV1().Roles(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"error importing Role",
-			fmt.Sprintf("Failed to import role %q in namespace %q: %s", name, namespace, err.Error()),
-		)
-		return
-	}
-
-	var state RoleModel
-	state.ID = types.StringValue(kubernetes.BuildId(role.ObjectMeta))
-	metadata, metaDiags := common.FlattenNamespacedMetadata(ctx, role.ObjectMeta, nil, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
-	resp.Diagnostics.Append(metaDiags...)
-	state.Metadata = metadata
-
-	rules, diags := flattenPolicyRules(role.Rules)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	state.Rule = rules
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-
-	identity := common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(rbacAPIVersion),
-			Kind:       types.StringValue(roleKind),
-			Name:       types.StringValue(role.Name),
-		},
-		Namespace: types.StringValue(role.Namespace),
-	}
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
+	// As with Namespace, Read populates state and identity after import. Unlike
+	// Namespace, the ID must contain both the namespace and the object name.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"),
+		kubernetes.BuildId(metav1.ObjectMeta{Namespace: namespace, Name: name}))...)
 }

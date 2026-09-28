@@ -4,85 +4,86 @@
 package rbacv1_test
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
 	"testing"
 
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
+
+func roleExternalProvider(version string) map[string]resource.ExternalProvider {
+	return map[string]resource.ExternalProvider{
+		"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: version},
+	}
+}
+
+func TestRoleUpgradeIdentity(t *testing.T) {
+	ctx := context.Background()
+	r := &rbacv1.RoleV1{}
+	var schema frameworkresource.IdentitySchemaResponse
+	r.IdentitySchema(ctx, frameworkresource.IdentitySchemaRequest{}, &schema)
+	if schema.IdentitySchema.Version != 1 {
+		t.Fatalf("identity version = %d; must remain compatible with SDKv2 version 1", schema.IdentitySchema.Version)
+	}
+	upgrader, ok := r.UpgradeIdentity(ctx)[0]
+	if !ok {
+		t.Fatal("missing version 0 upgrader")
+	}
+	for _, tc := range []struct {
+		name, raw string
+		wantError bool
+	}{
+		{name: "preIdentity"},
+		{name: "stored", raw: `{"name":"reader","namespace":"team"}`},
+		{name: "invalidJSON", raw: `{`, wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := frameworkresource.UpgradeIdentityRequest{}
+			if tc.raw != "" {
+				req.RawIdentity = &tfprotov6.RawState{JSON: []byte(tc.raw)}
+			}
+			resp := frameworkresource.UpgradeIdentityResponse{Identity: &tfsdk.ResourceIdentity{
+				Schema: schema.IdentitySchema,
+				Raw:    tftypes.NewValue(schema.IdentitySchema.Type().TerraformType(ctx), nil),
+			}}
+			upgrader.IdentityUpgrader(ctx, req, &resp)
+			if resp.Diagnostics.HasError() != tc.wantError {
+				t.Fatalf("diagnostics: %v", resp.Diagnostics)
+			}
+			if tc.wantError {
+				return
+			}
+			var got common.NamespacedResourceIdentity
+			if diags := resp.Identity.Get(ctx, &got); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if tc.raw == "" {
+				if !got.Name.IsNull() || !got.Namespace.IsNull() || !got.Kind.IsNull() || !got.APIVersion.IsNull() {
+					t.Fatalf("pre-identity state must remain null until Read: %#v", got)
+				}
+			} else if got.Name.ValueString() != "reader" || got.Namespace.ValueString() != "team" ||
+				got.Kind.ValueString() != "Role" || got.APIVersion.ValueString() != "rbac.authorization.k8s.io/v1" {
+				t.Fatalf("incorrect upgraded identity: %#v", got)
+			}
+		})
+	}
+}
 
 const roleSDKv2ProviderVersion = "3.2.1"
 
-// TestAccRole_movedFromAlias_names carries the steps the name/generate_name variant of this
-// test contributed and the plain moved test does not: an update *after* the move asserting
-// ResourceActionUpdate rather than a replacement, and a final no-op plan proving idempotence.
-// The move planning empty is the easy half; the update that follows is where a lost UID or a
-// spurious replacement would show up.
-//
-// Configuration sets name only. Setting name and generate_name together is now rejected — see
-// TestAccRole_nameAndGenerateName.
-func TestAccRole_movedFromAlias_names(t *testing.T) {
-	name := "tf-acc-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	resourceName := "kubernetes_role_v1.test"
-	config := testAccRoleConfig_names(name)
-	aliasConfig := strings.Replace(config, `"kubernetes_role_v1"`, `"kubernetes_role"`, 1)
-	moveConfig := config + `
-moved {
-  from = kubernetes_role.test
-  to   = kubernetes_role_v1.test
-}
-`
-	updatedConfig := strings.Replace(moveConfig, `verbs      = ["get"]`, `verbs      = ["get", "list"]`, 1)
-	var uid string
+const rolePreIdentityProviderVersion = "2.37.1"
 
-	resource.ParallelTest(t, resource.TestCase{
-		CheckDestroy:             testAccRoleCheckDestroy,
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_8_0),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: aliasConfig,
-				Check:  testAccRoleCheckExists("kubernetes_role.test", &uid),
-			},
-			{
-				Config: moveConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					// Same uid pointer throughout: testAccRoleCheckExists compares against it,
-					// so a recreate anywhere in this test fails here.
-					testAccRoleCheckExists(resourceName, &uid),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-				),
-			},
-			{
-				Config: updatedConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
-					},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(resourceName, &uid),
-					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", "list"),
-				),
-			},
-			{
-				Config: updatedConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-			},
-		},
-	})
-}
 func testAccRoleMigration(t *testing.T, config string, checks ...resource.TestCheckFunc) {
 	t.Helper()
 	testAccRoleMigrationWithPlanCheck(t, config, plancheck.ExpectEmptyPlan(), checks...)
@@ -99,6 +100,10 @@ func testAccRoleMigrationExpectingUpdate(t *testing.T, config string, checks ...
 }
 
 func testAccRoleMigrationWithPlanCheck(t *testing.T, config string, planCheck plancheck.PlanCheck, checks ...resource.TestCheckFunc) {
+	testAccRoleMigrationFrom(t, roleSDKv2ProviderVersion, config, planCheck, checks...)
+}
+
+func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck plancheck.PlanCheck, checks ...resource.TestCheckFunc) {
 	t.Helper()
 
 	var uid string
@@ -110,13 +115,13 @@ func testAccRoleMigrationWithPlanCheck(t *testing.T, config string, planCheck pl
 		resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.resources.*", "pods"),
 	}, checks...)
 
-	resource.ParallelTest(t, resource.TestCase{
+	testAccRoleWithImports(t, resource.TestCase{
 		CheckDestroy: testAccRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
-						VersionConstraint: roleSDKv2ProviderVersion,
+						VersionConstraint: version,
 						Source:            "hashicorp/kubernetes",
 					},
 				},
@@ -138,6 +143,29 @@ func testAccRoleMigrationWithPlanCheck(t *testing.T, config string, planCheck pl
 }
 
 func TestAccRole_UpgradeFromSDKv2_scenarios(t *testing.T) {
+	testAccRoleScenarios(t, func(t *testing.T, config string, update bool, checks ...resource.TestCheckFunc) {
+		if update {
+			testAccRoleMigrationExpectingUpdate(t, config, checks...)
+			return
+		}
+		testAccRoleMigration(t, config, checks...)
+	})
+}
+
+func TestAccRole_UpgradeFromSDKv2_preIdentity(t *testing.T) {
+	testAccRolePreIdentityScenarios(t, func(t *testing.T, config string, update bool, checks ...resource.TestCheckFunc) {
+		testAccRoleMigrationFrom(t, rolePreIdentityProviderVersion, config, plancheck.ExpectEmptyPlan(), checks...)
+	})
+}
+
+type roleScenarioRunner func(*testing.T, string, bool, ...resource.TestCheckFunc)
+
+func testAccRolePreIdentityScenarios(t *testing.T, run roleScenarioRunner) {
+	testAccRoleScenarios(t, run, "minimal", "completeName", "completeGeneratedName")
+}
+
+func testAccRoleScenarios(t *testing.T, run roleScenarioRunner, selected ...string) {
+	t.Helper()
 	resourceName := "kubernetes_role_v1.test"
 	for _, scenario := range []struct {
 		name          string
@@ -194,17 +222,28 @@ func TestAccRole_UpgradeFromSDKv2_scenarios(t *testing.T) {
 		{
 			name: "completeName",
 			metadata: `labels = { team = "platform" }
-    annotations = { note = "retained" }`,
+    annotations = { note = "retained" }
+    namespace = "default"`,
 			resourceNames: `resource_names = ["one", "two"]`,
 		},
 		{
 			name:          "completeGeneratedName",
 			generatedName: true,
 			metadata: `labels = { team = "platform" }
-    annotations = { note = "retained" }`,
+    annotations = { note = "retained" }
+    namespace = "default"`,
 			resourceNames: `resource_names = ["one", "two"]`,
 		},
 	} {
+		if len(selected) > 0 {
+			found := false
+			for _, name := range selected {
+				found = found || name == scenario.name
+			}
+			if !found {
+				continue
+			}
+		}
 		t.Run(scenario.name, func(t *testing.T) {
 			name := "tf-migration-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 			naming := fmt.Sprintf("name = %q", name)
@@ -252,10 +291,10 @@ resource "kubernetes_role_v1" "test" {
 			// SDKv2 wrote null for a config declaring {}, so these two reconcile on the
 			// first framework plan rather than migrating silently.
 			if scenario.name == "emptyValuesName" || scenario.name == "emptyValuesGeneratedName" {
-				testAccRoleMigrationExpectingUpdate(t, config, checks...)
+				run(t, config, true, checks...)
 				return
 			}
-			testAccRoleMigration(t, config, checks...)
+			run(t, config, false, checks...)
 		})
 	}
 }
@@ -265,7 +304,7 @@ func TestAccRole_UpgradeFromSDKv2(t *testing.T) {
 	resourceName := "kubernetes_role_v1.test"
 	var uid string
 
-	resource.ParallelTest(t, resource.TestCase{
+	testAccRoleWithImports(t, resource.TestCase{
 		CheckDestroy: testAccRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -305,6 +344,10 @@ func TestAccRole_UpgradeFromSDKv2(t *testing.T) {
 }
 
 func TestAccRole_UpgradeFromSDKv2_nullMetadata(t *testing.T) {
+	testAccRoleNullMetadataMigration(t, "kubernetes_role_v1", func(config string) string { return config })
+}
+
+func testAccRoleNullMetadataMigration(t *testing.T, sourceType string, targetConfig func(string) string) {
 	// SDKv2 accepted a null map value and silently dropped the key. The framework rejects
 	// it at plan, matching SDKv2's own validateLabels/validateAnnotations, which check keys
 	// but never values. So state created by SDKv2 from a config containing nulls cannot be
@@ -313,174 +356,46 @@ func TestAccRole_UpgradeFromSDKv2_nullMetadata(t *testing.T) {
 	// That is the intended fix, not a regression: under SDKv2 the dropped key reappeared in
 	// every subsequent plan, because Update wrote the config's null into state while Read
 	// rebuilt the map from a server response that never had it. Needs a release note.
-	for _, sourceType := range []string{"kubernetes_role", "kubernetes_role_v1"} {
-		t.Run(sourceType, func(t *testing.T) {
-			name := "tf-acc-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-			config := testAccRoleConfig_nullMetadata(name, "null")
-			sourceConfig := strings.Replace(config, `"kubernetes_role_v1"`, fmt.Sprintf("%q", sourceType), 1)
-			if sourceType == "kubernetes_role" {
-				config += `
-moved {
-  from = kubernetes_role.test
-  to   = kubernetes_role_v1.test
-}
-`
-			}
-			var uid string
+	t.Run(sourceType, func(t *testing.T) {
+		name := "tf-acc-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+		config := testAccRoleConfig_nullMetadata(name, "null")
+		sourceConfig := strings.Replace(config, `"kubernetes_role_v1"`, fmt.Sprintf("%q", sourceType), 1)
+		config = targetConfig(config)
+		var uid string
 
-			resource.ParallelTest(t, resource.TestCase{
-				CheckDestroy: testAccRoleCheckDestroy,
-				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-					tfversion.SkipBelow(tfversion.Version1_8_0),
-				},
-				Steps: []resource.TestStep{
-					{
-						ExternalProviders: map[string]resource.ExternalProvider{
-							"kubernetes": {
-								VersionConstraint: roleSDKv2ProviderVersion,
-								Source:            "hashicorp/kubernetes",
-							},
+		testAccRoleWithImports(t, resource.TestCase{
+			CheckDestroy: testAccRoleCheckDestroy,
+			TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+				tfversion.SkipBelow(tfversion.Version1_8_0),
+			},
+			Steps: []resource.TestStep{
+				{
+					ExternalProviders: map[string]resource.ExternalProvider{
+						"kubernetes": {
+							VersionConstraint: roleSDKv2ProviderVersion,
+							Source:            "hashicorp/kubernetes",
 						},
-						Config: sourceConfig,
-						Check:  testAccRoleCheckExists(sourceType+".test", &uid),
 					},
-					{
-						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-						Config:                   config,
-						ExpectError:              regexp.MustCompile("(?s)Invalid Attribute Value.*value must be a string"),
-					},
-					{
-						// A configuration without nulls plans and applies, which is the
-						// documented remediation. Also leaves state the harness can destroy.
-						ExternalProviders: map[string]resource.ExternalProvider{
-							"kubernetes": {
-								VersionConstraint: roleSDKv2ProviderVersion,
-								Source:            "hashicorp/kubernetes",
-							},
-						},
-						Config: strings.ReplaceAll(sourceConfig, ", optional = null", ""),
-					},
+					Config: sourceConfig,
+					Check:  testAccRoleCheckExists(sourceType+".test", &uid),
 				},
-			})
+				{
+					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+					Config:                   config,
+					ExpectError:              regexp.MustCompile("(?s)Invalid Attribute Value.*value must be a string"),
+				},
+				{
+					// A configuration without nulls plans and applies, which is the
+					// documented remediation. Also leaves state the harness can destroy.
+					ExternalProviders: map[string]resource.ExternalProvider{
+						"kubernetes": {
+							VersionConstraint: roleSDKv2ProviderVersion,
+							Source:            "hashicorp/kubernetes",
+						},
+					},
+					Config: strings.ReplaceAll(sourceConfig, ", optional = null", ""),
+				},
+			},
 		})
-	}
-}
-func TestAccRole_movedFromAlias(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	aliasResource := "kubernetes_role.test"
-	v1Resource := "kubernetes_role_v1.test"
-	var uid string
-
-	resource.ParallelTest(t, resource.TestCase{
-		CheckDestroy: testAccRoleCheckDestroy,
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_8_0),
-		},
-		Steps: []resource.TestStep{
-			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {
-						VersionConstraint: roleSDKv2ProviderVersion,
-						Source:            "hashicorp/kubernetes",
-					},
-				},
-				Config: testAccRoleAliasConfig(name),
-				Check: resource.ComposeTestCheckFunc(
-					testAccRoleCheckExists(aliasResource, &uid),
-					resource.TestCheckResourceAttr(aliasResource, "metadata.0.name", name),
-					resource.TestCheckResourceAttrSet(aliasResource, "metadata.0.uid"),
-				),
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccRoleMoveConfig(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-				Check: resource.ComposeTestCheckFunc(
-					testAccRoleCheckExists(v1Resource, &uid),
-					resource.TestCheckResourceAttrSet(v1Resource, "metadata.0.uid"),
-					resource.TestCheckResourceAttr(v1Resource, "metadata.0.name", name),
-				),
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccRoleMoveUpdatedConfig(name),
-				Check: resource.ComposeTestCheckFunc(
-					testAccRoleCheckExists(v1Resource, &uid),
-					resource.TestCheckResourceAttr(v1Resource, "rule.#", "1"),
-				),
-			},
-		},
 	})
-}
-
-func testAccRoleAliasConfig(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role" "test" {
-  metadata {
-    name      = %[1]q
-    namespace = "default"
-  }
-
-  rule {
-    api_groups = [""]
-    resources  = ["pods"]
-    verbs      = ["get", "list"]
-  }
-
-  rule {
-    api_groups = ["apps"]
-    resources  = ["deployments"]
-    verbs      = ["get"]
-  }
-}
-`, name)
-}
-
-func testAccRoleMoveConfig(name string) string {
-	return fmt.Sprintf(`
-moved {
-  from = kubernetes_role.test
-  to   = kubernetes_role_v1.test
-}
-
-resource "kubernetes_role_v1" "test" {
-  metadata {
-    name      = %[1]q
-    namespace = "default"
-  }
-
-  rule {
-    api_groups = [""]
-    resources  = ["pods"]
-    verbs      = ["get", "list"]
-  }
-
-  rule {
-    api_groups = ["apps"]
-    resources  = ["deployments"]
-    verbs      = ["get"]
-  }
-}
-`, name)
-}
-
-func testAccRoleMoveUpdatedConfig(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_v1" "test" {
-  metadata {
-    name      = %[1]q
-    namespace = "default"
-  }
-
-  rule {
-    api_groups = ["batch"]
-    resources  = ["jobs"]
-    verbs      = ["get", "list", "watch"]
-  }
-}
-`, name)
 }

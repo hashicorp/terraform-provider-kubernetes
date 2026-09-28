@@ -15,34 +15,34 @@ import (
 )
 
 var (
-	_ resource.Resource                    = (*Role)(nil)
-	_ resource.ResourceWithConfigure       = (*Role)(nil)
-	_ resource.ResourceWithImportState     = (*Role)(nil)
-	_ resource.ResourceWithIdentity        = (*Role)(nil)
-	_ resource.ResourceWithMoveState       = (*Role)(nil)
-	_ resource.ResourceWithUpgradeIdentity = (*Role)(nil)
+	_ resource.Resource                    = (*RoleV1)(nil)
+	_ resource.ResourceWithConfigure       = (*RoleV1)(nil)
+	_ resource.ResourceWithImportState     = (*RoleV1)(nil)
+	_ resource.ResourceWithIdentity        = (*RoleV1)(nil)
+	_ resource.ResourceWithMoveState       = (*RoleV1)(nil)
+	_ resource.ResourceWithUpgradeIdentity = (*RoleV1)(nil)
 )
 
-type Role struct {
+type RoleV1 struct {
 	SDKv2Meta func() any
 }
 
-func NewRole() resource.Resource {
-	return &Role{}
+func NewRoleV1() resource.Resource {
+	return &RoleV1{}
 }
 
-func (r *Role) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *RoleV1) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_role_v1"
 }
 
-func (r *Role) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *RoleV1) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
 	r.SDKv2Meta = req.ProviderData.(func() any)
 }
 
-func (r *Role) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+func (r *RoleV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	// common.NamespacedIdentitySchema reproduces resourceIdentitySchemaNamespaced() from
 	// kubernetes/resourceidentity.go, including Version 1 and namespace being
 	// OptionalForImport rather than required.
@@ -56,8 +56,8 @@ func (r *Role) IdentitySchema(_ context.Context, _ resource.IdentitySchemaReques
 // identity_schema_version 0 and no identity, and Terraform asks for an upgrade whenever the
 // stored version differs from the declared one — even when nothing is stored. SDKv2 answers
 // that generically in its gRPC server; the framework requires each resource to supply it.
-func (r *Role) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
-	return common.UpgradeNamespacedIdentity(rbacAPIVersion, roleKind)
+func (r *RoleV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
+	return common.UpgradeNamespacedIdentity(roleKind, rbacAPIVersion)
 }
 
 const (
@@ -66,13 +66,13 @@ const (
 	providerAddressSuffix       = "hashicorp/kubernetes"
 )
 
-func (r *Role) MoveState(_ context.Context) []resource.StateMover {
+func (r *RoleV1) MoveState(_ context.Context) []resource.StateMover {
 	return []resource.StateMover{{
 		StateMover: r.moveFromDeprecatedRole,
 	}}
 }
 
-func (r *Role) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+func (r *RoleV1) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
 	if !strings.HasSuffix(req.SourceProviderAddress, providerAddressSuffix) {
 		return
 	}
@@ -82,7 +82,8 @@ func (r *Role) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStat
 	if req.SourceSchemaVersion != deprecatedRoleSchemaVersion {
 		return
 	}
-	if req.SourceRawState == nil {
+	if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {
+		resp.Diagnostics.AddError("Unable to move kubernetes_role state", "The source state has no JSON data. Flatmap state is not supported.")
 		return
 	}
 
@@ -92,6 +93,10 @@ func (r *Role) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStat
 			"Unable to move kubernetes_role state",
 			"The prior state of the source resource could not be decoded: "+err.Error(),
 		)
+		return
+	}
+	if src.ID == "" || len(src.Metadata) != 1 {
+		resp.Diagnostics.AddError("Unable to move kubernetes_role state", "The source state must have a non-empty id and exactly one metadata element.")
 		return
 	}
 

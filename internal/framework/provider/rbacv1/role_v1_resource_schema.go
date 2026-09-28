@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
-func (r *Role) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *RoleV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "A role contains rules that represent a set of permissions. Permissions are purely additive (there are no \"deny\" rules).",
 		Attributes: map[string]schema.Attribute{

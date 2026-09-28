@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	api "k8s.io/api/rbac/v1"
@@ -25,15 +26,22 @@ const (
 )
 
 func (r *ClusterRoleBinding) conn() (kubernetes.KubeClientsets, error) {
+	if r.SDKv2Meta == nil {
+		return nil, fmt.Errorf("provider meta is not configured")
+	}
 	meta := r.SDKv2Meta()
 	if meta == nil {
 		return nil, fmt.Errorf("provider meta is not configured")
 	}
-	return meta.(kubernetes.KubeClientsets), nil
+	clientsets, ok := meta.(kubernetes.KubeClientsets)
+	if !ok {
+		return nil, fmt.Errorf("provider meta does not implement kubernetes.KubeClientsets")
+	}
+	return clientsets, nil
 }
 
-func (r *ClusterRoleBinding) identity(name string) ClusterRoleBindingIdentityModel {
-	return ClusterRoleBindingIdentityModel{
+func (r *ClusterRoleBinding) identity(name string) common.ResourceIdentity {
+	return common.ResourceIdentity{
 		APIVersion: types.StringValue(clusterRoleBindingAPIVersion),
 		Kind:       types.StringValue(clusterRoleBindingKind),
 		Name:       types.StringValue(name),
@@ -52,12 +60,7 @@ func applyState(
 ) diag.Diagnostics {
 	state.ID = types.StringValue(out.Name)
 
-	var currentMeta ClusterRoleBindingMetadataModel
-	if len(state.Metadata) > 0 {
-		currentMeta = state.Metadata[0]
-	}
-
-	metadata, diags := flattenMetadata(ctx, out.ObjectMeta, currentMeta, ignoreAnnotations, ignoreLabels)
+	metadata, diags := common.FlattenMetadata(ctx, out.ObjectMeta, state.Metadata, ignoreAnnotations, ignoreLabels)
 	if diags.HasError() {
 		return diags
 	}
@@ -66,40 +69,24 @@ func applyState(
 	state.RoleRef = flattenRoleRef(out.RoleRef)
 	state.Subject = flattenSubjects(out.Subjects)
 
-	return nil
+	return diags
 }
 
-// applyPlanResult updates a plan-derived model after a Create/Update using the
-// server response, filtering metadata using the planned state as the "current"
-// reference so that provider-ignored keys do not cause plan drift. Subjects are
-// taken from the response because their api_group and namespace fields are
-// computed. The server-assigned name is always echoed back (required for
-// generate_name).
+// applyPlanResult preserves configured values and resolves server-computed fields.
 func applyPlanResult(
-	ctx context.Context,
 	plan *ClusterRoleBindingModel,
 	out *api.ClusterRoleBinding,
-	ignoreAnnotations []string,
-	ignoreLabels []string,
-) diag.Diagnostics {
+) {
 	plan.ID = types.StringValue(out.Name)
-
-	var currentMeta ClusterRoleBindingMetadataModel
-	if len(plan.Metadata) > 0 {
-		currentMeta = plan.Metadata[0]
-	}
-
-	metadata, diags := flattenMetadata(ctx, out.ObjectMeta, currentMeta, ignoreAnnotations, ignoreLabels)
-	if diags.HasError() {
-		return diags
-	}
-
-	plan.Metadata = metadata
-	// name is Optional+Computed: echo the server value to handle generate_name.
 	plan.Metadata[0].Name = types.StringValue(out.Name)
-	plan.Subject = flattenSubjects(out.Subjects)
-
-	return nil
+	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
+	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	for i := range plan.Subject {
+		if plan.Subject[i].APIGroup.IsUnknown() {
+			plan.Subject[i].APIGroup = types.StringValue(out.Subjects[i].APIGroup)
+		}
+	}
 }
 
 func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -120,7 +107,7 @@ func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	metadata, d := expandMetadata(ctx, plan.Metadata)
+	metadata, d := common.ExpandMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -141,10 +128,7 @@ func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	resp.Diagnostics.Append(applyPlanResult(ctx, &plan, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	applyPlanResult(&plan, out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
@@ -181,7 +165,12 @@ func (r *ClusterRoleBinding) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 
-	resp.Diagnostics.Append(applyState(ctx, &state, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
+	filters, ok := r.SDKv2Meta().(kubernetes.MetadataFilters)
+	if !ok {
+		resp.Diagnostics.AddError("Unexpected provider metadata", "Provider metadata does not implement kubernetes.MetadataFilters.")
+		return
+	}
+	resp.Diagnostics.Append(applyState(ctx, &state, out, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -212,7 +201,7 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 
 	// Guard metadata access — schema requires one block but avoids a panic on
 	// incomplete state.
-	var stateMetadata, planMetadata ClusterRoleBindingMetadataModel
+	var stateMetadata, planMetadata common.MetadataModel
 	if len(state.Metadata) > 0 {
 		stateMetadata = state.Metadata[0]
 	}
@@ -224,11 +213,7 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 	// Terraform-managed keys are modified. Externally added and
 	// provider-ignored keys are absent from Terraform state (filtered during
 	// Read) and therefore never appear in the diff.
-	ops, d := buildMetadataPatch(ctx, stateMetadata, planMetadata)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	ops := common.MetadataPatchOps("/metadata/", stateMetadata, planMetadata)
 
 	// role_ref is immutable (RequiresReplace) — only subjects can change here.
 	// Replace /subjects atomically with one operation to avoid per-index
@@ -251,10 +236,7 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 			)
 			return
 		}
-		resp.Diagnostics.Append(applyPlanResult(ctx, &plan, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+		applyPlanResult(&plan, out)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 		return
@@ -281,10 +263,7 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 		return
 	}
 
-	resp.Diagnostics.Append(applyPlanResult(ctx, &plan, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	applyPlanResult(&plan, out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
@@ -323,7 +302,7 @@ func (r *ClusterRoleBinding) ImportState(ctx context.Context, req resource.Impor
 	if req.ID != "" {
 		name = req.ID
 	} else {
-		var identityData ClusterRoleBindingIdentityModel
+		var identityData common.ResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -352,7 +331,12 @@ func (r *ClusterRoleBinding) ImportState(ctx context.Context, req resource.Impor
 	}
 
 	var state ClusterRoleBindingModel
-	resp.Diagnostics.Append(applyState(ctx, &state, out, clientset.GetIgnoreAnnotations(), clientset.GetIgnoreLabels())...)
+	filters, ok := r.SDKv2Meta().(kubernetes.MetadataFilters)
+	if !ok {
+		resp.Diagnostics.AddError("Unexpected provider metadata", "Provider metadata does not implement kubernetes.MetadataFilters.")
+		return
+	}
+	resp.Diagnostics.Append(applyState(ctx, &state, out, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

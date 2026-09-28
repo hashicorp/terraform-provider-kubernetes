@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	sdkv2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -49,7 +50,13 @@ func testAccKubernetesClusterRoleBindingV1Destroy(s *terraform.State) error {
 		}
 		name := rs.Primary.ID
 		resp, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
-		if err == nil && resp.Name == rs.Primary.ID {
+		if apierrors.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if resp.Name == rs.Primary.ID {
 			return fmt.Errorf("ClusterRoleBinding still exists: %s", rs.Primary.ID)
 		}
 	}

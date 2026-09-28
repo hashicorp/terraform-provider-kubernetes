@@ -4,11 +4,19 @@
 package rbacv1
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	api "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TestFilterManagedMetadataKeys covers the core filtering logic.
@@ -92,7 +100,16 @@ func TestFilterManagedMetadataKeys(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := filterManagedMetadataKeys(tc.input, tc.current, tc.ignorePatterns)
+			current, diags := types.MapValueFrom(context.Background(), types.StringType, tc.current)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			gotMeta, diags := common.FlattenBaseMetadata(context.Background(),
+				metav1.ObjectMeta{Labels: tc.input}, common.MetadataBase{Labels: current}, nil, tc.ignorePatterns)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			got := gotMeta.Labels.Elements()
 
 			for _, key := range tc.wantKeys {
 				if _, ok := got[key]; !ok {
@@ -129,7 +146,12 @@ func TestIsInternalMetadataKey(t *testing.T) {
 		key := key
 		t.Run("internal/"+key, func(t *testing.T) {
 			t.Parallel()
-			if !isInternalMetadataKey(key) {
+			meta, diags := common.FlattenBaseMetadata(context.Background(),
+				metav1.ObjectMeta{Labels: map[string]string{key: "value"}}, common.MetadataBase{}, nil, nil)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if len(meta.Labels.Elements()) != 0 {
 				t.Errorf("expected %q to be detected as internal, but it was not", key)
 			}
 		})
@@ -139,7 +161,12 @@ func TestIsInternalMetadataKey(t *testing.T) {
 		key := key
 		t.Run("allowed/"+key, func(t *testing.T) {
 			t.Parallel()
-			if isInternalMetadataKey(key) {
+			meta, diags := common.FlattenBaseMetadata(context.Background(),
+				metav1.ObjectMeta{Labels: map[string]string{key: "value"}}, common.MetadataBase{}, nil, nil)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if len(meta.Labels.Elements()) != 1 {
 				t.Errorf("expected %q to be allowed (not internal), but it was flagged as internal", key)
 			}
 		})
@@ -212,9 +239,11 @@ func TestEscapeJSONPointer(t *testing.T) {
 		c := c
 		t.Run(c.in, func(t *testing.T) {
 			t.Parallel()
-			got := escapeJSONPointer(c.in)
-			if got != c.want {
-				t.Errorf("escapeJSONPointer(%q) = %q, want %q", c.in, got, c.want)
+			ops := kubernetes.DiffStringMap("/metadata/annotations",
+				map[string]interface{}{c.in: "old"}, map[string]interface{}{c.in: "new"})
+			got := marshalOps(t, ops)
+			if len(got) != 1 || got[0].path != "/metadata/annotations/"+c.want {
+				t.Errorf("escaped patch path for %q = %v, want %q", c.in, got, c.want)
 			}
 		})
 	}
@@ -298,13 +327,23 @@ func TestDiffStringMap(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			ops := diffStringMap(prefix, tc.oldValues, tc.newValues)
+			oldValues, diags := types.MapValueFrom(context.Background(), types.StringType, tc.oldValues)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			newValues, diags := types.MapValueFrom(context.Background(), types.StringType, tc.newValues)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			ops := common.BaseMetadataPatchOps("/metadata/",
+				common.MetadataBase{Annotations: oldValues}, common.MetadataBase{Annotations: newValues})
 			got := marshalOps(t, ops)
 
 			for _, want := range tc.wantOps {
 				if !hasOp(got, want) {
 					t.Errorf("missing op %+v; got %+v", want, got)
 				}
+
 			}
 			for _, none := range tc.wantNone {
 				if hasOp(got, none) {
@@ -315,6 +354,92 @@ func TestDiffStringMap(t *testing.T) {
 				t.Errorf("len(ops) = %d, want %d; ops=%+v", len(ops), tc.wantLen, got)
 			}
 		})
+	}
+}
+
+func TestApplyPlanResultPreservesMetadata(t *testing.T) {
+	for _, labels := range []types.Map{types.MapNull(types.StringType), types.MapValueMust(types.StringType, nil)} {
+		t.Run(labels.String(), func(t *testing.T) {
+			plan := ClusterRoleBindingModel{
+				ID: types.StringUnknown(),
+				Metadata: []common.MetadataModel{{
+					MetadataBase: common.MetadataBase{Labels: labels, Annotations: labels},
+					GenerateName: types.StringValue("tf-acc:"),
+				}},
+				Subject: []SubjectModel{{APIGroup: types.StringUnknown(), Namespace: types.StringValue("default")}},
+			}
+			out := &api.ClusterRoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "tf-acc:generated", UID: "uid", ResourceVersion: "42", Generation: 1,
+					Labels:      map[string]string{"injected": "true"},
+					Annotations: map[string]string{"injected": "true"},
+				},
+				Subjects: []api.Subject{{APIGroup: "rbac.authorization.k8s.io"}},
+			}
+			applyPlanResult(&plan, out)
+			if !plan.Metadata[0].Labels.Equal(labels) || !plan.Metadata[0].Annotations.Equal(labels) {
+				t.Fatalf("apply must echo planned metadata: %#v", plan.Metadata[0])
+			}
+			if plan.ID.ValueString() != out.Name || plan.Metadata[0].Name.ValueString() != out.Name ||
+				plan.Metadata[0].UID.ValueString() != string(out.UID) ||
+				plan.Metadata[0].ResourceVersion.ValueString() != out.ResourceVersion ||
+				plan.Metadata[0].Generation.ValueInt64() != out.Generation {
+				t.Fatalf("server-assigned fields were not populated: %#v", plan)
+			}
+			if plan.Metadata[0].GenerateName.ValueString() != "tf-acc:" ||
+				plan.Subject[0].Namespace.ValueString() != "default" ||
+				plan.Subject[0].APIGroup.ValueString() != out.Subjects[0].APIGroup {
+				t.Fatalf("unexpected planned or computed values: %#v", plan)
+			}
+		})
+	}
+}
+
+func TestClusterRoleBindingGenerateNameWithoutRefresh(t *testing.T) {
+	ctx := context.Background()
+	r := &ClusterRoleBinding{}
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	model := ClusterRoleBindingModel{
+		ID: types.StringValue("binding"),
+		Metadata: []common.MetadataModel{{
+			MetadataBase: common.MetadataBase{
+				Name:        types.StringValue("binding"),
+				Labels:      types.MapNull(types.StringType),
+				Annotations: types.MapNull(types.StringType),
+			},
+			GenerateName: types.StringValue(""),
+		}},
+	}
+	state := tfsdk.State{Schema: schemaResp.Schema}
+	if diags := state.Set(ctx, model); diags.HasError() {
+		t.Fatal(diags)
+	}
+	plan := tfsdk.Plan{Schema: schemaResp.Schema}
+	model.Metadata[0].GenerateName = types.StringNull()
+	if diags := plan.Set(ctx, model); diags.HasError() {
+		t.Fatal(diags)
+	}
+	block := schemaResp.Schema.Blocks["metadata"].(schema.ListNestedBlock)
+	attr := block.NestedObject.Attributes["generate_name"].(schema.StringAttribute)
+	for _, tc := range []struct {
+		state   types.String
+		replace bool
+	}{
+		{types.StringValue(""), false},
+		{types.StringValue("real-prefix-"), true},
+	} {
+		req := planmodifier.StringRequest{
+			State: state, Plan: plan, StateValue: tc.state, PlanValue: types.StringNull(),
+		}
+		resp := planmodifier.StringResponse{PlanValue: req.PlanValue}
+		for _, modifier := range attr.PlanModifiers {
+			modifier.PlanModifyString(ctx, req, &resp)
+		}
+		if resp.Diagnostics.HasError() || resp.RequiresReplace != tc.replace {
+			t.Fatalf("state %s: replacement=%t, want %t; diagnostics=%v",
+				tc.state, resp.RequiresReplace, tc.replace, resp.Diagnostics)
+		}
 	}
 }
 

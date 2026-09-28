@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // MoveState implements resource.ResourceWithMoveState. It enables a
@@ -90,7 +91,7 @@ func moveFromClusterRoleBinding(
 	// We derive them from the canonical constants rather than trying to parse
 	// the old SDKv2 identity JSON, so they are always correct.
 	name := src.ID.ValueString()
-	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, ClusterRoleBindingIdentityModel{
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue(clusterRoleBindingAPIVersion),
 		Kind:       types.StringValue(clusterRoleBindingKind),
 		Name:       types.StringValue(name),

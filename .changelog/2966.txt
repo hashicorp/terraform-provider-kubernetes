@@ -1,3 +1,11 @@
 ```release-note:note
-`resource/kubernetes_cluster_role_binding_v1`: Migrated from sdkv2 to the Terraform Plugin Framework. This is an internal change served through the provider mux server; existing configurations and state continue to work unchanged.
+`resource/kubernetes_cluster_role_binding_v1`: Supports moving state from `kubernetes_cluster_role_binding` using a `moved` block with Terraform 1.8 or later. Existing block syntax and name-only import IDs are preserved. Explicitly empty metadata maps can produce a one-time in-place update when upgrading SDKv2 state; the binding is not replaced.
+```
+
+```release-note:bug
+`resource/kubernetes_cluster_role_binding_v1`: Fix unnecessary replacement when planning SDKv2 state without refresh and support upgrading state created before resource identity was introduced.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_cluster_role_binding_v1`: Reject null values in metadata labels and annotations during planning instead of silently dropping them or failing during apply. Omit unwanted entries rather than setting their values to null.
 ```

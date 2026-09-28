@@ -253,7 +253,6 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			// core
 			"kubernetes_namespace":                  resourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
-			"kubernetes_namespace_v1":               resourceKubernetesNamespaceV1(""),
 			"kubernetes_service":                    resourceKubernetesServiceV1("Deprecated; use kubernetes_service_v1."),
 			"kubernetes_service_v1":                 resourceKubernetesServiceV1(""),
 			"kubernetes_service_account":            resourceKubernetesServiceAccountV1("Deprecated; use kubernetes_service_account_v1."),
@@ -379,6 +378,12 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
+}
+
+// MetadataFilters exposes the provider-level ignore lists that control which
+// Kubernetes metadata keys are reconciled into Terraform state. Kept separate from
+// KubeClientsets, which is about API clients rather than provider configuration.
+type MetadataFilters interface {
 	GetIgnoreAnnotations() []string
 	GetIgnoreLabels() []string
 }

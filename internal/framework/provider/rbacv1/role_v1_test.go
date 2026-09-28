@@ -16,14 +16,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
 func TestAccRole_basic(t *testing.T) {
+	// Colons are deliberate: RBAC names are path segments, not DNS subdomains, and SDKv2
+	// validates them with validateRBACNameFunc (schema_rbac.go). "system:controller:foo" is
+	// a real ClusterRole name, so this fixture guards that the RBAC override is in place.
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
 
@@ -255,188 +256,35 @@ func TestAccRole_identity(t *testing.T) {
 
 func TestAccRole_nameAndGenerateName(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_role_v1.test"
-	config := testAccRoleConfig_nameAndGenerateName(name)
-	updatedConfig := strings.Replace(config, `verbs      = ["get"]`, `verbs      = ["get", "list"]`, 1)
-	var uid string
 
+	// Setting both is rejected. SDKv2's namespaced schema declared the conflict against an
+	// unresolvable path so it never fired, but the combination was never meaningful — the
+	// API ignores generate_name whenever name is present. See the note on
+	// TestAccRole_movedFromAlias_nameAndGenerateName for the upgrade impact.
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: config,
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(resourceName, &uid),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", name),
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: updatedConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
-					},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(resourceName, &uid),
-					resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", "list"),
-					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", name),
-				),
-			},
-			{
-				Config: updatedConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
+				Config:      testAccRoleConfig_nameAndGenerateName(name),
+				ExpectError: regexp.MustCompile("(?s)Invalid Attribute Combination"),
 			},
 		},
 	})
 }
-
 func TestAccRole_nullMetadata(t *testing.T) {
 	name := "tf-acc-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	address := "kubernetes_role_v1.test"
-	nullConfig := testAccRoleConfig_nullMetadata(name, "null")
-	var uid string
 
+	// A null map value is rejected at plan, matching SDKv2's validateLabels and
+	// validateAnnotations. Role previously accepted it and silently dropped the key, so
+	// every later plan showed the key being added back.
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:            nullConfig,
-				ConfigStateChecks: testAccRoleNullMetadataStateChecks(address),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(address, &uid),
-					testAccRoleCheckNullMetadata(address),
-				),
-			},
-			{
-				Config: nullConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-			},
-			{
-				ResourceName:      address,
-				ImportState:       true,
-				ImportStateVerify: true,
-				// Configuration-only null entries cannot be read from Kubernetes.
-				ImportStateVerifyIgnore: []string{
-					"metadata.0.labels.%",
-					"metadata.0.labels.optional",
-					"metadata.0.annotations.%",
-					"metadata.0.annotations.optional",
-				},
-				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					if len(states) != 1 {
-						return fmt.Errorf("expected one imported Role, got %d", len(states))
-					}
-					for _, field := range []string{"labels", "annotations"} {
-						if got := states[0].Attributes["metadata.0."+field+".%"]; got != "1" {
-							return fmt.Errorf("imported %s count = %q, want 1", field, got)
-						}
-						if _, exists := states[0].Attributes["metadata.0."+field+".optional"]; exists {
-							return fmt.Errorf("import reconstructed a configuration-only null %s entry", field)
-						}
-					}
-					return nil
-				},
-			},
-			{
-				Config:            nullConfig,
-				ConfigStateChecks: testAccRoleNullMetadataStateChecks(address),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(address, &uid),
-					testAccRoleCheckNullMetadata(address),
-				),
-			},
-			{
-				PreConfig: func() {
-					conn, err := testAccRoleClient()
-					if err != nil {
-						t.Fatal(err)
-					}
-					_, err = conn.RbacV1().Roles("default").Patch(context.Background(), name, k8stypes.MergePatchType,
-						[]byte(`{"metadata":{"labels":{"optional":"drift"},"annotations":{"optional":"drift"}}}`), metav1.PatchOptions{})
-					if err != nil {
-						t.Fatal(err)
-					}
-				},
-				Config:            nullConfig,
-				ConfigStateChecks: testAccRoleNullMetadataStateChecks(address),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate),
-					},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(address, &uid),
-					testAccRoleCheckNullMetadata(address),
-				),
-			},
-			{
-				Config: testAccRoleConfig_nullMetadata(name, `"present"`),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(address, &uid),
-					resource.TestCheckResourceAttr(address, "metadata.0.labels.optional", "present"),
-					resource.TestCheckResourceAttr(address, "metadata.0.annotations.optional", "present"),
-				),
-			},
-			{
-				Config:            nullConfig,
-				ConfigStateChecks: testAccRoleNullMetadataStateChecks(address),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate),
-					},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccRoleCheckExists(address, &uid),
-					testAccRoleCheckNullMetadata(address),
-				),
-			},
-			{
-				Config: nullConfig,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-			},
-		},
-	})
-}
-
-func TestAccRole_nullMetadataUnknownValue(t *testing.T) {
-	name := "tf-acc-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	config := testAccRoleConfig_nullMetadata(name, "terraform_data.input.output.value") + `
-resource "terraform_data" "input" {
-  input = { value = null }
-}
-`
-	resource.ParallelTest(t, resource.TestCase{
-		CheckDestroy:             testAccRoleCheckDestroy,
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:            config,
-				ConfigStateChecks: testAccRoleNullMetadataStateChecks("kubernetes_role_v1.test"),
-				Check:             testAccRoleCheckNullMetadata("kubernetes_role_v1.test"),
-			},
-			{
-				Config: config,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
+				Config:      testAccRoleConfig_nullMetadata(name, "null"),
+				ExpectError: regexp.MustCompile("(?s)Invalid Attribute Value.*value must be a string"),
 			},
 		},
 	})
@@ -458,53 +306,6 @@ resource "kubernetes_role_v1" "test" {
 }
 `, name)
 	return strings.ReplaceAll(config, "optional = null", "optional = "+value)
-}
-
-func testAccRoleCheckNullMetadata(address string) resource.TestCheckFunc {
-	return resource.ComposeAggregateTestCheckFunc(
-		resource.TestCheckResourceAttr(address, "metadata.0.labels.keep", "retained"),
-		resource.TestCheckResourceAttr(address, "metadata.0.annotations.keep", "retained"),
-		func(state *terraform.State) error {
-			rs, ok := state.RootModule().Resources[address]
-			if !ok {
-				return fmt.Errorf("resource %q not found in state", address)
-			}
-			namespace, name, ok := strings.Cut(rs.Primary.ID, "/")
-			if !ok {
-				return fmt.Errorf("invalid Role ID %q", rs.Primary.ID)
-			}
-			conn, err := testAccRoleClient()
-			if err != nil {
-				return err
-			}
-			role, err := conn.RbacV1().Roles(namespace).Get(context.Background(), name, metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			if _, exists := role.Labels["optional"]; exists {
-				return fmt.Errorf("Role %q retains the null-valued label", rs.Primary.ID)
-			}
-			if _, exists := role.Annotations["optional"]; exists {
-				return fmt.Errorf("Role %q retains the null-valued annotation", rs.Primary.ID)
-			}
-			return nil
-		},
-	)
-}
-
-func testAccRoleNullMetadataStateChecks(address string) []statecheck.StateCheck {
-	var checks []statecheck.StateCheck
-	for _, field := range []string{"labels", "annotations"} {
-		checks = append(checks, statecheck.ExpectKnownValue(
-			address,
-			tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field),
-			knownvalue.MapExact(map[string]knownvalue.Check{
-				"keep":     knownvalue.StringExact("retained"),
-				"optional": knownvalue.Null(),
-			}),
-		))
-	}
-	return checks
 }
 
 func TestAccRole_missingRule(t *testing.T) {
@@ -864,7 +665,7 @@ func TestAccRole_invalidAnnotationKey(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccRoleConfig_badAnnotationKey(),
-				ExpectError: regexp.MustCompile(`(?i)Invalid Annotation Key`),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Value.*annotations\[`),
 			},
 		},
 	})
@@ -877,7 +678,7 @@ func TestAccRole_invalidLabelValue(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccRoleConfig_badLabelValue(),
-				ExpectError: regexp.MustCompile(`(?i)Invalid Label Value`),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Value.*labels\[`),
 			},
 		},
 	})
@@ -978,4 +779,20 @@ func testAccRoleCheckExists(address string, priorUID *string) resource.TestCheck
 		}
 		return nil
 	}
+}
+
+func testAccRoleConfig_names(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods"]
+    verbs      = ["get"]
+  }
+}
+`, name)
 }

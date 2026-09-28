@@ -9,16 +9,18 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 var (
-	_ resource.Resource                = (*Role)(nil)
-	_ resource.ResourceWithConfigure   = (*Role)(nil)
-	_ resource.ResourceWithImportState = (*Role)(nil)
-	_ resource.ResourceWithIdentity    = (*Role)(nil)
-	_ resource.ResourceWithMoveState   = (*Role)(nil)
+	_ resource.Resource                    = (*Role)(nil)
+	_ resource.ResourceWithConfigure       = (*Role)(nil)
+	_ resource.ResourceWithImportState     = (*Role)(nil)
+	_ resource.ResourceWithIdentity        = (*Role)(nil)
+	_ resource.ResourceWithMoveState       = (*Role)(nil)
+	_ resource.ResourceWithUpgradeIdentity = (*Role)(nil)
 )
 
 type Role struct {
@@ -41,26 +43,21 @@ func (r *Role) Configure(_ context.Context, req resource.ConfigureRequest, resp 
 }
 
 func (r *Role) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = identityschema.Schema{
-		// Version must match resourceIdentitySchemaNamespaced() in the SDKv2
-		// implementation so that identity state written before this resource
-		// migrated to Framework is still considered current.
-		Version: 1,
-		Attributes: map[string]identityschema.Attribute{
-			"api_version": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"kind": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"namespace": identityschema.StringAttribute{
-				OptionalForImport: true,
-			},
-			"name": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-		},
-	}
+	// common.NamespacedIdentitySchema reproduces resourceIdentitySchemaNamespaced() from
+	// kubernetes/resourceidentity.go, including Version 1 and namespace being
+	// OptionalForImport rather than required.
+	resp.IdentitySchema = common.NamespacedIdentitySchema()
+}
+
+// UpgradeIdentity implements [resource.ResourceWithUpgradeIdentity].
+//
+// Without this, any Role created by provider 2.37.x or older fails its first plan with
+// "Unable to Upgrade Resource Identity": identity shipped in 2.38.0, so older state carries
+// identity_schema_version 0 and no identity, and Terraform asks for an upgrade whenever the
+// stored version differs from the declared one — even when nothing is stored. SDKv2 answers
+// that generically in its gRPC server; the framework requires each resource to supply it.
+func (r *Role) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
+	return common.UpgradeNamespacedIdentity(rbacAPIVersion, roleKind)
 }
 
 const (
@@ -98,19 +95,41 @@ func (r *Role) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStat
 		return
 	}
 
-	var metaModel MetadataModel
+	var metaModel common.NamespacedMetadataModel
 	if len(src.Metadata) > 0 {
 		m := src.Metadata[0]
-		metaModel = MetadataModel{
-			Generation:      types.Int64Value(m.Generation),
-			Name:            types.StringValue(m.Name),
-			Namespace:       types.StringValue(m.Namespace),
-			ResourceVersion: types.StringValue(m.ResourceVersion),
-			UID:             types.StringValue(m.UID),
-			Annotations:     flattenStringMap(m.Annotations),
-			Labels:          flattenStringMap(m.Labels),
+
+		annotations, annDiags := types.MapValueFrom(ctx, types.StringType, m.Annotations)
+		resp.Diagnostics.Append(annDiags...)
+		labels, labelDiags := types.MapValueFrom(ctx, types.StringType, m.Labels)
+		resp.Diagnostics.Append(labelDiags...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
-		metaModel.GenerateName = types.StringValue(m.GenerateName)
+
+		// SDKv2 has no null for primitives, so it stores an unset generate_name as "".
+		// Carrying that across verbatim leaves state holding "" where the framework would
+		// hold null, and a plan that skips refresh then sees a change on a ForceNew
+		// attribute. Normalise here, as the namespace mover does.
+		generateName := types.StringNull()
+		if m.GenerateName != "" {
+			generateName = types.StringValue(m.GenerateName)
+		}
+
+		metaModel = common.NamespacedMetadataModel{
+			MetadataModel: common.MetadataModel{
+				MetadataBase: common.MetadataBase{
+					Generation:      types.Int64Value(m.Generation),
+					Name:            types.StringValue(m.Name),
+					ResourceVersion: types.StringValue(m.ResourceVersion),
+					UID:             types.StringValue(m.UID),
+					Annotations:     annotations,
+					Labels:          labels,
+				},
+				GenerateName: generateName,
+			},
+			Namespace: types.StringValue(m.Namespace),
+		}
 	}
 
 	rules := make([]RuleModel, len(src.Rule))
@@ -137,7 +156,7 @@ func (r *Role) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStat
 
 	target := RoleModel{
 		ID:       types.StringValue(src.ID),
-		Metadata: []MetadataModel{metaModel},
+		Metadata: []common.NamespacedMetadataModel{metaModel},
 		Rule:     rules,
 	}
 
@@ -152,11 +171,13 @@ func (r *Role) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStat
 			ns = src.Metadata[0].Namespace
 			name = src.Metadata[0].Name
 		}
-		identity := RoleIdentityModel{
-			APIVersion: types.StringValue(rbacAPIVersion),
-			Kind:       types.StringValue(roleKind),
-			Namespace:  types.StringValue(ns),
-			Name:       types.StringValue(name),
+		identity := common.NamespacedResourceIdentity{
+			ResourceIdentity: common.ResourceIdentity{
+				APIVersion: types.StringValue(rbacAPIVersion),
+				Kind:       types.StringValue(roleKind),
+				Name:       types.StringValue(name),
+			},
+			Namespace: types.StringValue(ns),
 		}
 		resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, identity)...)
 	}

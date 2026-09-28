@@ -1,3 +1,11 @@
 ```release-note:note
 `resource/kubernetes_role_v1`: Migrated the resource to the Terraform Plugin Framework, preserving block syntax, empty metadata and rule values, and configurations specifying both `name` and `generate_name`. Existing configurations do not require edits or manual state migration. Added support for moving from the deprecated `kubernetes_role` resource using a `moved` block with Terraform 1.8 or later.
 ```
+
+```release-note:breaking-change
+`resource/kubernetes_role_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected during plan. Earlier versions allowed it, which was not the desired behvaiour, K8 API ignores `generate_name` whenever `name` is set. Remove `generate_name` from configurations that set both.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_role_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry.
+```

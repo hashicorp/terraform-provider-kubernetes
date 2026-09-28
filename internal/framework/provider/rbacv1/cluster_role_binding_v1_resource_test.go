@@ -17,7 +17,7 @@ import (
 
 const clusterRoleBindingResourceName = "kubernetes_cluster_role_binding_v1.test"
 
-func TestAccFrameworkClusterRoleBindingV1_basic(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -42,6 +42,12 @@ func TestAccFrameworkClusterRoleBindingV1_basic(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				Config: testAccKubernetesClusterRoleBindingV1Config_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.name", name),
@@ -56,6 +62,12 @@ func TestAccFrameworkClusterRoleBindingV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.name", "system:masters"),
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.kind", "Group"),
 				),
+			},
+			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				// role_ref change forces replacement (ForceNew).
@@ -75,7 +87,7 @@ func TestAccFrameworkClusterRoleBindingV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccFrameworkClusterRoleBindingV1_generatedName(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_generatedName(t *testing.T) {
 	prefix := "tf-acc-test-gen:"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -92,11 +104,17 @@ func TestAccFrameworkClusterRoleBindingV1_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.name", "notauser"),
 				),
 			},
+			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 		},
 	})
 }
 
-func TestAccFrameworkClusterRoleBindingV1_serviceAccountSubject(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_serviceAccountSubject(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -113,11 +131,17 @@ func TestAccFrameworkClusterRoleBindingV1_serviceAccountSubject(t *testing.T) {
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.kind", "ServiceAccount"),
 				),
 			},
+			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 		},
 	})
 }
 
-func TestAccFrameworkClusterRoleBindingV1_groupSubject(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_groupSubject(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -144,7 +168,7 @@ func TestAccFrameworkClusterRoleBindingV1_groupSubject(t *testing.T) {
 	})
 }
 
-func TestAccFrameworkClusterRoleBindingV1_identity(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -326,12 +350,12 @@ func testAccKubernetesClusterRoleBindingV1Config_groupSubject(name string) strin
 `, name)
 }
 
-// TestAccFrameworkClusterRoleBindingV1_ignoreAnnotations verifies that:
+// TestAccFrameworkClusterRoleBinding_ignoreAnnotations verifies that:
 //   - provider-level ignore_annotations prevents drift from untracked
 //     server-side annotations matching the pattern
 //   - annotations the user has explicitly configured are retained even
 //     when their key matches an ignore pattern
-func TestAccFrameworkClusterRoleBindingV1_ignoreAnnotations(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_ignoreAnnotations(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -394,14 +418,14 @@ resource "kubernetes_cluster_role_binding_v1" "test" {
 `, name)
 }
 
-// TestAccFrameworkClusterRoleBindingV1_subjectOrderWithRemovals is the
+// TestAccFrameworkClusterRoleBinding_subjectOrderWithRemovals is the
 // Framework port of the SDKv2
 // TestAccKubernetesClusterRoleBindingV1_UpdatePatchOperationsOrderWithRemovals
 // test. It verifies that removing a subject, then re-adding subjects in a
 // different order, produces the exact expected list with no stale entries.
 // This validates the single replace /subjects operation instead of the
 // error-prone per-index patch approach.
-func TestAccFrameworkClusterRoleBindingV1_subjectOrderWithRemovals(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_subjectOrderWithRemovals(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -419,6 +443,12 @@ func TestAccFrameworkClusterRoleBindingV1_subjectOrderWithRemovals(t *testing.T)
 				),
 			},
 			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
 				// Step 2 — remove the ServiceAccount; two subjects remain.
 				Config: testAccKubernetesClusterRoleBindingV1Config_subjectRemoval(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -426,6 +456,12 @@ func TestAccFrameworkClusterRoleBindingV1_subjectOrderWithRemovals(t *testing.T)
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.kind", "User"),
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.kind", "Group"),
 				),
+			},
+			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
 				// Step 3 — add subjects back in a different order.
@@ -436,6 +472,12 @@ func TestAccFrameworkClusterRoleBindingV1_subjectOrderWithRemovals(t *testing.T)
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.kind", "ServiceAccount"),
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.kind", "User"),
 				),
+			},
+			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 		},
 	})
@@ -502,10 +544,10 @@ func testAccKubernetesClusterRoleBindingV1Config_subjectReorder(name string) str
 `, name)
 }
 
-// TestAccFrameworkClusterRoleBindingV1_invalidMetadataName verifies that a
+// TestAccFrameworkClusterRoleBinding_invalidMetadataName verifies that a
 // metadata.name containing a path separator is rejected during Terraform
 // validation, matching the SDKv2 validateRBACNameFunc behavior.
-func TestAccFrameworkClusterRoleBindingV1_invalidMetadataName(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_invalidMetadataName(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -517,9 +559,9 @@ func TestAccFrameworkClusterRoleBindingV1_invalidMetadataName(t *testing.T) {
 	})
 }
 
-// TestAccFrameworkClusterRoleBindingV1_invalidMetadataGenerateName verifies
+// TestAccFrameworkClusterRoleBinding_invalidMetadataGenerateName verifies
 // that an invalid generate_name prefix is also rejected during validation.
-func TestAccFrameworkClusterRoleBindingV1_invalidMetadataGenerateName(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_invalidMetadataGenerateName(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -531,10 +573,10 @@ func TestAccFrameworkClusterRoleBindingV1_invalidMetadataGenerateName(t *testing
 	})
 }
 
-// TestAccFrameworkClusterRoleBindingV1_missingMetadata verifies that omitting
+// TestAccFrameworkClusterRoleBinding_missingMetadata verifies that omitting
 // the required metadata block is rejected during Terraform validation by
 // listvalidator.IsRequired(), rather than deferring the failure to apply.
-func TestAccFrameworkClusterRoleBindingV1_missingMetadata(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_missingMetadata(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -546,10 +588,10 @@ func TestAccFrameworkClusterRoleBindingV1_missingMetadata(t *testing.T) {
 	})
 }
 
-// TestAccFrameworkClusterRoleBindingV1_missingRoleRef verifies that omitting
+// TestAccFrameworkClusterRoleBinding_missingRoleRef verifies that omitting
 // the required role_ref block is rejected during Terraform validation by
 // listvalidator.IsRequired().
-func TestAccFrameworkClusterRoleBindingV1_missingRoleRef(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_missingRoleRef(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -561,10 +603,10 @@ func TestAccFrameworkClusterRoleBindingV1_missingRoleRef(t *testing.T) {
 	})
 }
 
-// TestAccFrameworkClusterRoleBindingV1_missingSubject verifies that omitting
+// TestAccFrameworkClusterRoleBinding_missingSubject verifies that omitting
 // the required subject block is rejected during Terraform validation by
 // listvalidator.IsRequired().
-func TestAccFrameworkClusterRoleBindingV1_missingSubject(t *testing.T) {
+func TestAccFrameworkClusterRoleBinding_missingSubject(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{

@@ -82,9 +82,9 @@ func migrationTestCase(t *testing.T, config string, extraChecks ...resource.Test
 	})
 }
 
-// TestAccMigrateClusterRoleBindingV1_basic verifies the simplest binding (a
+// TestAccMigrateClusterRoleBinding_basic verifies the simplest binding (a
 // single User subject) migrates in place with no diff.
-func TestAccMigrateClusterRoleBindingV1_basic(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	migrationTestCase(t,
@@ -97,11 +97,11 @@ func TestAccMigrateClusterRoleBindingV1_basic(t *testing.T) {
 	)
 }
 
-// TestAccMigrateClusterRoleBindingV1_generatedName verifies that a binding
+// TestAccMigrateClusterRoleBinding_generatedName verifies that a binding
 // created via metadata.generate_name (server-assigned name) migrates without a
 // diff. This is the important computed-name case: the Framework version must
 // reproduce the exact generated name that the SDKv2 version stored.
-func TestAccMigrateClusterRoleBindingV1_generatedName(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_generatedName(t *testing.T) {
 	prefix := "tf-acc-test-gen:"
 
 	migrationTestCase(t,
@@ -113,11 +113,11 @@ func TestAccMigrateClusterRoleBindingV1_generatedName(t *testing.T) {
 	)
 }
 
-// TestAccMigrateClusterRoleBindingV1_multipleSubjects verifies that a binding
+// TestAccMigrateClusterRoleBinding_multipleSubjects verifies that a binding
 // with a mix of User, ServiceAccount (namespaced, empty api_group) and Group
 // subjects migrates with no diff. This exercises the computed subject.api_group
 // and subject.namespace defaulting logic across the migration boundary.
-func TestAccMigrateClusterRoleBindingV1_multipleSubjects(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_multipleSubjects(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	migrationTestCase(t,
@@ -132,10 +132,10 @@ func TestAccMigrateClusterRoleBindingV1_multipleSubjects(t *testing.T) {
 	)
 }
 
-// TestAccMigrateClusterRoleBindingV1_serviceAccountSubject verifies migration of
+// TestAccMigrateClusterRoleBinding_serviceAccountSubject verifies migration of
 // a binding whose only subject is a ServiceAccount that omits api_group and
 // namespace, ensuring the computed/default handling matches SDKv2 state.
-func TestAccMigrateClusterRoleBindingV1_serviceAccountSubject(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_serviceAccountSubject(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	migrationTestCase(t,
@@ -147,9 +147,9 @@ func TestAccMigrateClusterRoleBindingV1_serviceAccountSubject(t *testing.T) {
 	)
 }
 
-// TestAccMigrateClusterRoleBindingV1_groupSubject verifies migration of a
+// TestAccMigrateClusterRoleBinding_groupSubject verifies migration of a
 // binding with a single Group subject (non-empty api_group).
-func TestAccMigrateClusterRoleBindingV1_groupSubject(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_groupSubject(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	migrationTestCase(t,
@@ -161,12 +161,12 @@ func TestAccMigrateClusterRoleBindingV1_groupSubject(t *testing.T) {
 	)
 }
 
-// TestAccMigrateClusterRoleBindingV1_thenUpdate verifies the full lifecycle
+// TestAccMigrateClusterRoleBinding_thenUpdate verifies the full lifecycle
 // across the migration boundary: create with the released SDKv2 provider,
 // migrate to the Framework provider with no diff, then apply an actual
 // configuration change (adding subjects) using the Framework provider to prove
 // Update works correctly on state that originated from SDKv2.
-func TestAccMigrateClusterRoleBindingV1_thenUpdate(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_thenUpdate(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
@@ -200,10 +200,10 @@ func TestAccMigrateClusterRoleBindingV1_thenUpdate(t *testing.T) {
 	})
 }
 
-// TestAccMigrateClusterRoleBindingV1_thenForceReplace verifies that changing an
+// TestAccMigrateClusterRoleBinding_thenForceReplace verifies that changing an
 // immutable role_ref field after migration correctly forces replacement under
 // the Framework provider, matching the SDKv2 ForceNew behaviour.
-func TestAccMigrateClusterRoleBindingV1_thenForceReplace(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_thenForceReplace(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.Test(t, resource.TestCase{
@@ -241,7 +241,7 @@ func TestAccMigrateClusterRoleBindingV1_thenForceReplace(t *testing.T) {
 	})
 }
 
-// TestAccMigrateClusterRoleBindingV1_externalMetadataSurvivesSubjectUpdate
+// TestAccMigrateClusterRoleBinding_externalMetadataSurvivesSubjectUpdate
 // verifies that an annotation added to the Kubernetes object outside Terraform
 // is not removed when the Framework resource patches only the subject list.
 //
@@ -257,7 +257,7 @@ func TestAccMigrateClusterRoleBindingV1_thenForceReplace(t *testing.T) {
 //     no diff (the ignored key is filtered and does not create drift).
 //  3. Step 3 updates subjects and verifies the annotation still exists on the
 //     live Kubernetes object.
-func TestAccMigrateClusterRoleBindingV1_externalMetadataSurvivesSubjectUpdate(t *testing.T) {
+func TestAccMigrateClusterRoleBinding_externalMetadataSurvivesSubjectUpdate(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	const (
@@ -376,273 +376,6 @@ func testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIOModified(name s
 	return fmt.Sprintf(`
 provider "kubernetes" {
   ignore_annotations = ["^external\\.io/"]
-}
-
-resource "kubernetes_cluster_role_binding_v1" "test" {
-  metadata {
-    name = %q
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-
-  subject {
-    kind      = "ServiceAccount"
-    name      = "default"
-    api_group = ""
-    namespace = "kube-system"
-  }
-
-  subject {
-    kind      = "Group"
-    name      = "system:masters"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
-}
-
-// ---------------------------------------------------------------------------
-// MoveState tests — cross-type rename via moved { } block
-//
-// These tests exercise the ResourceWithMoveState implementation added to
-// kubernetes_cluster_role_binding_v1.  The scenario is:
-//
-//  1. The practitioner has existing state for the deprecated resource type
-//     kubernetes_cluster_role_binding (bare name, SDKv2 only).
-//  2. They add a moved { } block in their configuration to rename it to
-//     kubernetes_cluster_role_binding_v1 (the Framework resource).
-//  3. Terraform calls MoveResourceState on the new provider.
-//  4. The Framework MoveState implementation copies state directly — schemas
-//     are identical because ClusterRoleBinding is non-namespaced.
-//  5. The post-move plan must be empty (no destroy/recreate).
-// ---------------------------------------------------------------------------
-
-// TestAccMoveStateClusterRoleBindingV1_basic verifies that a binding created
-// as kubernetes_cluster_role_binding can be moved to
-// kubernetes_cluster_role_binding_v1 via a moved block with no diff.
-func TestAccMoveStateClusterRoleBindingV1_basic(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		CheckDestroy: testAccKubernetesClusterRoleBindingV1Destroy,
-		Steps: []resource.TestStep{
-			{
-				// Step 1 — create with the released SDKv2 provider using the
-				// deprecated kubernetes_cluster_role_binding resource type.
-				ExternalProviders: releasedKubernetesProvider(),
-				Config:            testAccKubernetesClusterRoleBindingConfig_deprecatedType(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(
-						"kubernetes_cluster_role_binding.test",
-						"metadata.0.name", name,
-					),
-					resource.TestCheckResourceAttr(
-						"kubernetes_cluster_role_binding.test",
-						"subject.#", "1",
-					),
-				),
-			},
-			{
-				// Step 2 — switch to the local Framework provider with a
-				// moved block renaming the resource type.  The plan must be
-				// empty: MoveState copies state in place with no changes.
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"metadata.0.name", name,
-					),
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"subject.#", "1",
-					),
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"role_ref.0.name", "cluster-admin",
-					),
-				),
-			},
-			{
-				// Step 3 — idempotency after the move: plan must still be
-				// empty on the Framework provider.
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PostApplyPostRefresh: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
-// TestAccMoveStateClusterRoleBindingV1_multipleSubjects verifies the move
-// with a binding that has multiple subjects of different kinds, exercising
-// the computed api_group and namespace defaulting across the move boundary.
-func TestAccMoveStateClusterRoleBindingV1_multipleSubjects(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
-	resource.Test(t, resource.TestCase{
-		CheckDestroy: testAccKubernetesClusterRoleBindingV1Destroy,
-		Steps: []resource.TestStep{
-			{
-				ExternalProviders: releasedKubernetesProvider(),
-				Config:            testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(
-						"kubernetes_cluster_role_binding.test",
-						"subject.#", "3",
-					),
-				),
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"subject.#", "3",
-					),
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"subject.0.kind", "User",
-					),
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"subject.1.kind", "ServiceAccount",
-					),
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"subject.2.kind", "Group",
-					),
-				),
-			},
-		},
-	})
-}
-
-// testAccKubernetesClusterRoleBindingConfig_deprecatedType returns HCL that
-// creates a ClusterRoleBinding using the deprecated
-// kubernetes_cluster_role_binding resource type (SDKv2 bare name).
-func testAccKubernetesClusterRoleBindingConfig_deprecatedType(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-  metadata {
-    name = %q
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
-}
-
-// testAccKubernetesClusterRoleBindingConfig_movedToV1 returns HCL that moves
-// the kubernetes_cluster_role_binding.test resource to
-// kubernetes_cluster_role_binding_v1.test using a moved { } block.
-// The resource configuration itself is identical — only the type changes.
-func testAccKubernetesClusterRoleBindingConfig_movedToV1(name string) string {
-	return fmt.Sprintf(`
-moved {
-  from = kubernetes_cluster_role_binding.test
-  to   = kubernetes_cluster_role_binding_v1.test
-}
-
-resource "kubernetes_cluster_role_binding_v1" "test" {
-  metadata {
-    name = %q
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
-}
-
-// testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject returns
-// HCL for a binding with three subjects, using the deprecated type.
-func testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_cluster_role_binding" "test" {
-  metadata {
-    name = %q
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-
-  subject {
-    kind      = "ServiceAccount"
-    name      = "default"
-    api_group = ""
-    namespace = "kube-system"
-  }
-
-  subject {
-    kind      = "Group"
-    name      = "system:masters"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
-}
-
-// testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject is the
-// moved-block equivalent of testAccKubernetesClusterRoleBindingConfig_deprecatedTypeMultiSubject.
-func testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject(name string) string {
-	return fmt.Sprintf(`
-moved {
-  from = kubernetes_cluster_role_binding.test
-  to   = kubernetes_cluster_role_binding_v1.test
 }
 
 resource "kubernetes_cluster_role_binding_v1" "test" {

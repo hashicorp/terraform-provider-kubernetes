@@ -361,7 +361,7 @@ func testAccCheckKubernetesRoleBindingV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -390,7 +390,7 @@ func testAccCheckKubernetesRoleBindingV1Exists(n string, obj *rbacv1.RoleBinding
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

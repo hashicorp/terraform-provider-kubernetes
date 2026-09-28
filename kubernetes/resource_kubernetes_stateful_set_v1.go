@@ -98,7 +98,7 @@ func resourceKubernetesStatefulSetV1Create(ctx context.Context, d *schema.Resour
 	}
 	log.Printf("[INFO] Submitted new StatefulSet: %#v", out)
 
-	id := buildId(out.ObjectMeta)
+	id := BuildId(out.ObjectMeta)
 	d.SetId(id)
 
 	log.Printf("[INFO] StatefulSet %s created", id)
@@ -123,7 +123,7 @@ func resourceKubernetesStatefulSetV1Exists(ctx context.Context, d *schema.Resour
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}
@@ -154,7 +154,7 @@ func resourceKubernetesStatefulSetV1Read(ctx context.Context, d *schema.Resource
 	}
 
 	id := d.Id()
-	namespace, name, err := idParts(id)
+	namespace, name, err := IdParts(id)
 	if err != nil {
 		return diag.Errorf("Error parsing resource ID: %#v", err)
 	}
@@ -197,7 +197,7 @@ func resourceKubernetesStatefulSetV1Update(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.Errorf("Error parsing resource ID: %#v", err)
 	}
@@ -241,7 +241,7 @@ func resourceKubernetesStatefulSetV1Delete(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.Errorf("Error parsing resource ID: %#v", err)
 	}

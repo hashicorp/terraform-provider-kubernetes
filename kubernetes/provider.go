@@ -253,7 +253,6 @@ func Provider() *schema.Provider {
 		ResourcesMap: map[string]*schema.Resource{
 			// core
 			"kubernetes_namespace":                  resourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
-			"kubernetes_namespace_v1":               resourceKubernetesNamespaceV1(""),
 			"kubernetes_service":                    resourceKubernetesServiceV1("Deprecated; use kubernetes_service_v1."),
 			"kubernetes_service_v1":                 resourceKubernetesServiceV1(""),
 			"kubernetes_service_account":            resourceKubernetesServiceAccountV1("Deprecated; use kubernetes_service_account_v1."),
@@ -382,6 +381,14 @@ type KubeClientsets interface {
 	GetIgnoreLabels() []string
 }
 
+// MetadataFilters exposes the provider-level ignore lists that control which
+// Kubernetes metadata keys are reconciled into Terraform state. Kept separate from
+// KubeClientsets, which is about API clients rather than provider configuration.
+type MetadataFilters interface {
+	GetIgnoreAnnotations() []string
+	GetIgnoreLabels() []string
+}
+
 type providerMetadata struct {
 	// TODO: this struct has become overloaded we should
 	// rename this or break it into smaller structs
@@ -393,6 +400,13 @@ type providerMetadata struct {
 
 	IgnoreAnnotations []string
 	IgnoreLabels      []string
+}
+
+func (k providerMetadata) GetIgnoreAnnotations() []string {
+	return k.IgnoreAnnotations
+}
+func (k providerMetadata) GetIgnoreLabels() []string {
+	return k.IgnoreLabels
 }
 
 func (k providerMetadata) MainClientset() (*kubernetes.Clientset, error) {
@@ -452,14 +466,6 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 		k.discoveryClient = kc
 	}
 	return k.discoveryClient, nil
-}
-
-func (k providerMetadata) GetIgnoreAnnotations() []string {
-	return k.IgnoreAnnotations
-}
-
-func (k providerMetadata) GetIgnoreLabels() []string {
-	return k.IgnoreLabels
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

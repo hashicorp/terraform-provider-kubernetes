@@ -401,6 +401,13 @@ type providerMetadata struct {
 	IgnoreLabels      []string
 }
 
+func (k providerMetadata) GetIgnoreAnnotations() []string {
+	return k.IgnoreAnnotations
+}
+func (k providerMetadata) GetIgnoreLabels() []string {
+	return k.IgnoreLabels
+}
+
 func (k providerMetadata) MainClientset() (*kubernetes.Clientset, error) {
 	if k.mainClientset != nil {
 		return k.mainClientset, nil
@@ -458,14 +465,6 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 		k.discoveryClient = kc
 	}
 	return k.discoveryClient, nil
-}
-
-func (k providerMetadata) GetIgnoreAnnotations() []string {
-	return k.IgnoreAnnotations
-}
-
-func (k providerMetadata) GetIgnoreLabels() []string {
-	return k.IgnoreLabels
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {

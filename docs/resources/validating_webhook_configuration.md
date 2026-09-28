@@ -222,7 +222,7 @@ resource "kubernetes_validating_webhook_configuration" "example" {
 
 The provider supports clusters running either `v1` or `v1beta1` of the Admission Registration API.
 
-##Import
+## Import
 
 Validating Webhook Configuration can be imported using the name, e.g.
 

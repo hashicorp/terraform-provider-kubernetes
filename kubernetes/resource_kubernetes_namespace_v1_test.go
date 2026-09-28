@@ -444,7 +444,7 @@ func testAccCheckKubernetesDefaultServiceAccountExists(n string,
 		}
 		ctx := context.TODO()
 
-		namespace, _, err := idParts(rs.Primary.ID + "/")
+		namespace, _, err := IdParts(rs.Primary.ID + "/")
 		if err != nil {
 			return err
 		}

@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
+	pathValidation "k8s.io/apimachinery/pkg/api/validation/path"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -170,5 +171,37 @@ func (v labelsValidator) ValidateMap(_ context.Context, req validator.MapRequest
 			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 				req.Path.AtMapKey(k), "value "+msg, val.String()))
 		}
+	}
+}
+
+// RBACNameValidator validates a name the way SDKv2's validateRBACNameFunc does
+// (kubernetes/schema_rbac.go), with apimachinery's IsValidPathSegmentName rather than
+// NameIsDNSSubdomain.
+//
+// RBAC names are path segments, not DNS subdomains: "system:controller:foo" is a legitimate
+// ClusterRole name and the API accepts it. Using the DNS rule here would reject names that
+// both Kubernetes and every released provider version accept.
+func RBACNameValidator() validator.String {
+	return rbacNameValidator{}
+}
+
+type rbacNameValidator struct{}
+
+func (v rbacNameValidator) Description(ctx context.Context) string {
+	return v.MarkdownDescription(ctx)
+}
+
+func (v rbacNameValidator) MarkdownDescription(_ context.Context) string {
+	return "must be a valid path segment name"
+}
+
+func (v rbacNameValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	for _, msg := range pathValidation.IsValidPathSegmentName(req.ConfigValue.ValueString()) {
+		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+			req.Path, msg, req.ConfigValue.ValueString()))
 	}
 }

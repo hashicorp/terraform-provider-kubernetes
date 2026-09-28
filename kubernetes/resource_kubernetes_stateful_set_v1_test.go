@@ -441,7 +441,7 @@ func testAccCheckKubernetesStatefulSetV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -494,7 +494,7 @@ func getStatefulSetFromResourceName(s *terraform.State, n string) (*appsv1.State
 	}
 	ctx := context.TODO()
 
-	namespace, name, err := idParts(rs.Primary.ID)
+	namespace, name, err := IdParts(rs.Primary.ID)
 	if err != nil {
 		return nil, err
 	}

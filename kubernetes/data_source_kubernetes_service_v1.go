@@ -260,7 +260,7 @@ func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceDa
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading service %s", metadata.Name)
 	svc, err := conn.CoreV1().Services(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

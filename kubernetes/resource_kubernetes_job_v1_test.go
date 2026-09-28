@@ -305,7 +305,7 @@ func testAccCheckKubernetesJobV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -334,7 +334,7 @@ func testAccCheckKubernetesJobV1Exists(n string, obj *batchv1.Job) resource.Test
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

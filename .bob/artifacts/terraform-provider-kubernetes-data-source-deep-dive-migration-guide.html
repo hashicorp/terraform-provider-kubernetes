@@ -1,0 +1,539 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Data Sources — Deep Dive &amp; Migration Guide</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #1f2328;
+    background: #ffffff;
+    padding: 40px 20px 60px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: #57606a; font-size: 13px; margin-bottom: 36px; }
+  h2 { font-size: 16px; font-weight: 700; margin: 36px 0 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+  h3 { font-size: 14px; font-weight: 700; margin: 22px 0 6px; color: #1f2328; }
+  p { margin-bottom: 12px; }
+  ul, ol { margin: 8px 0 14px 22px; }
+  li { margin-bottom: 4px; }
+  code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px;
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  pre {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 10px 0 18px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: 12px; }
+  .label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-bottom: 4px;
+  }
+  .label-sdk { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+  .label-fw  { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+  .callout {
+    background: #f7f8fa;
+    border-left: 4px solid #3b82d4;
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 14px 0 18px;
+    font-size: 13px;
+  }
+  .callout.warn {
+    border-left-color: #d97706;
+    background: #fffbeb;
+  }
+  .callout.tip {
+    border-left-color: #16a34a;
+    background: #f0fdf4;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 13px; }
+  th { background: #f7f8fa; border: 1px solid #e5e7eb; padding: 7px 10px; text-align: left; font-weight: 600; }
+  td { border: 1px solid #e5e7eb; padding: 7px 10px; vertical-align: top; }
+  .step {
+    counter-increment: steps;
+    display: flex;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: #3b82d4;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
+  footer {
+    margin-top: 48px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 10px;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Data Sources — Deep Dive &amp; Migration Guide</h1>
+  <p class="subtitle">terraform-provider-kubernetes · SDKv2 → Plugin Framework</p>
+
+  
+  <h2>1. What Is a Data Source?</h2>
+  <p>A <strong>data source</strong> is a read-only construct in Terraform. It lets a configuration look up information that already exists — either in the target infrastructure or anywhere an API can describe — and expose that information as attributes that other parts of the configuration can reference.</p>
+  <p>Unlike a <em>resource</em>, a data source:</p>
+  <ul>
+    <li>Never creates, modifies, or deletes anything in the API.</li>
+    <li>Has <strong>no lifecycle</strong> beyond reading (no <code>Create</code>, <code>Update</code>, or <code>Delete</code> methods).</li>
+    <li>Runs during <code>terraform plan</code> (and again during <code>apply</code> if the value is needed) rather than only during <code>apply</code>.</li>
+    <li>Is tracked in state only for caching — the state is refreshed every run.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>Kubernetes examples in this provider:</strong> <code>kubernetes_namespace_v1</code>, <code>kubernetes_secret_v1</code>, <code>kubernetes_server_version</code>, <code>kubernetes_nodes</code>, <code>kubernetes_pod_v1</code>, and ~20 others — all living under <code>kubernetes/data_source_kubernetes_*.go</code>.
+  </div>
+
+  
+  <h2>2. Using a Data Source in a Terraform Config File</h2>
+  <p>Yes — data sources are referenced directly in <code>.tf</code> configuration files. The HCL keyword is <code>data</code>, not <code>resource</code>.</p>
+
+  <pre><code># Declare the data source
+data "kubernetes_namespace_v1" "staging" {
+  metadata {
+    name = "staging"
+  }
+}
+
+# Reference its attributes elsewhere in the same config
+resource "kubernetes_config_map_v1" "app_config" {
+  metadata {
+    namespace = data.kubernetes_namespace_v1.staging.metadata[0].name
+    name      = "app-config"
+  }
+  data = {
+    env = "staging"
+  }
+}
+</code></pre>
+
+  <p>The reference syntax is always <code>data.&lt;type&gt;.&lt;local_name&gt;.&lt;attribute&gt;</code>. You <strong>cannot</strong> reference a data source as if it were a resource (no <code>kubernetes_namespace_v1.staging</code> — that would look for a managed resource).</p>
+
+  <div class="callout tip">
+    <strong>Timing:</strong> Terraform evaluates data sources during the <em>plan</em> phase when all their inputs are known. If an input depends on a resource that hasn't been created yet, Terraform defers the read to the <em>apply</em> phase.
+  </div>
+
+  
+  <h2>3. How a Data Source Works — End-to-End Flow</h2>
+  <p>Here is the full lifecycle of a data source call from HCL config to state:</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>Parse &amp; validate</strong><br />
+      Terraform parses the <code>data</code> block and validates every attribute against the schema the provider declared for that data source (required fields present, correct types, etc.).
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Provider configure</strong><br />
+      Before any reads happen, the provider's <code>Configure</code> method runs once, establishing the Kubernetes client (<code>KubeClientsets</code>). This client is passed into every data source read via <code>meta</code> (SDKv2) or <code>req.ProviderData</code> (Framework).
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <strong>Read / Refresh</strong><br />
+      The data source's <code>Read</code> function executes. It calls the Kubernetes API (e.g., <code>conn.CoreV1().Namespaces().Get(…)</code>), maps the response to schema attributes, and writes the result into state.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <strong>State stored &amp; attributes exposed</strong><br />
+      Terraform stores the read values under a synthetic ID (set via <code>d.SetId(…)</code> in SDKv2 or <code>resp.State.Set(…)</code> in Framework). Downstream resources can now reference those attribute values.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <strong>Every subsequent plan</strong><br />
+      The data source is re-read on every <code>terraform plan</code> / <code>terraform apply</code>. There is no "drift detection" — the current API value is always authoritative.
+    </div>
+  </div>
+
+  
+  <h2>4. Anatomy of a Data Source in SDKv2 (Current State)</h2>
+  <p>All data sources in this provider today live in the <code>kubernetes/</code> package and are written with <code>terraform-plugin-sdk/v2</code>. Two components define each one:</p>
+
+  <h3>4a. The schema function</h3>
+  <p>Returns a <code>*schema.Resource</code> — the same struct used for managed resources, but without Create/Update/Delete hooks.</p>
+
+  <div class="label label-sdk">SDKv2 · kubernetes/data_source_kubernetes_namespace_v1.go</div>
+  <pre><code>func dataSourceKubernetesNamespaceV1(deprecationMessage string) *schema.Resource {
+    return &amp;schema.Resource{
+        Description:        "Query a namespace within a Kubernetes cluster.",
+        ReadContext:        dataSourceKubernetesNamespaceV1Read,
+        DeprecationMessage: deprecationMessage,
+
+        Schema: map[string]*schema.Schema{
+            "metadata": metadataSchema("namespace", false),
+            "spec": {
+                Type:     schema.TypeList,
+                Computed: true,
+                Elem: &amp;schema.Resource{
+                    Schema: map[string]*schema.Schema{
+                        "finalizers": {
+                            Type:     schema.TypeList,
+                            Optional: true,
+                            Elem:     &amp;schema.Schema{Type: schema.TypeString},
+                        },
+                    },
+                },
+            },
+        },
+    }
+}</code></pre>
+
+  <h3>4b. The Read function</h3>
+  <p>Called by Terraform during plan/apply. It receives the config state via <code>*schema.ResourceData</code>, calls the API, and writes results back.</p>
+
+  <div class="label label-sdk">SDKv2 · kubernetes/data_source_kubernetes_namespace_v1.go</div>
+  <pre><code>func dataSourceKubernetesNamespaceV1Read(
+    ctx context.Context, d *schema.ResourceData, meta interface{},
+) diag.Diagnostics {
+    conn, err := meta.(KubeClientsets).MainClientset()
+    if err != nil {
+        return diag.FromErr(err)
+    }
+
+    metadata := expandMetadata(d.Get("metadata").([]interface{}))
+    d.SetId(metadata.Name)
+
+    namespace, err := conn.CoreV1().Namespaces().Get(ctx, metadata.Name, metav1.GetOptions{})
+    if err != nil {
+        return diag.FromErr(err)
+    }
+
+    d.Set("metadata", flattenMetadataFields(namespace.ObjectMeta))
+    d.Set("spec", flattenNamespaceV1Spec(&amp;namespace.Spec))
+    return nil
+}</code></pre>
+
+  <h3>4c. Provider registration</h3>
+  <p>The data source is wired into the provider via <code>DataSourcesMap</code> in <code>kubernetes/provider.go</code>:</p>
+
+  <div class="label label-sdk">SDKv2 · kubernetes/provider.go</div>
+  <pre><code>DataSourcesMap: map[string]*schema.Resource{
+    "kubernetes_namespace":    dataSourceKubernetesNamespaceV1("Deprecated; use kubernetes_namespace_v1."),
+    "kubernetes_namespace_v1": dataSourceKubernetesNamespaceV1(""),
+    "kubernetes_secret_v1":    dataSourceKubernetesSecretV1(""),
+    "kubernetes_server_version": dataSourceKubernetesServerVersion(),
+    // ... 20+ more
+},</code></pre>
+
+  
+  <h2>5. SDKv2 vs. Plugin Framework — Key Differences</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Concern</th>
+        <th>SDKv2</th>
+        <th>Plugin Framework</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Type</td>
+        <td><code>*schema.Resource</code></td>
+        <td>struct implementing <code>datasource.DataSource</code></td>
+      </tr>
+      <tr>
+        <td>Registration</td>
+        <td><code>DataSourcesMap</code> on <code>schema.Provider</code></td>
+        <td>slice returned by <code>provider.DataSources()</code></td>
+      </tr>
+      <tr>
+        <td>Schema</td>
+        <td><code>map[string]*schema.Schema</code></td>
+        <td><code>datasource/schema.Schema</code> with typed <code>Attribute</code> structs</td>
+      </tr>
+      <tr>
+        <td>Read signature</td>
+        <td><code>func(ctx, *schema.ResourceData, interface{}) diag.Diagnostics</code></td>
+        <td><code>func(ctx, datasource.ReadRequest, *datasource.ReadResponse)</code></td>
+      </tr>
+      <tr>
+        <td>State writes</td>
+        <td><code>d.Set("key", value)</code> + <code>d.SetId(…)</code></td>
+        <td><code>resp.State.Set(ctx, &amp;model)</code> (typed Go struct)</td>
+      </tr>
+      <tr>
+        <td>Client access</td>
+        <td><code>meta.(KubeClientsets)</code></td>
+        <td><code>req.ProviderData</code> via <code>Configure()</code></td>
+      </tr>
+      <tr>
+        <td>Type name</td>
+        <td>Map key string in <code>DataSourcesMap</code></td>
+        <td><code>resp.TypeName</code> in <code>Metadata()</code> method</td>
+      </tr>
+      <tr>
+        <td>Errors</td>
+        <td><code>diag.FromErr(err)</code></td>
+        <td><code>resp.Diagnostics.AddError(summary, detail)</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+  <h2>6. Migrating a Data Source — Step-by-Step</h2>
+
+  <p>The following steps walk through converting an existing SDKv2 data source (e.g., <code>kubernetes_namespace_v1</code>) to the Plugin Framework. The Framework provider lives in <code>internal/framework/provider/</code>. See <code>schedulingv1/priority_class_v1.go</code> as a reference for how a migrated resource is structured — a data source follows the same pattern but only needs <code>Metadata</code>, <code>Schema</code>, and <code>Read</code>.</p>
+
+  <hr class="divider" />
+
+  <h3>Step 1 — Create the package directory</h3>
+  <p>Follow the existing convention: one directory per Kubernetes API group.</p>
+  <pre><code>internal/framework/provider/corev1/
+    namespace_v1.go          # struct + Metadata + Configure + Schema + Read
+    namespace_v1_model.go    # Go state model struct
+    namespace_v1_schema.go   # schema definition (optional split)
+</code></pre>
+
+  <hr class="divider" />
+
+  <h3>Step 2 — Define the state model</h3>
+  <p>Replace the loosely-typed <code>schema.ResourceData</code> map with a concrete Go struct that mirrors the schema. Every attribute becomes a typed <code>types.*</code> field.</p>
+
+  <div class="label label-fw">Framework · namespace_v1_model.go</div>
+  <pre><code>package corev1
+
+import "github.com/hashicorp/terraform-plugin-framework/types"
+
+type NamespaceV1Model struct {
+    ID       types.String        `tfsdk:"id"`
+    Metadata []MetadataModel     `tfsdk:"metadata"`
+    Spec     []NamespaceSpecModel `tfsdk:"spec"`
+}
+
+type NamespaceSpecModel struct {
+    Finalizers []types.String `tfsdk:"finalizers"`
+}
+</code></pre>
+
+  <hr class="divider" />
+
+  <h3>Step 3 — Define the Schema</h3>
+  <p>Use <code>datasource/schema</code> (not <code>resource/schema</code>). Data source attributes are almost always <code>Computed: true</code> (they come from the API), with only the lookup key (e.g., <code>metadata.name</code>) being <code>Required: true</code>.</p>
+
+  <div class="label label-fw">Framework · namespace_v1_schema.go</div>
+  <pre><code>package corev1
+
+import (
+    "context"
+    "github.com/hashicorp/terraform-plugin-framework/datasource"
+    dschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+    "github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+func (d *NamespaceV1DataSource) Schema(
+    _ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse,
+) {
+    resp.Schema = dschema.Schema{
+        MarkdownDescription: "Query attributes of a Kubernetes namespace.",
+        Attributes: map[string]dschema.Attribute{
+            "id": dschema.StringAttribute{Computed: true},
+        },
+        Blocks: map[string]dschema.Block{
+            "metadata": dschema.ListNestedBlock{
+                NestedObject: dschema.NestedBlockObject{
+                    Attributes: map[string]dschema.Attribute{
+                        "name": dschema.StringAttribute{Required: true},
+                        "uid":  dschema.StringAttribute{Computed: true},
+                        "labels": dschema.MapAttribute{
+                            ElementType: types.StringType,
+                            Computed:    true,
+                        },
+                    },
+                },
+            },
+            "spec": dschema.ListNestedBlock{
+                NestedObject: dschema.NestedBlockObject{
+                    Attributes: map[string]dschema.Attribute{
+                        "finalizers": dschema.ListAttribute{
+                            ElementType: types.StringType,
+                            Computed:    true,
+                        },
+                    },
+                },
+            },
+        },
+    }
+}</code></pre>
+
+  <hr class="divider" />
+
+  <h3>Step 4 — Implement the struct and required methods</h3>
+
+  <div class="label label-fw">Framework · namespace_v1.go</div>
+  <pre><code>package corev1
+
+import (
+    "context"
+    "github.com/hashicorp/terraform-plugin-framework/datasource"
+    "github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// Compile-time interface checks
+var _ datasource.DataSource          = (*NamespaceV1DataSource)(nil)
+var _ datasource.DataSourceWithConfigure = (*NamespaceV1DataSource)(nil)
+
+type NamespaceV1DataSource struct {
+    SDKv2Meta func() any
+}
+
+func NewNamespaceV1DataSource() datasource.DataSource {
+    return &amp;NamespaceV1DataSource{}
+}
+
+// Metadata sets the type name (must match the key in DataSourcesMap for mux compat).
+func (d *NamespaceV1DataSource) Metadata(
+    _ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse,
+) {
+    resp.TypeName = req.ProviderTypeName + "_namespace_v1"
+}
+
+// Configure receives the provider-level Kubernetes client.
+func (d *NamespaceV1DataSource) Configure(
+    _ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse,
+) {
+    if req.ProviderData == nil {
+        return
+    }
+    d.SDKv2Meta = req.ProviderData.(func() any)
+}
+
+// Read calls the Kubernetes API and writes attributes into state.
+func (d *NamespaceV1DataSource) Read(
+    ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse,
+) {
+    var state NamespaceV1Model
+    resp.Diagnostics.Append(req.Config.Get(ctx, &amp;state)...)
+    if resp.Diagnostics.HasError() {
+        return
+    }
+
+    meta := d.SDKv2Meta().(kubernetes.KubeClientsets)
+    conn, err := meta.MainClientset()
+    if err != nil {
+        resp.Diagnostics.AddError("kubernetes client error", err.Error())
+        return
+    }
+
+    name := state.Metadata[0].Name.ValueString()
+    ns, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+    if err != nil {
+        resp.Diagnostics.AddError("error reading Namespace", err.Error())
+        return
+    }
+
+    state.ID = types.StringValue(ns.Name)
+    // … populate state.Metadata, state.Spec from ns.ObjectMeta / ns.Spec …
+
+    resp.Diagnostics.Append(resp.State.Set(ctx, &amp;state)...)
+}</code></pre>
+
+  <hr class="divider" />
+
+  <h3>Step 5 — Register with the Framework provider</h3>
+  <p>Add the constructor to the <code>DataSources</code> slice in <code>internal/framework/provider/provider.go</code>. Currently that slice is empty (<code>return []func() datasource.DataSource{}</code>) — this is where migrated data sources land.</p>
+
+  <div class="label label-fw">Framework · internal/framework/provider/provider.go</div>
+  <pre><code>import "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
+
+func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+    return []func() datasource.DataSource{
+        corev1.NewNamespaceV1DataSource,
+    }
+}</code></pre>
+
+  <hr class="divider" />
+
+  <h3>Step 6 — Remove from SDKv2 DataSourcesMap (after mux cutover)</h3>
+  <p>During a mux migration, both providers coexist. The Plugin Framework provider takes priority for type names it declares. Once the framework version is stable and tested, remove the entry from <code>DataSourcesMap</code> in <code>kubernetes/provider.go</code>.</p>
+
+  <div class="callout warn">
+    <strong>Do not remove the SDKv2 entry until the Framework version is fully tested.</strong> The mux server (<code>internal/mux/</code>) routes requests to whichever provider claims the type name. Duplicate registrations will cause a startup panic.
+  </div>
+
+  
+  <h2>7. Data Flow Diagram</h2>
+
+  <pre style="font-size:11px;line-height:1.5"><code>  .tf config                   Provider (mux)          Kubernetes API
+  ─────────                    ──────────────          ──────────────
+  data "kubernetes_namespace_v1" "x" {
+    metadata { name = "staging" }            ──[route]──▶  SDKv2 or Framework
+  }                                                        provider.DataSources()
+                                                                │
+                                                         NamespaceV1.Read()
+                                                                │
+                                             ◀──────  conn.CoreV1().Namespaces().Get()
+                                                                │
+                                                       resp.State.Set(&amp;model)
+                                                                │
+  data.kubernetes_namespace_v1.x.metadata[0].name  ◀──────────┘
+  (usable by any downstream resource/output)
+</code></pre>
+
+  
+  <h2>8. Common Patterns &amp; Gotchas</h2>
+
+  <h3>Computed vs. Required in data source schemas</h3>
+  <p>In a data source schema, fields that come <em>from</em> the API are <code>Computed: true</code>. Only the fields needed to <em>identify</em> the resource (like <code>metadata.name</code> and <code>metadata.namespace</code>) are <code>Required: true</code> (or <code>Optional</code>). Never mark an API-returned field as <code>Required</code> — that would force the user to supply a value Terraform will immediately overwrite.</p>
+
+  <h3>SetId in SDKv2</h3>
+  <p>SDKv2 requires you to call <code>d.SetId(someUniqueString)</code> in the Read function. If you forget, Terraform will consider the data source non-existent and return empty values. The Framework equivalent is writing the <code>id</code> attribute into <code>resp.State</code> via the model struct.</p>
+
+  <h3>The datasource/schema vs. resource/schema import</h3>
+  <p>These are <em>different packages</em> with overlapping type names. A data source uses <code>github.com/hashicorp/terraform-plugin-framework/datasource/schema</code>. Accidentally importing <code>resource/schema</code> compiles but the method signature won't satisfy <code>datasource.DataSource</code>.</p>
+
+  <h3>No Timeouts needed for most data sources</h3>
+  <p>Timeouts are an advanced pattern only needed if the upstream API call can hang indefinitely. Most Kubernetes <code>Get</code> calls return quickly. Add timeouts only if the data source documentation explicitly mentions them.</p>
+
+  <h3>Not in config files? Never.</h3>
+  <p>You <em>always</em> declare data sources in <code>.tf</code> files using the <code>data</code> block. There is no other mechanism. They are first-class citizens of HCL configuration — not a workaround, not a special case.</p>
+
+  <footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>

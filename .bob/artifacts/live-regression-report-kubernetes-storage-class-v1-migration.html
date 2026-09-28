@@ -1,0 +1,362 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Cluster Regression Suite Report — kubernetes_storage_class_v1 Migration</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px;
+    background-color: #ffffff;
+    color: #1f2328;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; }
+  h2 { font-size: 16px; font-weight: 600; margin-top: 28px; margin-bottom: 12px; border-bottom: 1px solid #f0f2f5; padding-bottom: 6px; }
+  h3 { font-size: 14px; font-weight: 600; margin-top: 18px; margin-bottom: 8px; }
+  p { margin: 0 0 10px 0; }
+  ul { margin: 0 0 12px 0; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    background-color: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 2px 4px;
+  }
+  pre {
+    background-color: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+  .context-box {
+    background-color: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+  }
+  .context-row {
+    display: flex;
+    margin-bottom: 4px;
+  }
+  .context-row:last-child { margin-bottom: 0; }
+  .context-label {
+    width: 170px;
+    font-weight: 600;
+    color: #57606a;
+  }
+  .context-value { flex: 1; word-break: break-all; }
+  .badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .badge-block { background-color: #ffebe9; color: #cf222e; border: 1px solid rgba(207,34,46,0.2); }
+  .badge-warn { background-color: #fff8c5; color: #9a6700; border: 1px solid rgba(154,103,0,0.2); }
+  .badge-pass { background-color: #dafbe1; color: #1a7f37; border: 1px solid rgba(26,127,55,0.2); }
+  .badge-na { background-color: #f6f8fa; color: #57606a; border: 1px solid #d0d7de; }
+  .card {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card-block { border-left: 4px solid #cf222e; }
+  .card-warn { border-left: 4px solid #d4a72c; }
+  .card-pass { border-left: 4px solid #2da44e; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f7f8fa;
+    font-weight: 600;
+  }
+  .footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Live-Cluster Regression Suite Report</h1>
+  <p>Resource: <code>kubernetes_storage_class_v1</code> • Branch: <code>migrate-kubernetes-storage-class-v1</code></p>
+
+  <h2>1. Run Metadata</h2>
+  <div class="context-box">
+    <div class="context-row"><span class="context-label">Cluster Name / Node:</span><span class="context-value">kind (kind-control-plane v1.36.1)</span></div>
+    <div class="context-row"><span class="context-label">Terraform CLI Version:</span><span class="context-value">Terraform v1.14.7 (darwin_arm64)</span></div>
+    <div class="context-row"><span class="context-label">Provider Baseline:</span><span class="context-value">hashicorp/kubernetes v3.2.1 (released SDKv2)</span></div>
+    <div class="context-row"><span class="context-label">Binary SHA-256:</span><span class="context-value"><code>d4f09b48ca6d685d2b1f89b2af182831b92645cf9b5c57d5defbe0a7b52486b7</code></span></div>
+    <div class="context-row"><span class="context-label">Dev Override Proof:</span><span class="context-value">Confirmed via <code>Provider development overrides are in effect</code> warning in all live probe executions</span></div>
+    <div class="context-row"><span class="context-label">Control Probe Result:</span><span class="context-value"><span class="badge badge-pass">PASSED</span> — Bogus kubeconfig caused connection failure (<code>dial tcp 127.0.0.1:80: connect: connection refused</code>), confirming tests reach the live cluster</span></div>
+    <div class="context-row"><span class="context-label">Leftover Probe Objects:</span><span class="context-value">0 probe objects remaining on cluster</span></div>
+  </div>
+
+  <h2>2. Phase A: Acceptance Test Suite</h2>
+  <p>Run against live kind cluster with <code>TF_ACC=1</code> (clean <code>TF_CLI_CONFIG_FILE</code> for ExternalProviders steps):</p>
+  <pre>=== RUN   TestAccStorageClassV1_allowedTopologies   --- PASS (0.57s)
+=== RUN   TestAccStorageClassV1_generateName        --- PASS (0.74s)
+=== RUN   TestAccStorageClassV1_disappears          --- PASS (0.77s)
+=== RUN   TestAccStorageClassV1_provisionerRequiresReplace --- PASS (0.88s)
+=== RUN   TestAccStorageClassV1_volumeExpansionIsUpdate --- PASS (0.88s)
+=== RUN   TestAccStorageClassV1_volumeBindingModeRequiresReplace --- PASS (0.89s)
+=== RUN   TestAccStorageClassV1_volumeExpansion     --- PASS (0.89s)
+=== RUN   TestAccStorageClassV1_basic               --- PASS (1.31s)
+=== RUN   TestAccStorageClassV1_moved               --- PASS (67.12s)
+=== RUN   TestAccStorageClassV1_upgradeFromSDKv2    --- PASS (76.95s)
+PASS: 10/10 tests passed in 77.725s</pre>
+
+  <h2>3. Phase B &amp; C: Live Probes Scorecard</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px">#</th>
+        <th style="width:170px">Probe</th>
+        <th style="width:130px">Rule ID</th>
+        <th style="width:75px">Result</th>
+        <th>Measured Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Import → Plan</td>
+        <td><code>K8S-MIGRATE-022</code></td>
+        <td><span class="badge badge-pass">PASS</span></td>
+        <td>Created StorageClass with unconfigured <code>mount_options</code>, ran <code>terraform import</code> → <code>terraform plan -detailed-exitcode</code> returned exit code 0 (<code>No changes. Your infrastructure matches the configuration.</code>).</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>One-field Update (reclaim_policy)</td>
+        <td><code>K8S-MIGRATE-022</code></td>
+        <td><span class="badge badge-pass">PASS</span></td>
+        <td>Updating <code>reclaim_policy</code> from <code>Delete</code> to <code>Retain</code> correctly planned <code># forces replacement</code>, successfully executed replace (exit code 0), and post-apply plan showed 0 diff (exit code 0).</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Remove Optional Block (allowed_topologies)</td>
+        <td><code>K8S-MIGRATE-001</code></td>
+        <td><span class="badge badge-pass">PASS</span></td>
+        <td>Removing <code>allowed_topologies</code> block correctly planned <code># forces replacement</code>, successfully executed replace (exit code 0), and post-apply plan showed 0 diff (exit code 0).</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>generate_name + Secondary Update</td>
+        <td><code>K8S-MIGRATE-025</code></td>
+        <td><span class="badge badge-pass">PASS</span></td>
+        <td>Plan: 0 to add, 1 to change (in-place label update). <code>metadata.name</code> was preserved without replacement due to <code>UseStateForUnknown()</code>.</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Omit Required metadata Block</td>
+        <td><code>K8S-MIGRATE-002</code></td>
+        <td><span class="badge badge-pass">PASS</span></td>
+        <td><code>terraform plan</code> failed at plan time with diagnostic <code>Invalid Block: Block metadata must have a configuration value as the provider has marked it as required</code> (exit code 1). Provider did not panic.</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>moved from Deprecated Alias</td>
+        <td><code>K8S-MIGRATE-010</code></td>
+        <td><span class="badge badge-pass">PASS</span></td>
+        <td>Created with <code>kubernetes_storage_class</code> on v3.2.1, applied <code>moved</code> block → Plan showed 0 to add, 0 to change, 0 to destroy. Cluster UID <code>a06a1a8f-ed79-4e71-9de2-9caac931642a</code> was preserved.</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>Released → Local Upgrade</td>
+        <td><code>K8S-MIGRATE-015</code></td>
+        <td><span class="badge badge-pass">PASS</span></td>
+        <td>Applied with released v3.2.1, switched to dev_overrides → <code>No changes. Your infrastructure matches the configuration.</code> JSON plan confirmed 0 planned changes; metadata and outputs preserved cleanly.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Impact by User Group</h2>
+  <ul>
+    <li><strong>Existing Users (Upgrading from SDKv2):</strong> Upgrade with identical configuration is completely safe and produces 0 diff (Probe 7). Upgrading using <code>moved</code> from <code>kubernetes_storage_class</code> preserves object UID with no recreation (Probe 6).</li>
+    <li><strong>New Users (Omitted metadata Block):</strong> Omitting <code>metadata</code> is caught at plan time with a clear <code>Invalid Block</code> validation error (Probe 5).</li>
+    <li><strong>Users Importing Existing StorageClasses:</strong> Importing an existing StorageClass that omits <code>mount_options</code> produces an exact 0 diff on the next plan (Probe 1).</li>
+    <li><strong>Users Modifying Immutable Fields:</strong> Changing <code>reclaim_policy</code> or removing <code>allowed_topologies</code> correctly triggers resource replacement, aligning Terraform plan behavior with Kubernetes API immutability constraints (Probes 2 &amp; 3).</li>
+  </ul>
+
+  <h2>5. HCL &amp; State Compatibility Matrices</h2>
+
+  <h3>HCL Change Matrix</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>HCL Block / Field</th>
+        <th>SDKv2 Behavior</th>
+        <th>Framework Behavior</th>
+        <th>Change Required?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>metadata { ... }</code></td>
+        <td>Required block (MaxItems: 1)</td>
+        <td>ListNestedBlock (SizeBetween 1, 1 + IsRequired)</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code>allowed_topologies { ... }</code></td>
+        <td>Optional block (MaxItems: 1, ForceNew)</td>
+        <td>ListNestedBlock (SizeBetween 0, 1 + ModifyPlan replace)</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code>storage_provisioner</code></td>
+        <td>Required String (ForceNew)</td>
+        <td>Required String (RequiresReplace)</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code>reclaim_policy</code></td>
+        <td>Optional String, Default "Delete" (ForceNew)</td>
+        <td>Optional+Computed String, Default "Delete" (RequiresReplace)</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code>volume_binding_mode</code></td>
+        <td>Optional String, Default "Immediate" (ForceNew)</td>
+        <td>Optional+Computed String, Default "Immediate" (RequiresReplace)</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code>allow_volume_expansion</code></td>
+        <td>Optional Bool, Default true (Mutable)</td>
+        <td>Optional+Computed Bool, Default true (Mutable)</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code>mount_options</code></td>
+        <td>Optional Set of Strings (ForceNew)</td>
+        <td>Optional Set of Strings (RequiresReplace)</td>
+        <td>No</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>State Change Matrix</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Attribute</th>
+        <th>SDKv2 Stored Format</th>
+        <th>Framework Stored Format</th>
+        <th>State Migration Needed?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>metadata</code></td>
+        <td>List of 1 Object (<code>metadata.0.*</code>)</td>
+        <td>List of 1 Object (<code>metadata.0.*</code>)</td>
+        <td>No (identical wire format)</td>
+      </tr>
+      <tr>
+        <td><code>allowed_topologies</code></td>
+        <td>List of 1 Object (<code>allowed_topologies.0.*</code>)</td>
+        <td>List of 1 Object (<code>allowed_topologies.0.*</code>)</td>
+        <td>No (identical wire format)</td>
+      </tr>
+      <tr>
+        <td><code>mount_options</code></td>
+        <td>Flat array / Set</td>
+        <td>Framework Set</td>
+        <td>Handled by Framework</td>
+      </tr>
+      <tr>
+        <td><code>parameters</code></td>
+        <td>String Map</td>
+        <td>String Map</td>
+        <td>No (identical wire format)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. Must-Fix Before Merge Table</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Issue</th>
+        <th>Rule ID</th>
+        <th>Live Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Crash on Omitted metadata Block</strong></td>
+        <td><code>K8S-MIGRATE-002</code></td>
+        <td><span class="badge badge-pass">FIXED &amp; VERIFIED</span> (Probe 5 catches at plan time)</td>
+      </tr>
+      <tr>
+        <td><strong>Destructive Plan After Import (mount_options)</strong></td>
+        <td><code>K8S-MIGRATE-022</code></td>
+        <td><span class="badge badge-pass">FIXED &amp; VERIFIED</span> (Probe 1 plans 0 diff)</td>
+      </tr>
+      <tr>
+        <td><strong>Inconsistent Result on reclaim_policy Update</strong></td>
+        <td><code>K8S-MIGRATE-022</code></td>
+        <td><span class="badge badge-pass">FIXED &amp; VERIFIED</span> (Probe 2 replaces cleanly)</td>
+      </tr>
+      <tr>
+        <td><strong>Inconsistent Result on Removing allowed_topologies</strong></td>
+        <td><code>K8S-MIGRATE-001</code></td>
+        <td><span class="badge badge-pass">FIXED &amp; VERIFIED</span> (Probe 3 replaces cleanly)</td>
+      </tr>
+      <tr>
+        <td><strong>Unjustified ImportStateVerifyIgnore Expansion</strong></td>
+        <td><code>K8S-MIGRATE-020</code></td>
+        <td><span class="badge badge-pass">FIXED &amp; VERIFIED</span> (Removed generation from ignore list)</td>
+      </tr>
+      <tr>
+        <td><strong>Missing Gating in MoveState Handler</strong></td>
+        <td><code>K8S-MIGRATE-011</code></td>
+        <td><span class="badge badge-pass">FIXED &amp; VERIFIED</span> (Address &amp; version 0 checks added)</td>
+      </tr>
+      <tr>
+        <td><strong>Version Constraint for Upgrade &amp; Move Tests</strong></td>
+        <td><code>K8S-MIGRATE-017</code></td>
+        <td><span class="badge badge-pass">FIXED &amp; VERIFIED</span> (Pinned to 3.2.1, 10/10 tests pass)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Made with IBM Bob
+  </div>
+</div>
+</body>
+</html>

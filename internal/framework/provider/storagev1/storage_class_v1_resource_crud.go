@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	storagev1api "k8s.io/api/storage/v1"
@@ -25,30 +27,43 @@ func (r *StorageClassV1) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, _, diags := r.sdkv2Meta()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
 	}
 
-	m := plan.Metadata[0]
+	objMeta, expandDiags := common.ExpandMetadata(ctx, plan.Metadata)
+	resp.Diagnostics.Append(expandDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	reclaimPolicy := corev1.PersistentVolumeReclaimPolicy(plan.ReclaimPolicy.ValueString())
 	volumeBindingMode := storagev1api.VolumeBindingMode(plan.VolumeBindingMode.ValueString())
 	allowVolumeExpansion := plan.AllowVolumeExpansion.ValueBool()
 
+	var parameters map[string]string
+	if !plan.Parameters.IsNull() && !plan.Parameters.IsUnknown() {
+		resp.Diagnostics.Append(plan.Parameters.ElementsAs(ctx, &parameters, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	obj := &storagev1api.StorageClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:         m.Name.ValueString(),
-			GenerateName: m.GenerateName.ValueString(),
-			Labels:       expandStringMap(m.Labels),
-			Annotations:  expandStringMap(m.Annotations),
-		},
+		ObjectMeta:           objMeta,
 		Provisioner:          plan.StorageProvisioner.ValueString(),
 		ReclaimPolicy:        &reclaimPolicy,
 		VolumeBindingMode:    &volumeBindingMode,
 		AllowVolumeExpansion: &allowVolumeExpansion,
-		Parameters:           expandStringMap(plan.Parameters),
+		Parameters:           parameters,
 		MountOptions:         expandMountOptions(ctx, plan.MountOptions),
 		AllowedTopologies:    expandAllowedTopologies(ctx, plan.AllowedTopologies),
 	}
@@ -57,19 +72,13 @@ func (r *StorageClassV1) Create(ctx context.Context, req resource.CreateRequest,
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error creating StorageClass",
-			fmt.Sprintf("Failed to create StorageClass %q: %s", m.Name.ValueString(), err.Error()),
+			fmt.Sprintf("Failed to create StorageClass %q: %s", objMeta.Name, err.Error()),
 		)
 		return
 	}
 
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata = []MetadataModel{flattenMetadata(
-		out.ObjectMeta, m,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
-	setComputedFields(ctx, &plan, out)
-
+	populateMetadataFromResponse(&plan, out.ObjectMeta)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, storageClassIdentity(out.Name))...)
 }
@@ -81,8 +90,13 @@ func (r *StorageClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, filters, diags := r.sdkv2Meta()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -102,15 +116,13 @@ func (r *StorageClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	var currentMeta MetadataModel
-	if len(state.Metadata) > 0 {
-		currentMeta = state.Metadata[0]
+	// Read uses the API response as source of truth and filters.
+	flatMeta, flatDiags := common.FlattenMetadata(ctx, out.ObjectMeta, state.Metadata, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	resp.Diagnostics.Append(flatDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	state.Metadata = []MetadataModel{flattenMetadata(
-		out.ObjectMeta, currentMeta,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
+	state.Metadata = flatMeta
 	setComputedFields(ctx, &state, out)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -118,7 +130,7 @@ func (r *StorageClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	var currentIdentity StorageClassIdentityModel
+	var currentIdentity common.ResourceIdentity
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -149,30 +161,23 @@ func (r *StorageClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, _, diags := r.sdkv2Meta()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
 	}
 
 	name := state.ID.ValueString()
-	stateMeta := state.Metadata[0]
-	planMeta := plan.Metadata[0]
 
 	// Build JSON Patch: metadata (annotations + labels) and allow_volume_expansion.
 	// Only these two items are mutable; everything else is ForceNew.
-	ops := make(kubernetes.PatchOperations, 0)
-	ops = append(ops, kubernetes.DiffStringMap(
-		"/metadata/annotations",
-		toStringInterfaceMap(stateMeta.Annotations),
-		toStringInterfaceMap(planMeta.Annotations),
-	)...)
-	ops = append(ops, kubernetes.DiffStringMap(
-		"/metadata/labels",
-		toStringInterfaceMap(stateMeta.Labels),
-		toStringInterfaceMap(planMeta.Labels),
-	)...)
+	ops := common.MetadataPatchOps("/metadata/", state.Metadata[0], plan.Metadata[0])
 	ops = append(ops, &kubernetes.ReplaceOperation{
 		Path:  "/allowVolumeExpansion",
 		Value: plan.AllowVolumeExpansion.ValueBool(),
@@ -199,12 +204,13 @@ func (r *StorageClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
+	// Update echoes the plan for user-controlled fields; only server-assigned
+	// metadata fields (name, uid, resource_version, generation) come from the response.
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata = []MetadataModel{flattenMetadata(
-		out.ObjectMeta, planMeta,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
+	plan.Metadata[0].MetadataBase.Name = types.StringValue(out.Name)
+	plan.Metadata[0].MetadataBase.UID = types.StringValue(string(out.UID))
+	plan.Metadata[0].MetadataBase.ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata[0].MetadataBase.Generation = types.Int64Value(out.Generation)
 	setComputedFields(ctx, &plan, out)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -212,7 +218,7 @@ func (r *StorageClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	var currentIdentity StorageClassIdentityModel
+	var currentIdentity common.ResourceIdentity
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -232,7 +238,13 @@ func (r *StorageClassV1) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
+	clients, _, diags := r.sdkv2Meta()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -254,7 +266,7 @@ func (r *StorageClassV1) ImportState(ctx context.Context, req resource.ImportSta
 	if req.ID != "" {
 		name = req.ID
 	} else {
-		var identityData StorageClassIdentityModel
+		var identityData common.ResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -262,8 +274,13 @@ func (r *StorageClassV1) ImportState(ctx context.Context, req resource.ImportSta
 		name = identityData.Name.ValueString()
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, filters, diags := r.sdkv2Meta()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -278,21 +295,16 @@ func (r *StorageClassV1) ImportState(ctx context.Context, req resource.ImportSta
 		return
 	}
 
-	flatMeta := flattenMetadata(
-		out.ObjectMeta,
-		MetadataModel{},
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)
-	// Only set generate_name if the server actually has one; otherwise leave null
-	// to avoid a perpetual diff against configs that use name instead.
-	if out.GenerateName == "" {
-		flatMeta.GenerateName = types.StringNull()
+	// Import uses API response as source of truth (same as Read).
+	flatMeta, flatDiags := common.FlattenMetadata(ctx, out.ObjectMeta, nil, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	resp.Diagnostics.Append(flatDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	var state StorageClassModel
 	state.ID = types.StringValue(out.Name)
-	state.Metadata = []MetadataModel{flatMeta}
+	state.Metadata = flatMeta
 	state.MountOptions = types.SetNull(types.StringType)
 	setComputedFields(ctx, &state, out)
 
@@ -301,6 +313,33 @@ func (r *StorageClassV1) ImportState(ctx context.Context, req resource.ImportSta
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
+
+// sdkv2Meta resolves the SDKv2 provider metadata into the two interfaces this resource needs.
+// The call is deferred until the request rather than made in Configure, because the mux server
+// configures the SDKv2 provider independently.
+func (r *StorageClassV1) sdkv2Meta() (kubernetes.KubeClientsets, kubernetes.MetadataFilters, diag.Diagnostics) {
+	meta := r.SDKv2Meta()
+	clients := meta.(kubernetes.KubeClientsets)
+	filters := meta.(kubernetes.MetadataFilters)
+	return clients, filters, nil
+}
+
+// populateMetadataFromResponse overwrites only server-assigned metadata fields
+// in the plan from the API response, preserving the plan's user-controlled fields
+// (labels, annotations). Called after Create — not Update (Update uses plan directly
+// plus MetadataPatchOps).
+//
+// Takes the model by pointer so that field assignments land in the caller's model.
+// A value receiver would silently discard assignments to non-slice fields.
+func populateMetadataFromResponse(plan *StorageClassModel, obj metav1.ObjectMeta) {
+	if len(plan.Metadata) == 0 {
+		return
+	}
+	plan.Metadata[0].MetadataBase.Name = types.StringValue(obj.Name)
+	plan.Metadata[0].MetadataBase.UID = types.StringValue(string(obj.UID))
+	plan.Metadata[0].MetadataBase.ResourceVersion = types.StringValue(obj.ResourceVersion)
+	plan.Metadata[0].MetadataBase.Generation = types.Int64Value(obj.Generation)
+}
 
 // setComputedFields populates all Computed fields from the Kubernetes API
 // response into the model. Called after Create, Read, Update and ImportState.
@@ -327,10 +366,11 @@ func setComputedFields(ctx context.Context, m *StorageClassModel, out *storagev1
 
 	// parameters: only write if server returned data or user had it configured.
 	if len(out.Parameters) > 0 {
-		m.Parameters = flattenStringMap(out.Parameters)
-	} else if m.Parameters != nil {
-		// User had parameters set; server echoed empty — clear to nil.
-		m.Parameters = nil
+		p, _ := types.MapValueFrom(ctx, types.StringType, out.Parameters)
+		m.Parameters = p
+	} else if !m.Parameters.IsNull() {
+		// User had parameters set; server echoed empty — clear to null.
+		m.Parameters = types.MapNull(types.StringType)
 	}
 
 	// mount_options: only write if server returned data or user had it configured.
@@ -356,10 +396,10 @@ func setComputedFields(ctx context.Context, m *StorageClassModel, out *storagev1
 }
 
 // storageClassIdentity returns the identity model for a given StorageClass name.
-func storageClassIdentity(name string) StorageClassIdentityModel {
-	return StorageClassIdentityModel{
-		APIVersion: types.StringValue("storage.k8s.io/v1"),
-		Kind:       types.StringValue("StorageClass"),
+func storageClassIdentity(name string) common.ResourceIdentity {
+	return common.ResourceIdentity{
+		APIVersion: types.StringValue(storageClassAPIVersion),
+		Kind:       types.StringValue(storageClassKind),
 		Name:       types.StringValue(name),
 	}
 }

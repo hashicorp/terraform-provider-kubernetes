@@ -1,0 +1,300 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PR #2974 Review — priority_class_v1 SDKv2 → Framework</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1f2328;
+    background: #ffffff;
+    padding: 32px 16px 48px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 15px; font-weight: 700; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+  h3 { font-size: 13px; font-weight: 700; margin: 18px 0 6px; color: #1f2328; }
+  p  { margin-bottom: 10px; }
+  ul, ol { margin: 6px 0 10px 20px; }
+  li { margin-bottom: 3px; }
+
+  .meta { font-size: 12px; color: #57606a; margin-bottom: 20px; }
+  .meta span { display: inline-block; margin-right: 18px; }
+
+  /* status badges */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .badge-green  { background: #d1fae5; color: #065f46; }
+  .badge-yellow { background: #fef9c3; color: #713f12; }
+  .badge-red    { background: #fee2e2; color: #991b1b; }
+  .badge-gray   { background: #f3f4f6; color: #374151; }
+
+  /* section headers */
+  .section-blocking  { color: #dc2626; }
+  .section-suggest   { color: #d97706; }
+  .section-good      { color: #059669; }
+  .section-unverified{ color: #57606a; }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+  th { background: #f7f8fa; text-align: left; padding: 7px 10px; border: 1px solid #e5e7eb; font-weight: 600; }
+  td { padding: 7px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+
+  /* code */
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12px;
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  pre {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 8px 0 14px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  /* callout boxes */
+  .callout {
+    border-left: 3px solid #e5e7eb;
+    padding: 10px 14px;
+    margin: 10px 0 14px;
+    background: #f7f8fa;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout-green  { border-color: #10b981; background: #f0fdf4; }
+  .callout-red    { border-color: #ef4444; background: #fef2f2; }
+  .callout-yellow { border-color: #f59e0b; background: #fffbeb; }
+
+  /* finding cards */
+  .finding {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: #ffffff;
+  }
+  .finding-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+  .finding-meta  { font-size: 12px; color: #57606a; margin-bottom: 8px; }
+
+  /* summary box */
+  .summary-box {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-top: 24px;
+  }
+  .summary-box h2 { border: none; padding: 0; margin-top: 0; margin-bottom: 12px; }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #e5e7eb; }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-label { font-size: 13px; color: #374151; }
+  .summary-value { font-weight: 700; font-size: 13px; }
+
+  .verdict {
+    background: #f0fdf4;
+    border: 1px solid #10b981;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #065f46;
+    font-weight: 600;
+  }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>PR #2974 — Deep Review Report</h1>
+  <p style="font-size:15px;color:#57606a;margin-bottom:12px">
+    <em>Migrate <code>kubernetes_priority_class_v1</code> from SDKv2 to Plugin Framework</em>
+  </p>
+
+  <div class="meta">
+    <span><strong>Branch:</strong> feat/moved-block-priority-class-v1</span>
+    <span><strong>Head SHA:</strong> d8a9738</span>
+    <span><strong>Base:</strong> main (5b3b7cef)</span>
+    <span><strong>SDK:</strong> Muxed (Framework + SDKv2)</span>
+    <span><strong>Reviewed:</strong> 2026-09-17</span>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
+    <span>Build <span class="badge badge-green">✓ PASS</span></span>
+    <span>Vet <span class="badge badge-green">✓ PASS</span></span>
+    <span>Migration unit tests (7/7) <span class="badge badge-green">✓ PASS</span></span>
+    <span>Live acc tests <span class="badge badge-gray">NOT RUN (no cluster auth)</span></span>
+  </div>
+
+  
+  <h2>Contract Questions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Question</th>
+        <th>Decision</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Does existing configuration change meaning or plan differently?</td>
+        <td><span class="badge badge-green">No</span> Existing <code>kubernetes_priority_class_v1</code> users get an empty plan after upgrading. <code>ListNestedBlock</code> emits identical JSON state shape to SDKv2 <code>TypeList{MaxItems:1}</code>.</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Are attributes added, removed, renamed, or retyped?</td>
+        <td><span class="badge badge-yellow">Additive only</span> <code>value</code> gains a range validator (<code>Between(MinInt32, 1_000_000_000)</code>). Non-breaking for valid configs. No removals or renames.</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Does an existing attribute become required or lose a default?</td>
+        <td><span class="badge badge-green">No</span> All three optional fields (<code>description</code>, <code>global_default</code>, <code>preemption_policy</code>) retain their defaults. <code>metadata</code> block enforced via <code>listvalidator.SizeBetween(1,1)</code> — equivalent to SDKv2 <code>Required:true, MaxItems:1</code>.</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Does an existing field newly require replacement?</td>
+        <td><span class="badge badge-green">No</span> <code>value</code>, <code>preemption_policy</code>, <code>metadata.name</code>, and <code>metadata.generate_name</code> were all <code>ForceNew</code> in SDKv2 and have <code>RequiresReplace</code> in Framework. No regressions.</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Can the new implementation read existing stored state?</td>
+        <td><span class="badge badge-green">Yes</span> SDKv2 <code>TypeList{MaxItems:1}</code> and Framework <code>ListNestedBlock</code> produce identical JSON (<code>{"metadata":[{...}]}</code>). No <code>UpgradeState</code> needed or added. Confirmed by static trace and the <code>TestAccPriorityClassV1_upgradeFromSDKv2</code> test design.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  
+  <h2 class="section-blocking">🔴 Blocking</h2>
+  <div class="callout callout-green">
+    <strong>None found.</strong> No P0/Critical defects, no breaking changes, no SDKv2 parity regressions confirmed.
+  </div>
+
+  
+  <h2 class="section-suggest">🟡 Suggestions (Non-Blocking)</h2>
+
+  <div class="finding">
+    <div class="finding-title">S1 — Update() sends unconditional AddOperation for <code>description</code> and <code>globalDefault</code></div>
+    <div class="finding-meta">File: <code>priority_class_v1_crud.go:177–184</code></div>
+    <p>The SDKv2 Update uses <code>if d.HasChange(...)</code> before appending patch ops. The Framework Update always appends <code>AddOperation</code> for both fields even when unchanged.</p>
+    <pre>// Always appended, even when unchanged:
+ops = append(ops, &amp;kubernetes.AddOperation{Path: "/description",   Value: plan.Description.ValueString()})
+ops = append(ops, &amp;kubernetes.AddOperation{Path: "/globalDefault", Value: plan.GlobalDefault.ValueBool()})</pre>
+    <p><strong>Impact:</strong> Not breaking. The Kubernetes API accepts an idempotent add with the same value and returns the same state. Only consequence is a slightly larger patch payload on updates. No user-visible drift.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-title">S2 — Update() does not reflect <code>preemption_policy</code> from API response</div>
+    <div class="finding-meta">File: <code>priority_class_v1_crud.go:216–218</code></div>
+    <p>After the JSON PATCH, <code>Update()</code> sets <code>PreemptionPolicy</code> only <code>if out.PreemptionPolicy != nil</code>. Since <code>preemption_policy</code> is <code>RequiresReplace</code>, this path is only hit when the field is unchanged — the value in the plan will always match. Not a correctness issue in practice, but subtly inconsistent with the Read path.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-title">S3 — No <code>CheckDestroy</code> in the new acceptance tests</div>
+    <div class="finding-meta">File: <code>priority_class_v1_test.go</code></div>
+    <p>The removed SDKv2 test suite had <code>CheckDestroy: testAccCheckKubernetesPriorityClassV1Destroy</code> on every case, which verified via the Kubernetes API that the object was actually deleted. The new Framework tests rely on the test framework's own cleanup but do not make this API assertion. The <code>TestAccPriorityClassV1_disappears</code> test covers the deletion code path functionally.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-title">S4 — <code>diffMetadataPatch</code> helper is defined but never called</div>
+    <div class="finding-meta">File: <code>priority_class_v1_helpers.go:87–100</code></div>
+    <p><code>diffMetadataPatch</code> builds a patch for annotation/label diffs but <code>Update()</code> inlines the equivalent logic directly. This is dead code and should be removed to avoid confusion.</p>
+  </div>
+
+  <div class="finding">
+    <div class="finding-title">S5 — <code>metadata.0.generation</code> unnecessarily excluded from ImportStateVerifyIgnore</div>
+    <div class="finding-meta">File: <code>priority_class_v1_test.go:50–53</code></div>
+    <p>The new import test ignores both <code>metadata.0.resource_version</code> and <code>metadata.0.generation</code>. The SDKv2 test only ignored <code>resource_version</code>. Since <code>generation</code> is a <code>Computed:true</code> field that is populated on every Read (including ImportState), it could be asserted. Low impact.</p>
+  </div>
+
+  
+  <h2 class="section-good">🟢 Good</h2>
+  <ul>
+    <li><strong>State shape parity confirmed (static trace):</strong> <code>ListNestedBlock</code> emits <code>{"metadata":[{"name":"...","annotations":{},...}]}</code> — identical to SDKv2 <code>TypeList{MaxItems:1}</code>.</li>
+    <li><strong>MoveState correctness:</strong> All 7 unit tests pass. Handler correctly normalizes <code>generate_name</code> (empty → null), empty annotation/label maps → nil, and defaults missing <code>preemption_policy</code> to <code>PreemptLowerPriority</code>. Wrong-source-type early return is safe.</li>
+    <li><strong>ForceNew / RequiresReplace parity:</strong> <code>value</code>, <code>preemption_policy</code>, <code>metadata.name</code>, <code>metadata.generate_name</code> all correctly marked <code>RequiresReplace</code> — matches SDKv2 <code>ForceNew:true</code>.</li>
+    <li><strong>ID format:</strong> <code>out.Name</code> (not namespaced) — correct for cluster-scoped PriorityClass. Matches SDKv2 <code>d.SetId(out.ObjectMeta.Name)</code>.</li>
+    <li><strong>apierrors.IsNotFound:</strong> Correctly used in both <code>Read()</code> (→ <code>RemoveResource</code>) and <code>Delete()</code> (→ swallow). Matches SDKv2 behavior.</li>
+    <li><strong>ignore_annotations / ignore_labels:</strong> Wired through <code>meta.GetIgnoreAnnotations()</code> / <code>meta.GetIgnoreLabels()</code> via SDKv2 meta callback. <code>filterIgnoredMetadataKeys</code> mirrors <code>removeInternalKeys + removeKeys</code> from SDKv2 <code>structures.go</code>.</li>
+    <li><strong>Provider registration:</strong> <code>kubernetes_priority_class_v1</code> correctly added to Framework server's <code>Resources()</code>; <code>kubernetes_priority_class</code> (deprecated alias) remains in SDKv2 server. Mux wiring is sound.</li>
+    <li><strong>patch_operations.go change:</strong> Trivial single-character comment edit. No behavioral effect.</li>
+    <li><strong>Copyright headers</strong> are correct on all new files.</li>
+    <li><strong>Changelog entry</strong> present at <code>.changelog/2974.txt</code> with correct format and user-facing description.</li>
+    <li><strong>value validator</strong> <code>Between(math.MinInt32, 1_000_000_000)</code> is strictly additive — any previously valid value still passes; out-of-range values would have been rejected by the API anyway.</li>
+    <li><strong>Defaults preserved:</strong> <code>description: ""</code>, <code>global_default: false</code>, <code>preemption_policy: "PreemptLowerPriority"</code> — all identical to SDKv2.</li>
+  </ul>
+
+  
+  <h2 class="section-unverified">⚪ Not Verified</h2>
+  <ul>
+    <li><strong>Live acceptance tests</strong> (<code>TestAccPriorityClassV1_*</code>, <code>TestAccPriorityClassV1_upgradeFromSDKv2</code>, <code>TestAccPriorityClassV1_moved</code>) — require <code>TF_ACC=1</code> and a live cluster. Infrastructure tests not authorized for this review session.</li>
+    <li><strong>TestAccPriorityClassV1_disappears</strong> — uses <code>kubectl</code> subprocess; requires working kubeconfig. Code path (<code>Read → IsNotFound → RemoveResource</code>) is correct by static trace.</li>
+  </ul>
+
+  
+  <div class="summary-box">
+    <h2>Release-Blocking Summary</h2>
+    <div class="summary-row">
+      <span class="summary-label">Confirmed P0 / Critical issues</span>
+      <span class="summary-value" style="color:#059669">0</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Confirmed SDKv2 parity regressions</span>
+      <span class="summary-value" style="color:#059669">0</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Confirmed missing SDKv2 features</span>
+      <span class="summary-value" style="color:#059669">0</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Non-blocking suggestions</span>
+      <span class="summary-value" style="color:#d97706">5</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Areas regression-tested (unit, offline)</span>
+      <span class="summary-value">MoveState (7/7), build, vet</span>
+    </div>
+    <div class="summary-row">
+      <span class="summary-label">Areas not live-tested</span>
+      <span class="summary-value" style="color:#57606a">Acceptance tests (require cluster + TF_ACC=1)</span>
+    </div>
+  </div>
+
+  <div class="verdict">
+    ✅ No release-blocking SDKv2 parity regression found in the reviewed scope. The migration is structurally correct and safe to merge.
+  </div>
+
+  <footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>

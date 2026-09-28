@@ -1,0 +1,625 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PR Review: kubernetes_all_namespaces Migration</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 14px; line-height: 1.6; color: #1f2328; background: #ffffff; padding: 32px 16px 64px; }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  h1 { font-size: 22px; font-weight: 700; color: #1f2328; margin-bottom: 4px; }
+  h2 { font-size: 16px; font-weight: 700; margin: 32px 0 12px; color: #1f2328; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+  h3 { font-size: 14px; font-weight: 700; margin: 0 0 6px; }
+  p { margin-bottom: 8px; }
+
+  .subtitle { color: #57606a; font-size: 13px; margin-bottom: 24px; }
+
+  /* Context block */
+  .context-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 8px; }
+  .context-table td { padding: 5px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
+  .context-table td:first-child { background: #f7f8fa; font-weight: 600; white-space: nowrap; width: 200px; color: #57606a; }
+
+  /* Finding cards */
+  .finding { border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
+  .finding-header { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; background: #f7f8fa; border-bottom: 1px solid #e5e7eb; }
+  .finding-body { padding: 12px 14px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+  .badge-p1 { background: #fde8e8; color: #b91c1c; }
+  .badge-p2 { background: #fef3c7; color: #92400e; }
+  .badge-sug { background: #e0f2fe; color: #0369a1; }
+  .badge-good { background: #dcfce7; color: #166534; }
+  .badge-nv   { background: #f3f4f6; color: #374151; }
+  .finding-title { font-weight: 700; font-size: 14px; flex: 1; }
+  .loc { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; color: #57606a; background: #f7f8fa; border: 1px solid #e5e7eb; padding: 1px 6px; border-radius: 4px; }
+  .rule-tag { font-size: 11px; color: #3b82d4; background: #eff6ff; border: 1px solid #bfdbfe; padding: 1px 6px; border-radius: 12px; }
+  .meta-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+
+  .finding-body dt { font-weight: 600; font-size: 12px; color: #57606a; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .finding-body dd { margin: 2px 0 0 0; }
+
+  code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; background: #f7f8fa; border: 1px solid #e5e7eb; padding: 1px 5px; border-radius: 3px; }
+  pre { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; background: #f7f8fa; border: 1px solid #e5e7eb; padding: 12px; border-radius: 4px; overflow-x: auto; margin: 8px 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+
+  /* Section emoji headers */
+  .section-header { display: flex; align-items: center; gap: 8px; }
+  .section-icon { font-size: 18px; }
+
+  /* Scorecard table */
+  .scorecard { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .scorecard th { background: #f7f8fa; padding: 7px 10px; text-align: left; font-weight: 600; border: 1px solid #e5e7eb; font-size: 12px; color: #57606a; text-transform: uppercase; letter-spacing: 0.04em; }
+  .scorecard td { padding: 6px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
+  .scorecard tr:hover td { background: #f7f8fa; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .pill-pass { background: #dcfce7; color: #166534; }
+  .pill-fail { background: #fde8e8; color: #b91c1c; }
+  .pill-na   { background: #f3f4f6; color: #6b7280; }
+
+  /* Verification table */
+  .vtable { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  .vtable th { background: #f7f8fa; padding: 7px 10px; text-align: left; font-weight: 600; border: 1px solid #e5e7eb; font-size: 12px; color: #57606a; }
+  .vtable td { padding: 6px 10px; border: 1px solid #e5e7eb; vertical-align: top; }
+
+  /* Contract questions */
+  .contract-item { padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; display: flex; gap: 12px; align-items: flex-start; }
+  .contract-num { font-weight: 700; font-size: 16px; color: #57606a; min-width: 24px; }
+  .contract-body { flex: 1; }
+  .contract-q { font-weight: 600; margin-bottom: 4px; }
+  .answer-yes { color: #166534; font-weight: 700; }
+  .answer-no  { color: #1f2328; font-weight: 700; }
+
+  /* Summary banner */
+  .summary-banner { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px 20px; margin-bottom: 28px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center; }
+  .stat-val { font-size: 28px; font-weight: 700; }
+  .stat-lbl { font-size: 12px; color: #57606a; }
+  .stat-red  .stat-val { color: #b91c1c; }
+  .stat-yel  .stat-val { color: #92400e; }
+  .stat-grn  .stat-val { color: #166534; }
+  .stat-blu  .stat-val { color: #1d4ed8; }
+
+  /* Gates */
+  .gate-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+  .gate-row:last-child { border-bottom: none; }
+  .gate-icon { font-size: 15px; min-width: 22px; }
+  .gate-text { flex: 1; font-size: 13px; }
+  .gate-status { font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .gs-pass { color: #166534; }
+  .gs-fail { color: #b91c1c; }
+  .gs-nr   { color: #6b7280; }
+
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+
+  .footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Static Code Review</h1>
+  <div class="subtitle">
+    Branch <code>migrate_data_source_kubernetes_all_namespaces</code> → <code>main</code>  · 
+    Head <code>e7f0aed4</code>  · 
+    Task class: SDKv2 → Plugin Framework migration  · 
+    Data source: <code>kubernetes_all_namespaces</code>
+  </div>
+
+  
+  <div class="summary-banner">
+    <div class="stat-red"><div class="stat-val">4</div><div class="stat-lbl">Blocking</div></div>
+    <div class="stat-yel"><div class="stat-val">4</div><div class="stat-lbl">Suggestions</div></div>
+    <div class="stat-grn"><div class="stat-val">15</div><div class="stat-lbl">Checks passed</div></div>
+    <div class="stat-blu"><div class="stat-val">5</div><div class="stat-lbl">Not verified</div></div>
+  </div>
+
+  
+  <h2><span class="section-header"><span class="section-icon">📋</span> Context Block</span></h2>
+  <table class="context-table">
+    <tr><td>Repository</td><td><code>hashicorp/terraform-provider-kubernetes</code></td></tr>
+    <tr><td>Branch</td><td><code>migrate_data_source_kubernetes_all_namespaces</code></td></tr>
+    <tr><td>Head SHA</td><td><code>e7f0aed495044cd87efff119e65b931f62f3a17b</code></td></tr>
+    <tr><td>Base SHA</td><td><code>a5dc7bc0271240ec4cc2a895ff8e446658793a6c</code> (main)</td></tr>
+    <tr><td>SDK flavour</td><td><strong>muxed</strong> — direct: <code>terraform-plugin-framework v1.15.1</code>, <code>terraform-plugin-sdk/v2 v2.38.2</code>, <code>terraform-plugin-mux v0.20.0</code></td></tr>
+    <tr><td>This resource</td><td>Plugin Framework (<code>datasource.DataSource</code>)</td></tr>
+    <tr><td>Package</td><td><code>internal/framework/provider/corev1/</code></td></tr>
+    <tr><td>Domain pack</td><td><code>tfp-domain-kubernetes</code> v0.5.0</td></tr>
+    <tr><td>Native agent instructions</td><td>None — <code>AGENTS.md</code> absent (checked)</td></tr>
+    <tr><td>go build ./...</td><td>✅ Exit 0 — no compilation errors</td></tr>
+    <tr><td>Compile check (-run '^$')</td><td>✅ <code>ok internal/framework/provider/corev1 1.081s [no tests to run]</code></td></tr>
+    <tr><td>Symbol collision check</td><td>⚠️ <code>func TestAccKubernetesDataSourceAllNamespaces</code> in <code>_test</code> package only — no production collision</td></tr>
+    <tr><td>terrafmt (new test files)</td><td>✅ Exit 0</td></tr>
+  </table>
+
+  
+  <h2><span class="section-header"><span class="section-icon">📁</span> Changed Files</span></h2>
+  <table class="context-table">
+    <tr><td>New</td><td><code>internal/framework/provider/corev1/all_namespaces.go</code></td></tr>
+    <tr><td>New</td><td><code>internal/framework/provider/corev1/all_namespaces_model.go</code></td></tr>
+    <tr><td>New</td><td><code>internal/framework/provider/corev1/all_namespaces_schema.go</code></td></tr>
+    <tr><td>New</td><td><code>internal/framework/provider/corev1/all_namespaces_read.go</code></td></tr>
+    <tr><td>New</td><td><code>internal/framework/provider/corev1/all_namespaces_test.go</code> (renamed from <code>kubernetes/data_source_kubernetes_all_namespaces_test.go</code>)</td></tr>
+    <tr><td>New</td><td><code>internal/framework/provider/corev1/all_namespaces_migration_test.go</code></td></tr>
+    <tr><td>New</td><td><code>internal/framework/provider/corev1/corev1_test.go</code></td></tr>
+    <tr><td>Modified</td><td><code>internal/framework/provider/provider.go</code></td></tr>
+    <tr><td>Modified</td><td><code>kubernetes/provider.go</code></td></tr>
+    <tr><td>Deleted</td><td><code>kubernetes/data_source_kubernetes_all_namespaces_test.go</code></td></tr>
+    <tr><td>New</td><td><code>.changelog/2962.txt</code></td></tr>
+  </table>
+
+  <hr />
+
+  
+  <h2><span class="section-header"><span class="section-icon">📝</span> Five Contract Questions</span></h2>
+
+  <div class="contract-item">
+    <div class="contract-num">1</div>
+    <div class="contract-body">
+      <div class="contract-q">Does existing configuration change meaning or plan differently?</div>
+      <span class="answer-no">No.</span> The data source takes no inputs. The only observable outputs are <code>namespaces</code> (a list of strings) and <code>id</code> (a SHA-256 hex string). Both are preserved byte-for-byte. Existing HCL <code>data "kubernetes_all_namespaces" "x" {}</code> is unchanged.
+    </div>
+  </div>
+
+  <div class="contract-item">
+    <div class="contract-num">2</div>
+    <div class="contract-body">
+      <div class="contract-q">Are attributes/types added, removed, renamed, or retyped?</div>
+      <span class="answer-no">No regression.</span> SDKv2 exposed <code>namespaces</code> (TypeList/Computed/TypeString) and an implicit <code>id</code>. Framework exposes <code>namespaces</code> (<code>ListAttribute{ElementType: types.StringType, Computed: true}</code>) and <code>id</code> (<code>StringAttribute{Computed: true}</code>) explicitly — both correct. No attribute added, removed, renamed, or retyped.
+    </div>
+  </div>
+
+  <div class="contract-item">
+    <div class="contract-num">3</div>
+    <div class="contract-body">
+      <div class="contract-q">Does an existing attribute become required or lose a default?</div>
+      <span class="answer-no">No.</span> There are no Optional or Required attributes — the schema is entirely Computed. No defaults existed in SDKv2 and none are added in Framework.
+    </div>
+  </div>
+
+  <div class="contract-item">
+    <div class="contract-num">4</div>
+    <div class="contract-body">
+      <div class="contract-q">Does an existing field newly require replacement?</div>
+      <span class="answer-no">No.</span> Data sources have no replacement semantics. No plan modifiers present.
+    </div>
+  </div>
+
+  <div class="contract-item">
+    <div class="contract-num">5</div>
+    <div class="contract-body">
+      <div class="contract-q">Can the new implementation read existing stored state?</div>
+      <span class="answer-yes">Yes.</span> Schema shape is identical: list-of-strings for <code>namespaces</code>, string for <code>id</code>. No schema version bump; no state upgrader required. The migration test (<code>_MigrateFromSDKv2</code>) mechanically proves this via <code>ExpectEmptyPlan()</code> anchored to a <code>terraform_data</code> resource.
+    </div>
+  </div>
+
+  <hr />
+
+  
+  <h2><span class="section-header"><span class="section-icon">🔴</span> Blocking Findings</span></h2>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p1">P1</span>
+      <div>
+        <div class="finding-title">B1 — Framework-only factory in <code>corev1_test.go</code> will break future migrations in this package</div>
+        <div class="meta-row" style="margin-top:4px">
+          <span class="loc">internal/framework/provider/corev1/corev1_test.go:31</span>
+          <span class="rule-tag">K8S-MIGRATE-019</span>
+        </div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <dl>
+        <dt>Trigger</dt>
+        <dd><code>testAccProtoV6ProviderFactories</code> is <code>providerserver.NewProtocol6WithError(provider.New(...))</code> — a Framework-only server with no SDKv2 or manifest servers.</dd>
+        <dt>Failure</dt>
+        <dd>K8S-MIGRATE-019 measured a 6/15 failure rate from this exact pattern. The factory is <strong>package-owned and inherited silently by every future PR</strong> in <code>corev1</code>. The moment any test in <code>package corev1_test</code> uses an SDKv2-served resource as a fixture (e.g. <code>kubernetes_config_map_v1</code>, <code>kubernetes_namespace_v1</code> — both Core v1 data sources still on SDKv2) it fails with <code>Invalid resource type — The provider hashicorp/kubernetes does not support resource type</code> and the bug will appear in the follow-on PR, not here.</dd>
+        <dt>Impact</dt>
+        <dd>The <code>corev1</code> package is named for Kubernetes Core API v1, which contains dozens of SDKv2 data sources. Every subsequent migration that adds a test using one as a fixture will be broken by this choice.</dd>
+        <dt>Correction</dt>
+        <dd>Replace the factory with a mux factory that reconstructs all three servers (matching <code>internal/mux/mux.go</code>). The <code>internal/mux</code> package cannot be directly imported (import cycle via <code>kubernetes</code>), so reconstruct inline:</dd>
+      </dl>
+      <pre>var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+    "kubernetes": func() (tfprotov6.ProviderServer, error) {
+        ctx := context.Background()
+        kubernetesProvider := kubernetes.Provider()
+        kubernetesProvider.Configure(ctx, sdkv2.NewResourceConfigRaw(nil))
+
+        upgradedSdk, err := tf5to6server.UpgradeServer(ctx, kubernetesProvider.GRPCProvider)
+        if err != nil {
+            return nil, err
+        }
+        upgradedManifest, err := tf5to6server.UpgradeServer(ctx, manifestprovider.Provider())
+        if err != nil {
+            return nil, err
+        }
+        return tf6muxserver.NewMuxServer(ctx,
+            func() tfprotov6.ProviderServer { return upgradedSdk },
+            func() tfprotov6.ProviderServer { return upgradedManifest },
+            providerserver.NewProtocol6(provider.New("test", kubernetesProvider.Meta)),
+        )
+    },
+}</pre>
+      <dl>
+        <dt>Evidence</dt>
+        <dd>K8S-MIGRATE-019 measurement table (9/15 PASS Framework-only vs 15/15 PASS mux); <code>internal/mux/mux.go</code> (full server list); <code>admissionregistrationv1_test.go:25</code> (same defect already exists — this PR is the opportunity to get <code>corev1</code> right).</dd>
+      </dl>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p2">P2</span>
+      <div>
+        <div class="finding-title">B2 — <code>all_namespaces_test.go</code> drops <code>PreCheck</code> guard from SDKv2 baseline</div>
+        <div class="meta-row" style="margin-top:4px">
+          <span class="loc">internal/framework/provider/corev1/all_namespaces_test.go:22</span>
+          <span class="rule-tag">K8S-MIGRATE-020</span>
+        </div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <dl>
+        <dt>Trigger</dt>
+        <dd>The deleted SDKv2 test declared <code>PreCheck: func() { testAccPreCheck(t) }</code>. The migrated test omits it entirely.</dd>
+        <dt>Failure</dt>
+        <dd>The explicit pre-check that validates required env vars (<code>TF_ACC</code>, <code>KUBE_CONFIG_PATH</code>) before cluster access is removed. The Framework's own <code>TF_ACC</code> guard in <code>resource.ParallelTest</code> still prevents the test from contacting a cluster, so this is not a crash — but it is a weakening of the test contract relative to the SDKv2 baseline.</dd>
+        <dt>Correction</dt>
+        <dd>Add a local <code>PreCheck</code> function in <code>corev1_test.go</code> that checks required env vars, or confirm with maintainers that the Framework package convention intentionally omits it (as <code>admissionregistrationv1</code> tests also do).</dd>
+        <dt>Evidence</dt>
+        <dd>Deleted baseline: <code>kubernetes/data_source_kubernetes_all_namespaces_test.go:21</code> (git diff shows <code>PreCheck: func() { testAccPreCheck(t) }</code> removed).</dd>
+      </dl>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p2">P2</span>
+      <div>
+        <div class="finding-title">B3 — <code>corev1_test.go</code> factory uses eager (init-time) initialization — violates K8S-TESTING-002</div>
+        <div class="meta-row" style="margin-top:4px">
+          <span class="loc">internal/framework/provider/corev1/corev1_test.go:22–32</span>
+          <span class="rule-tag">K8S-TESTING-002</span>
+        </div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <dl>
+        <dt>Trigger</dt>
+        <dd><code>sdkv2providerMeta()</code> is called at <strong>package init time</strong> when <code>testAccProtoV6ProviderFactories</code> is initialized as a package-level <code>var</code>. <code>p.Configure(context.Background(), sdkv2.NewResourceConfigRaw(nil))</code> executes immediately when the test binary is loaded — before a cluster is available, and even when <code>TF_ACC</code> is unset.</dd>
+        <dt>Failure</dt>
+        <dd>K8S-TESTING-002: "Configure lazily inside the factory, not during package initialization." The test binary panics or errors during init if the SDKv2 provider's Configure path touches the environment unexpectedly. Currently benign, but fragile as the provider grows.</dd>
+        <dt>Correction</dt>
+        <dd>Wrap initialization inside the factory closure:</dd>
+      </dl>
+      <pre>var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+    "kubernetes": func() (tfprotov6.ProviderServer, error) {
+        p := kubernetes.Provider()
+        if diags := p.Configure(context.Background(),
+            sdkv2.NewResourceConfigRaw(nil)); diags.HasError() {
+            return nil, fmt.Errorf("configuring Kubernetes provider: %v", diags)
+        }
+        return providerserver.NewProtocol6WithError(
+            provider.New("test", p.Meta))()
+    },
+}</pre>
+      <dl>
+        <dt>Evidence</dt>
+        <dd>K8S-TESTING-002 "Correct" block; <code>admissionregistrationv1_test.go:24</code> (same defect propagated from there).</dd>
+      </dl>
+    </div>
+  </div>
+
+  
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-p2">P2</span>
+      <div>
+        <div class="finding-title">B4 — Changelog uses <code>release-note:note</code> instead of <code>release-note:enhancement</code></div>
+        <div class="meta-row" style="margin-top:4px">
+          <span class="loc">.changelog/2962.txt:1</span>
+          <span class="rule-tag">K8S-DOCS-002</span>
+        </div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <dl>
+        <dt>Trigger</dt>
+        <dd>The entry reads <code>```release-note:note</code>. A migration of a shipped user-facing data source to a new SDK is a user-visible enhancement.</dd>
+        <dt>Failure</dt>
+        <dd>Not a CI failure, but <code>note</code> entries appear in the <code>NOTES</code> section of release notes, which users rarely scan for data source changes. Migration entries from peers in this repo use <code>release-note:enhancement</code>.</dd>
+        <dt>Correction</dt>
+        <dd>Change to:</dd>
+      </dl>
+      <pre>```release-note:enhancement
+`data-source/kubernetes_all_namespaces`: migrated from SDKv2 to Plugin Framework
+```</pre>
+    </div>
+  </div>
+
+  <hr />
+
+  
+  <h2><span class="section-header"><span class="section-icon">🟡</span> Suggestions</span></h2>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-sug">S1</span>
+      <div>
+        <div class="finding-title">Missing <code>Description</code> on the <code>id</code> attribute</div>
+        <div class="meta-row" style="margin-top:4px"><span class="loc">internal/framework/provider/corev1/all_namespaces_schema.go:35</span><span class="rule-tag">K8S-DOCS-003</span></div>
+      </div>
+    </div>
+    <div class="finding-body">
+      The <code>"id"</code> attribute is declared <code>Computed: true</code> with no <code>Description</code>. SDKv2 had no explicit <code>id</code> schema entry (it was injected), so there is no regression, but this is the opportunity to document it. Suggested: <code>Description: "SHA-256 fingerprint of all namespace names, in API-returned order."</code>
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-sug">S2</span>
+      <div>
+        <div class="finding-title">Unchecked type assertion in <code>Configure</code> could panic</div>
+        <div class="meta-row" style="margin-top:4px"><span class="loc">internal/framework/provider/corev1/all_namespaces.go:52</span></div>
+      </div>
+    </div>
+    <div class="finding-body">
+      <code>d.SDKv2Meta = req.ProviderData.(func() any)</code> — direct assertion without comma-ok. If <code>ProviderData</code> is unexpectedly typed (e.g. a different test factory), the provider panics. All existing migrated resources use the same pattern, so this is a pre-existing convention — not a regression introduced here. Suggestion: use the comma-ok form and return a diagnostic.
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-sug">S3</span>
+      <div>
+        <div class="finding-title">Schema description silently fixes a typo in the SDKv2 source</div>
+        <div class="meta-row" style="margin-top:4px"><span class="loc">internal/framework/provider/corev1/all_namespaces_schema.go:28–31</span></div>
+      </div>
+    </div>
+    <div class="finding-body">
+      SDKv2 description reads <em>"check for existence of a specific <strong>namespaces</strong>"</em> (typo). The new description corrects it to <em>"a specific <strong>namespace</strong>"</em>. This is a deliberate improvement, not a pure copy — worth calling out explicitly so reviewers do not mistake it for an accidental change.
+    </div>
+  </div>
+
+  <div class="finding">
+    <div class="finding-header">
+      <span class="badge badge-sug">S4</span>
+      <div>
+        <div class="finding-title"><code>sdkv2providerMeta()</code> duplicated from <code>admissionregistrationv1_test.go</code></div>
+        <div class="meta-row" style="margin-top:4px"><span class="loc">internal/framework/provider/corev1/corev1_test.go:21</span><span class="rule-tag">K8S-MIGRATE-009</span></div>
+      </div>
+    </div>
+    <div class="finding-body">
+      The helper is identical to <code>admissionregistrationv1/admissionregistrationv1_test.go:17</code>. Separate packages compile independently so no immediate defect, but the pattern is spreading. Consider a shared <code>internal/framework/provider/testhelpers</code> package. Low priority — not required for this migration.
+    </div>
+  </div>
+
+  <hr />
+
+  
+  <h2><span class="section-header"><span class="section-icon">🟢</span> Checks Passed</span></h2>
+
+  <table class="scorecard">
+    <thead><tr><th>Check</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td><strong>K8S-MIGRATE-006</strong> — <code>id</code> declared explicitly with correct value</td><td>Schema: <code>schema.StringAttribute{Computed: true}</code>; Read: <code>model.ID = types.StringValue(fmt.Sprintf("%x", idsum.Sum(nil)))</code> — byte-for-byte match to SDKv2 <code>d.SetId(id)</code></td></tr>
+      <tr><td><strong>K8S-MIGRATE-008</strong> — Single registration on Framework server</td><td>Removed from <code>kubernetes/provider.go</code> DataSourcesMap; registered in <code>internal/framework/provider/provider.go:204</code> via <code>corev1.NewAllNamespacesDataSource</code></td></tr>
+      <tr><td><strong>K8S-MIGRATE-014</strong> — SDKv2 source retained for one release</td><td><code>kubernetes/data_source_kubernetes_all_namespaces.go</code> present on branch — only the <em>registration</em> was removed</td></tr>
+      <tr><td><strong>K8S-MIGRATE-015</strong> — Two-step upgrade test present</td><td><code>TestAccKubernetesDataSourceAllNamespaces_MigrateFromSDKv2</code>: Step 1 ExternalProviders + Step 2 local factory + <code>ExpectEmptyPlan()</code></td></tr>
+      <tr><td><strong>K8S-MIGRATE-016</strong> — Data-source anchor in migration test</td><td><code>terraform_data</code> resource anchors both <code>id</code> and <code>namespaces</code> — <code>ExpectEmptyPlan()</code> is non-vacuous</td></tr>
+      <tr><td><strong>K8S-MIGRATE-017</strong> — Exact version pin</td><td><code>VersionConstraint: "3.2.1"</code> — no operators (<code>~&gt;</code>, <code>&gt;=</code>)</td></tr>
+      <tr><td><strong>SHA-256 fingerprint preserved exactly</strong></td><td>Read iterates <code>nsRaw.Items</code> directly for hash — same source, same order as SDKv2</td></tr>
+      <tr><td><strong>Compile-time interface guards</strong></td><td><code>var _ datasource.DataSource = (*AllNamespacesDataSource)(nil)</code> and <code>var _ datasource.DataSourceWithConfigure = ...</code></td></tr>
+      <tr><td><strong>K8S-TESTING-001</strong> — External <code>_test</code> package</td><td>All test files: <code>package corev1_test</code></td></tr>
+      <tr><td><strong>K8S-TESTING-003</strong> — <code>ParallelTest</code> with <code>ProtoV6ProviderFactories</code></td><td>Both test files use <code>resource.ParallelTest</code> + <code>ProtoV6ProviderFactories</code></td></tr>
+      <tr><td><strong>K8S-NAMING-002</strong> — Files split by role</td><td>5 production files: <code>.go</code> (type), <code>_model.go</code>, <code>_schema.go</code>, <code>_read.go</code>, <code>_test.go</code></td></tr>
+      <tr><td><strong>K8S-MIGRATE-001</strong> — Collection shape preserved</td><td><code>namespaces</code> was Computed-only TypeList; mapped to <code>ListAttribute{Computed: true}</code> — no HCL syntax change</td></tr>
+      <tr><td><strong>K8S-CRUD-001</strong> — Client wired via SDKv2Meta</td><td><code>d.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()</code> — correct mux migration pattern</td></tr>
+      <tr><td><strong>go build ./...</strong> passes</td><td>Exit 0 — full module build, no errors</td></tr>
+      <tr><td><strong>terrafmt</strong> clean on new test files</td><td><code>terrafmt diff internal/framework/provider/corev1/</code> exits 0</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  
+  <h2><span class="section-header"><span class="section-icon">⬜</span> Not Verified</span></h2>
+  <table class="vtable">
+    <thead><tr><th>Check</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Acceptance tests (<code>basic</code>, <code>MigrateFromSDKv2</code>)</td><td>Require <code>TF_ACC=1</code> and a live Kubernetes cluster. Not run — no cluster available in this session.</td></tr>
+      <tr><td>K8S-MIGRATE-017 baseline integrity (<code>dev_overrides</code> guard)</td><td><code>~/.terraformrc</code> absent on this machine. Must be confirmed in CI: run migration tests with <code>TF_CLI_CONFIG_FILE</code> pointing at a clean config (<code>provider_installation { direct {} }</code>) and verify <code>Installing hashicorp/kubernetes v3.2.1...</code> in terraform init output.</td></tr>
+      <tr><td><code>make docs-lint</code></td><td>Requires Docker. Not run. <code>docs/data-sources/all_namespaces.md</code> was not changed in this diff — no docs regression expected.</td></tr>
+      <tr><td><code>make tests-lint</code> (full)</td><td><code>terrafmt</code> not in <code>make</code>'s PATH; ran directly against new files — exit 0. The reported failure in <code>make tests-lint</code> comes from pre-existing SDKv2 test files in <code>kubernetes/</code>, not from this PR.</td></tr>
+      <tr><td>Live state upgrade proof</td><td>Running the migration test against a real cluster to confirm <code>3.2.1</code> state → local provider plan is empty. Not run — infrastructure; requires explicit authorization.</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  
+  <h2><span class="section-header"><span class="section-icon">📊</span> Migration Rule Scorecard</span></h2>
+  <table class="scorecard">
+    <thead>
+      <tr>
+        <th style="width:170px">Rule</th>
+        <th style="width:90px">Applies</th>
+        <th style="width:80px">Verdict</th>
+        <th>Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>K8S-MIGRATE-001</strong><br /><small>Preserve block/collection shape</small></td>
+        <td>Yes</td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td><code>namespaces</code> was Computed-only TypeList → <code>ListAttribute{Computed: true}</code>; no HCL syntax change</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-002</strong><br /><small>Preserve required blocks</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No user-configurable blocks</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-003</strong><br /><small>Port ValidateFunc</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No <code>ValidateFunc</code> in SDKv2 source</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-004</strong><br /><small>Default → Computed</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No defaults in SDKv2 source</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-005</strong><br /><small>Default normalisation</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No flatten paths; Read builds directly from API</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-006</strong><br /><small>Synthetic <code>id</code></small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td>Declared <code>Computed: true</code>; value matches SDKv2 <code>d.SetId(...)</code> exactly</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-007</strong><br /><small>Optional+Computed preserved</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>All fields are Computed-only</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-008</strong><br /><small>Single registration</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td>Removed from SDKv2 <code>DataSourcesMap</code>; added to Framework <code>DataSources()</code></td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-009</strong><br /><small>Shared helpers once per pkg</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td>No shared helpers; no duplicate symbols in production package</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-010</strong><br /><small>MoveState for deprecated alias</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>Data source; no <code>moved</code> blocks; no <code>_v1</code> alias</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-011</strong><br /><small>MoveState gates on addr+type+ver</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No MoveState; data source</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-012</strong><br /><small>Prefer SourceRawState</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No MoveState; data source</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-013</strong><br /><small>Normalize historical empty values</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No historical state shapes</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-014</strong><br /><small>Keep SDKv2 source for one release</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td><code>kubernetes/data_source_kubernetes_all_namespaces.go</code> retained on branch</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-015</strong><br /><small>Two-step upgrade test</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td>ExternalProviders 3.2.1 Step 1 + local factory Step 2 + <code>ExpectEmptyPlan()</code></td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-016</strong><br /><small>Data-source anchor in migration test</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td><code>terraform_data</code> anchors both <code>id</code> and <code>namespaces</code></td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-017</strong><br /><small>Exact version pin</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td><code>VersionConstraint: "3.2.1"</code> — no operators</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-018</strong><br /><small>Gate moved-block tests on TF 1.8</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No moved blocks; data source</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-019</strong><br /><small>Mux factory for SDKv2 type references</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-fail">FAIL — B1</span></td>
+        <td><code>corev1_test.go:31</code> — Framework-only factory; unsafe as package grows</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-020</strong><br /><small>ImportStateVerifyIgnore must not grow</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>Data sources do not support import</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-021</strong><br /><small>IdentitySchema version+flags</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>SDKv2 source had no ResourceIdentity; data source</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-022</strong><br /><small>Do not add/remove defaulting</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td>No defaulting in SDKv2 or Framework paths</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-023</strong><br /><small>Confirm migration choices</small></td>
+        <td><strong>Yes</strong></td>
+        <td><span class="pill pill-pass">PASS</span></td>
+        <td>Entirely Computed schema; no optional fields; no breaking change decision required</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-024</strong><br /><small>Historical state conversions</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>Data source; no UpgradeState</td>
+      </tr>
+      <tr>
+        <td><strong>K8S-MIGRATE-025</strong><br /><small>Optional+Computed + RequiresReplace → UseStateForUnknown</small></td>
+        <td>N/A</td>
+        <td><span class="pill pill-na">N/A</span></td>
+        <td>No Optional+Computed attributes</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  
+  <h2><span class="section-header"><span class="section-icon">🔒</span> PR-Review Verification Gate</span></h2>
+  <div>
+    <div class="gate-row"><div class="gate-icon">✅</div><div class="gate-text"><strong>1 — Revision/context:</strong> Head and base SHA recorded; per-resource SDK confirmed Framework; domain pack applicability checked against upstream.</div><div class="gate-status gs-pass">PASS</div></div>
+    <div class="gate-row"><div class="gate-icon">✅</div><div class="gate-text"><strong>2 — Coverage:</strong> All 11 changed files reviewed in full; every group accounted for.</div><div class="gate-status gs-pass">PASS</div></div>
+    <div class="gate-row"><div class="gate-icon">✅</div><div class="gate-text"><strong>3 — Contracts:</strong> All five contract questions answered with concrete before/after evidence. Additive changes not blocked.</div><div class="gate-status gs-pass">PASS</div></div>
+    <div class="gate-row"><div class="gate-icon">✅</div><div class="gate-text"><strong>4 — Behavior:</strong> Full Read trace: config decode → client → API → name extraction → SHA-256 → state write. Every value path verified.</div><div class="gate-status gs-pass">PASS</div></div>
+    <div class="gate-row"><div class="gate-icon">✅</div><div class="gate-text"><strong>5 — Findings:</strong> Exact file:line, trigger, failure, and evidence for all 4 blockers. No pack-only false positives.</div><div class="gate-status gs-pass">PASS</div></div>
+    <div class="gate-row"><div class="gate-icon">✅</div><div class="gate-text"><strong>6 — Omissions:</strong> All 25 migration rules evaluated; N/A status recorded with explicit reason for each inapplicable rule.</div><div class="gate-status gs-pass">PASS</div></div>
+    <div class="gate-row"><div class="gate-icon">✅</div><div class="gate-text"><strong>7 — Verification honesty:</strong> Acceptance tests, live upgrade proof, and docs-lint reported as not run with explicit reasons.</div><div class="gate-status gs-pass">PASS</div></div>
+    <div class="gate-row"><div class="gate-icon">⛔</div><div class="gate-text"><strong>8 — Scope:</strong> Review complete. No implementation changes made, no PRs opened, no infrastructure tests run.</div><div class="gate-status gs-pass">PASS</div></div>
+  </div>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>

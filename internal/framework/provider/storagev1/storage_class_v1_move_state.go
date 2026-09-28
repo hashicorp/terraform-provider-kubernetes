@@ -10,8 +10,10 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // moveStateHandlers returns the StateMover list for StorageClassV1.
@@ -111,11 +113,13 @@ func moveStateFromKubernetesStorageClassHandler(ctx context.Context, req resourc
 
 	// ── metadata ─────────────────────────────────────────────────────────────
 	m := raw.Metadata[0]
-	meta := MetadataModel{
-		Name:            types.StringValue(m.Name),
-		Generation:      types.Int64Value(m.Generation),
-		ResourceVersion: types.StringValue(m.ResourceVersion),
-		UID:             types.StringValue(m.UID),
+	meta := common.MetadataModel{
+		MetadataBase: common.MetadataBase{
+			Name:            types.StringValue(m.Name),
+			Generation:      types.Int64Value(m.Generation),
+			ResourceVersion: types.StringValue(m.ResourceVersion),
+			UID:             types.StringValue(string(m.UID)),
+		},
 	}
 	// empty string → null to avoid perpetual plan diff
 	if m.GenerateName != "" {
@@ -123,18 +127,27 @@ func moveStateFromKubernetesStorageClassHandler(ctx context.Context, req resourc
 	} else {
 		meta.GenerateName = types.StringNull()
 	}
-	// empty maps → nil to avoid perpetual plan diff
-	if len(m.Annotations) > 0 {
-		meta.Annotations = flattenStringMap(m.Annotations)
-	}
-	if len(m.Labels) > 0 {
-		meta.Labels = flattenStringMap(m.Labels)
+
+	var diags diag.Diagnostics
+	// SDKv2 writes null for an empty map; {} comes from import. Keep both distinct.
+	meta.MetadataBase.Annotations, diags = sdkv2MapToFramework(ctx, m.Annotations)
+	resp.Diagnostics.Append(diags...)
+	meta.MetadataBase.Labels, diags = sdkv2MapToFramework(ctx, m.Labels)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// ── parameters ───────────────────────────────────────────────────────────
-	var parameters map[string]types.String
+	var parameters types.Map
 	if len(raw.Parameters) > 0 {
-		parameters = flattenStringMap(raw.Parameters)
+		parameters, diags = types.MapValueFrom(ctx, types.StringType, raw.Parameters)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		parameters = types.MapNull(types.StringType)
 	}
 
 	// ── reclaim_policy default ────────────────────────────────────────────────
@@ -157,7 +170,7 @@ func moveStateFromKubernetesStorageClassHandler(ctx context.Context, req resourc
 
 	moved := StorageClassModel{
 		ID:                   types.StringValue(raw.ID),
-		Metadata:             []MetadataModel{meta},
+		Metadata:             []common.MetadataModel{meta},
 		StorageProvisioner:   types.StringValue(raw.StorageProvisioner),
 		Parameters:           parameters,
 		ReclaimPolicy:        types.StringValue(reclaimPolicy),
@@ -172,14 +185,24 @@ func moveStateFromKubernetesStorageClassHandler(ctx context.Context, req resourc
 		return
 	}
 
-	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, StorageClassIdentityModel{
-		APIVersion: types.StringValue("storage.k8s.io/v1"),
-		Kind:       types.StringValue("StorageClass"),
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, common.ResourceIdentity{
+		APIVersion: types.StringValue(storageClassAPIVersion),
+		Kind:       types.StringValue(storageClassKind),
 		Name:       types.StringValue(m.Name),
 	})...)
 }
 
 // ── Move helpers ──────────────────────────────────────────────────────────────
+
+// sdkv2MapToFramework keeps SDKv2's null-vs-empty distinction: a nil Go map (JSON null)
+// becomes a typed null, {} stays a known empty map. Never leave the field unset instead — a
+// zero-value types.Map carries no element type and fails to write to state.
+func sdkv2MapToFramework(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
+	if m == nil {
+		return types.MapNull(types.StringType), nil
+	}
+	return types.MapValueFrom(ctx, types.StringType, m)
+}
 
 // stringsToSet converts []string → types.Set (ElementType: StringType).
 // An empty or nil slice becomes a null set so that the moved state matches

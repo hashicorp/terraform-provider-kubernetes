@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -20,62 +19,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 func (r *StorageClassV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = StorageClassV1Schema()
-}
-
-// metadataBlockAttrs returns the attribute map used inside the metadata block.
-// Shared between the live schema (ListNestedBlock) and the v0 PriorSchema
-// (ListNestedAttribute) used by the state upgrader — both describe the same fields.
-func metadataBlockAttrs() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"annotations": schema.MapAttribute{
-			MarkdownDescription: "An unstructured key value map stored with the storage class that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations",
-			ElementType:         types.StringType,
-			Optional:            true,
-		},
-		"generate_name": schema.StringAttribute{
-			MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-			Optional:            true,
-			Validators: []validator.String{
-				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("name")),
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-			},
-		},
-		"generation": schema.Int64Attribute{
-			MarkdownDescription: "A sequence number representing a specific generation of the desired state.",
-			Computed:            true,
-		},
-		"labels": schema.MapAttribute{
-			MarkdownDescription: "Map of string keys and values that can be used to organize and categorize (scope and select) the storage class. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels",
-			ElementType:         types.StringType,
-			Optional:            true,
-		},
-		"name": schema.StringAttribute{
-			MarkdownDescription: "Name of the storage class, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
-			Optional:            true,
-			Computed:            true,
-			Validators: []validator.String{
-				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("generate_name")),
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
-		"resource_version": schema.StringAttribute{
-			MarkdownDescription: "An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
-			Computed:            true,
-		},
-		"uid": schema.StringAttribute{
-			MarkdownDescription: "The unique in time and space value for this storage class. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids",
-			Computed:            true,
-		},
-	}
 }
 
 // StorageClassV1Schema returns the Plugin Framework schema for StorageClassV1.
@@ -162,19 +110,10 @@ func StorageClassV1Schema() schema.Schema {
 
 		// ── Blocks ──────────────────────────────────────────────────────────
 		Blocks: map[string]schema.Block{
-			// metadata uses ListNestedBlock — the framework equivalent of SDK v2's
-			// TypeList{MaxItems:1}. Produces state paths metadata.0.name etc.,
-			// preserving full SDK v2 state compatibility without a StateUpgrader.
-			"metadata": schema.ListNestedBlock{
-				MarkdownDescription: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeBetween(1, 1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: metadataBlockAttrs(),
-				},
-			},
+			// metadata uses common.MetadataSchema — cluster-scoped, generatable name.
+			// It produces a ListNestedBlock that preserves the SDKv2 state wire shape
+			// (metadata.0.name etc.) without a StateUpgrader.
+			"metadata": common.MetadataSchema("storage class", true),
 
 			// allowed_topologies is MaxItems:1 in SDKv2. Modelled as a
 			// ListNestedBlock with SizeBetween(0,1) to allow the block to be

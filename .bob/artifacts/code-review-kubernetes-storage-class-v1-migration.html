@@ -1,0 +1,263 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Code Review: kubernetes_storage_class_v1 Migration</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px;
+    background-color: #ffffff;
+    color: #1f2328;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 22px; font-weight: 600; margin-top: 0; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; }
+  h2 { font-size: 16px; font-weight: 600; margin-top: 28px; margin-bottom: 12px; }
+  h3 { font-size: 14px; font-weight: 600; margin-top: 16px; margin-bottom: 6px; }
+  p { margin: 0 0 10px 0; }
+  ul { margin: 0 0 12px 0; padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    background-color: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 2px 4px;
+  }
+  pre {
+    background-color: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px;
+    overflow-x: auto;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .context-box {
+    background-color: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+  }
+  .context-row {
+    display: flex;
+    margin-bottom: 4px;
+  }
+  .context-row:last-child { margin-bottom: 0; }
+  .context-label {
+    width: 130px;
+    font-weight: 600;
+    color: #57606a;
+  }
+  .context-value { flex: 1; }
+  .badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .badge-block { background-color: #ffebe9; color: #cf222e; border: 1px solid rgba(207,34,46,0.2); }
+  .badge-warn { background-color: #fff8c5; color: #9a6700; border: 1px solid rgba(154,103,0,0.2); }
+  .badge-pass { background-color: #dafbe1; color: #1a7f37; border: 1px solid rgba(26,127,55,0.2); }
+  .badge-na { background-color: #f6f8fa; color: #57606a; border: 1px solid #d0d7de; }
+  .card {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .card-block { border-left: 4px solid #cf222e; }
+  .card-warn { border-left: 4px solid #d4a72c; }
+  .card-pass { border-left: 4px solid #2da44e; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  th, td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f7f8fa;
+    font-weight: 600;
+  }
+  .footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Static Code Review Report</h1>
+  <p>Branch: <code>migrate-kubernetes-storage-class-v1</code> • Target: <code>main</code> • Task: SDKv2 → Plugin Framework Migration</p>
+
+  <div class="context-box">
+    <div class="context-row"><span class="context-label">Repository:</span><span class="context-value">hashicorp/terraform-provider-kubernetes</span></div>
+    <div class="context-row"><span class="context-label">Architecture:</span><span class="context-value">Muxed (SDKv2 + Framework + Manifest)</span></div>
+    <div class="context-row"><span class="context-label">Resource Target:</span><span class="context-value">kubernetes_storage_class_v1 (Plugin Framework)</span></div>
+    <div class="context-row"><span class="context-label">Package Path:</span><span class="context-value">internal/framework/provider/storagev1</span></div>
+    <div class="context-row"><span class="context-label">Domain Pack:</span><span class="context-value">tfp-domain-kubernetes</span></div>
+  </div>
+
+  <h2>Blocking Findings (2)</h2>
+
+  <div class="card card-block">
+    <span class="badge badge-block">P1 • Blocking</span> <strong>Missing listvalidator.IsRequired() on metadata block</strong>
+    <p style="margin-top:8px"><code>internal/framework/provider/storagev1/storage_class_v1_schema.go:167-169</code></p>
+    <p><strong>Trigger:</strong> User configuration omits the required <code>metadata</code> block entirely.</p>
+    <p><strong>Failure:</strong> <code>listvalidator.SizeBetween(1, 1)</code> skips validation when the collection is null. Plan succeeds, and the apply phase crashes on <code>plan.Metadata[0]</code> with a panic (index out of range).</p>
+    <p><strong>Correction:</strong> Add <code>listvalidator.IsRequired()</code> to the metadata block validators.</p>
+    <pre>Validators: []validator.List{
+    listvalidator.IsRequired(),
+    listvalidator.SizeBetween(1, 1),
+}</pre>
+    <p><strong>Rule ID:</strong> <code>K8S-MIGRATE-002</code></p>
+  </div>
+
+  <div class="card card-block">
+    <span class="badge badge-block">P1 • Blocking</span> <strong>ImportStateVerifyIgnore expanded without justification</strong>
+    <p style="margin-top:8px"><code>internal/framework/provider/storagev1/storage_class_v1_test.go:114-116</code></p>
+    <p><strong>Trigger:</strong> <code>ImportStateVerify</code> in acceptance tests.</p>
+    <p><strong>Failure:</strong> <code>metadata.0.generation</code> was added to <code>ImportStateVerifyIgnore</code> without documented justification. In the SDKv2 baseline, only <code>metadata.0.resource_version</code> was ignored.</p>
+    <p><strong>Correction:</strong> Remove <code>metadata.0.generation</code> from the ignore list or document the controller behavior necessitating it.</p>
+    <p><strong>Rule ID:</strong> <code>K8S-MIGRATE-020</code></p>
+  </div>
+
+  <h2>Suggestions (3)</h2>
+
+  <div class="card card-warn">
+    <span class="badge badge-warn">P2 • Suggestion</span> <strong>MoveState handler gating checks</strong>
+    <p style="margin-top:8px"><code>internal/framework/provider/storagev1/storage_class_v1_move_state.go:80</code></p>
+    <p>The state mover only gates on <code>req.SourceTypeName</code>. It should also verify <code>req.SourceProviderAddress</code> (matching suffix <code>hashicorp/kubernetes</code>) and <code>req.SourceSchemaVersion == 0</code> before JSON unmarshalling (Rule <code>K8S-MIGRATE-011</code>).</p>
+  </div>
+
+  <div class="card card-warn">
+    <span class="badge badge-warn">P2 • Suggestion</span> <strong>Metadata attribute validation parity</strong>
+    <p style="margin-top:8px"><code>internal/framework/provider/storagev1/storage_class_v1_schema.go:34-58</code></p>
+    <p>SDKv2 <code>validateName</code>, <code>validateGenerateName</code>, <code>validateLabels</code>, and <code>validateAnnotations</code> were not mapped to Framework attribute validators, shifting input errors from plan-time to apply-time 422 errors (Rule <code>K8S-MIGRATE-003</code>).</p>
+  </div>
+
+  <div class="card card-warn">
+    <span class="badge badge-warn">P2 • Suggestion</span> <strong>Terraform version gating on moved test</strong>
+    <p style="margin-top:8px"><code>internal/framework/provider/storagev1/storage_class_v1_test.go:448</code></p>
+    <p>Add <code>TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)}</code> to <code>TestAccStorageClassV1_moved</code> to prevent failures on older CLI test runners (Rule <code>K8S-MIGRATE-018</code>).</p>
+  </div>
+
+  <h2>Five Contract Questions</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:35px">#</th>
+        <th style="width:320px">Question</th>
+        <th style="width:70px">Verdict</th>
+        <th>Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>Does existing configuration change meaning or plan differently?</td>
+        <td><span class="badge badge-pass">No</span></td>
+        <td>Schema attributes, block types, ForceNew modifiers, and defaults match SDKv2 exactly.</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Are attributes/types added, removed, renamed, or retyped?</td>
+        <td><span class="badge badge-pass">No</span></td>
+        <td>Attribute and block inventory is identical between SDKv2 and Framework schemas.</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Does an existing attribute become required or lose a default?</td>
+        <td><span class="badge badge-pass">No</span></td>
+        <td>All defaults preserved via <code>stringdefault.StaticString</code> and <code>booldefault.StaticBool</code>.</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Does an existing field newly require replacement?</td>
+        <td><span class="badge badge-pass">No</span></td>
+        <td>Replacement semantics preserved; <code>allow_volume_expansion</code> remains mutable in-place.</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Can the new implementation read existing stored state?</td>
+        <td><span class="badge badge-pass">Yes</span></td>
+        <td><code>ListNestedBlock</code> produces identical JSON paths (<code>metadata.0.*</code>); MoveState handles alias migration.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Migration Rule Scorecard</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:140px">Rule ID</th>
+        <th>Description</th>
+        <th style="width:80px">Status</th>
+        <th>Evidence / Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>K8S-MIGRATE-001</td><td>Preserve block syntax &amp; collection shape</td><td><span class="badge badge-pass">PASS</span></td><td>Uses ListNestedBlock for metadata and allowed_topologies.</td></tr>
+      <tr><td>K8S-MIGRATE-002</td><td>Preserve required blocks validation</td><td><span class="badge badge-block">FAIL</span></td><td>Missing listvalidator.IsRequired() on metadata.</td></tr>
+      <tr><td>K8S-MIGRATE-003</td><td>Port SDKv2 ValidateFuncs</td><td><span class="badge badge-warn">WARN</span></td><td>Metadata regex/DNS validators omitted.</td></tr>
+      <tr><td>K8S-MIGRATE-004</td><td>Default requires Computed</td><td><span class="badge badge-pass">PASS</span></td><td>Optional+Computed+Default configured properly.</td></tr>
+      <tr><td>K8S-MIGRATE-005</td><td>Default normalization in flatten paths</td><td><span class="badge badge-pass">PASS</span></td><td>setComputedFields handles empty collections cleanly.</td></tr>
+      <tr><td>K8S-MIGRATE-006</td><td>Declare synthetic id on data sources</td><td><span class="badge badge-na">N/A</span></td><td>Managed resource migration.</td></tr>
+      <tr><td>K8S-MIGRATE-007</td><td>Keep Optional+Computed metadata fields</td><td><span class="badge badge-pass">PASS</span></td><td>Metadata flags match SDKv2 definitions.</td></tr>
+      <tr><td>K8S-MIGRATE-008</td><td>Remove SDKv2 registration for migrated type</td><td><span class="badge badge-pass">PASS</span></td><td>Registered on Framework; removed from SDKv2 map.</td></tr>
+      <tr><td>K8S-MIGRATE-009</td><td>Shared helpers declared once per package</td><td><span class="badge badge-pass">PASS</span></td><td>Zero duplicate symbols in package storagev1.</td></tr>
+      <tr><td>K8S-MIGRATE-010</td><td>Implement MoveState for alias</td><td><span class="badge badge-pass">PASS</span></td><td>MoveState implemented for kubernetes_storage_class.</td></tr>
+      <tr><td>K8S-MIGRATE-011</td><td>MoveState gates on address/type/version</td><td><span class="badge badge-warn">WARN</span></td><td>Only SourceTypeName checked in handler.</td></tr>
+      <tr><td>K8S-MIGRATE-012</td><td>Prefer SourceRawState with explicit struct</td><td><span class="badge badge-pass">PASS</span></td><td>Decodes raw state into sdkv2StorageClassStateV0.</td></tr>
+      <tr><td>K8S-MIGRATE-013</td><td>Normalize historical empty values</td><td><span class="badge badge-pass">PASS</span></td><td>generate_name and empty maps normalized to null/nil.</td></tr>
+      <tr><td>K8S-MIGRATE-014</td><td>Keep SDKv2 source alias registered</td><td><span class="badge badge-pass">PASS</span></td><td>kubernetes_storage_class retained as deprecated.</td></tr>
+      <tr><td>K8S-MIGRATE-015</td><td>Ship two-step upgrade test</td><td><span class="badge badge-pass">PASS</span></td><td>TestAccStorageClassV1_upgradeFromSDKv2 included.</td></tr>
+      <tr><td>K8S-MIGRATE-016</td><td>Anchor data-source test attributes</td><td><span class="badge badge-na">N/A</span></td><td>Managed resource migration.</td></tr>
+      <tr><td>K8S-MIGRATE-017</td><td>Pin external provider version</td><td><span class="badge badge-pass">PASS</span></td><td>Pinned to "3.2.1" and "3.0.1".</td></tr>
+      <tr><td>K8S-MIGRATE-018</td><td>Gate moved-block tests on TF 1.8</td><td><span class="badge badge-warn">WARN</span></td><td>SkipBelow check omitted in moved test.</td></tr>
+      <tr><td>K8S-MIGRATE-019</td><td>Moved test provider factory</td><td><span class="badge badge-pass">PASS</span></td><td>Framework factory serves target resource.</td></tr>
+      <tr><td>K8S-MIGRATE-020</td><td>ImportStateVerifyIgnore must not grow</td><td><span class="badge badge-block">FAIL</span></td><td>metadata.0.generation added to ignore list.</td></tr>
+      <tr><td>K8S-MIGRATE-021</td><td>IdentitySchema reproduces flags</td><td><span class="badge badge-pass">PASS</span></td><td>Resource identity configured for non-namespaced resource.</td></tr>
+      <tr><td>K8S-MIGRATE-022</td><td>Preserve defaulting behavior</td><td><span class="badge badge-pass">PASS</span></td><td>No unauthorized defaulting changes.</td></tr>
+      <tr><td>K8S-MIGRATE-023</td><td>Confirm contract changes</td><td><span class="badge badge-pass">PASS</span></td><td>Exact HCL and state compatibility preserved.</td></tr>
+      <tr><td>K8S-MIGRATE-024</td><td>Historical state upgrades</td><td><span class="badge badge-na">N/A</span></td><td>Schema shape preserved at version 0.</td></tr>
+      <tr><td>K8S-MIGRATE-025</td><td>Optional+Computed carries UseStateForUnknown</td><td><span class="badge badge-pass">PASS</span></td><td>metadata.name includes UseStateForUnknown().</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Compilation &amp; Symbol Checks</h2>
+  <ul>
+    <li><code>go build ./...</code> — <strong>PASSED</strong> (clean build)</li>
+    <li><code>go test ./internal/framework/provider/storagev1/... -run '^$'</code> — <strong>PASSED</strong></li>
+    <li>Cross-file symbol collision check in <code>storagev1</code> — <strong>PASSED</strong> (0 duplicates)</li>
+  </ul>
+
+  <div class="footer">
+    Made with IBM Bob
+  </div>
+</div>
+</body>
+</html>

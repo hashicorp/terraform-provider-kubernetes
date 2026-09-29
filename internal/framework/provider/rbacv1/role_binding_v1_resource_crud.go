@@ -7,11 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	rbacv1api "k8s.io/api/rbac/v1"
@@ -20,19 +20,10 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
-// buildID returns the canonical "namespace/name" ID used as the Terraform resource ID.
-func buildID(namespace, name string) string {
-	return namespace + "/" + name
-}
-
-// splitID splits a "namespace/name" ID into its components.
-func splitID(id string) (namespace, name string, err error) {
-	parts := strings.SplitN(id, "/", 2)
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", fmt.Errorf("invalid RoleBinding ID %q: expected \"namespace/name\"", id)
-	}
-	return parts[0], parts[1], nil
-}
+const (
+	roleBindingAPIVersion = "rbac.authorization.k8s.io/v1"
+	roleBindingKind       = "RoleBinding"
+)
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
@@ -50,49 +41,44 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	m := plan.Metadata[0]
-	obj := &rbacv1api.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:         m.Name.ValueString(),
-			GenerateName: m.GenerateName.ValueString(),
-			Namespace:    m.Namespace.ValueString(),
-			Labels:       expandStringMap(m.Labels),
-			Annotations:  expandStringMap(m.Annotations),
-		},
-		RoleRef:  expandRoleRef(plan.RoleRef[0]),
-		Subjects: expandSubjects(plan.Subject),
+	objMeta, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	out, err := conn.RbacV1().RoleBindings(obj.Namespace).Create(ctx, obj, metav1.CreateOptions{})
+	obj := &rbacv1api.RoleBinding{
+		ObjectMeta: objMeta,
+		RoleRef:    expandRoleRef(plan.RoleRef[0]),
+		Subjects:   expandSubjects(plan.Subject),
+	}
+
+	out, err := conn.RbacV1().RoleBindings(objMeta.Namespace).Create(ctx, obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error creating RoleBinding",
-			fmt.Sprintf("Failed to create RoleBinding %q/%q: %s", obj.Namespace, obj.Name, err.Error()),
+			fmt.Sprintf("Failed to create RoleBinding %q/%q: %s", objMeta.Namespace, objMeta.Name, err.Error()),
 		)
 		return
 	}
 
-	plan.ID = types.StringValue(buildID(out.Namespace, out.Name))
-
-	var currentMeta NamespacedMetadataModel
-	if len(plan.Metadata) > 0 {
-		currentMeta = plan.Metadata[0]
-	}
-	plan.Metadata = []NamespacedMetadataModel{flattenNamespacedMetadata(
-		out.ObjectMeta,
-		currentMeta,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
-	plan.RoleRef = []RoleRefModel{flattenRoleRef(out.RoleRef)}
-	plan.Subject = flattenSubjects(out.Subjects)
+	// Echo the plan, overwriting only server-assigned fields.
+	// Filtering server-added metadata keys is Read's job, not Create's.
+	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
+	plan.Metadata[0].Name = types.StringValue(out.Name)
+	plan.Metadata[0].Namespace = types.StringValue(out.Namespace)
+	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, RoleBindingIdentityModel{
-		APIVersion: types.StringValue("rbac.authorization.k8s.io/v1"),
-		Kind:       types.StringValue("RoleBinding"),
-		Namespace:  types.StringValue(out.Namespace),
-		Name:       types.StringValue(out.Name),
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(roleBindingAPIVersion),
+			Kind:       types.StringValue(roleBindingKind),
+			Name:       types.StringValue(out.Name),
+		},
+		Namespace: types.StringValue(out.Namespace),
 	})...)
 }
 
@@ -105,7 +91,7 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	namespace, name, err := splitID(state.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("invalid resource ID", err.Error())
 		return
@@ -131,25 +117,26 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	var currentMeta NamespacedMetadataModel
-	if len(state.Metadata) > 0 {
-		currentMeta = state.Metadata[0]
+	// Read filters the API response against prior state and ignore lists.
+	metadata, diags := common.FlattenNamespacedMetadata(ctx, out.ObjectMeta, state.Metadata,
+		meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	state.Metadata = []NamespacedMetadataModel{flattenNamespacedMetadata(
-		out.ObjectMeta,
-		currentMeta,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
+
+	state.Metadata = metadata
 	state.RoleRef = []RoleRefModel{flattenRoleRef(out.RoleRef)}
 	state.Subject = flattenSubjects(out.Subjects)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, RoleBindingIdentityModel{
-		APIVersion: types.StringValue("rbac.authorization.k8s.io/v1"),
-		Kind:       types.StringValue("RoleBinding"),
-		Namespace:  types.StringValue(out.Namespace),
-		Name:       types.StringValue(out.Name),
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(roleBindingAPIVersion),
+			Kind:       types.StringValue(roleBindingKind),
+			Name:       types.StringValue(out.Name),
+		},
+		Namespace: types.StringValue(out.Namespace),
 	})...)
 }
 
@@ -169,7 +156,7 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	namespace, name, err := splitID(state.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("invalid resource ID", err.Error())
 		return
@@ -185,25 +172,9 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	stateMeta := state.Metadata[0]
 	planMeta := plan.Metadata[0]
 
-	// Build JSON Patch: metadata (annotations + labels) and subject list.
-	// Only call DiffStringMap when at least one side is non-empty. When both
-	// sides are nil/empty, DiffStringMap would emit an Add operation that
-	// replaces the entire map with {}, erasing any externally managed ignored keys.
-	ops := make(kubernetes.PatchOperations, 0)
-	if len(stateMeta.Annotations) > 0 || len(planMeta.Annotations) > 0 {
-		ops = append(ops, kubernetes.DiffStringMap(
-			"/metadata/annotations",
-			toStringInterfaceMap(stateMeta.Annotations),
-			toStringInterfaceMap(planMeta.Annotations),
-		)...)
-	}
-	if len(stateMeta.Labels) > 0 || len(planMeta.Labels) > 0 {
-		ops = append(ops, kubernetes.DiffStringMap(
-			"/metadata/labels",
-			toStringInterfaceMap(stateMeta.Labels),
-			toStringInterfaceMap(planMeta.Labels),
-		)...)
-	}
+	// Build metadata patch ops via common helper — mirrors SDKv2 patchMetadata.
+	ops := common.MetadataPatchOps("/metadata/", stateMeta.MetadataModel, planMeta.MetadataModel)
+	// Add subject patch ops on top.
 	ops = append(ops, patchSubjects(state.Subject, plan.Subject)...)
 
 	patchBytes, err := json.Marshal(ops)
@@ -227,22 +198,23 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	plan.ID = types.StringValue(buildID(out.Namespace, out.Name))
-	plan.Metadata = []NamespacedMetadataModel{flattenNamespacedMetadata(
-		out.ObjectMeta,
-		planMeta,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
-	plan.RoleRef = []RoleRefModel{flattenRoleRef(out.RoleRef)}
-	plan.Subject = flattenSubjects(out.Subjects)
+	// Echo the plan, overwriting only server-assigned fields.
+	// Filtering server-added metadata keys is Read's job, not Update's.
+	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
+	plan.Metadata[0].Name = types.StringValue(out.Name)
+	plan.Metadata[0].Namespace = types.StringValue(out.Namespace)
+	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
+	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, RoleBindingIdentityModel{
-		APIVersion: types.StringValue("rbac.authorization.k8s.io/v1"),
-		Kind:       types.StringValue("RoleBinding"),
-		Namespace:  types.StringValue(out.Namespace),
-		Name:       types.StringValue(out.Name),
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(roleBindingAPIVersion),
+			Kind:       types.StringValue(roleBindingKind),
+			Name:       types.StringValue(out.Name),
+		},
+		Namespace: types.StringValue(out.Namespace),
 	})...)
 }
 
@@ -255,7 +227,7 @@ func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	namespace, name, err := splitID(state.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("invalid resource ID", err.Error())
 		return
@@ -284,13 +256,13 @@ func (r *RoleBindingV1) ImportState(ctx context.Context, req resource.ImportStat
 	// Accept either a plain "namespace/name" string ID or an identity object.
 	if req.ID != "" {
 		var err error
-		namespace, name, err = splitID(req.ID)
+		namespace, name, err = kubernetes.IdParts(req.ID)
 		if err != nil {
 			resp.Diagnostics.AddError("invalid import ID", err.Error())
 			return
 		}
 	} else {
-		var identityData RoleBindingIdentityModel
+		var identityData common.NamespacedResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -315,31 +287,28 @@ func (r *RoleBindingV1) ImportState(ctx context.Context, req resource.ImportStat
 		return
 	}
 
-	flatMeta := flattenNamespacedMetadata(
-		out.ObjectMeta,
-		NamespacedMetadataModel{},
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)
-
-	// If the server has no generate_name, set to null to avoid perpetual diff
-	// against configs that use name instead of generate_name.
-	if out.GenerateName == "" {
-		flatMeta.GenerateName = types.StringNull()
+	// Import uses an empty prior state — nothing declared, so nothing is exempt from filtering.
+	flatMetadata, diags := common.FlattenNamespacedMetadata(ctx, out.ObjectMeta, nil,
+		meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	state := RoleBindingModel{
-		ID:       types.StringValue(buildID(out.Namespace, out.Name)),
-		Metadata: []NamespacedMetadataModel{flatMeta},
+		ID:       types.StringValue(kubernetes.BuildId(out.ObjectMeta)),
+		Metadata: flatMetadata,
 		RoleRef:  []RoleRefModel{flattenRoleRef(out.RoleRef)},
 		Subject:  flattenSubjects(out.Subjects),
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, RoleBindingIdentityModel{
-		APIVersion: types.StringValue("rbac.authorization.k8s.io/v1"),
-		Kind:       types.StringValue("RoleBinding"),
-		Namespace:  types.StringValue(out.Namespace),
-		Name:       types.StringValue(out.Name),
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(roleBindingAPIVersion),
+			Kind:       types.StringValue(roleBindingKind),
+			Name:       types.StringValue(out.Name),
+		},
+		Namespace: types.StringValue(out.Namespace),
 	})...)
 }

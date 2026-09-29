@@ -332,8 +332,10 @@ func TestAccRoleBinding_validation_invalidAnnotationKey(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
 			{
+				// common.AnnotationsValidator uses validatordiag.InvalidAttributeValueDiagnostic:
+				// summary "Invalid Attribute Value", detail "Attribute ... annotations[...] key ..., got: ..."
 				Config:      testAccRoleBindingV1Config_invalidAnnotationKey(name),
-				ExpectError: regexp.MustCompile(`(?i)invalid annotation key`),
+				ExpectError: regexp.MustCompile(`(?i)Invalid Attribute Value`),
 			},
 		},
 	})
@@ -348,8 +350,10 @@ func TestAccRoleBinding_validation_invalidLabelKey(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
 			{
+				// common.LabelsValidator uses validatordiag.InvalidAttributeValueDiagnostic:
+				// summary "Invalid Attribute Value", detail "Attribute ... labels[...] key ..., got: ..."
 				Config:      testAccRoleBindingV1Config_invalidLabelKey(name),
-				ExpectError: regexp.MustCompile(`(?i)invalid label key`),
+				ExpectError: regexp.MustCompile(`(?i)Invalid Attribute Value`),
 			},
 		},
 	})
@@ -364,8 +368,10 @@ func TestAccRoleBinding_validation_invalidLabelValue(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
 			{
+				// common.LabelsValidator uses validatordiag.InvalidAttributeValueDiagnostic:
+				// summary "Invalid Attribute Value", detail "Attribute ... labels[...] value ..., got: ..."
 				Config:      testAccRoleBindingV1Config_invalidLabelValue(name),
-				ExpectError: regexp.MustCompile(`(?i)invalid label value`),
+				ExpectError: regexp.MustCompile(`(?i)Invalid Attribute Value`),
 			},
 		},
 	})
@@ -378,8 +384,10 @@ func TestAccRoleBinding_validation_invalidName(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
 			{
+				// common.RBACNameValidator uses validatordiag.InvalidAttributeValueDiagnostic:
+				// summary "Invalid Attribute Value", detail "Attribute metadata[0].name ..., got: ..."
 				Config:      testAccRoleBindingV1Config_basic("invalid/name"),
-				ExpectError: regexp.MustCompile(`(?i)invalid value`),
+				ExpectError: regexp.MustCompile(`(?i)Invalid Attribute Value`),
 			},
 		},
 	})

@@ -7,9 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 const (
@@ -36,6 +40,8 @@ func moveStateHandlers() []resource.StateMover {
 
 // sdkv2RBMetadataElement is the JSON shape of one element in the SDKv2
 // TypeList metadata for kubernetes_role_binding (schema version 0).
+// Types follow what SDKv2 writes: unset strings are "", maps are nil (JSON null)
+// for unset and {} for an explicitly-configured empty map.
 type sdkv2RBMetadataElement struct {
 	Name            string            `json:"name"`
 	GenerateName    string            `json:"generate_name"`
@@ -126,29 +132,36 @@ func moveStateFromKubernetesRoleBindingHandler(ctx context.Context, req resource
 
 	m := raw.Metadata[0]
 
-	meta := NamespacedMetadataModel{
-		Name:            types.StringValue(m.Name),
-		Namespace:       types.StringValue(m.Namespace),
-		Generation:      types.Int64Value(m.Generation),
-		ResourceVersion: types.StringValue(m.ResourceVersion),
-		UID:             types.StringValue(m.UID),
+	meta := common.NamespacedMetadataModel{
+		MetadataModel: common.MetadataModel{
+			MetadataBase: common.MetadataBase{
+				Name:            types.StringValue(m.Name),
+				Generation:      types.Int64Value(m.Generation),
+				ResourceVersion: types.StringValue(m.ResourceVersion),
+				UID:             types.StringValue(m.UID),
+			},
+		},
+		Namespace: types.StringValue(m.Namespace),
 	}
 
-	// generate_name: empty string → null to avoid perpetual plan diff
+	// generate_name: SDKv2 stores unset as ""; Framework needs null.
+	// Left as "", RequiresReplace would recreate the object on plan -refresh=false.
+	meta.GenerateName = types.StringNull()
 	if m.GenerateName != "" {
 		meta.GenerateName = types.StringValue(m.GenerateName)
-	} else {
-		meta.GenerateName = types.StringNull()
 	}
 
-	// Empty maps → nil to avoid perpetual plan diff against configs that
-	// omit annotations/labels entirely.
-	if len(m.Annotations) > 0 {
-		meta.Annotations = flattenStringMap(m.Annotations)
+	// annotations/labels: preserve SDKv2's null-vs-empty distinction.
+	// A nil Go map (JSON null) becomes a typed null; {} stays a known empty map.
+	annotations, annotationDiags := sdkv2MapToFramework(ctx, m.Annotations)
+	resp.Diagnostics.Append(annotationDiags...)
+	labels, labelDiags := sdkv2MapToFramework(ctx, m.Labels)
+	resp.Diagnostics.Append(labelDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	if len(m.Labels) > 0 {
-		meta.Labels = flattenStringMap(m.Labels)
-	}
+	meta.Annotations = annotations
+	meta.Labels = labels
 
 	// role_ref
 	rr := raw.RoleRef[0]
@@ -171,10 +184,30 @@ func moveStateFromKubernetesRoleBindingHandler(ctx context.Context, req resource
 
 	moved := RoleBindingModel{
 		ID:       types.StringValue(raw.ID),
-		Metadata: []NamespacedMetadataModel{meta},
+		Metadata: []common.NamespacedMetadataModel{meta},
 		RoleRef:  []RoleRefModel{roleRef},
 		Subject:  subjects,
 	}
 
 	resp.Diagnostics.Append(resp.TargetState.Set(ctx, &moved)...)
+	if resp.Diagnostics.HasError() || resp.TargetIdentity == nil {
+		return
+	}
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(roleBindingAPIVersion),
+			Kind:       types.StringValue(roleBindingKind),
+			Name:       types.StringValue(m.Name),
+		},
+		Namespace: types.StringValue(m.Namespace),
+	})...)
+}
+
+// sdkv2MapToFramework converts an SDKv2 map (nil = null, {} = empty) to a typed types.Map.
+// A nil Go map becomes a typed null — never an untyped zero value, which cannot be written to state.
+func sdkv2MapToFramework(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
+	if m == nil {
+		return types.MapNull(types.StringType), nil
+	}
+	return types.MapValueFrom(ctx, types.StringType, m)
 }

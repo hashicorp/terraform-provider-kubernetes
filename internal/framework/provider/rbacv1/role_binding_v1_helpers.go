@@ -9,103 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	rbacv1api "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// ── String map helpers ────────────────────────────────────────────────────────
-
-// expandStringMap converts map[string]types.String → map[string]string for Kubernetes API calls.
-func expandStringMap(m map[string]types.String) map[string]string {
-	if m == nil {
-		return nil
-	}
-	result := make(map[string]string, len(m))
-	for k, v := range m {
-		if !v.IsNull() && !v.IsUnknown() {
-			result[k] = v.ValueString()
-		}
-	}
-	return result
-}
-
-// flattenStringMap converts map[string]string → map[string]types.String.
-func flattenStringMap(m map[string]string) map[string]types.String {
-	if m == nil {
-		return nil
-	}
-	result := make(map[string]types.String, len(m))
-	for k, v := range m {
-		result[k] = types.StringValue(v)
-	}
-	return result
-}
-
-// toStringInterfaceMap converts map[string]types.String → map[string]interface{}
-// as required by kubernetes.DiffStringMap.
-func toStringInterfaceMap(m map[string]types.String) map[string]interface{} {
-	result := make(map[string]interface{}, len(m))
-	for k, v := range m {
-		if !v.IsNull() && !v.IsUnknown() {
-			result[k] = v.ValueString()
-		}
-	}
-	return result
-}
-
-// ── Metadata helpers ──────────────────────────────────────────────────────────
-
-// filterIgnoredMetadataKeys removes internal Kubernetes keys and keys matching
-// ignore patterns — unless that key is already present in current (managed by TF).
-func filterIgnoredMetadataKeys(meta map[string]string, current map[string]types.String, ignorePatterns []string) map[string]string {
-	result := make(map[string]string, len(meta))
-	for k, v := range meta {
-		_, managedByTF := current[k]
-		if !managedByTF && (kubernetes.IsInternalKey(k) || kubernetes.IgnoreKey(k, ignorePatterns)) {
-			continue
-		}
-		result[k] = v
-	}
-	return result
-}
-
-// flattenNamespacedMetadata converts a Kubernetes ObjectMeta to NamespacedMetadataModel,
-// filtering out internal Kubernetes keys and user-configured ignore patterns.
-// current holds the existing Terraform-managed metadata (used to preserve user-managed keys).
-func flattenNamespacedMetadata(meta metav1.ObjectMeta, current NamespacedMetadataModel, ignoreAnnotations, ignoreLabels []string) NamespacedMetadataModel {
-	result := NamespacedMetadataModel{
-		Name:            types.StringValue(meta.Name),
-		Namespace:       types.StringValue(meta.Namespace),
-		Generation:      types.Int64Value(meta.Generation),
-		ResourceVersion: types.StringValue(meta.ResourceVersion),
-		UID:             types.StringValue(string(meta.UID)),
-	}
-
-	// generate_name: only set if non-empty to avoid perpetual diff vs nil
-	if meta.GenerateName != "" {
-		result.GenerateName = types.StringValue(meta.GenerateName)
-	} else {
-		result.GenerateName = types.StringNull()
-	}
-
-	filtered := filterIgnoredMetadataKeys(meta.Annotations, current.Annotations, ignoreAnnotations)
-	// Preserve non-null empty map when the user explicitly configured annotations = {}.
-	// Without this, annotations={} in config would flatten to null and cause an
-	// inconsistent-result error on the next plan.
-	if len(filtered) > 0 {
-		result.Annotations = flattenStringMap(filtered)
-	} else if current.Annotations != nil {
-		result.Annotations = map[string]types.String{}
-	}
-
-	filtered = filterIgnoredMetadataKeys(meta.Labels, current.Labels, ignoreLabels)
-	if len(filtered) > 0 {
-		result.Labels = flattenStringMap(filtered)
-	} else if current.Labels != nil {
-		result.Labels = map[string]types.String{}
-	}
-
-	return result
-}
 
 // ── RoleRef helpers ───────────────────────────────────────────────────────────
 
@@ -170,9 +74,9 @@ func patchSubjects(old, new []SubjectModel) kubernetes.PatchOperations {
 
 	ops := make(kubernetes.PatchOperations, 0, len(newExpanded)+len(oldExpanded))
 
-	common := len(newExpanded)
-	if common > len(oldExpanded) {
-		common = len(oldExpanded)
+	commonLen := len(newExpanded)
+	if commonLen > len(oldExpanded) {
+		commonLen = len(oldExpanded)
 	}
 
 	// Remove trailing old entries first (reverse order to keep indices stable)
@@ -185,7 +89,7 @@ func patchSubjects(old, new []SubjectModel) kubernetes.PatchOperations {
 	}
 
 	// Replace entries that exist in both old and new
-	for i, v := range newExpanded[:common] {
+	for i, v := range newExpanded[:commonLen] {
 		ops = append(ops, &kubernetes.ReplaceOperation{
 			Path:  "/subjects/" + strconv.Itoa(i),
 			Value: v,
@@ -194,9 +98,9 @@ func patchSubjects(old, new []SubjectModel) kubernetes.PatchOperations {
 
 	// Add new entries beyond the old length
 	if len(newExpanded) > len(oldExpanded) {
-		for i, v := range newExpanded[common:] {
+		for i, v := range newExpanded[commonLen:] {
 			ops = append(ops, &kubernetes.AddOperation{
-				Path:  "/subjects/" + strconv.Itoa(common+i),
+				Path:  "/subjects/" + strconv.Itoa(commonLen+i),
 				Value: v,
 			})
 		}

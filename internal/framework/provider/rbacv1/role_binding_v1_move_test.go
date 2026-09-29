@@ -742,13 +742,18 @@ func TestMigration_MoveState_basic(t *testing.T) {
 	if got.Subject[0].Name.ValueString() != "alice" {
 		t.Errorf("subject[0].name: got %q, want alice", got.Subject[0].Name.ValueString())
 	}
-	if got.Metadata[0].Annotations["example.com/note"].ValueString() != "test" {
-		t.Errorf("annotation: got %q, want test",
-			got.Metadata[0].Annotations["example.com/note"].ValueString())
+	// Annotations and Labels are now types.Map; extract elements to check values.
+	annotationElems := got.Metadata[0].Annotations.Elements()
+	if v, ok := annotationElems["example.com/note"]; !ok {
+		t.Error("annotation 'example.com/note' missing")
+	} else if s, ok := v.(interface{ ValueString() string }); !ok || s.ValueString() != "test" {
+		t.Errorf("annotation: got %v, want test", v)
 	}
-	if got.Metadata[0].Labels["managed-by"].ValueString() != "terraform" {
-		t.Errorf("label: got %q, want terraform",
-			got.Metadata[0].Labels["managed-by"].ValueString())
+	labelElems := got.Metadata[0].Labels.Elements()
+	if v, ok := labelElems["managed-by"]; !ok {
+		t.Error("label 'managed-by' missing")
+	} else if s, ok := v.(interface{ ValueString() string }); !ok || s.ValueString() != "terraform" {
+		t.Errorf("label: got %v, want terraform", v)
 	}
 }
 
@@ -801,15 +806,17 @@ func TestMigration_MoveState_nonEmptyGenerateName(t *testing.T) {
 	}
 }
 
-// TestMigration_MoveState_emptyMapsAreNil verifies that empty annotation and
-// label maps from SDKv2 become nil in the Framework model, preventing a
-// perpetual plan diff against configs that omit annotations/labels entirely.
-func TestMigration_MoveState_emptyMapsAreNil(t *testing.T) {
+// TestMigration_MoveState_emptyMapsAreEmpty verifies that SDKv2 JSON `{}` maps for
+// annotations and labels are preserved as empty (zero-element, known) types.Map values,
+// not as null. SDKv2 stores `{}` when the user explicitly set annotations = {} or
+// labels = {}; the null/empty distinction must be preserved across the state move
+// so the Framework schema can produce an in-place update (not a perpetual diff).
+func TestMigration_MoveState_emptyMapsAreEmpty(t *testing.T) {
 	t.Parallel()
 
 	raw := sdkv2RawJSON(
 		"default/my-binding", "my-binding", "", "default",
-		map[string]string{}, map[string]string{}, // empty maps
+		map[string]string{}, map[string]string{}, // SDKv2 stored {} (not null)
 		"1", "uid-3", 0,
 		"rbac.authorization.k8s.io", "Role", "admin",
 		[]map[string]string{
@@ -820,13 +827,25 @@ func TestMigration_MoveState_emptyMapsAreNil(t *testing.T) {
 	resp := runMoveState(t, "kubernetes_role_binding", raw)
 	got := readMovedModel(t, resp)
 
-	if got.Metadata[0].Annotations != nil {
-		t.Errorf("annotations: expected nil for empty map, got %v",
-			got.Metadata[0].Annotations)
+	// {} from SDKv2 → empty known types.Map (not null): the plan for a config that
+	// omits annotations/labels will show an in-place update, not a replacement.
+	if got.Metadata[0].Annotations.IsNull() {
+		t.Error("annotations: expected empty known map for SDKv2 {}, got null")
 	}
-	if got.Metadata[0].Labels != nil {
-		t.Errorf("labels: expected nil for empty map, got %v",
-			got.Metadata[0].Labels)
+	if got.Metadata[0].Annotations.IsUnknown() {
+		t.Error("annotations: expected empty known map for SDKv2 {}, got unknown")
+	}
+	if len(got.Metadata[0].Annotations.Elements()) != 0 {
+		t.Errorf("annotations: expected 0 elements for SDKv2 {}, got %d", len(got.Metadata[0].Annotations.Elements()))
+	}
+	if got.Metadata[0].Labels.IsNull() {
+		t.Error("labels: expected empty known map for SDKv2 {}, got null")
+	}
+	if got.Metadata[0].Labels.IsUnknown() {
+		t.Error("labels: expected empty known map for SDKv2 {}, got unknown")
+	}
+	if len(got.Metadata[0].Labels.Elements()) != 0 {
+		t.Errorf("labels: expected 0 elements for SDKv2 {}, got %d", len(got.Metadata[0].Labels.Elements()))
 	}
 }
 

@@ -7,17 +7,19 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // Compile-time interface assertions — ensure RoleBindingV1 implements all
 // required Plugin Framework interfaces.
 var (
-	_ resource.Resource                = (*RoleBindingV1)(nil)
-	_ resource.ResourceWithConfigure   = (*RoleBindingV1)(nil)
-	_ resource.ResourceWithImportState = (*RoleBindingV1)(nil)
-	_ resource.ResourceWithIdentity    = (*RoleBindingV1)(nil)
-	_ resource.ResourceWithMoveState   = (*RoleBindingV1)(nil)
+	_ resource.Resource                    = (*RoleBindingV1)(nil)
+	_ resource.ResourceWithConfigure       = (*RoleBindingV1)(nil)
+	_ resource.ResourceWithImportState     = (*RoleBindingV1)(nil)
+	_ resource.ResourceWithIdentity        = (*RoleBindingV1)(nil)
+	_ resource.ResourceWithMoveState       = (*RoleBindingV1)(nil)
+	_ resource.ResourceWithUpgradeIdentity = (*RoleBindingV1)(nil)
 )
 
 // RoleBindingV1 is the Plugin Framework resource for kubernetes_role_binding_v1.
@@ -47,27 +49,23 @@ func (r *RoleBindingV1) Configure(_ context.Context, req resource.ConfigureReque
 	r.SDKv2Meta = req.ProviderData.(func() any)
 }
 
-// IdentitySchema defines the identity attributes for kubernetes_role_binding_v1.
-// RoleBindings are namespaced, reproducing the SDKv2 resourceIdentitySchemaNamespaced
-// contract (Version: 1, namespace OptionalForImport, others RequiredForImport).
+// IdentitySchema defines the identity schema for kubernetes_role_binding_v1.
+// RoleBindings are namespaced; delegates to common.NamespacedIdentitySchema which mirrors
+// the SDKv2 resourceIdentitySchemaNamespaced contract (Version: 1, namespace OptionalForImport,
+// others RequiredForImport).
 func (r *RoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = identityschema.Schema{
-		Version: 1,
-		Attributes: map[string]identityschema.Attribute{
-			"api_version": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"kind": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"namespace": identityschema.StringAttribute{
-				OptionalForImport: true,
-			},
-			"name": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-		},
-	}
+	resp.IdentitySchema = common.NamespacedIdentitySchema()
+}
+
+// UpgradeIdentity implements [resource.ResourceWithUpgradeIdentity].
+//
+// Without this, any object created by provider 2.37.x or older fails its first plan with
+// "Unable to Upgrade Resource Identity": identity shipped in 2.38.0, so older state carries
+// identity_schema_version 0 and no identity, and Terraform asks for an upgrade whenever the
+// stored version differs from the declared one. SDKv2 answers that generically in its gRPC
+// server; the framework requires each resource to supply it.
+func (r *RoleBindingV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
+	return common.UpgradeNamespacedIdentity(roleBindingKind, roleBindingAPIVersion)
 }
 
 // MoveState returns the StateMover handlers that enable `moved {}` block support

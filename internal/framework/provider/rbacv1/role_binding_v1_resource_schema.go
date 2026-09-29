@@ -8,88 +8,18 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 func (r *RoleBindingV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = RoleBindingV1Schema()
-}
-
-// namespacedMetadataBlockAttrs returns the attribute map used inside the
-// metadata block for a namespaced resource. Includes all standard fields plus
-// namespace. Shared between the live schema and the v0 upgrade schema so both
-// describe the same fields.
-func namespacedMetadataBlockAttrs() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"annotations": schema.MapAttribute{
-			MarkdownDescription: "An unstructured key value map stored with the role binding that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations",
-			ElementType:         types.StringType,
-			Optional:            true,
-			Validators: []validator.Map{
-				annotationKeyValidator{},
-			},
-		},
-		"generate_name": schema.StringAttribute{
-			MarkdownDescription: "Prefix, used by the server, to generate a unique name ONLY IF the name field has not been provided. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#idempotency",
-			Optional:            true,
-			Validators: []validator.String{
-				rbacNameValidator{},
-				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("name")),
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-			},
-		},
-		"generation": schema.Int64Attribute{
-			MarkdownDescription: "A sequence number representing a specific generation of the desired state.",
-			Computed:            true,
-		},
-		"labels": schema.MapAttribute{
-			MarkdownDescription: "Map of string keys and values that can be used to organize and categorize (scope and select) the role binding. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels",
-			ElementType:         types.StringType,
-			Optional:            true,
-			Validators: []validator.Map{
-				labelValidator{},
-			},
-		},
-		"name": schema.StringAttribute{
-			MarkdownDescription: "Name of the role binding, must be unique within the namespace. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#names",
-			Optional:            true,
-			Computed:            true,
-			Validators: []validator.String{
-				rbacNameValidator{},
-				stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("generate_name")),
-			},
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-				stringplanmodifier.UseStateForUnknown(),
-			},
-		},
-		"namespace": schema.StringAttribute{
-			MarkdownDescription: "Namespace defines the space within which the name of the role binding must be unique. Defaults to `default`. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces",
-			Optional:            true,
-			Computed:            true,
-			Default:             stringdefault.StaticString("default"),
-			PlanModifiers: []planmodifier.String{
-				stringplanmodifier.RequiresReplace(),
-			},
-		},
-		"resource_version": schema.StringAttribute{
-			MarkdownDescription: "An opaque value that represents the internal version of this object that can be used by clients to determine when objects have changed. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency",
-			Computed:            true,
-		},
-		"uid": schema.StringAttribute{
-			MarkdownDescription: "The unique in time and space value for this role binding. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids",
-			Computed:            true,
-		},
-	}
 }
 
 // RoleBindingV1Schema returns the Plugin Framework schema for RoleBindingV1.
@@ -107,19 +37,10 @@ func RoleBindingV1Schema() schema.Schema {
 			},
 		},
 		Blocks: map[string]schema.Block{
-			// metadata uses ListNestedBlock — the framework equivalent of SDK v2's
-			// TypeList{MaxItems:1}. Produces state paths metadata.0.name etc.,
-			// preserving full SDK v2 compatibility.
-			"metadata": schema.ListNestedBlock{
-				MarkdownDescription: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-				Validators: []validator.List{
-					listvalidator.IsRequired(),
-					listvalidator.SizeBetween(1, 1),
-				},
-				NestedObject: schema.NestedBlockObject{
-					Attributes: namespacedMetadataBlockAttrs(),
-				},
-			},
+			// MetadataSchemaRBAC mirrors metadataSchemaRBAC("roleBinding", true, true) from SDKv2.
+			// It uses the RBAC path-segment name validator rather than DNS-subdomain, so names like
+			// "system:controller:foo" are accepted. generatableName=true, namespaced=true.
+			"metadata": common.MetadataSchemaRBAC("role binding", true, true),
 			// role_ref is ForceNew in SDKv2 — modelled here with RequiresReplace on
 			// all three fields because the Kubernetes API forbids patching roleRef.
 			"role_ref": schema.ListNestedBlock{

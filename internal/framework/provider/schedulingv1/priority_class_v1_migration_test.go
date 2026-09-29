@@ -94,11 +94,66 @@ func testAccPriorityClassV1MigrationFrom(t *testing.T, sdkv2Version, config stri
 	})
 }
 
+// testAccPriorityClassV1MigrationExpectingUpdate asserts the upgrade plans an in-place update
+// instead of nothing (e.g. for configs declaring explicit empty maps {} where SDKv2 wrote null).
+func testAccPriorityClassV1MigrationExpectingUpdate(t *testing.T, config string) {
+	t.Helper()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {
+						VersionConstraint: sdkv2ProviderVersion,
+						Source:            "hashicorp/kubernetes",
+					},
+				},
+				Config: config,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("kubernetes_priority_class_v1.test", plancheck.ResourceActionUpdate),
+					},
+				},
+			},
+		},
+	})
+}
+
 // ─── Upgrade from SDKv2 (v3.2.1) ─────────────────────────────────────────────
 
 func TestAccPriorityClassV1_UpgradeFromSDKV2_basicName(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccPriorityClassV1Migration(t, testAccKubernetesPriorityClassV1Config_basic(name))
+}
+
+func TestAccPriorityClassV1_UpgradeFromSDKV2_generateName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-migration-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassV1Migration(t, testAccKubernetesPriorityClassV1Config_generateName(prefix))
+}
+
+func TestAccPriorityClassV1_UpgradeFromSDKV2_annotations(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassV1Migration(t, testAccKubernetesPriorityClassV1Config_annotations(name))
+}
+
+func TestAccPriorityClassV1_UpgradeFromSDKV2_labels(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassV1Migration(t, testAccKubernetesPriorityClassV1Config_labels(name))
+}
+
+func TestAccPriorityClassV1_UpgradeFromSDKV2_emptyValuesName(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassV1MigrationExpectingUpdate(t, testAccKubernetesPriorityClassV1Config_emptyValuesName(name))
+}
+
+func TestAccPriorityClassV1_UpgradeFromSDKV2_emptyValuesGenerateName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-migration-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassV1MigrationExpectingUpdate(t, testAccKubernetesPriorityClassV1Config_emptyValuesGenerateName(prefix))
 }
 
 func TestAccPriorityClassV1_UpgradeFromSDKV2_completeName(t *testing.T) {
@@ -117,6 +172,12 @@ func TestAccPriorityClassV1_UpgradeFromSDKV2PreIdentity_basicName(t *testing.T) 
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccPriorityClassV1MigrationFrom(t, sdkv2PreIdentityProviderVersion,
 		testAccKubernetesPriorityClassV1Config_basic(name))
+}
+
+func TestAccPriorityClassV1_UpgradeFromSDKV2PreIdentity_basicGenerateName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-migration-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassV1MigrationFrom(t, sdkv2PreIdentityProviderVersion,
+		testAccKubernetesPriorityClassV1Config_generateName(prefix))
 }
 
 func TestAccPriorityClassV1_UpgradeFromSDKV2PreIdentity_completeName(t *testing.T) {
@@ -143,6 +204,79 @@ resource "kubernetes_priority_class_v1" "test" {
   value = 100
 }
 `, name)
+}
+
+func testAccKubernetesPriorityClassV1Config_generateName(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    generate_name = %[1]q
+  }
+
+  value = 100
+}
+`, prefix)
+}
+
+func testAccKubernetesPriorityClassV1Config_annotations(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = %[1]q
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+  }
+
+  value = 100
+}
+`, name)
+}
+
+func testAccKubernetesPriorityClassV1Config_labels(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = %[1]q
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+  }
+
+  value = 100
+}
+`, name)
+}
+
+func testAccKubernetesPriorityClassV1Config_emptyValuesName(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name        = %[1]q
+    annotations = {}
+    labels      = {}
+  }
+
+  value = 100
+}
+`, name)
+}
+
+func testAccKubernetesPriorityClassV1Config_emptyValuesGenerateName(prefix string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    generate_name = %[1]q
+    annotations   = {}
+    labels        = {}
+  }
+
+  value = 100
+}
+`, prefix)
 }
 
 func testAccKubernetesPriorityClassV1Config_completeName(name string) string {

@@ -74,6 +74,21 @@ func TestAccPriorityClassV1_MoveStateFromUnversioned_basicName(t *testing.T) {
 	testAccPriorityClassMoveState(t, sdkv2ProviderVersion, testAccKubernetesPriorityClassV1Config_basic(name))
 }
 
+func TestAccPriorityClassV1_MoveStateFromUnversioned_generateName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-move-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassMoveState(t, sdkv2ProviderVersion, testAccKubernetesPriorityClassV1Config_generateName(prefix))
+}
+
+func TestAccPriorityClassV1_MoveStateFromUnversioned_annotations(t *testing.T) {
+	name := fmt.Sprintf("tf-move-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassMoveState(t, sdkv2ProviderVersion, testAccKubernetesPriorityClassV1Config_annotations(name))
+}
+
+func TestAccPriorityClassV1_MoveStateFromUnversioned_labels(t *testing.T) {
+	name := fmt.Sprintf("tf-move-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassMoveState(t, sdkv2ProviderVersion, testAccKubernetesPriorityClassV1Config_labels(name))
+}
+
 func TestAccPriorityClassV1_MoveStateFromUnversioned_completeName(t *testing.T) {
 	name := fmt.Sprintf("tf-move-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccPriorityClassMoveState(t, sdkv2ProviderVersion, testAccKubernetesPriorityClassV1Config_completeName(name))
@@ -90,6 +105,12 @@ func TestAccPriorityClassV1_MoveStateFromUnversionedPreIdentity_basicName(t *tes
 	name := fmt.Sprintf("tf-move-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccPriorityClassMoveState(t, sdkv2PreIdentityProviderVersion,
 		testAccKubernetesPriorityClassV1Config_basic(name))
+}
+
+func TestAccPriorityClassV1_MoveStateFromUnversionedPreIdentity_basicGenerateName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-move-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccPriorityClassMoveState(t, sdkv2PreIdentityProviderVersion,
+		testAccKubernetesPriorityClassV1Config_generateName(prefix))
 }
 
 func TestAccPriorityClassV1_MoveStateFromUnversionedPreIdentity_completeName(t *testing.T) {

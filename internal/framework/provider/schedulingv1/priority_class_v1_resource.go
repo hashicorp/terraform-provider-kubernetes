@@ -5,15 +5,12 @@ package schedulingv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 var (
@@ -46,58 +43,19 @@ func (r *PriorityClassV1) Configure(_ context.Context, req resource.ConfigureReq
 }
 
 func (r *PriorityClassV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = identityschema.Schema{
-		Version: 1,
-		Attributes: map[string]identityschema.Attribute{
-			"api_version": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"kind": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"name": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-		},
-	}
+	resp.IdentitySchema = common.IdentitySchema()
 }
 
 // UpgradeIdentity handles version-0 identity from provider versions before 2.38.0
 // (e.g. v2.37.1) where identity_schema_version was 0 or identity was absent.
+//
+// Without this, any object created by provider 2.37.x or older fails its first plan with
+// "Unable to Upgrade Resource Identity": identity shipped in 2.38.0, so older state carries
+// identity_schema_version 0 and no identity, and Terraform asks for an upgrade whenever the
+// stored version differs from the declared one. SDKv2 answers that generically in its gRPC
+// server; the framework requires each resource to supply it.
 func (r *PriorityClassV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
-	return map[int64]resource.IdentityUpgrader{
-		0: {
-			IdentityUpgrader: func(ctx context.Context, req resource.UpgradeIdentityRequest, resp *resource.UpgradeIdentityResponse) {
-				if resp.Identity == nil {
-					return
-				}
-
-				identity := PriorityClassIdentityModel{
-					Name:       types.StringNull(),
-					Kind:       types.StringNull(),
-					APIVersion: types.StringNull(),
-				}
-
-				if req.RawIdentity != nil && len(req.RawIdentity.JSON) > 0 {
-					var prior struct {
-						Name string `json:"name"`
-					}
-					if err := json.Unmarshal(req.RawIdentity.JSON, &prior); err != nil {
-						resp.Diagnostics.AddError(
-							"Unable to upgrade resource identity",
-							fmt.Sprintf("Could not decode the stored identity: %s", err),
-						)
-						return
-					}
-					identity.Name = types.StringValue(prior.Name)
-					identity.Kind = types.StringValue("PriorityClass")
-					identity.APIVersion = types.StringValue("scheduling.k8s.io/v1")
-				}
-
-				resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
-			},
-		},
-	}
+	return common.UpgradeIdentity("PriorityClass", "scheduling.k8s.io/v1")
 }
 
 func (r *PriorityClassV1) MoveState(_ context.Context) []resource.StateMover {
@@ -113,35 +71,7 @@ func (r *PriorityClassV1) MoveState(_ context.Context) []resource.StateMover {
 // system-node-critical) use values above the cap and must be importable.
 func (r *PriorityClassV1) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
-		&metadataRequiredValidator{},
 		&userDefinedValueValidator{},
-	}
-}
-
-// metadataRequiredValidator is a plan-time ConfigValidator that rejects configs
-// with no metadata block (empty list) before any CRUD method is called.
-type metadataRequiredValidator struct{}
-
-func (v *metadataRequiredValidator) Description(_ context.Context) string {
-	return "metadata block is required"
-}
-
-func (v *metadataRequiredValidator) MarkdownDescription(_ context.Context) string {
-	return "`metadata` block is required"
-}
-
-func (v *metadataRequiredValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config PriorityClassModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	if len(config.Metadata) == 0 {
-		resp.Diagnostics.AddError(
-			"Missing required block",
-			"A metadata block is required for kubernetes_priority_class_v1. "+
-				"Add a metadata { name = \"...\" } block to your configuration.",
-		)
 	}
 }
 
@@ -178,8 +108,7 @@ func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req re
 
 	// Lower bound: int32 minimum — the Kubernetes API uses an int32 field.
 	if val < math.MinInt32 {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("value"),
+		resp.Diagnostics.AddError(
 			"Invalid Priority Class Value",
 			fmt.Sprintf("value must be at least %d (int32 minimum), got: %d", math.MinInt32, val),
 		)
@@ -200,8 +129,7 @@ func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req re
 			}
 		}
 		if !strings.HasPrefix(name, "system-") {
-			resp.Diagnostics.AddAttributeError(
-				path.Root("value"),
+			resp.Diagnostics.AddError(
 				"Invalid Priority Class Value",
 				fmt.Sprintf(
 					"value must be at most 1000000000 for user-defined priority classes, got: %d. "+

@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
@@ -34,15 +35,15 @@ func (r *PriorityClassV1) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	m := plan.Metadata[0]
+	k8sMeta, diags := common.ExpandMetadata(ctx, plan.Metadata)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	preemptionPolicy := corev1.PreemptionPolicy(plan.PreemptionPolicy.ValueString())
 	obj := &schedulingv1.PriorityClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:         m.Name.ValueString(),
-			GenerateName: m.GenerateName.ValueString(),
-			Labels:       expandStringMap(m.Labels),
-			Annotations:  expandStringMap(m.Annotations),
-		},
+		ObjectMeta:       k8sMeta,
 		Value:            int32(plan.Value.ValueInt64()),
 		Description:      plan.Description.ValueString(),
 		GlobalDefault:    plan.GlobalDefault.ValueBool(),
@@ -53,29 +54,20 @@ func (r *PriorityClassV1) Create(ctx context.Context, req resource.CreateRequest
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"error creating PriorityClass",
-			fmt.Sprintf("Failed to create PriorityClass %q: %s", m.Name.ValueString(), err.Error()),
+			fmt.Sprintf("Failed to create PriorityClass %q: %s", k8sMeta.Name, err.Error()),
 		)
 		return
 	}
 
+	// Build state from plan, overwriting only server-assigned fields.
+	// Create must echo the plan — not filter the API response — to satisfy
+	// the apply-consistency contract (§2.3 of the migration guide).
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata = []MetadataModel{flattenPriorityClassMetadata(
-		out.ObjectMeta,
-		m,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
-
-	// Reflect server-set scalar fields
-	if out.PreemptionPolicy != nil {
-		plan.PreemptionPolicy = types.StringValue(string(*out.PreemptionPolicy))
-	}
-	plan.Description = types.StringValue(out.Description)
-	plan.GlobalDefault = types.BoolValue(out.GlobalDefault)
+	populateMetadataFromResponse(&plan, out)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, PriorityClassIdentityModel{
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
 		Kind:       types.StringValue("PriorityClass"),
 		Name:       types.StringValue(out.Name),
@@ -110,16 +102,14 @@ func (r *PriorityClassV1) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	var currentMeta MetadataModel
-	if len(state.Metadata) > 0 {
-		currentMeta = state.Metadata[0]
+	// Read uses the API response as the source of truth and filters internal/ignored keys.
+	metaFilters := meta.(kubernetes.MetadataFilters)
+	flatMeta, diags := common.FlattenMetadata(ctx, out.ObjectMeta, state.Metadata, metaFilters.GetIgnoreAnnotations(), metaFilters.GetIgnoreLabels())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	state.Metadata = []MetadataModel{flattenPriorityClassMetadata(
-		out.ObjectMeta,
-		currentMeta,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
+	state.Metadata = flatMeta
 
 	state.Value = types.Int64Value(int64(out.Value))
 	state.Description = types.StringValue(out.Description)
@@ -133,7 +123,7 @@ func (r *PriorityClassV1) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	var currentIdentity PriorityClassIdentityModel
+	var currentIdentity common.ResourceIdentity
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -147,7 +137,7 @@ func (r *PriorityClassV1) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, PriorityClassIdentityModel{
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
 		Kind:       types.StringValue("PriorityClass"),
 		Name:       types.StringValue(out.Name),
@@ -176,21 +166,9 @@ func (r *PriorityClassV1) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	name := state.ID.ValueString()
-	stateMeta := state.Metadata[0]
-	planMeta := plan.Metadata[0]
 
-	// Build JSON Patch for metadata (annotations + labels) and mutable scalar fields.
-	ops := make(kubernetes.PatchOperations, 0)
-	ops = append(ops, kubernetes.DiffStringMap(
-		"/metadata/annotations",
-		toStringInterfaceMap(stateMeta.Annotations),
-		toStringInterfaceMap(planMeta.Annotations),
-	)...)
-	ops = append(ops, kubernetes.DiffStringMap(
-		"/metadata/labels",
-		toStringInterfaceMap(stateMeta.Labels),
-		toStringInterfaceMap(planMeta.Labels),
-	)...)
+	// Build JSON Patch: metadata maps + mutable scalar fields.
+	ops := common.MetadataPatchOps("/metadata/", state.Metadata[0], plan.Metadata[0])
 	ops = append(ops, &kubernetes.AddOperation{
 		Path:  "/description",
 		Value: plan.Description.ValueString(),
@@ -221,25 +199,18 @@ func (r *PriorityClassV1) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	// Build state from plan, overwriting only server-assigned fields.
+	// Update must echo the plan — not filter the API response — to satisfy
+	// the apply-consistency contract (§2.3 of the migration guide).
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata = []MetadataModel{flattenPriorityClassMetadata(
-		out.ObjectMeta,
-		planMeta,
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)}
-	plan.Description = types.StringValue(out.Description)
-	plan.GlobalDefault = types.BoolValue(out.GlobalDefault)
-	if out.PreemptionPolicy != nil {
-		plan.PreemptionPolicy = types.StringValue(string(*out.PreemptionPolicy))
-	}
+	populateMetadataFromResponse(&plan, out)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if resp.Identity == nil {
 		return
 	}
 
-	var currentIdentity PriorityClassIdentityModel
+	var currentIdentity common.ResourceIdentity
 	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -249,7 +220,7 @@ func (r *PriorityClassV1) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, PriorityClassIdentityModel{
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
 		Kind:       types.StringValue("PriorityClass"),
 		Name:       types.StringValue(out.Name),
@@ -285,7 +256,7 @@ func (r *PriorityClassV1) ImportState(ctx context.Context, req resource.ImportSt
 	if req.ID != "" {
 		name = req.ID
 	} else {
-		var identityData PriorityClassIdentityModel
+		var identityData common.ResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -309,22 +280,17 @@ func (r *PriorityClassV1) ImportState(ctx context.Context, req resource.ImportSt
 		return
 	}
 
-	flatMeta := flattenPriorityClassMetadata(
-		out.ObjectMeta,
-		MetadataModel{},
-		meta.GetIgnoreAnnotations(),
-		meta.GetIgnoreLabels(),
-	)
-
-	// Only set generate_name if the server actually has one; otherwise leave nil
-	// to avoid a perpetual diff against configs that use name instead.
-	if out.GenerateName == "" {
-		flatMeta.GenerateName = types.StringNull()
+	// Import reads from the API and filters, same as Read.
+	metaFilters := meta.(kubernetes.MetadataFilters)
+	flatMeta, diags := common.FlattenMetadata(ctx, out.ObjectMeta, nil, metaFilters.GetIgnoreAnnotations(), metaFilters.GetIgnoreLabels())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	var state PriorityClassModel
 	state.ID = types.StringValue(out.Name)
-	state.Metadata = []MetadataModel{flatMeta}
+	state.Metadata = flatMeta
 	state.Value = types.Int64Value(int64(out.Value))
 	state.Description = types.StringValue(out.Description)
 	state.GlobalDefault = types.BoolValue(out.GlobalDefault)
@@ -336,9 +302,27 @@ func (r *PriorityClassV1) ImportState(ctx context.Context, req resource.ImportSt
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, PriorityClassIdentityModel{
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
 		Kind:       types.StringValue("PriorityClass"),
 		Name:       types.StringValue(out.Name),
 	})...)
+}
+
+// populateMetadataFromResponse overwrites the server-assigned metadata fields
+// (name, uid, resource_version, generation) in the plan model with values from
+// the API response. All other metadata fields are left as planned.
+//
+// The plan pointer is required: assignments to a value receiver's fields are
+// silently discarded for non-slice fields like ID (§4 of MIGRATION_CONVERGENCE_GUIDE.md).
+func populateMetadataFromResponse(plan *PriorityClassModel, out *schedulingv1.PriorityClass) {
+	if len(plan.Metadata) == 0 {
+		return
+	}
+	m := plan.Metadata[0]
+	m.Name = types.StringValue(out.Name)
+	m.UID = types.StringValue(string(out.UID))
+	m.ResourceVersion = types.StringValue(out.ResourceVersion)
+	m.Generation = types.Int64Value(out.Generation)
+	plan.Metadata[0] = m
 }

@@ -130,20 +130,10 @@ func (r *StorageClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	var currentIdentity common.ResourceIdentity
-	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// If current identity is null/empty (e.g. during an upgrade from a provider version
-	// that did not write resource identity into state), do not write a new identity during Read.
-	// Terraform checks identity during refresh, and mutating identity during Read triggers
-	// "Unexpected Identity Change".
-	if currentIdentity.Name.IsNull() || currentIdentity.Name.ValueString() == "" {
-		return
-	}
-
+	// Always set identity unconditionally. UpgradeIdentity returns all-null for v0 state
+	// (no prior identity), and framework v1.16.1+ allows Read to populate it afterwards.
+	// Guarding on the prior identity value caused "Missing Resource Identity After Read"
+	// on every migration test (SDKv2 state carries no identity at all).
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, storageClassIdentity(out.Name))...)
 }
 
@@ -218,16 +208,7 @@ func (r *StorageClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	var currentIdentity common.ResourceIdentity
-	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if currentIdentity.Name.IsNull() || currentIdentity.Name.ValueString() == "" {
-		return
-	}
-
+	// Set identity unconditionally — same reasoning as Read.
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, storageClassIdentity(out.Name))...)
 }
 
@@ -364,13 +345,18 @@ func setComputedFields(ctx context.Context, m *StorageClassModel, out *storagev1
 		m.AllowVolumeExpansion = types.BoolValue(*out.AllowVolumeExpansion)
 	}
 
-	// parameters: only write if server returned data or user had it configured.
+	// parameters: reflect server data when present; otherwise ensure a typed null.
+	// A zero-value types.Map{} has no element type and causes a decode error when
+	// stored to state — e.g. on ImportState where Parameters starts uninitialized.
 	if len(out.Parameters) > 0 {
 		p, _ := types.MapValueFrom(ctx, types.StringType, out.Parameters)
 		m.Parameters = p
-	} else if !m.Parameters.IsNull() {
-		// User had parameters set; server echoed empty — clear to null.
-		m.Parameters = types.MapNull(types.StringType)
+	} else {
+		// Preserve a non-null empty map if the plan had one (user explicitly configured
+		// an empty parameters block), but always ensure a typed value, never zero-value.
+		if m.Parameters.IsNull() || m.Parameters.ElementType(ctx) == nil {
+			m.Parameters = types.MapNull(types.StringType)
+		}
 	}
 
 	// mount_options: only write if server returned data or user had it configured.

@@ -1,6 +1,0 @@
-# Used for registry-dependent acceptance tests (upgradeFromSDKv2, moved).
-# No dev_overrides and no filesystem_mirror exclusion — allows Terraform to
-# download specific provider versions directly from the registry.
-provider_installation {
-  direct {}
-}

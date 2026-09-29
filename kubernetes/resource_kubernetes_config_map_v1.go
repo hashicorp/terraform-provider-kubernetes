@@ -94,7 +94,7 @@ func resourceKubernetesConfigMapV1Create(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new config map: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesConfigMapV1Read(ctx, d, meta)
 }
@@ -113,7 +113,7 @@ func resourceKubernetesConfigMapV1Read(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -152,7 +152,7 @@ func resourceKubernetesConfigMapV1Update(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -188,7 +188,7 @@ func resourceKubernetesConfigMapV1Update(ctx context.Context, d *schema.Resource
 		return diag.Errorf("Failed to update Config Map: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated config map: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesConfigMapV1Read(ctx, d, meta)
 }
@@ -199,7 +199,7 @@ func resourceKubernetesConfigMapV1Delete(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -224,7 +224,7 @@ func resourceKubernetesConfigMapV1Exists(ctx context.Context, d *schema.Resource
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

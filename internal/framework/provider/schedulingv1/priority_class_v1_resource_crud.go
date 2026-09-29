@@ -235,6 +235,19 @@ func (r *PriorityClassV1) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Identity == nil {
+		return
+	}
+
+	var currentIdentity PriorityClassIdentityModel
+	resp.Diagnostics.Append(req.Identity.Get(ctx, &currentIdentity)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if currentIdentity.Name.IsNull() || currentIdentity.Name.ValueString() == "" {
+		return
+	}
 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, PriorityClassIdentityModel{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),

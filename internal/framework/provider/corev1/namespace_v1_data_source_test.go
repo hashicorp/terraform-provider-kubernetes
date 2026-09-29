@@ -101,7 +101,32 @@ func TestAccKubernetesDataSourceNamespaceV1_no_metadata(t *testing.T) {
 				Config: `
 data "kubernetes_namespace_v1" "test" {
 }`,
-				ExpectError: regexp.MustCompile(`missing metadata block`),
+				// common's block carries listvalidator.IsRequired(), which is what translates
+				// SDKv2's Required: true. Size validators alone are not enough — they skip a
+				// null list, so an omitted block would pass validation and fail later at read.
+				ExpectError: regexp.MustCompile(`(?s)Invalid Block.*metadata must have a configuration value`),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesDataSourceNamespaceV1_no_name covers the one behaviour change in this
+// migration: metadata.name is Required, where SDKv2 declared it Optional + Computed.
+//
+// Under SDKv2 an omitted name validated and then failed at read, because there is nothing to
+// look up without it. Declaring it Required moves the failure to plan time with a message
+// that names the attribute. Distinct from _no_metadata, which omits the whole block.
+func TestAccKubernetesDataSourceNamespaceV1_no_name(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+data "kubernetes_namespace_v1" "test" {
+  metadata {
+  }
+}`,
+				ExpectError: regexp.MustCompile(`(?s)(Missing required argument|Incorrect attribute value type|argument "name" is required|Missing Configuration for Required Attribute)`),
 			},
 		},
 	})

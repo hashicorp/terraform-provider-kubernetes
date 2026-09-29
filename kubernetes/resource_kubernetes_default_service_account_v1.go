@@ -101,7 +101,7 @@ func resourceKubernetesDefaultServiceAccountV1Create(ctx context.Context, d *sch
 	}
 	log.Printf("[INFO] Submitted updated default service account: %#v", out)
 
-	d.SetId(buildId(metadata))
+	d.SetId(BuildId(metadata))
 
 	return resourceKubernetesServiceAccountV1Read(ctx, d, meta)
 }

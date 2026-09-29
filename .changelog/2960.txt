@@ -1,3 +1,7 @@
 ```release-note:note
-`data-source/kubernetes_namespace_v1`: Migrated from SDKv2 to the Plugin Framework
+`data-source/kubernetes_namespace_v1`: Migrated from SDKv2 to the Plugin Framework. Existing configurations and state are unaffected.
+```
+
+```release-note:breaking-change
+`data-source/kubernetes_namespace_v1`: `metadata.name` is now required. Earlier versions accepted a configuration without it and then failed while reading, since there is nothing to look up without a name; the error now appears during plan instead.
 ```

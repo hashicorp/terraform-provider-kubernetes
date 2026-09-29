@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,25 +90,17 @@ func (d *NamespaceV1DataSource) Read(
 	//    In SDKv2 this was done via d.Set("metadata", flattenMetadataFields(...))
 	//    and d.Set("spec", flattenNamespaceV1Spec(...)).
 
-	// Populate metadata fields from the live ObjectMeta.
-	annotations := make(map[string]types.String, len(ns.Annotations))
-	for k, v := range ns.Annotations {
-		annotations[k] = types.StringValue(v)
+	// Populate metadata from the live ObjectMeta. common.FlattenMetadataFields is the
+	// counterpart of SDKv2's flattenMetadataFields, and deliberately applies no filtering:
+	// a data source reports what the object carries, including keys like
+	// kubernetes.io/metadata.name that the resource path strips. Filtering here would hide
+	// data practitioners read today.
+	metadata, metaDiags := common.FlattenDataSourceMetadataFields(ctx, ns.ObjectMeta)
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	labels := make(map[string]types.String, len(ns.Labels))
-	for k, v := range ns.Labels {
-		labels[k] = types.StringValue(v)
-	}
-	model.Metadata = []MetadataModel{
-		{
-			Name:            types.StringValue(ns.Name),
-			UID:             types.StringValue(string(ns.UID)),
-			ResourceVersion: types.StringValue(ns.ResourceVersion),
-			Generation:      types.Int64Value(ns.Generation),
-			Labels:          labels,
-			Annotations:     annotations,
-		},
-	}
+	model.Metadata = []common.MetadataBase{metadata}
 
 	// Populate the spec attribute — equivalent to flattenNamespaceV1Spec in SDKv2.
 	// spec is a ListNestedAttribute so we build a types.List of object values.

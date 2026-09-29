@@ -469,14 +469,6 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 	return k.discoveryClient, nil
 }
 
-func (k providerMetadata) GetIgnoreAnnotations() []string {
-	return k.IgnoreAnnotations
-}
-
-func (k providerMetadata) GetIgnoreLabels() []string {
-	return k.IgnoreLabels
-}
-
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization
 	cfg, diags := initializeConfiguration(d)

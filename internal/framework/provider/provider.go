@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/admissionregistrationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/authenticationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )

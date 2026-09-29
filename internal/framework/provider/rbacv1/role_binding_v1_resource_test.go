@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
 	rbacv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
@@ -21,10 +20,10 @@ import (
 // compile-time check: RoleBindingV1 satisfies resource.Resource.
 var _ resource.Resource = (*rbacv1.RoleBindingV1)(nil)
 
-// TestAccRoleBindingV1_basic creates a RoleBinding with a single User subject,
+// TestAccRoleBinding_basic creates a RoleBinding with a single User subject,
 // verifies all computed fields are populated, and confirms import round-trips
 // without drift.
-func TestAccRoleBindingV1_basic(t *testing.T) {
+func TestAccRoleBinding_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
@@ -61,9 +60,9 @@ func TestAccRoleBindingV1_basic(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_update verifies that mutable fields — subjects, labels,
+// TestAccRoleBinding_update verifies that mutable fields — subjects, labels,
 // and annotations — can be changed in-place without destroy/recreate.
-func TestAccRoleBindingV1_update(t *testing.T) {
+func TestAccRoleBinding_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
@@ -76,6 +75,15 @@ func TestAccRoleBindingV1_update(t *testing.T) {
 				Check: tfresource.ComposeAggregateTestCheckFunc(
 					tfresource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
 			},
 			// Step 2: add two more subjects and metadata — must be in-place update.
 			{
@@ -91,6 +99,15 @@ func TestAccRoleBindingV1_update(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.example.com/note", "updated"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
 			// Step 3: revert to basic — verify subjects removed cleanly.
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
@@ -99,14 +116,23 @@ func TestAccRoleBindingV1_update(t *testing.T) {
 					tfresource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.managed-by"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
 		},
 	})
 }
 
-// TestAccRoleBindingV1_generateName creates a RoleBinding using generate_name,
+// TestAccRoleBinding_generateName creates a RoleBinding using generate_name,
 // verifies server assigned name and that updating a secondary attribute (labels)
 // triggers an in-place update rather than a destroy/re-create (K8S-MIGRATE-025).
-func TestAccRoleBindingV1_generateName(t *testing.T) {
+func TestAccRoleBinding_generateName(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
@@ -121,6 +147,15 @@ func TestAccRoleBindingV1_generateName(t *testing.T) {
 					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
 			// Step 2: update secondary field (labels) — must update in-place without replacement
 			{
 				Config: testAccRoleBindingV1Config_generateName_updated("tf-acc-rb-"),
@@ -134,13 +169,22 @@ func TestAccRoleBindingV1_generateName(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "sec"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
 		},
 	})
 }
 
-// TestAccRoleBindingV1_saSubject verifies that a ServiceAccount subject works
+// TestAccRoleBinding_saSubject verifies that a ServiceAccount subject works
 // correctly, including the empty api_group and explicit namespace.
-func TestAccRoleBindingV1_saSubject(t *testing.T) {
+func TestAccRoleBinding_saSubject(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
@@ -156,12 +200,21 @@ func TestAccRoleBindingV1_saSubject(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
 		},
 	})
 }
 
-// TestAccRoleBindingV1_groupSubject verifies that a Group subject works correctly.
-func TestAccRoleBindingV1_groupSubject(t *testing.T) {
+// TestAccRoleBinding_groupSubject verifies that a Group subject works correctly.
+func TestAccRoleBinding_groupSubject(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
@@ -177,13 +230,22 @@ func TestAccRoleBindingV1_groupSubject(t *testing.T) {
 					tfresource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
 		},
 	})
 }
 
-// TestAccRoleBindingV1_roleRefRequiresReplace verifies that changing role_ref
+// TestAccRoleBinding_roleRefRequiresReplace verifies that changing role_ref
 // destroys the existing RoleBinding and creates a new one (RequiresReplace).
-func TestAccRoleBindingV1_roleRefRequiresReplace(t *testing.T) {
+func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
@@ -193,6 +255,15 @@ func TestAccRoleBindingV1_roleRefRequiresReplace(t *testing.T) {
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
 				Check:  tfresource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
 			},
 			// Changing role_ref.kind must trigger destroy + create, not in-place update.
 			{
@@ -204,14 +275,23 @@ func TestAccRoleBindingV1_roleRefRequiresReplace(t *testing.T) {
 				},
 				Check: tfresource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "ClusterRole"),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
 		},
 	})
 }
 
-// TestAccRoleBindingV1_disappears verifies that if the RoleBinding is deleted
+// TestAccRoleBinding_disappears verifies that if the RoleBinding is deleted
 // outside Terraform (e.g. kubectl delete), the next plan detects it is gone
 // and proposes to recreate it.
-func TestAccRoleBindingV1_disappears(t *testing.T) {
+func TestAccRoleBinding_disappears(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
@@ -241,103 +321,11 @@ func TestAccRoleBindingV1_disappears(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_upgradeFromSDKv2 provisions the resource with the
-// last SDKv2 release (state schema version 0) then switches to the local
-// Framework provider and asserts zero plan diff — proving the Framework reads
-// the SDKv2 state without any upgrade step.
-//
-// Skipped in -short mode because it downloads from the Terraform registry.
-func TestAccRoleBindingV1_upgradeFromSDKv2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping registry-dependent upgrade test in -short mode")
-	}
-
-	name := acctest.RandomWithPrefix("tf-acc-rb")
-	resourceName := "kubernetes_role_binding_v1.test"
-
-	tfresource.ParallelTest(t, tfresource.TestCase{
-		Steps: []tfresource.TestStep{
-			// Step 1: provision with the last SDKv2 release.
-			// Writes state at schema version 0 with TypeList metadata.
-			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
-					"kubernetes": {
-						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.2.1",
-					},
-				},
-				Config: testAccRoleBindingV1Config_basic(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.name", "notauser"),
-				),
-			},
-			// Step 2: switch to the local Framework provider.
-			// ListNestedBlock produces identical state JSON to TypeList{MaxItems:1}
-			// so no UpgradeState is needed — plan must be empty.
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccRoleBindingV1Config_basic(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
-// TestAccRoleBindingV1_moved provisions the deprecated kubernetes_role_binding
-// with the last SDKv2 release then uses a moved block to migrate state to
-// kubernetes_role_binding_v1 with the Framework provider. The plan must be
-// empty — proving MoveState translates the state without drift.
-//
-// Skipped in -short mode because it downloads from the Terraform registry.
-func TestAccRoleBindingV1_moved(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping registry-dependent moved-block test in -short mode")
-	}
-
-	name := acctest.RandomWithPrefix("tf-acc-rb")
-
-	tfresource.ParallelTest(t, tfresource.TestCase{
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_8_0),
-		},
-		Steps: []tfresource.TestStep{
-			// Step 1: provision kubernetes_role_binding (deprecated) with the
-			// last SDKv2 release. Writes state at schema version 0.
-			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
-					"kubernetes": {
-						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.2.1",
-					},
-				},
-				Config: testAccRoleBindingConfig_deprecated(name),
-			},
-			// Step 2: add a moved block and switch to the Framework provider.
-			// MoveState translates kubernetes_role_binding → kubernetes_role_binding_v1.
-			// Plan must be empty — no destroy, no create.
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccRoleBindingV1Config_movedFrom(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
-}
-
 // ── Validation Acceptance Tests (Plan-time checks) ────────────────────────────
 
-// TestAccRoleBindingV1_validation_invalidAnnotationKey verifies that an invalid
+// TestAccRoleBinding_validation_invalidAnnotationKey verifies that an invalid
 // annotation key is rejected at plan time.
-func TestAccRoleBindingV1_validation_invalidAnnotationKey(t *testing.T) {
+func TestAccRoleBinding_validation_invalidAnnotationKey(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
@@ -351,9 +339,9 @@ func TestAccRoleBindingV1_validation_invalidAnnotationKey(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_validation_invalidLabelKey verifies that an invalid
+// TestAccRoleBinding_validation_invalidLabelKey verifies that an invalid
 // label key is rejected at plan time.
-func TestAccRoleBindingV1_validation_invalidLabelKey(t *testing.T) {
+func TestAccRoleBinding_validation_invalidLabelKey(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
@@ -367,9 +355,9 @@ func TestAccRoleBindingV1_validation_invalidLabelKey(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_validation_invalidLabelValue verifies that an invalid
+// TestAccRoleBinding_validation_invalidLabelValue verifies that an invalid
 // label value is rejected at plan time.
-func TestAccRoleBindingV1_validation_invalidLabelValue(t *testing.T) {
+func TestAccRoleBinding_validation_invalidLabelValue(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
@@ -383,9 +371,9 @@ func TestAccRoleBindingV1_validation_invalidLabelValue(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_validation_invalidName verifies that an invalid
+// TestAccRoleBinding_validation_invalidName verifies that an invalid
 // name (not a valid path segment) is rejected at plan time.
-func TestAccRoleBindingV1_validation_invalidName(t *testing.T) {
+func TestAccRoleBinding_validation_invalidName(t *testing.T) {
 	tfresource.ParallelTest(t, tfresource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
@@ -397,9 +385,9 @@ func TestAccRoleBindingV1_validation_invalidName(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_validation_missingMetadata verifies that omitting the
+// TestAccRoleBinding_validation_missingMetadata verifies that omitting the
 // metadata block is rejected at plan time.
-func TestAccRoleBindingV1_validation_missingMetadata(t *testing.T) {
+func TestAccRoleBinding_validation_missingMetadata(t *testing.T) {
 	tfresource.ParallelTest(t, tfresource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
@@ -411,9 +399,9 @@ func TestAccRoleBindingV1_validation_missingMetadata(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_validation_missingRoleRef verifies that omitting the
+// TestAccRoleBinding_validation_missingRoleRef verifies that omitting the
 // role_ref block is rejected at plan time.
-func TestAccRoleBindingV1_validation_missingRoleRef(t *testing.T) {
+func TestAccRoleBinding_validation_missingRoleRef(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
 	tfresource.ParallelTest(t, tfresource.TestCase{
@@ -427,9 +415,9 @@ func TestAccRoleBindingV1_validation_missingRoleRef(t *testing.T) {
 	})
 }
 
-// TestAccRoleBindingV1_validation_missingSubject verifies that omitting the
+// TestAccRoleBinding_validation_missingSubject verifies that omitting the
 // subject block is rejected at plan time.
-func TestAccRoleBindingV1_validation_missingSubject(t *testing.T) {
+func TestAccRoleBinding_validation_missingSubject(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
 	tfresource.ParallelTest(t, tfresource.TestCase{

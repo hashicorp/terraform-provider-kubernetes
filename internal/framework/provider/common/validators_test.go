@@ -195,3 +195,42 @@ func TestAnnotationsValidator(t *testing.T) {
 		})
 	}
 }
+
+// TestRBACNameValidator covers the RBAC name rule, which is deliberately laxer than the DNS
+// one used elsewhere. RBAC names are path segments: "system:controller:foo" is a real
+// ClusterRole name, and SDKv2 has always accepted it via validateRBACNameFunc. Using the DNS
+// subdomain rule here would reject names both Kubernetes and every released provider accept.
+func TestRBACNameValidator(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name       string
+		value      types.String
+		wantErrors int
+	}{
+		{"null is not validated", types.StringNull(), 0},
+		{"unknown is not validated", types.StringUnknown(), 0},
+		{"simple name", types.StringValue("my-role"), 0},
+		// The reason this validator exists rather than the DNS one.
+		{"colons are allowed", types.StringValue("system:controller:bootstrap-signer"), 0},
+		{"uppercase is allowed", types.StringValue("MyRole"), 0},
+		{"slash is rejected", types.StringValue("some/role"), 1},
+		{"percent is rejected", types.StringValue("some%role"), 1},
+		{"single dot is rejected", types.StringValue("."), 1},
+		{"double dot is rejected", types.StringValue(".."), 1},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := validator.StringRequest{Path: path.Root("name"), ConfigValue: tc.value}
+			resp := &validator.StringResponse{}
+			RBACNameValidator().ValidateString(context.Background(), req, resp)
+
+			if got := resp.Diagnostics.ErrorsCount(); got != tc.wantErrors {
+				t.Errorf("got %d errors, want %d: %v", got, tc.wantErrors, resp.Diagnostics)
+			}
+		})
+	}
+}

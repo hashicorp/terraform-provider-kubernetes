@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -236,13 +237,11 @@ func TestMigration_MoveState_basic(t *testing.T) {
 	if got.PreemptionPolicy.ValueString() != "PreemptLowerPriority" {
 		t.Errorf("preemption_policy: got %q, want PreemptLowerPriority", got.PreemptionPolicy.ValueString())
 	}
-	if got.Metadata[0].Annotations["example.com/note"].ValueString() != "test" {
-		t.Errorf("annotation: got %q, want test",
-			got.Metadata[0].Annotations["example.com/note"].ValueString())
+	if annot := got.Metadata[0].Annotations.Elements()["example.com/note"].(types.String).ValueString(); annot != "test" {
+		t.Errorf("annotation: got %q, want test", annot)
 	}
-	if got.Metadata[0].Labels["managed-by"].ValueString() != "terraform" {
-		t.Errorf("label: got %q, want terraform",
-			got.Metadata[0].Labels["managed-by"].ValueString())
+	if label := got.Metadata[0].Labels.Elements()["managed-by"].(types.String).ValueString(); label != "terraform" {
+		t.Errorf("label: got %q, want terraform", label)
 	}
 }
 
@@ -298,12 +297,12 @@ func TestMigration_MoveState_emptyMapsAreNil(t *testing.T) {
 	resp := runMoveState(t, "kubernetes_priority_class", raw)
 	got := readMovedModel(t, resp)
 
-	if got.Metadata[0].Annotations != nil {
-		t.Errorf("annotations: expected nil for empty map, got %v",
+	if !got.Metadata[0].Annotations.IsNull() {
+		t.Errorf("annotations: expected null for empty map, got %v",
 			got.Metadata[0].Annotations)
 	}
-	if got.Metadata[0].Labels != nil {
-		t.Errorf("labels: expected nil for empty map, got %v",
+	if !got.Metadata[0].Labels.IsNull() {
+		t.Errorf("labels: expected null for empty map, got %v",
 			got.Metadata[0].Labels)
 	}
 }
@@ -521,12 +520,12 @@ func TestMigration_MoveState_explicitEmptyAnnotations(t *testing.T) {
 	resp := runMoveState(t, "kubernetes_priority_class", raw)
 	got := readMovedModel(t, resp)
 
-	if got.Metadata[0].Annotations != nil {
-		t.Errorf("annotations: expected nil after MoveState for empty SDKv2 map, got %v",
+	if !got.Metadata[0].Annotations.IsNull() {
+		t.Errorf("annotations: expected null after MoveState for empty SDKv2 map, got %v",
 			got.Metadata[0].Annotations)
 	}
-	if got.Metadata[0].Labels != nil {
-		t.Errorf("labels: expected nil after MoveState for empty SDKv2 map, got %v",
+	if !got.Metadata[0].Labels.IsNull() {
+		t.Errorf("labels: expected null after MoveState for empty SDKv2 map, got %v",
 			got.Metadata[0].Labels)
 	}
 }

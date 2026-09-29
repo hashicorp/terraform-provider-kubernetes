@@ -52,7 +52,7 @@ func dataSourceKubernetesEndpointSliceV1Read(ctx context.Context, d *schema.Reso
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading endpoint slice %s", metadata.Name)
 	ep, err := conn.DiscoveryV1().EndpointSlices(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

@@ -100,10 +100,10 @@ func testAccRoleMigrationExpectingUpdate(t *testing.T, config string, checks ...
 }
 
 func testAccRoleMigrationWithPlanCheck(t *testing.T, config string, planCheck plancheck.PlanCheck, checks ...resource.TestCheckFunc) {
-	testAccRoleMigrationFrom(t, roleSDKv2ProviderVersion, config, planCheck, checks...)
+	testAccRoleMigrationFrom(t, roleSDKv2ProviderVersion, config, planCheck, "", checks...)
 }
 
-func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck plancheck.PlanCheck, checks ...resource.TestCheckFunc) {
+func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck plancheck.PlanCheck, internalMetadata string, checks ...resource.TestCheckFunc) {
 	t.Helper()
 
 	var uid string
@@ -139,26 +139,26 @@ func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck pl
 				Check: resource.ComposeAggregateTestCheckFunc(checks...),
 			},
 		},
-	})
+	}, internalMetadata)
 }
 
 func TestAccRole_UpgradeFromSDKv2_scenarios(t *testing.T) {
-	testAccRoleScenarios(t, func(t *testing.T, config string, update bool, checks ...resource.TestCheckFunc) {
+	testAccRoleScenarios(t, func(t *testing.T, config string, update bool, internalMetadata string, checks ...resource.TestCheckFunc) {
+		plan := plancheck.ExpectEmptyPlan()
 		if update {
-			testAccRoleMigrationExpectingUpdate(t, config, checks...)
-			return
+			plan = plancheck.ExpectResourceAction("kubernetes_role_v1.test", plancheck.ResourceActionUpdate)
 		}
-		testAccRoleMigration(t, config, checks...)
+		testAccRoleMigrationFrom(t, roleSDKv2ProviderVersion, config, plan, internalMetadata, checks...)
 	})
 }
 
 func TestAccRole_UpgradeFromSDKv2_preIdentity(t *testing.T) {
-	testAccRolePreIdentityScenarios(t, func(t *testing.T, config string, update bool, checks ...resource.TestCheckFunc) {
-		testAccRoleMigrationFrom(t, rolePreIdentityProviderVersion, config, plancheck.ExpectEmptyPlan(), checks...)
+	testAccRolePreIdentityScenarios(t, func(t *testing.T, config string, update bool, internalMetadata string, checks ...resource.TestCheckFunc) {
+		testAccRoleMigrationFrom(t, rolePreIdentityProviderVersion, config, plancheck.ExpectEmptyPlan(), internalMetadata, checks...)
 	})
 }
 
-type roleScenarioRunner func(*testing.T, string, bool, ...resource.TestCheckFunc)
+type roleScenarioRunner func(*testing.T, string, bool, string, ...resource.TestCheckFunc)
 
 func testAccRolePreIdentityScenarios(t *testing.T, run roleScenarioRunner) {
 	testAccRoleScenarios(t, run, "minimal", "completeName", "completeGeneratedName")
@@ -168,11 +168,12 @@ func testAccRoleScenarios(t *testing.T, run roleScenarioRunner, selected ...stri
 	t.Helper()
 	resourceName := "kubernetes_role_v1.test"
 	for _, scenario := range []struct {
-		name          string
-		generatedName bool
-		metadata      string
-		resourceNames string
-		checks        []resource.TestCheckFunc
+		name             string
+		generatedName    bool
+		metadata         string
+		resourceNames    string
+		internalMetadata string
+		checks           []resource.TestCheckFunc
 	}{
 		{name: "minimal"},
 		{name: "generateName", generatedName: true},
@@ -193,15 +194,17 @@ func testAccRoleScenarios(t *testing.T, run roleScenarioRunner, selected ...stri
 			},
 		},
 		{
-			name:     "declaredInternalLabel",
-			metadata: `labels = { "example.kubernetes.io/owner" = "terraform" }`,
+			name:             "declaredInternalLabel",
+			internalMetadata: "labels",
+			metadata:         `labels = { "example.kubernetes.io/owner" = "terraform" }`,
 			checks: []resource.TestCheckFunc{
 				resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.example.kubernetes.io/owner", "terraform"),
 			},
 		},
 		{
-			name:     "declaredInternalAnnotation",
-			metadata: `annotations = { "example.kubernetes.io/owner" = "terraform" }`,
+			name:             "declaredInternalAnnotation",
+			internalMetadata: "annotations",
+			metadata:         `annotations = { "example.kubernetes.io/owner" = "terraform" }`,
 			checks: []resource.TestCheckFunc{
 				resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.example.kubernetes.io/owner", "terraform"),
 			},
@@ -291,10 +294,10 @@ resource "kubernetes_role_v1" "test" {
 			// SDKv2 wrote null for a config declaring {}, so these two reconcile on the
 			// first framework plan rather than migrating silently.
 			if scenario.name == "emptyValuesName" || scenario.name == "emptyValuesGeneratedName" {
-				run(t, config, true, checks...)
+				run(t, config, true, scenario.internalMetadata, checks...)
 				return
 			}
-			run(t, config, false, checks...)
+			run(t, config, false, scenario.internalMetadata, checks...)
 		})
 	}
 }

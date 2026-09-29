@@ -44,7 +44,7 @@ func TestAccRole_movedFromAlias_nullMetadata(t *testing.T) {
 }
 
 func testAccRoleMoveRunner(version string) roleScenarioRunner {
-	return func(t *testing.T, config string, update bool, checks ...resource.TestCheckFunc) {
+	return func(t *testing.T, config string, update bool, internalMetadata string, checks ...resource.TestCheckFunc) {
 		var uid string
 		plan := plancheck.ExpectEmptyPlan()
 		if update {
@@ -74,7 +74,7 @@ func testAccRoleMoveRunner(version string) roleScenarioRunner {
 					Config:                   config,
 					ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 				},
-			}),
+			}, internalMetadata),
 		})
 	}
 }
@@ -195,6 +195,7 @@ func TestRoleMoveState(t *testing.T) {
 		{name: "privateRegistry", provider: "registry.example.com/hashicorp/kubernetes", raw: valid},
 		{name: "wrongType", sourceType: "kubernetes_cluster_role", raw: valid, wantSkip: true},
 		{name: "wrongProvider", provider: "registry.terraform.io/example/kubernetes", raw: valid, wantSkip: true},
+		{name: "lookalikeProvider", provider: "registry.example.com/nothashicorp/kubernetes", raw: valid, wantSkip: true},
 		{name: "wrongVersion", version: 1, raw: valid, wantSkip: true},
 		{name: "missingJSON", wantError: true},
 		{name: "malformedJSON", raw: "{", wantError: true},
@@ -229,6 +230,9 @@ func TestRoleMoveState(t *testing.T) {
 			if tc.wantError || tc.wantSkip {
 				if !resp.TargetState.Raw.IsNull() {
 					t.Fatal("unexpected target state")
+				}
+				if resp.TargetIdentity != nil && !resp.TargetIdentity.Raw.IsNull() {
+					t.Fatal("unexpected target identity")
 				}
 				return
 			}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
@@ -63,7 +64,7 @@ func (r *RoleV1) UpgradeIdentity(ctx context.Context) map[int64]resource.Identit
 const (
 	deprecatedRoleTypeName      = "kubernetes_role"
 	deprecatedRoleSchemaVersion = 0
-	providerAddressSuffix       = "hashicorp/kubernetes"
+	providerAddressSuffix       = "/hashicorp/kubernetes"
 )
 
 func (r *RoleV1) MoveState(_ context.Context) []resource.StateMover {
@@ -73,13 +74,14 @@ func (r *RoleV1) MoveState(_ context.Context) []resource.StateMover {
 }
 
 func (r *RoleV1) moveFromDeprecatedRole(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if !strings.HasSuffix(req.SourceProviderAddress, providerAddressSuffix) {
-		return
-	}
-	if req.SourceTypeName != deprecatedRoleTypeName {
-		return
-	}
-	if req.SourceSchemaVersion != deprecatedRoleSchemaVersion {
+	if req.SourceTypeName != deprecatedRoleTypeName ||
+		req.SourceSchemaVersion != deprecatedRoleSchemaVersion ||
+		!strings.HasSuffix(req.SourceProviderAddress, providerAddressSuffix) {
+		tflog.Debug(ctx, "MoveState: not a kubernetes_role v0 source, skipping", map[string]any{
+			"source_type_name":        req.SourceTypeName,
+			"source_schema_version":   req.SourceSchemaVersion,
+			"source_provider_address": req.SourceProviderAddress,
+		})
 		return
 	}
 	if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {

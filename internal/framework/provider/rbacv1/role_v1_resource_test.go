@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -35,7 +36,7 @@ import (
 
 // Keep imports on the same provider release as the preceding apply. In particular,
 // importing the baseline with the local provider would invalidate the migration test.
-func roleImportSteps(resourceName string, steps []resource.TestStep) []resource.TestStep {
+func roleImportSteps(resourceName string, steps []resource.TestStep, internalMetadata ...string) []resource.TestStep {
 	result := make([]resource.TestStep, 0, len(steps)*2)
 	for i, step := range steps {
 		result = append(result, step)
@@ -49,20 +50,59 @@ func roleImportSteps(resourceName string, steps []resource.TestStep) []resource.
 		if strings.Contains(step.Config, `resource "kubernetes_role" "test"`) {
 			name = "kubernetes_role.test"
 		}
-		result = append(result, resource.TestStep{
+		importStep := resource.TestStep{
 			ResourceName:             name,
 			ImportState:              true,
 			ImportStateVerify:        true,
 			ExternalProviders:        step.ExternalProviders,
 			ProtoV6ProviderFactories: step.ProtoV6ProviderFactories,
-		})
+		}
+		for _, field := range internalMetadata {
+			if field == "" {
+				continue
+			}
+			// Import has no prior ownership state. Only these scenario-specific
+			// internal keys (and their map count) cannot be reconstructed.
+			prefix := "metadata.0." + field + "."
+			importStep.ImportStateVerifyIgnore = append(importStep.ImportStateVerifyIgnore,
+				prefix+"%", prefix+"example.kubernetes.io/owner")
+			importStep.ImportStateCheck = func(states []*terraform.InstanceState) error {
+				if len(states) != 1 {
+					return fmt.Errorf("expected one imported Role, got %d", len(states))
+				}
+				if _, ok := states[0].Attributes[prefix+"example.kubernetes.io/owner"]; ok {
+					return fmt.Errorf("import unexpectedly claimed ownership of internal %s", field)
+				}
+				if count := states[0].Attributes[prefix+"%"]; count != "" && count != "0" {
+					return fmt.Errorf("imported %s count = %q, want empty", field, count)
+				}
+				conn, err := testAccRoleClient()
+				if err != nil {
+					return err
+				}
+				role, err := conn.RbacV1().Roles(states[0].Attributes["metadata.0.namespace"]).Get(
+					context.Background(), states[0].Attributes["metadata.0.name"], metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+				values := role.Labels
+				if field == "annotations" {
+					values = role.Annotations
+				}
+				if values["example.kubernetes.io/owner"] != "terraform" || string(role.UID) != states[0].Attributes["metadata.0.uid"] {
+					return fmt.Errorf("import changed live Role identity or internal %s", field)
+				}
+				return nil
+			}
+		}
+		result = append(result, importStep)
 	}
 	return result
 }
 
-func testAccRoleWithImports(t *testing.T, tc resource.TestCase) {
+func testAccRoleWithImports(t *testing.T, tc resource.TestCase, internalMetadata ...string) {
 	t.Helper()
-	tc.Steps = roleImportSteps("kubernetes_role_v1.test", tc.Steps)
+	tc.Steps = roleImportSteps("kubernetes_role_v1.test", tc.Steps, internalMetadata...)
 	testAccRoleValidateAndRun(t, tc)
 }
 
@@ -113,6 +153,42 @@ func TestRoleImportSteps(t *testing.T) {
 			t.Fatalf("incorrect import step: %#v", step)
 		}
 		testRoleProviderSchema(t, step.ProtoV6ProviderFactories, tc.alias)
+	}
+	for _, step := range steps {
+		if len(step.ImportStateVerifyIgnore) != 0 || step.ImportStateCheck != nil {
+			t.Fatal("ordinary imports must retain full state verification")
+		}
+	}
+}
+
+func TestRoleImportStepsInternalMetadata(t *testing.T) {
+	for _, field := range []string{"labels", "annotations"} {
+		t.Run(field, func(t *testing.T) {
+			steps := roleImportSteps("kubernetes_role_v1.test", []resource.TestStep{
+				{Config: `resource "kubernetes_role" "test" {}`, ExternalProviders: roleExternalProvider(roleSDKv2ProviderVersion)},
+				{Config: `resource "kubernetes_role_v1" "test" {}`, ProtoV6ProviderFactories: testAccProtoV6ProviderFactories},
+			}, field)
+			prefix := "metadata.0." + field + "."
+			want := []string{prefix + "%", prefix + "example.kubernetes.io/owner"}
+			if steps[1].ExternalProviders["kubernetes"].VersionConstraint != roleSDKv2ProviderVersion ||
+				steps[3].ProtoV6ProviderFactories == nil {
+				t.Fatal("imports must retain their apply step's provider")
+			}
+			for _, i := range []int{1, 3} {
+				step := steps[i]
+				if !step.ImportStateVerify || !slices.Equal(step.ImportStateVerifyIgnore, want) || step.ImportStateCheck == nil {
+					t.Fatalf("import exceptions must be limited to the declared internal key and count: %#v", step)
+				}
+				for _, attrs := range []map[string]string{
+					{prefix + "example.kubernetes.io/owner": "terraform"},
+					{prefix + "%": "1"},
+				} {
+					if err := step.ImportStateCheck([]*terraform.InstanceState{{Attributes: attrs}}); err == nil {
+						t.Fatalf("import checker accepted unexpected internal metadata: %v", attrs)
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -417,6 +493,7 @@ func TestAccRole_ruleTransitions(t *testing.T) {
 func TestAccRole_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
+	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
@@ -427,6 +504,7 @@ func TestAccRole_identity(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleConfig_noResourceNames(name),
+				Check:  testAccRoleCheckExists(resourceName, &uid),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectIdentity(
 						resourceName,
@@ -440,10 +518,18 @@ func TestAccRole_identity(t *testing.T) {
 				},
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateKind:   resource.ImportBlockWithResourceIdentity,
+				// Import blocks already assert a no-op plan and unchanged identity;
+				// plugin-testing only supports ImportStateVerify for CLI imports.
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+			{
+				Config: testAccRoleConfig_noResourceNames(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: testAccRoleCheckExists(resourceName, &uid),
 			},
 		},
 	})
@@ -828,6 +914,7 @@ resource "kubernetes_role_v1" "test" {
 func TestAccRole_identityImportDefaultNamespace(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
+	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
@@ -841,14 +928,25 @@ func TestAccRole_identityImportDefaultNamespace(t *testing.T) {
 				Config: testAccRoleConfig_noResourceNames(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.namespace", "default"),
+					testAccRoleCheckExists(resourceName, &uid),
 				),
 			},
 			// Import by identity WITH explicit namespace — must succeed.
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateKind:   resource.ImportBlockWithResourceIdentity,
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+			{
+				Config: testAccRoleConfig_noResourceNames(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.namespace", "default"),
+					testAccRoleCheckExists(resourceName, &uid),
+				),
 			},
 		},
 	})
@@ -966,6 +1064,12 @@ func testAccRoleCheckExists(address string, priorUID *string) resource.TestCheck
 		uid := string(role.UID)
 		if uid == "" || rs.Primary.Attributes["metadata.0.uid"] != uid {
 			return fmt.Errorf("Role %q has mismatched API and state UID", rs.Primary.ID)
+		}
+		for field, values := range map[string]map[string]string{"labels": role.Labels, "annotations": role.Annotations} {
+			key := "example.kubernetes.io/owner"
+			if expected, declared := rs.Primary.Attributes["metadata.0."+field+"."+key]; declared && values[key] != expected {
+				return fmt.Errorf("Role %q internal %s differs between API and state", rs.Primary.ID, field)
+			}
 		}
 		if priorUID != nil {
 			if *priorUID != "" && *priorUID != uid {

@@ -1,5 +1,5 @@
 ```release-note:note
-`resource/kubernetes_role_v1`: Migrated the resource to the Terraform Plugin Framework, preserving block syntax and resource identity, including upgrades from versions before identity support. Added support for moving from the deprecated `kubernetes_role` resource using a `moved` block with Terraform 1.8 or later. Explicit empty metadata maps may require a one-time in-place update. Identity imports default an omitted namespace to `default`. See the configuration changes below.
+`resource/kubernetes_role_v1`: Migrated the resource to the Terraform Plugin Framework, preserving block syntax and resource identity, including upgrades from versions before identity support. Added support for moving from the deprecated `kubernetes_role` resource using a `moved` block with Terraform 1.8 or later, restricted to source providers in the `hashicorp` namespace. Explicit empty metadata maps may require a one-time in-place update. Identity imports default an omitted namespace to `default`. See the configuration changes below.
 ```
 
 ```release-note:breaking-change

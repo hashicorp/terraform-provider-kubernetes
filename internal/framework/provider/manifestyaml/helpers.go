@@ -65,6 +65,12 @@ func applyErrDiag(err error) (string, string) {
 	return kubemanifest.ApplyErrDiag("kubernetes_manifest_yaml", err)
 }
 
+// conflictWarnDiag classifies a plan-time dry-run error into a non-blocking field-manager
+// conflict warning (isConflict=true) or nothing (isConflict=false for nil/other errors).
+func conflictWarnDiag(err error) (string, string, bool) {
+	return kubemanifest.ConflictWarnDiag("kubernetes_manifest_yaml", err)
+}
+
 func isImmutableErr(err error) bool { return kubemanifest.IsImmutableErr(err) }
 
 func waitForDeleted(ctx context.Context, ri dynamic.ResourceInterface, name string) error {

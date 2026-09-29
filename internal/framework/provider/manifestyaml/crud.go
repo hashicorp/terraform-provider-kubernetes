@@ -19,9 +19,10 @@ import (
 	apitypes "k8s.io/apimachinery/pkg/types"
 )
 
-// apply performs a Server-Side Apply of the object described by the model's yaml_body.
-// When preview is true the apply is a server dry-run (used for plan/diff).
-func (r *ManifestYAML) apply(ctx context.Context, m *manifestYAMLModel, preview bool) (*unstructured.Unstructured, error) {
+// patch performs a Server-Side Apply of the object described by the model's yaml_body.
+// preview runs it as a server dry-run (DryRunAll); force makes SSA take ownership on a
+// field-manager conflict instead of returning a 409.
+func (r *ManifestYAML) patch(ctx context.Context, m *manifestYAMLModel, preview, force bool) (*unstructured.Unstructured, error) {
 	obj, err := decodeYAML(m.YamlBody.ValueString())
 	if err != nil {
 		return nil, err
@@ -39,7 +40,6 @@ func (r *ManifestYAML) apply(ctx context.Context, m *manifestYAMLModel, preview 
 		return nil, err
 	}
 
-	force := m.ForceConflicts.ValueBool() || preview // dry-run (preview) forces so drift detection isn't masked by conflicts
 	opts := metav1.PatchOptions{
 		FieldManager: m.FieldManager.ValueString(),
 		Force:        &force,
@@ -50,6 +50,14 @@ func (r *ManifestYAML) apply(ctx context.Context, m *manifestYAMLModel, preview 
 
 	ri := resourceInterface(dyn, gvr, namespaced, obj.GetNamespace())
 	return ri.Patch(ctx, obj.GetName(), apitypes.ApplyPatchType, data, opts)
+}
+
+// apply is the CRUD-path SSA: a real apply for Create/Update (preview=false) and the
+// forced projection dry-run for ModifyPlan (preview=true). The preview path forces so
+// drift detection isn't masked by field-manager conflicts; plan-time conflict detection
+// is handled separately in ModifyPlan via an unforced dry-run.
+func (r *ManifestYAML) apply(ctx context.Context, m *manifestYAMLModel, preview bool) (*unstructured.Unstructured, error) {
+	return r.patch(ctx, m, preview, m.ForceConflicts.ValueBool() || preview)
 }
 
 // setComputed writes the identity/status computed fields from a live object.
@@ -280,7 +288,23 @@ func (r *ManifestYAML) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 	if err != nil {
 		return
 	}
-	if projected != state.LiveManifest.ValueString() {
+	ownedDrift := projected != state.LiveManifest.ValueString()
+
+	// Plan-time conflict detection (RFC-011 §6): the projection dry-run above is FORCED, so it
+	// never surfaces an SSA 409 — without this, a plan looks clean and then fails at apply when
+	// force_conflicts=false. When a change will actually be applied and the user hasn't opted
+	// into force, run one extra UNFORCED dry-run purely to surface the conflict now, as a
+	// non-blocking warning. An unreachable cluster already returned above, so this runs only
+	// when the cluster is reachable; the forced dry-run remains the source of truth for drift.
+	if !plan.ForceConflicts.ValueBool() && (ownedDrift || !plan.YamlBody.Equal(state.YamlBody)) {
+		if _, cerr := r.patch(ctx, &plan, true, false); cerr != nil {
+			if summary, detail, isConflict := conflictWarnDiag(cerr); isConflict {
+				resp.Diagnostics.AddWarning(summary, detail)
+			}
+		}
+	}
+
+	if ownedDrift {
 		plan.LiveManifest = types.StringValue(projected)
 		// These change when the corrective apply runs; mark unknown to avoid
 		// "inconsistent result after apply".

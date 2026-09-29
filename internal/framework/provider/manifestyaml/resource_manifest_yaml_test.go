@@ -45,6 +45,28 @@ func externalPatchConfigMapData(t *testing.T, name, key, val string) {
 	}
 }
 
+// externalApplyConfigMapKey Server-Side Applies data.key as a DIFFERENT field manager
+// (with Force) so that manager takes ownership of the field. A later UNFORCED apply of a
+// different value by this resource then conflicts (HTTP 409).
+func externalApplyConfigMapKey(t *testing.T, name, val string) {
+	t.Helper()
+	dyn, err := testAccClients().DynamicClient()
+	if err != nil {
+		t.Fatalf("dynamic client: %v", err)
+	}
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
+	body := []byte(fmt.Sprintf(
+		`{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":%q,"namespace":"default"},"data":{"key":%q}}`,
+		name, val))
+	force := true
+	_, err = dyn.Resource(gvr).Namespace("default").
+		Patch(context.Background(), name, apitypes.ApplyPatchType, body,
+			metav1.PatchOptions{FieldManager: "external-tool", Force: &force})
+	if err != nil {
+		t.Fatalf("external apply failed: %v", err)
+	}
+}
+
 // ---- helpers ---------------------------------------------------------------
 
 // parseManifestID parses the resource id "apiVersion=..,kind=..,namespace=..,name=..".
@@ -364,6 +386,38 @@ func TestAccManifestYAML_ownedFieldDriftCorrected(t *testing.T) {
 					},
 				},
 				Check: testAccCheckManifestYAMLExists(resourceName),
+			},
+		},
+	})
+}
+
+// TestAccManifestYAML_conflictWarnsAtPlan proves the plan surfaces an SSA field-manager
+// conflict as a NON-blocking warning: another manager owns data.key, the config changes it
+// with force_conflicts=false, and the plan must still succeed (warning, not error) while
+// showing the update. The projection dry-run is forced, so this exercises the SEPARATE
+// unforced conflict-detection dry-run in ModifyPlan and confirms it does not turn the plan
+// into a hard failure. (The step stops at plan to avoid the deliberate apply-time 409.)
+func TestAccManifestYAML_conflictWarnsAtPlan(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-cm")
+	resourceName := "kubernetes_manifest_yaml.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckManifestYAMLDestroy,
+		Steps: []resource.TestStep{
+			{
+				// terraform (default manager, force_conflicts=false) creates and owns data.key.
+				Config: testAccManifestYAMLConfigMap(name, "intended"),
+				Check:  testAccCheckManifestYAMLExists(resourceName),
+			},
+			{
+				// external-tool takes ownership of data.key; config now wants a different value.
+				// An unforced apply would 409, so the plan emits a warning — the plan itself must
+				// still succeed and plan the update.
+				PreConfig:          func() { externalApplyConfigMapKey(t, name, "owned-by-external") },
+				Config:             testAccManifestYAMLConfigMap(name, "want-this"),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
 			},
 		},
 	})

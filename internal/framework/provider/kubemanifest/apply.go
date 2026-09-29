@@ -58,6 +58,23 @@ func ApplyErrDiag(resource string, err error) (string, string) {
 	return resource + ": apply failed", err.Error()
 }
 
+// ConflictWarnDiag classifies a plan-time dry-run error. For an SSA field-manager conflict
+// (HTTP 409) it returns a (summary, detail) warning explaining that the next apply will fail
+// unless force_conflicts is set, with isConflict=true. For nil or any other error it returns
+// isConflict=false so callers can ignore it (the forced projection dry-run and the apply-time
+// ApplyErrDiag cover those paths). resource prefixes the summary with the Terraform type name.
+func ConflictWarnDiag(resource string, err error) (summary, detail string, isConflict bool) {
+	if !apierrors.IsConflict(err) {
+		return "", "", false
+	}
+	return resource + ": apply will conflict with another field manager",
+		fmt.Sprintf("A dry-run Server-Side Apply reported a field-ownership conflict:\n\n%s\n\n"+
+			"Another field manager owns one or more fields this configuration sets, so the next apply "+
+			"will fail. Set `force_conflicts = true` to take ownership, or use a distinct `field_manager` "+
+			"to co-own the object.", err.Error()),
+		true
+}
+
 // IsImmutableErr reports whether an apply error is a Kubernetes rejection of an update
 // to an immutable field (which requires object replacement, not update).
 func IsImmutableErr(err error) bool {

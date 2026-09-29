@@ -117,6 +117,28 @@ func TestApplyErrDiag_prefixesResource(t *testing.T) {
 	}
 }
 
+func TestConflictWarnDiag(t *testing.T) {
+	summary, detail, isConflict := ConflictWarnDiag("kubernetes_manifest_yaml",
+		apierrors.NewConflict(schema.GroupResource{Resource: "configmaps"}, "cm", nil))
+	if !isConflict {
+		t.Fatal("expected a 409 conflict to be classified as a conflict warning")
+	}
+	if !strings.HasPrefix(summary, "kubernetes_manifest_yaml:") || !strings.Contains(summary, "conflict") {
+		t.Fatalf("unexpected summary: %q", summary)
+	}
+	if !strings.Contains(detail, "force_conflicts") || !strings.Contains(detail, "field_manager") {
+		t.Fatalf("detail should guide to force_conflicts/field_manager: %q", detail)
+	}
+
+	// Non-conflict errors (and nil) must not be classified as conflicts.
+	if _, _, ok := ConflictWarnDiag("kubernetes_manifest_yaml", apierrors.NewBadRequest("nope")); ok {
+		t.Error("bad request must not be classified as a conflict")
+	}
+	if _, _, ok := ConflictWarnDiag("kubernetes_manifest_yaml", nil); ok {
+		t.Error("nil must not be classified as a conflict")
+	}
+}
+
 func TestOpTimeout_floorAndDefault(t *testing.T) {
 	tv := timeouts.Value{}
 	// no floor → default

@@ -22,10 +22,9 @@ func (r *ManifestYAML) Schema(ctx context.Context, _ resource.SchemaRequest, res
 			"See RFC-011.",
 		Attributes: map[string]schema.Attribute{
 			"yaml_body": schema.StringAttribute{
-				MarkdownDescription: "Raw YAML for exactly one Kubernetes object. Marked sensitive because " +
-					"the manifest may contain a Secret.",
-				Required:  true,
-				Sensitive: true,
+				MarkdownDescription: "Raw YAML for exactly one Kubernetes object. Note: contents are shown " +
+					"in plan output, so any `Secret` data in the manifest will be visible in plan/apply output and logs.",
+				Required: true,
 			},
 			"field_manager": schema.StringAttribute{
 				MarkdownDescription: "Server-Side Apply field manager name. Use a unique value when sharing " +
@@ -74,8 +73,7 @@ func (r *ManifestYAML) Schema(ctx context.Context, _ resource.SchemaRequest, res
 			"live_manifest": schema.StringAttribute{
 				MarkdownDescription: "Canonical JSON of the fields owned by this resource's field manager " +
 					"(the drift anchor). Only these fields are compared on plan.",
-				Computed:  true,
-				Sensitive: true,
+				Computed: true,
 			},
 		},
 		Blocks: map[string]schema.Block{

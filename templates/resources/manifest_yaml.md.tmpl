@@ -15,7 +15,9 @@ Drift is tracked only for the fields this resource's [field manager](https://kub
 
 ~> **Note** This resource manages a **single** object. To apply a multi-document YAML file, use `for_each` over [`provider::kubernetes::manifest_decode_multi(...)`](../functions/manifest_decode_multi.md) and apply CRDs before the custom resources that use them.
 
-~> **Note** `yaml_body` is marked **sensitive** because a manifest may contain a `Secret`. Terraform will not display its contents in plan output.
+~> **Note** `yaml_body` and `live_manifest` are **not** marked sensitive, so Terraform shows their full contents in plan output. If a manifest contains a `Secret`, its data will appear in plan/apply output and logs.
+
+~> **Note** With the default `force_conflicts = false`, if another field manager owns a field this resource sets, the conflict is surfaced as a **warning during `terraform plan`** (the apply would otherwise fail only when run). Set `force_conflicts = true` to take ownership, or use a distinct `field_manager` to co-own the object.
 
 {{ .SchemaMarkdown }}
 

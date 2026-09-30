@@ -1,0 +1,15 @@
+```release-note:note
+`data-source/kubernetes_namespace_v1`: Migrated from SDKv2 to the Plugin Framework.
+```
+
+```release-note:breaking-change
+`data-source/kubernetes_namespace_v1`: `metadata.name` is now required. Earlier versions accepted a configuration without it and then failed while reading, since there is nothing to look up without a name; the error now appears during plan instead.
+```
+
+```release-note:breaking-change
+`data-source/kubernetes_namespace_v1`: `metadata.annotations` and `metadata.labels` are now read-only. Setting either in a data source configuration is rejected during plan with `Invalid Configuration for Read-Only Attribute`; remove the lines. Earlier versions accepted them because the same schema served resources and data sources.
+```
+
+```release-note:breaking-change
+`data-source/kubernetes_namespace_v1`: When the namespace does not exist the read still succeeds without an error, but now records only `metadata.name` and leaves every other attribute null. Earlier versions left empty values behind instead — `{}` for `metadata.annotations` and `metadata.labels`, `""` for `metadata.uid` and `metadata.resource_version`, and `0` for `metadata.generation`. Configurations that detect a missing namespace with `metadata[0].uid != ""` will now evaluate that to `true` rather than `false`, because Terraform treats `null` as equal only to `null`; compare against `null` instead. Expressions that pass `metadata[0].annotations` or `metadata[0].labels` to `length`, `lookup`, `merge` or a `for` expression will error on a missing namespace.
+```

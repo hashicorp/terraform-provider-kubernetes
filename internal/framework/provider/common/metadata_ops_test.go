@@ -754,3 +754,58 @@ func TestFlattenNamespacedMetadata(t *testing.T) {
 		t.Errorf("prior metadata or ignore filters were not preserved: %v", got[0])
 	}
 }
+
+// TestFlattenDataSourceMetadataFieldsEmptyMaps pins nil → {} rather than nil → null.
+//
+// This is the default case, not an edge case: the Kubernetes API omits annotations entirely
+// for any object created without them, so every data source reading such an object hits it.
+// (Namespace labels are never empty only because the API server injects
+// kubernetes.io/metadata.name.)
+//
+// SDKv2's TypeMap has no null, so flattenMetadataFields stored a nil Go map as {}.
+// types.MapValueFrom on a nil map produces null instead, and that difference is visible to
+// anything reading the attribute — so a data source would report a change on upgrade for
+// every object with no annotations. Reverting stringMapValue to a plain MapValueFrom fails
+// this test.
+func TestFlattenDataSourceMetadataFieldsEmptyMaps(t *testing.T) {
+	t.Parallel()
+
+	got, diags := FlattenDataSourceMetadataFields(context.Background(), metav1.ObjectMeta{Name: "thing"})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	for field, v := range map[string]types.Map{"Annotations": got.Annotations, "Labels": got.Labels} {
+		if v.IsNull() {
+			t.Errorf("%s is null, want a known empty map — SDKv2 stored {} here", field)
+		}
+		if n := len(v.Elements()); n != 0 {
+			t.Errorf("%s has %d elements, want 0", field, n)
+		}
+	}
+}
+
+// TestFlattenDataSourceMetadataFieldsDoesNotFilter is the guard for the other half of the data source
+// contract: SDKv2's flattenMetadataFields strips nothing, so internal keys the resource path
+// removes must survive here. Filtering would hide data practitioners read today.
+func TestFlattenDataSourceMetadataFieldsDoesNotFilter(t *testing.T) {
+	t.Parallel()
+
+	objMeta := metav1.ObjectMeta{
+		Name:        "thing",
+		Labels:      map[string]string{"kubernetes.io/metadata.name": "thing", "env": "demo"},
+		Annotations: map[string]string{"deprecated.daemonset.template.generation": "1"},
+	}
+
+	got, diags := FlattenDataSourceMetadataFields(context.Background(), objMeta)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if n := len(got.Labels.Elements()); n != 2 {
+		t.Errorf("labels has %d elements, want 2 — the internal key must not be filtered", n)
+	}
+	if n := len(got.Annotations.Elements()); n != 1 {
+		t.Errorf("annotations has %d elements, want 1 — the internal key must not be filtered", n)
+	}
+}

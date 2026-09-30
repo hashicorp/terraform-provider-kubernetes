@@ -15,4 +15,32 @@ description: |-
 
 {{tffile "examples/resources/pod_disruption_budget_v1/example_1.tf"}}
 
+## Import
 
+Import an existing PodDisruptionBudget using `namespace/name`:
+
+```shell
+terraform import kubernetes_pod_disruption_budget_v1.demo default/demo
+```
+
+## Upgrading the provider
+
+This resource uses Plugin Framework. Existing `kubernetes_pod_disruption_budget_v1`
+configurations and state do not require a resource rename, a `moved` block, or
+re-import. The resource schema version and `namespace/name` ID format are unchanged.
+
+Changes to `spec`, including its selector, continue to replace the resource.
+Changes to metadata labels and annotations are applied in place.
+
+When upgrading SDKv2-written state, an unset `metadata.generate_name` can change
+from `""` to `null` during refresh. Explicitly configured empty metadata maps,
+`selector.match_labels = {}`, or expression `values = []` can produce a one-time
+in-place plan that normalizes legacy `null` state to the configured empty collection.
+These are state-only changes: applying them does not modify or recreate the PDB.
+The next plan is empty. Outputs that expose these fields will reflect the new
+null/empty representation.
+
+The deprecated `kubernetes_pod_disruption_budget` resource uses `policy/v1beta1`;
+it is not a same-API alias and is not supported as a cross-type `moved` source.
+In particular, an empty selector matches no pods in `policy/v1beta1`, but all
+pods in the namespace in `policy/v1`.

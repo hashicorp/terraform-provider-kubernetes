@@ -83,7 +83,7 @@ func resourceKubernetesCronJobV1Beta1Create(ctx context.Context, d *schema.Resou
 	}
 	log.Printf("[INFO] Submitted new cron job: %#v", out)
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesCronJobV1Beta1Read(ctx, d, meta)
 }
@@ -94,7 +94,7 @@ func resourceKubernetesCronJobV1Beta1Update(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	namespace, _, err := idParts(d.Id())
+	namespace, _, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -119,7 +119,7 @@ func resourceKubernetesCronJobV1Beta1Update(ctx context.Context, d *schema.Resou
 	}
 	log.Printf("[INFO] Submitted updated cron job: %#v", out)
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 	return resourceKubernetesCronJobV1Beta1Read(ctx, d, meta)
 }
 
@@ -137,7 +137,7 @@ func resourceKubernetesCronJobV1Beta1Read(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -182,7 +182,7 @@ func resourceKubernetesCronJobV1Beta1Delete(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -221,7 +221,7 @@ func resourceKubernetesCronJobV1Beta1Exists(ctx context.Context, d *schema.Resou
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

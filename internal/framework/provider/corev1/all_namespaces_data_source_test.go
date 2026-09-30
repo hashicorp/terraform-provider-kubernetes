@@ -8,12 +8,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
 
-// TestAccKubernetesDataSourceAllNamespaces_basic verifies that the framework
-// implementation reads all expected attributes from a live cluster.
-// Mirrors TestAccKubernetesDataSourceAllNamespaces_basic in
-// kubernetes/data_source_kubernetes_all_namespaces_test.go.
 func TestAccKubernetesDataSourceAllNamespaces_basic(t *testing.T) {
 	dataSourceName := "data.kubernetes_all_namespaces.test"
 	rxPosNum := regexp.MustCompile("^[1-9][0-9]*$")
@@ -25,7 +22,6 @@ func TestAccKubernetesDataSourceAllNamespaces_basic(t *testing.T) {
 			{
 				Config: testAllNamespacesConfig(),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					// id is computed — just assert it is set to something non-empty.
 					resource.TestCheckResourceAttrSet(dataSourceName, "id"),
 					// The cluster always has at least one namespace (default).
 					resource.TestMatchResourceAttr(dataSourceName, "namespaces.#", rxPosNum),
@@ -40,4 +36,28 @@ func TestAccKubernetesDataSourceAllNamespaces_basic(t *testing.T) {
 
 func testAllNamespacesConfig() string {
 	return `data "kubernetes_all_namespaces" "test" {}`
+}
+
+// TestAccKubernetesDataSourceAllNamespaces_idIsStable covers the one real hazard in this data
+// source's design: id is a sha256 over the namespace names in the order the API lists them.
+// If that order were unstable, every plan would show a change even with the cluster untouched.
+// Two identical steps with an empty plan is what proves it.
+//
+// Serial for the same reason as the migration test — a namespace appearing between steps
+// would change the id legitimately.
+func TestAccKubernetesDataSourceAllNamespaces_idIsStable(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAllNamespacesConfig(),
+			},
+			{
+				Config: testAllNamespacesConfig(),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
 }

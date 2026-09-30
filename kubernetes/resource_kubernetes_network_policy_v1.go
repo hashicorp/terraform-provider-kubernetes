@@ -273,7 +273,7 @@ func resourceKubernetesNetworkPolicyV1Create(ctx context.Context, d *schema.Reso
 	}
 
 	log.Printf("[INFO] Submitted new network policy: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesNetworkPolicyV1Read(ctx, d, meta)
 }
@@ -292,7 +292,7 @@ func resourceKubernetesNetworkPolicyV1Read(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -327,7 +327,7 @@ func resourceKubernetesNetworkPolicyV1Update(ctx context.Context, d *schema.Reso
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -350,7 +350,7 @@ func resourceKubernetesNetworkPolicyV1Update(ctx context.Context, d *schema.Reso
 		return diag.Errorf("Failed to update network policy: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated network policy: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesNetworkPolicyV1Read(ctx, d, meta)
 }
@@ -361,7 +361,7 @@ func resourceKubernetesNetworkPolicyV1Delete(ctx context.Context, d *schema.Reso
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -385,7 +385,7 @@ func resourceKubernetesNetworkPolicyV1Exists(ctx context.Context, d *schema.Reso
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

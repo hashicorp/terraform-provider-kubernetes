@@ -25,18 +25,13 @@ func (d *AllNamespacesDataSource) Schema(
 	resp *datasource.SchemaResponse,
 ) {
 	resp.Schema = schema.Schema{
-		Description: "This data source provides a mechanism for listing the names of all available namespaces in a Kubernetes cluster. " +
-			"It can be used to check for existence of a specific namespace or to apply another resource to all or a subset of existing " +
-			"namespaces in a cluster. In Kubernetes, namespaces provide a scope for names and are intended as a way to divide cluster " +
-			"resources between multiple users.",
+		Description: "This data source provides a mechanism for listing the names of all available namespaces in a Kubernetes cluster. It can be used to check for existence of a specific namespaces or to apply another resource to all or a subset of existing namespaces in a cluster.In Kubernetes, namespaces provide a scope for names and are intended as a way to divide cluster resources between multiple users.",
 		Attributes: map[string]schema.Attribute{
 			// id is a SHA-256 fingerprint of all namespace names, computed in Read.
-			// SDKv2 equivalent: d.SetId(fmt.Sprintf("%x", idsum.Sum(nil)))
 			"id": schema.StringAttribute{
 				Computed: true,
 			},
 			// namespaces is the list of all namespace names returned by the API.
-			// SDKv2 equivalent: schema.TypeList / Computed / Elem TypeString
 			"namespaces": schema.ListAttribute{
 				ElementType: types.StringType,
 				Description: "List of all namespaces in a cluster.",

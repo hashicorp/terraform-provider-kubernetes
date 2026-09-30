@@ -1682,7 +1682,7 @@ resource "kubernetes_deployment_v1" "test" {
   }
 }
 
-resource "kubernetes_service_v1" "test" {
+resource "kubernetes_service" "test" {
   metadata {
     name      = "%s-init-service"
     namespace = kubernetes_namespace.test.metadata.0.name

@@ -685,7 +685,7 @@ func testAccKubernetesIngressV1Config_internalKey_removed(name string) string {
 }
 
 func testAccKubernetesIngressV1Config_waitForLoadBalancer(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = %q
   }
@@ -741,7 +741,7 @@ resource "kubernetes_deployment_v1" "test" {
 
 resource "kubernetes_ingress_v1" "test" {
   depends_on = [
-    kubernetes_service_v1.test,
+    kubernetes_service.test,
     kubernetes_deployment_v1.test
   ]
   metadata {

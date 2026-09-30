@@ -65,7 +65,9 @@ resource "kubernetes_namespace_v1" "example" {
 }
 ```
 
-Use your existing Terraform addresses and namespace configuration, including any labels or annotations; do not retain both resource declarations. Update references to the new address. Run `terraform plan` to verify the move and any in-place changes described above. Investigate any proposed replacement before applying the plan to record the move, then confirm the next plan is empty. No state removal or re-import is needed.
+Update references to the new address, for example, `kubernetes_namespace.example.metadata[0].name` to `kubernetes_namespace_v1.example.metadata[0].name`.
+
+Run `terraform plan` to verify the move and review any in-place changes described above. Investigate any proposed replacement before applying. After applying, run `terraform plan` again and confirm it is empty. No state removal or re-import is needed.
 
 ## Data source: kubernetes_namespace_v1
 

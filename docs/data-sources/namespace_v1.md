@@ -104,4 +104,4 @@ Unlike the `kubernetes_namespace_v1` resource, this data source has three behavi
   Two consequences are worth checking for in existing configurations:
 
   - An existence check written as `data.kubernetes_namespace_v1.example.metadata[0].uid != ""` now evaluates to `true` for a missing namespace rather than `false`, because Terraform treats `null` as equal only to `null`. Compare against `null` instead.
-  - Passing `metadata[0].annotations` or `metadata[0].labels` to `length`, `lookup`, `merge` or a `for` expression errors for a missing namespace.
+  - Passing `metadata[0].annotations` or `metadata[0].labels` to `length`, `lookup` or a `for` expression errors for a missing namespace.

@@ -57,7 +57,6 @@ func NamespacedDataSourceMetadataSchema(objectName string) schema.ListNestedBloc
 // name is Required, diverging from SDKv2's Optional + Computed. There is nothing to
 // look up without it, so SDKv2's declaration only deferred the failure from plan to
 // read.
-//
 func dataSourceMetadataAttributes(objectName string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"annotations": schema.MapAttribute{

@@ -320,12 +320,9 @@ func Provider() *schema.Provider {
 			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBindingV1(""),
 
 			// networking
-			"kubernetes_ingress":           resourceKubernetesIngressV1Beta1("Deprecated; use kubernetes_ingress_v1."),
-			"kubernetes_ingress_v1":        resourceKubernetesIngressV1(""),
-			"kubernetes_ingress_class":     resourceKubernetesIngressClassV1("Deprecated; use kubernetes_ingress_class_v1."),
-			"kubernetes_ingress_class_v1":  resourceKubernetesIngressClassV1(""),
-			"kubernetes_network_policy":    resourceKubernetesNetworkPolicyV1("Deprecated; use kubernetes_network_policy_v1."),
-			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicyV1(""),
+			"kubernetes_ingress":        resourceKubernetesIngressV1Beta1("Deprecated; use kubernetes_ingress_v1."),
+			"kubernetes_ingress_class":  resourceKubernetesIngressClassV1("Deprecated; use kubernetes_ingress_class_v1."),
+			"kubernetes_network_policy": resourceKubernetesNetworkPolicyV1("Deprecated; use kubernetes_network_policy_v1."),
 
 			// policy
 			"kubernetes_pod_disruption_budget":    resourceKubernetesPodDisruptionBudget(),

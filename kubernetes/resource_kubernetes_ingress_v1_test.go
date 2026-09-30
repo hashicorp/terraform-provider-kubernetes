@@ -31,8 +31,8 @@ func TestAccKubernetesIngressV1_serviceBackend(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_serviceBackend(name),
@@ -86,8 +86,8 @@ func TestAccKubernetesIngressV1_resourceBackend(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_resourceBackend(name),
@@ -128,8 +128,8 @@ func TestAccKubernetesIngressV1_TLS(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_TLS(name),
@@ -174,8 +174,8 @@ func TestAccKubernetesIngressV1_emptyTLS(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_emptyTLS(name),
@@ -206,8 +206,8 @@ func TestAccKubernetesIngressV1_InternalKey(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_internalKey(name),
@@ -252,8 +252,8 @@ func TestAccKubernetesIngressV1_WaitForLoadBalancerGoogleCloud(t *testing.T) {
 			skipIfNotRunningInGke(t)
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_waitForLoadBalancer(name),
@@ -277,8 +277,8 @@ func TestAccKubernetesIngressV1_hostOnlyRule(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_ruleHostOnly(name),
@@ -311,8 +311,8 @@ func TestAccKubernetesIngressV1_multipleRulesDifferentHosts(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_multipleRulesDifferentHosts(name),
@@ -359,8 +359,8 @@ func TestAccKubernetesIngressV1_defaultIngressClass(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_defaultIngressClass(ingressClass, name),
@@ -388,8 +388,8 @@ func TestAccKubernetesIngressV1_identity(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Destroy,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Config_identity(ingressClass, name),

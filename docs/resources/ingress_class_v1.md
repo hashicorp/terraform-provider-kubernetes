@@ -83,6 +83,31 @@ resource "kubernetes_ingress_class_v1" "example" {
 }
 ```
 
+## Migration to Plugin Framework
+
+`kubernetes_ingress_class_v1` is implemented using the Terraform Plugin Framework. The resource type, configuration syntax, state schema version (0), and identity schema version (1) are unchanged. Existing `kubernetes_ingress_class_v1` state does not require a `moved` block or re-import.
+
+Before upgrading, confirm that the current configuration has an empty plan. Review the plan after upgrading; do not apply unexpected replacement or specification changes.
+
+There is one narrow compatibility exception: if `metadata.labels = {}` or `metadata.annotations = {}` was explicitly configured but stored as `null` by the previous provider, the first upgrade plan can show an in-place update from `null` to `{}` for those maps. This update changes Terraform state only: it must not write to the Kubernetes API or replace the object, and the next plan must be empty. This exception does not cover omitted metadata arguments, selectors, TLS hosts, or other configuration changes.
+
+### Migration from `kubernetes_ingress_class`
+
+The deprecated alias remains on SDKv2. With Terraform 1.8 or later, replace the old resource block's type with `kubernetes_ingress_class_v1`, keep its configuration unchanged, update references, and add:
+
+```terraform
+moved {
+  from = kubernetes_ingress_class.example
+  to   = kubernetes_ingress_class_v1.example
+}
+```
+
+Do not keep both resource declarations for the same Kubernetes object.
+
+### Resource identity
+
+With Terraform 1.12 or later, resource identity contains `api_version` (`networking.k8s.io/v1`), `kind` (`IngressClass`), and `name`. Ingress classes are cluster-scoped; their identity has no namespace. The existing name-only import identifier is unchanged.
+
 ## Import
 
 Ingress Classes can be imported using its name, e.g:

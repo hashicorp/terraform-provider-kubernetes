@@ -197,7 +197,9 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
+		corev1.NewDefaultServiceAccountV1,
 		corev1.NewNamespaceV1,
+		corev1.NewServiceAccountV1,
 		rbacv1.NewRoleV1,
 	}
 }

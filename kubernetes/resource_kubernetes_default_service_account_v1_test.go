@@ -13,10 +13,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestAccKubernetesDefaultServiceAccountV1_basic(t *testing.T) {
+func TestAccKubernetesDefaultServiceAccount_basic(t *testing.T) {
 	var conf corev1.ServiceAccount
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_default_service_account_v1.test"
+	resourceName := "kubernetes_default_service_account.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -52,11 +52,11 @@ func TestAccKubernetesDefaultServiceAccountV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDefaultServiceAccountV1_secrets(t *testing.T) {
+func TestAccKubernetesDefaultServiceAccount_secrets(t *testing.T) {
 	var conf corev1.ServiceAccount
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_default_service_account_v1.test"
+	resourceName := "kubernetes_default_service_account.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -86,10 +86,10 @@ func TestAccKubernetesDefaultServiceAccountV1_secrets(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDefaultServiceAccountV1_automountServiceAccountToken(t *testing.T) {
+func TestAccKubernetesDefaultServiceAccount_automountServiceAccountToken(t *testing.T) {
 	var conf corev1.ServiceAccount
 	namespace := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_default_service_account_v1.test"
+	resourceName := "kubernetes_default_service_account.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -124,7 +124,7 @@ func testAccKubernetesDefaultServiceAccountV1Config_basic(namespace string) stri
   }
 }
 
-resource "kubernetes_default_service_account_v1" "test" {
+resource "kubernetes_default_service_account" "test" {
   metadata {
     namespace = kubernetes_namespace.test.metadata.0.name
 
@@ -150,7 +150,7 @@ func testAccKubernetesDefaultServiceAccountV1Config_secrets(namespace string, na
   }
 }
 
-resource "kubernetes_default_service_account_v1" "test" {
+resource "kubernetes_default_service_account" "test" {
   metadata {
     namespace = kubernetes_namespace.test.metadata.0.name
   }
@@ -187,7 +187,7 @@ func testAccKubernetesDefaultServiceAccountV1Config_automountServiceAccountToken
   }
 }
 
-resource "kubernetes_default_service_account_v1" "test" {
+resource "kubernetes_default_service_account" "test" {
   metadata {
     namespace = kubernetes_namespace.test.metadata.0.name
   }

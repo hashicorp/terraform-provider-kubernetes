@@ -13,7 +13,7 @@ import (
 
 func TestAccKubernetesTokenRequestV1_basic(t *testing.T) {
 	var conf corev1.ServiceAccount
-	saName := "kubernetes_service_account_v1.test"
+	saName := "kubernetes_service_account.test"
 	resourceName := "kubernetes_token_request_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -47,7 +47,7 @@ func TestAccKubernetesTokenRequestV1_basic(t *testing.T) {
 }
 
 func testAccKubernetesTokenRequestV1Config_basic(audiences string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     name = "tokentest"
   }
@@ -55,7 +55,7 @@ func testAccKubernetesTokenRequestV1Config_basic(audiences string) string {
 
 resource "kubernetes_token_request_v1" "test" {
   metadata {
-    name = kubernetes_service_account_v1.test.metadata.0.name
+    name = kubernetes_service_account.test.metadata.0.name
   }
   spec {
     audiences = %s

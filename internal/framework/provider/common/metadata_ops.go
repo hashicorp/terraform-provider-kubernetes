@@ -8,9 +8,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
-
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
 // MetadataPatchOps mirrors SDKv2 patchMetadata, skipping maps with no managed keys.
@@ -179,4 +180,77 @@ func FlattenNamespacedMetadata(ctx context.Context, k8MetaObj metav1.ObjectMeta,
 
 	base, diags := FlattenMetadata(ctx, k8MetaObj, priorBase, ignoreAnnotations, ignoreLabels)
 	return []NamespacedMetadataModel{{MetadataModel: base[0], Namespace: types.StringValue(k8MetaObj.Namespace)}}, diags
+}
+
+// FlattenDataSourceMetadataFields converts a Kubernetes ObjectMeta into the data source metadata
+// model. It is the counterpart of SDKv2's flattenMetadataFields (kubernetes/structures.go),
+// and the important thing about it is what it does *not* do: no filtering.
+//
+// The resource path strips internal keys and anything matching ignore_labels /
+// ignore_annotations, because a resource has to distinguish what the practitioner manages
+// from what the cluster added. A data source manages nothing — it reports what is there — so
+// SDKv2 passes the API response through untouched, and keys like
+// kubernetes.io/metadata.name are expected to appear. Filtering here would hide data that
+// practitioners read today.
+func FlattenDataSourceMetadataFields(ctx context.Context, k8MetaObj metav1.ObjectMeta) (MetadataBase, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	var out MetadataBase
+
+	// Empty, not null — matching what SDKv2 leaves in a data source's state.
+	//
+	// SDKv2 is not consistent between the two paths, and the reason is normalizeNullValues
+	// in helper/schema/grpc_provider.go: it converts an empty collection back to null, and
+	// it runs for ReadResource, PlanResourceChange and ApplyResourceChange but not for
+	// ReadDataSource. So an object with no annotations ends up null in a resource's state
+	// and {} in a data source's. MapValueFrom on a nil Go map produces null, so without
+	// this normalisation the migrated data source would report a diff on upgrade.
+	annotations, d := stringMapValue(ctx, k8MetaObj.Annotations)
+	diags.Append(d...)
+	out.Annotations = annotations
+
+	labels, d := stringMapValue(ctx, k8MetaObj.Labels)
+	diags.Append(d...)
+	out.Labels = labels
+
+	out.Generation = types.Int64Value(k8MetaObj.Generation)
+	out.Name = types.StringValue(k8MetaObj.Name)
+	out.ResourceVersion = types.StringValue(k8MetaObj.ResourceVersion)
+	out.UID = types.StringValue(string(k8MetaObj.UID))
+
+	return out, diags
+}
+
+// FlattenNamespacedMetadataFields is FlattenMetadataFields for a namespaced data source.
+func FlattenNamespacedMetadataFields(ctx context.Context, k8MetaObj metav1.ObjectMeta) (NamespacedMetadataBase, diag.Diagnostics) {
+	base, diags := FlattenDataSourceMetadataFields(ctx, k8MetaObj)
+	return NamespacedMetadataBase{
+		MetadataBase: base,
+		Namespace:    types.StringValue(k8MetaObj.Namespace),
+	}, diags
+}
+
+// stringMapValue converts a Kubernetes metadata map to types.Map, treating nil as empty
+// rather than null. See FlattenMetadataFields for why.
+func stringMapValue(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
+	if m == nil {
+		m = map[string]string{}
+	}
+	return types.MapValueFrom(ctx, types.StringType, m)
+}
+
+// ResolveDataSourceNamespace returns the namespace a namespaced data source should read,
+// applying SDKv2's "default" fallback when the configuration omits one.
+//
+// SDKv2 gets this from a schema default. The framework cannot: datasource/schema
+// attributes have no Default field, because defaults are applied during plan
+// modification and a data source has no plan. So the fallback has to happen in Read.
+//
+// Callers write the result back into the model as well as using it for the API call.
+// SDKv2's default lands in state, so a configuration that omits namespace records
+// "default"; returning null instead would change state shape.
+func ResolveDataSourceNamespace(in types.String) types.String {
+	if in.IsNull() || in.IsUnknown() || in.ValueString() == "" {
+		return types.StringValue(corev1.NamespaceDefault)
+	}
+	return in
 }

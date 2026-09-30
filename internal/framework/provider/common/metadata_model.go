@@ -30,3 +30,14 @@ type NamespacedMetadataModel struct {
 	MetadataModel
 	Namespace types.String `tfsdk:"namespace"`
 }
+
+// NamespacedMetadataBase is the model for the block built by
+// NamespacedDataSourceMetadataSchema: MetadataBase plus namespace.
+//
+// It exists for namespaced data sources. The resource side has no equivalent because a
+// namespaced resource always exposes generate_name too, which makes its model
+// NamespacedMetadataModel.
+type NamespacedMetadataBase struct {
+	MetadataBase
+	Namespace types.String `tfsdk:"namespace"`
+}

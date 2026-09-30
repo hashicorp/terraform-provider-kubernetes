@@ -85,7 +85,7 @@ func resourceKubernetesPodDisruptionBudgetV1Update(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -103,7 +103,7 @@ func resourceKubernetesPodDisruptionBudgetV1Update(ctx context.Context, d *schem
 	}
 
 	log.Printf("[INFO] Submitted updated pod disruption budget: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesPodDisruptionBudgetV1Read(ctx, d, meta)
 }
@@ -131,7 +131,7 @@ func resourceKubernetesPodDisruptionBudgetV1Create(ctx context.Context, d *schem
 	}
 
 	log.Printf("[INFO] Submitted new pod disruption budget: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesPodDisruptionBudgetV1Read(ctx, d, meta)
 }
@@ -150,7 +150,7 @@ func resourceKubernetesPodDisruptionBudgetV1Read(ctx context.Context, d *schema.
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -182,7 +182,7 @@ func resourceKubernetesPodDisruptionBudgetV1Delete(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -209,7 +209,7 @@ func resourceKubernetesPodDisruptionBudgetV1Exists(ctx context.Context, d *schem
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

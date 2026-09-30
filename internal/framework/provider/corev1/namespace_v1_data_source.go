@@ -24,13 +24,10 @@ type NamespaceV1DataSource struct {
 	SDKv2Meta func() any
 }
 
-// NewNamespaceV1DataSource is the constructor registered in provider.go.
 func NewNamespaceV1DataSource() datasource.DataSource {
 	return &NamespaceV1DataSource{}
 }
 
-// Metadata sets the type name Terraform uses to route requests to this
-// data source. Must match the key in the SDKv2 DataSourcesMap exactly.
 func (d *NamespaceV1DataSource) Metadata(
 	_ context.Context,
 	req datasource.MetadataRequest,

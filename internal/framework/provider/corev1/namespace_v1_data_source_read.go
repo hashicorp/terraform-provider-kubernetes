@@ -25,24 +25,17 @@ var specElementType = types.ObjectType{
 	},
 }
 
-// Read is the framework equivalent of dataSourceKubernetesNamespaceV1Read in
-// data_source_kubernetes_namespace_v1.go. The Kubernetes API call is identical;
-// only the way we read config and write state changes.
 func (d *NamespaceV1DataSource) Read(
 	ctx context.Context,
 	req datasource.ReadRequest,
 	resp *datasource.ReadResponse,
 ) {
-	// 1. Read the config the user wrote in their .tf file into our typed model.
-	//    In SDKv2 this was: metadata := expandMetadata(d.Get("metadata").([]interface{}))
 	var model NamespaceV1DataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// 2. Get the Kubernetes client.
-	//    In SDKv2 this was: conn, err := meta.(KubeClientsets).MainClientset()
 	meta := d.SDKv2Meta().(kubernetes.KubeClientsets)
 	conn, err := meta.MainClientset()
 	if err != nil {
@@ -50,32 +43,25 @@ func (d *NamespaceV1DataSource) Read(
 		return
 	}
 
-	// 3. Extract the namespace name from the metadata block.
-	//    Guard against an empty slice — the schema validator enforces exactly
-	//    one block, but Read can be called before validation completes.
-	if len(model.Metadata) == 0 {
-		resp.Diagnostics.AddError(
-			"missing metadata block",
-			"exactly one metadata block with a name is required",
-		)
-		return
-	}
 	name := model.Metadata[0].Name.ValueString()
 
-	// 4. Set the synthetic ID now — before the API call — so that if the namespace
-	//    is not found (404) we still persist the requested name as the ID.
-	//    This matches the SDKv2 behaviour where d.SetId(metadata.Name) is called
-	//    before conn.CoreV1().Namespaces().Get(...).
+	//  Set the synthetic ID now — before the API call — so that if the namespace
+	//  is not found (404) we still persist the requested name as the ID.
+	//  This matches the SDKv2 behaviour.
 	model.ID = types.StringValue(name)
 
-	// 5. Call the Kubernetes API — identical to the SDKv2 implementation.
 	ns, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Preserve the SDKv2 behaviour: silently return without error when
-			// the namespace is not found. Write the partial model (ID set, metadata
-			// name set from config, spec empty) so that id and name are accessible.
-			model.Spec = types.ListValueMust(specElementType, []attr.Value{})
+			// Namespace does not exist. Return without an error, as SDKv2 does, and
+			// write the config-decoded model: id and metadata.name are set, everything
+			// else is null.
+			//
+			// This is the documented divergence: SDKv2 recorded empty values instead —
+			// {} for the metadata maps, "" for uid and resource_version, 0 for
+			// generation. An existence check written as metadata[0].uid != "" therefore
+			// flips from false to true, because HCL treats null as equal only to null.
+			// See the changelog entry and the migration test, which pins both shapes.
 			resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 			return
 		}
@@ -86,15 +72,6 @@ func (d *NamespaceV1DataSource) Read(
 		return
 	}
 
-	// 6. Map the API response onto our model.
-	//    In SDKv2 this was done via d.Set("metadata", flattenMetadataFields(...))
-	//    and d.Set("spec", flattenNamespaceV1Spec(...)).
-
-	// Populate metadata from the live ObjectMeta. common.FlattenMetadataFields is the
-	// counterpart of SDKv2's flattenMetadataFields, and deliberately applies no filtering:
-	// a data source reports what the object carries, including keys like
-	// kubernetes.io/metadata.name that the resource path strips. Filtering here would hide
-	// data practitioners read today.
 	metadata, metaDiags := common.FlattenDataSourceMetadataFields(ctx, ns.ObjectMeta)
 	resp.Diagnostics.Append(metaDiags...)
 	if resp.Diagnostics.HasError() {
@@ -122,7 +99,5 @@ func (d *NamespaceV1DataSource) Read(
 		model.Spec = types.ListValueMust(specElementType, []attr.Value{})
 	}
 
-	// 7. Write the populated model into state.
-	//    In SDKv2 this happened implicitly through d.Set calls.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }

@@ -8,9 +8,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
-
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
 // MetadataPatchOps mirrors SDKv2 patchMetadata, skipping maps with no managed keys.
@@ -195,10 +196,14 @@ func FlattenDataSourceMetadataFields(ctx context.Context, k8MetaObj metav1.Objec
 	var diags diag.Diagnostics
 	var out MetadataBase
 
-	// Empty, not null. SDKv2's TypeMap has no null, so flattenMetadataFields stored a nil
-	// Go map as {} — and MapValueFrom on a nil map produces null instead. For an object
-	// with no annotations that difference is visible to anything reading the attribute, so
-	// it has to be normalised here or every such data source reports a change on upgrade.
+	// Empty, not null — matching what SDKv2 leaves in a data source's state.
+	//
+	// SDKv2 is not consistent between the two paths, and the reason is normalizeNullValues
+	// in helper/schema/grpc_provider.go: it converts an empty collection back to null, and
+	// it runs for ReadResource, PlanResourceChange and ApplyResourceChange but not for
+	// ReadDataSource. So an object with no annotations ends up null in a resource's state
+	// and {} in a data source's. MapValueFrom on a nil Go map produces null, so without
+	// this normalisation the migrated data source would report a diff on upgrade.
 	annotations, d := stringMapValue(ctx, k8MetaObj.Annotations)
 	diags.Append(d...)
 	out.Annotations = annotations
@@ -231,4 +236,21 @@ func stringMapValue(ctx context.Context, m map[string]string) (types.Map, diag.D
 		m = map[string]string{}
 	}
 	return types.MapValueFrom(ctx, types.StringType, m)
+}
+
+// ResolveDataSourceNamespace returns the namespace a namespaced data source should read,
+// applying SDKv2's "default" fallback when the configuration omits one.
+//
+// SDKv2 gets this from a schema default. The framework cannot: datasource/schema
+// attributes have no Default field, because defaults are applied during plan
+// modification and a data source has no plan. So the fallback has to happen in Read.
+//
+// Callers write the result back into the model as well as using it for the API call.
+// SDKv2's default lands in state, so a configuration that omits namespace records
+// "default"; returning null instead would change state shape.
+func ResolveDataSourceNamespace(in types.String) types.String {
+	if in.IsNull() || in.IsUnknown() || in.ValueString() == "" {
+		return types.StringValue(corev1.NamespaceDefault)
+	}
+	return in
 }

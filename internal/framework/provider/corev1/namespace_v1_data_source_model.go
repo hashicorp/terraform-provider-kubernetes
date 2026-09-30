@@ -12,10 +12,6 @@ import (
 // NamespaceV1DataSourceModel is the top-level state model for the
 // kubernetes_namespace_v1 data source. Every field maps 1:1 to a schema
 // attribute or block via the tfsdk struct tag.
-//
-// Spec is types.List (not []NamespaceSpecModel) because spec is a
-// ListNestedAttribute in the schema. Framework decodes ListNestedAttribute
-// into types.List; slices are used for ListNestedBlock only.
 type NamespaceV1DataSourceModel struct {
 	ID       types.String          `tfsdk:"id"`
 	Metadata []common.MetadataBase `tfsdk:"metadata"`

@@ -289,6 +289,42 @@ resource "kubernetes_network_policy_v1" "example" {
 ```
 
 
+## Migration to Plugin Framework
+
+`kubernetes_network_policy_v1` is implemented using the Terraform Plugin Framework. The resource type, configuration syntax, state schema version (0), and identity schema version (1) are unchanged. Existing `kubernetes_network_policy_v1` state does not require a `moved` block or re-import.
+
+Before upgrading, confirm that the current configuration has an empty plan. Review the plan after upgrading; do not apply unexpected replacement or specification changes.
+
+Narrow compatibility exceptions apply to explicitly configured empty collections previously stored as `null`:
+
+- `metadata.labels = {}` and `metadata.annotations = {}` can change from `null` to `{}`.
+- `match_labels = {}` can change from `null` to `{}` at these selector paths:
+  - `spec.pod_selector`
+  - `spec.ingress[*].from[*].namespace_selector`
+  - `spec.ingress[*].from[*].pod_selector`
+  - `spec.egress[*].to[*].namespace_selector`
+  - `spec.egress[*].to[*].pod_selector`
+- At each selector path above, `match_expressions[*].values = []` can change from `null` to `[]` only for the `Exists` and `DoesNotExist` operators.
+
+The first upgrade plan can show an in-place update for exactly these values. This update changes Terraform state only: it must not write to the Kubernetes API or replace the object, must preserve its UID and complete specification, and the next plan must be empty. These exceptions do not cover omitted maps or collections, `ip_block.except`, other expression operators, or other configuration changes.
+
+### Migration from `kubernetes_network_policy`
+
+The deprecated alias remains on SDKv2. With Terraform 1.8 or later, replace the old resource block's type with `kubernetes_network_policy_v1`, keep its configuration unchanged, update references, and add:
+
+```terraform
+moved {
+  from = kubernetes_network_policy.example
+  to   = kubernetes_network_policy_v1.example
+}
+```
+
+Do not keep both resource declarations for the same Kubernetes object.
+
+### Resource identity
+
+With Terraform 1.12 or later, resource identity contains `api_version` (`networking.k8s.io/v1`), `kind` (`NetworkPolicy`), `name`, and `namespace`. The existing namespace/name import identifier is unchanged.
+
 ## Import
 
 Network policies can be imported using their identifier consisting of `<namespace-name>/<network-policy-name>`, e.g.:

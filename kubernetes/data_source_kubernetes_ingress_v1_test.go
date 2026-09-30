@@ -21,7 +21,7 @@ func TestAccKubernetesDataSourceIngressV1_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
 		Steps: []resource.TestStep{
 			{ // Create the ingress resource in the first apply. Then check it in the second apply.
 				Config: testAccKubernetesDataSourceIngressV1_basic(name),
@@ -79,7 +79,7 @@ func TestAccKubernetesDataSourceIngressV1_not_found(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceIngressV1_nonexistent(name),

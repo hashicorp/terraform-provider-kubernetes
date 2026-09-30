@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/admissionregistrationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/authenticationv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/batchv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
@@ -196,6 +197,8 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
+		batchv1.NewJobV1,
+		batchv1.NewCronJobV1,
 		corev1.NewNamespaceV1,
 	}
 }

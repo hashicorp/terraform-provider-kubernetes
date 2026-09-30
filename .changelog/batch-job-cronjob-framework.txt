@@ -1,0 +1,23 @@
+```release-note:breaking-change
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. Job selectors (including `match_expressions`), Pod template `image_pull_secrets` and `readiness_gate`, and container/init container `resources` now require list-of-object assignment syntax instead of nested blocks. Existing list indexing remains unchanged. Review the batch-v1 Framework migration guide before upgrading.
+```
+
+```release-note:note
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Retain resource names, namespace/name import IDs, and identity schema version 1. Same-type upgrades do not require moved blocks. Provider-assisted moves accept JSON state schema versions 0 and 1 from the deprecated `kubernetes_job` and `kubernetes_cron_job` types. The deprecated CronJob type still uses the legacy batch/v1beta1 endpoint.
+```
+
+```release-note:note
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Absent optional, non-computed leaf values can now appear as null rather than SDKv2 zero or empty values. Upgrading existing state can require a one-time in-place state-normalization update and change outputs, even with unchanged configuration; the first migration plan is not necessarily empty. Review the upgrade plan and verify that normalization preserves the Kubernetes object's identity and desired specification.
+```
+
+```release-note:bug
+`resource/kubernetes_job_v1`: Apply updates and removals of `ttl_seconds_after_finished` and `max_failed_indexes` to Kubernetes.
+```
+
+```release-note:bug
+`resource/kubernetes_job_v1`: Replace Jobs when immutable `pod_failure_policy` rules change instead of planning an ineffective in-place update. CronJob template rule edits remain in-place updates.
+```
+
+```release-note:bug
+`resource/kubernetes_cron_job_v1`: Preserve server-managed metadata and unmanaged labels and annotations when updating CronJobs and their Job and Pod templates.
+```

@@ -9,6 +9,8 @@ description: |-
 
 {{ .Description }}
 
+~> The Framework migration changes selected nested blocks to list-of-object attributes. Review the [Job and CronJob migration guide](../guides/batch-v1-framework-migration.md) before upgrading existing configurations.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage - No waiting
@@ -21,5 +23,18 @@ description: |-
 
 Note:
 
-- Kubernetes provider will treat update operations that change the Job spec resulting in the job re-run as "# forces replacement". In such cases, the `create` timeout value is used for both Create and Update operations.
-- `wait_for_completion` is not applicable during Delete operations; thus, there is no "delete" timeout value for Delete operation.
+- Changes to immutable Job fields require replacement. Creating the replacement uses the `create` timeout; in-place updates use the `update` timeout.
+- The `create`, `update`, and `delete` timeouts each default to `1m`.
+- `wait_for_completion` defaults to `true` and applies only to create and update operations. Deletion still waits for the Job to disappear, using the `delete` timeout regardless of `wait_for_completion`.
+
+## Import
+
+Jobs can be imported using the namespace and name, separated by `/`:
+
+```shell
+terraform import kubernetes_job_v1.demo default/demo
+```
+
+`wait_for_completion` defaults to `true` on import, including identity-based imports, because Kubernetes does not store this provider-only setting. If the configuration sets it to `false`, the next plan can show an in-place state-only update to reconcile that setting. Changing only this setting does not change the Job's API specification or require replacement.
+
+For an existing `kubernetes_job_v1` state entry, a provider upgrade does not require import or a `moved` block. To change from the deprecated `kubernetes_job` resource type, follow the [migration guide](../guides/batch-v1-framework-migration.md#moving-from-deprecated-resource-types).

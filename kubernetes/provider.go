@@ -296,10 +296,8 @@ func Provider() *schema.Provider {
 			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSetV1(""),
 
 			// batch
-			"kubernetes_job":         resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
-			"kubernetes_job_v1":      resourceKubernetesJobV1(""),
-			"kubernetes_cron_job":    resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
-			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(""),
+			"kubernetes_job":      resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
+			"kubernetes_cron_job": resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
 
 			// autoscaling
 			"kubernetes_horizontal_pod_autoscaler":         resourceKubernetesHorizontalPodAutoscaler(),

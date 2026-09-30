@@ -9,8 +9,20 @@ description: |-
 
 {{ .Description }}
 
+~> The Framework migration changes selected nested blocks to list-of-object attributes. Review the [Job and CronJob migration guide](../guides/batch-v1-framework-migration.md) before upgrading existing configurations.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage
 
 {{tffile "examples/resources/cron_job_v1/example_1.tf"}}
+
+## Import
+
+CronJobs can be imported using the namespace and name, separated by `/`:
+
+```shell
+terraform import kubernetes_cron_job_v1.demo default/demo
+```
+
+For an existing `kubernetes_cron_job_v1` state entry, a provider upgrade does not require import or a `moved` block. To change from the deprecated `kubernetes_cron_job` resource type, follow the [migration guide](../guides/batch-v1-framework-migration.md#moving-from-deprecated-resource-types), including its warning about the legacy `batch/v1beta1` endpoint.

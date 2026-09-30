@@ -223,7 +223,7 @@ func TestJobMutablePlanDoesNotReplace(t *testing.T) {
 		{"backoff_limit", types.Int64Value(0), false},
 		{"manual_selector", types.BoolValue(true), false},
 		{"completions", types.Int64Value(2), true},
-		{"backoff_limit_per_index", types.Int64Value(0), true},
+		{"backoff_limit_per_index", types.Int64Value(2), true},
 		{"completion_mode", types.StringValue("Indexed"), true},
 	} {
 		t.Run(tc.field, func(t *testing.T) {
@@ -317,24 +317,12 @@ func TestJobSelectorReplacementRules(t *testing.T) {
 	}
 }
 
-func TestJobIndexedBackoffRemovalRequiresReplacement(t *testing.T) {
+func TestJobIndexedBackoffRemovalDefaults(t *testing.T) {
 	ctx := context.Background()
 	server, err := mux.MuxServer(ctx, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	state := jobUnitState(t, &batchv1.JobV1{}, jobUnitStateJSON)
-	model := jobUnitModel(t, state)
-	jobUnitSpec(&model, "completion_mode", types.StringValue("Indexed"))
-	jobUnitSpec(&model, "backoff_limit_per_index", types.Int64Value(0))
-	state = jobUnitModelState(t, state, model)
-	jobUnitSpec(&model, "backoff_limit_per_index", types.Int64Null())
-	proposed := jobUnitModelState(t, state, model)
-	model.ID = types.StringNull()
-	model.Metadata[0].Generation = types.Int64Null()
-	model.Metadata[0].UID = types.StringNull()
-	model.Metadata[0].ResourceVersion = types.StringNull()
-	config := jobUnitModelState(t, state, model)
 	dynamic := func(value tfsdk.State) *tfprotov6.DynamicValue {
 		result, err := tfprotov6.NewDynamicValue(value.Raw.Type(), value.Raw)
 		if err != nil {
@@ -342,26 +330,61 @@ func TestJobIndexedBackoffRemovalRequiresReplacement(t *testing.T) {
 		}
 		return &result
 	}
-	response, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
-		TypeName: "kubernetes_job_v1", PriorState: dynamic(state),
-		ProposedNewState: dynamic(proposed), Config: dynamic(config),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, diagnostic := range response.Diagnostics {
-		if diagnostic.Severity == tfprotov6.DiagnosticSeverityError {
-			t.Fatal(diagnostic)
-		}
-	}
-	found := false
-	for _, replacement := range response.RequiresReplace {
-		if strings.Contains(replacement.String(), "backoff_limit_per_index") {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("removing an explicit Indexed backoff limit of zero must require replacement: %v", response.RequiresReplace)
+	for _, test := range []struct {
+		name    string
+		value   int64
+		replace bool
+	}{
+		{"zero-no-op", 0, false},
+		{"nonzero-replacement", 2, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			state := jobUnitState(t, &batchv1.JobV1{}, jobUnitStateJSON)
+			model := jobUnitModel(t, state)
+			jobUnitSpec(&model, "completion_mode", types.StringValue("Indexed"))
+			jobUnitSpec(&model, "backoff_limit_per_index", types.Int64Value(test.value))
+			state = jobUnitModelState(t, state, model)
+			jobUnitSpec(&model, "backoff_limit_per_index", types.Int64Null())
+			proposed := jobUnitModelState(t, state, model)
+			model.ID = types.StringNull()
+			model.Metadata[0].Generation = types.Int64Null()
+			model.Metadata[0].UID = types.StringNull()
+			model.Metadata[0].ResourceVersion = types.StringNull()
+			config := jobUnitModelState(t, state, model)
+			response, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
+				TypeName: "kubernetes_job_v1", PriorState: dynamic(state),
+				ProposedNewState: dynamic(proposed), Config: dynamic(config),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, diagnostic := range response.Diagnostics {
+				if diagnostic.Severity == tfprotov6.DiagnosticSeverityError {
+					t.Fatal(diagnostic)
+				}
+			}
+			found := false
+			for _, replacement := range response.RequiresReplace {
+				if strings.Contains(replacement.String(), "backoff_limit_per_index") {
+					found = true
+				}
+			}
+			if found != test.replace {
+				t.Fatalf("replacement paths = %v, want replacement %t", response.RequiresReplace, test.replace)
+			}
+			raw, err := response.PlannedState.Unmarshal(state.Raw.Type())
+			if err != nil {
+				t.Fatal(err)
+			}
+			planned := tfsdk.State{Schema: state.Schema, Raw: raw}
+			var limit types.Int64
+			if diagnostics := planned.GetAttribute(ctx, path.Root("spec").AtListIndex(0).AtName("backoff_limit_per_index"), &limit); diagnostics.HasError() {
+				t.Fatal(diagnostics)
+			}
+			if limit != types.Int64Value(0) {
+				t.Fatalf("removed backoff limit = %v, want default zero", limit)
+			}
+		})
 	}
 }
 

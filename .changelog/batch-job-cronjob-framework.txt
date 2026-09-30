@@ -7,11 +7,15 @@
 ```
 
 ```release-note:note
-`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Absent optional, non-computed leaf values can now appear as null rather than SDKv2 zero or empty values. Upgrading existing state can require a one-time in-place state-normalization update and change outputs, even with unchanged configuration; the first migration plan is not necessarily empty. Review the upgrade plan and verify that normalization preserves the Kubernetes object's identity and desired specification.
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Absent optional, non-computed leaf values can now appear as null rather than SDKv2 zero or empty values. The Indexed Job retry fields `backoff_limit_per_index` and `max_failed_indexes` retain provider defaults of `0` instead of normalizing to null. Upgrading existing state can require a one-time in-place state-normalization update and change outputs, even with unchanged configuration; the first migration plan is not necessarily empty. Review the upgrade plan and verify that normalization preserves the Kubernetes object's identity and desired specification.
 ```
 
 ```release-note:bug
-`resource/kubernetes_job_v1`: Apply updates and removals of `ttl_seconds_after_finished` and `max_failed_indexes` to Kubernetes.
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Preserve provider `3.2.1` zero defaults for `backoff_limit_per_index` and `max_failed_indexes`, fixing unintended replacement or changes to Indexed Job retry settings during Framework upgrades with omitted arguments. These are provider defaults, not Kubernetes defaults. Omission or removal selects `0`, not an unset API field or unlimited failures; implicit zero values remain unchanged. Removing a nonzero `backoff_limit_per_index` still requires replacement of either resource, while removing a nonzero `max_failed_indexes` updates it to `0` in place.
+```
+
+```release-note:bug
+`resource/kubernetes_job_v1`: Apply updates to `ttl_seconds_after_finished` and `max_failed_indexes` to Kubernetes. Removing `ttl_seconds_after_finished` clears its API field; removing `max_failed_indexes` resets it to the provider default `0`.
 ```
 
 ```release-note:bug

@@ -13,7 +13,7 @@ This guide describes the breaking changes when `kubernetes_job_v1` and `kubernet
 
 - Selected nested blocks now require **list-of-object attribute** syntax, such as `resources = [{ ... }]`. Their values remain lists, so indexed references do not change.
 - A `dynamic` block cannot generate one of these attributes. Replace it with a list expression.
-- Absent optional, non-computed leaf fields can be represented as `null` instead of SDKv2 zero or empty values. Review outputs and explicit empty values as well as resource actions.
+- Absent optional, non-computed leaf fields can be represented as `null` instead of SDKv2 zero or empty values. The Indexed Job retry fields `backoff_limit_per_index` and `max_failed_indexes` retain provider defaults of `0` and are exceptions to this normalization. Review outputs and explicit empty values as well as resource actions.
 - Editing a Job's immutable `pod_failure_policy` rules now requires replacement instead of an ineffective in-place update. Corresponding CronJob template rule edits remain in-place updates.
 
 Other blocks remain blocks. In particular, keep `metadata`, `spec`, `job_template`, `template`, `container`, `init_container`, `pod_failure_policy`, `volume`, `affinity`, and `timeouts` in block syntax.
@@ -246,8 +246,6 @@ For example, plans from provider `3.2.1` state show the following representation
 | Relative path | Legacy state | Framework plan |
 | --- | --- | --- |
 | `active_deadline_seconds` | `0` | `null` |
-| `backoff_limit_per_index` | `0` | `null` |
-| `max_failed_indexes` | `0` | `null` |
 | `ttl_seconds_after_finished` | `""` | `null` |
 | `template.metadata.generate_name` | `""` | `null` |
 | `template.spec.active_deadline_seconds` | `0` | `null` |
@@ -265,6 +263,24 @@ Upgrades from provider `3.2.1` can require a **one-time in-place Terraform updat
 Do not assume every post-upgrade diff is harmless normalization. Review the plan's resource actions, replacement reasons, and output changes separately. No blanket no-op plan is promised for every existing configuration.
 
 For unchanged configuration, a normalization-only upgrade must not delete or recreate the Job or CronJob, or change its desired workload specification. When verifying an upgrade, check both the Terraform actions and continuity of the Kubernetes object's UID and desired specification. A successful apply or an in-place action alone is not enough to establish that only state changed.
+
+### Indexed Job retry defaults
+
+`backoff_limit_per_index` and `max_failed_indexes` are exceptions to optional-field null normalization. Both are optional/computed attributes with explicit **provider defaults of `0`**, not Kubernetes API defaults. For Indexed Jobs and CronJob templates, released provider `3.2.1` sends `0` to Kubernetes for either omitted field. The Framework implementation preserves that behavior:
+
+| Relative path | Provider `3.2.1` omitted value | Framework omitted value |
+| --- | --- | --- |
+| `backoff_limit_per_index` | `0` | `0` |
+| `max_failed_indexes` | `0` | `0` |
+
+These paths are relative to `spec` for Jobs or `spec.job_template.spec` for CronJobs. Retaining the defaults repairs unintended replacements when both arguments were omitted and unintended removal of the API's `maxFailedIndexes` value when only `max_failed_indexes` was omitted. Unchanged configuration must preserve these retry settings on upgrade; any normalization of other fields must not alter them.
+
+Omitting or removing either argument selects `0`. It does not unset the corresponding Indexed Job API field or select unlimited failures. Leaving an implicit `0` omitted, or removing an explicit `0`, does not change these retry settings. Removing a nonzero value is a real configuration change:
+
+- `backoff_limit_per_index` returns to `0` and requires replacement of either resource, including a CronJob. The provider retains this immutable-field behavior even though Kubernetes supports updates to CronJob templates.
+- `max_failed_indexes` returns to `0` through an in-place update of either resource; it does not clear the API field to `nil`.
+
+This exception does not change removal behavior for `ttl_seconds_after_finished` or Job-spec `active_deadline_seconds`: removing a configured value still clears the corresponding API field.
 
 ### Quantity formatting and admission-populated values
 
@@ -332,7 +348,7 @@ For Jobs, `wait_for_completion` defaults to `true` on import, including identity
 
 ## Related behavior corrections
 
-- Job updates now send changes to `ttl_seconds_after_finished` and `max_failed_indexes` to Kubernetes, including clearing those optional fields. Normal Kubernetes validation and feature availability still apply.
+- Job updates now send changes to `ttl_seconds_after_finished` and `max_failed_indexes` to Kubernetes. Removing `ttl_seconds_after_finished` clears the API field; removing `max_failed_indexes` resets it to the provider default `0` rather than clearing the API field. Normal Kubernetes validation and feature availability still apply.
 - CronJob updates preserve server-managed metadata and unmanaged labels/annotations on the CronJob, Job template, and Pod template instead of replacing them with only Terraform-managed metadata.
 - Job `create`, `update`, and `delete` timeouts each default to `1m`. `wait_for_completion` defaults to `true` and controls waiting for completion on create/update only. Deletion still uses its own timeout and waits for the Job to disappear. Replacement creates use the `create` timeout, not the in-place `update` timeout.
 

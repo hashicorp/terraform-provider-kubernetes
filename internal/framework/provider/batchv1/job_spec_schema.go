@@ -109,8 +109,8 @@ func jobSpecBlock(updatable bool) schema.ListNestedBlock {
 					Validators: []validator.Int64{int64validator.AtLeast(0)},
 				},
 				"backoff_limit_per_index": schema.Int64Attribute{
-					Description: "Maximum retries per index in an Indexed job. Changes require replacement, including within a CronJob template.",
-					Optional:    true, PlanModifiers: immutableInt,
+					Description: "Maximum retries per index in an Indexed job. Omission uses the provider default of zero rather than unsetting the API field. Changes require replacement, including within a CronJob template.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(0), PlanModifiers: immutableInt,
 					Validators: []validator.Int64{int64validator.AtLeast(0)},
 				},
 				"completions": schema.Int64Attribute{
@@ -129,8 +129,8 @@ func jobSpecBlock(updatable bool) schema.ListNestedBlock {
 					Description: "Whether the caller controls pod labels and selectors.",
 				},
 				"max_failed_indexes": schema.Int64Attribute{
-					Description: "Maximum number of failed indexes before an Indexed job is marked failed and its remaining pods are terminated. Requires backoff_limit_per_index.",
-					Optional:    true, Validators: []validator.Int64{int64validator.AtLeast(0)},
+					Description: "Maximum number of failed indexes before an Indexed job is marked failed and its remaining pods are terminated. Requires backoff_limit_per_index. Omission uses the provider default of zero rather than unsetting the API field.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(0), Validators: []validator.Int64{int64validator.AtLeast(0)},
 				},
 				"parallelism": schema.Int64Attribute{
 					Optional: true, Computed: true, Default: int64default.StaticInt64(1),

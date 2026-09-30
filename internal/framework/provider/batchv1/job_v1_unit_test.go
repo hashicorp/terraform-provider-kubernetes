@@ -48,7 +48,7 @@ const jobUnitStateJSON = `{
 	"metadata":[{"name":"test","namespace":"default","generate_name":null,
 		"annotations":null,"labels":null,"generation":1,"uid":"uid-1","resource_version":"1"}],
 	"spec":[{"backoff_limit":6,"completions":1,"completion_mode":"NonIndexed",
-		"manual_selector":false,"parallelism":1,
+		"manual_selector":false,"parallelism":1,"backoff_limit_per_index":0,"max_failed_indexes":0,
 		"template":[{"metadata":[{"name":"","generate_name":null,"annotations":null,"labels":null}],
 			"spec":[{"restart_policy":"Never","automount_service_account_token":true,
 				"dns_policy":"ClusterFirst","enable_service_links":true,"host_ipc":false,
@@ -373,8 +373,8 @@ func TestJobUpdateMutableFields(t *testing.T) {
 		{"ttl_seconds_after_finished", "ttlSecondsAfterFinished", types.StringNull(), types.StringValue("0"), float64(0)},
 		{"ttl_seconds_after_finished", "ttlSecondsAfterFinished", types.StringValue("90"), types.StringNull(), nil},
 		{"max_failed_indexes", "maxFailedIndexes", types.Int64Null(), types.Int64Value(0), float64(0)},
-		{"max_failed_indexes", "maxFailedIndexes", types.Int64Value(0), types.Int64Null(), nil},
-		{"max_failed_indexes", "maxFailedIndexes", types.Int64Value(3), types.Int64Null(), nil},
+		{"max_failed_indexes", "maxFailedIndexes", types.Int64Value(0), types.Int64Value(1), float64(1)},
+		{"max_failed_indexes", "maxFailedIndexes", types.Int64Value(3), types.Int64Value(0), float64(0)},
 		{"active_deadline_seconds", "activeDeadlineSeconds", types.Int64Null(), types.Int64Value(30), float64(30)},
 		{"active_deadline_seconds", "activeDeadlineSeconds", types.Int64Value(30), types.Int64Null(), nil},
 		{"backoff_limit", "backoffLimit", types.Int64Value(6), types.Int64Value(0), float64(0)},
@@ -393,6 +393,7 @@ func TestJobUpdateMutableFields(t *testing.T) {
 				job := jobUnitAPIJob()
 				if tc.field == "max_failed_indexes" {
 					job.Spec.CompletionMode = ptr.To(batchapi.IndexedCompletion)
+					job.Spec.BackoffLimitPerIndex = ptr.To(int32(0))
 				}
 				encoded, err := json.Marshal(job)
 				if err != nil {

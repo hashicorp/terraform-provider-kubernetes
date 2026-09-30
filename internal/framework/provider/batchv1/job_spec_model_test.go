@@ -15,7 +15,8 @@ import (
 	batchapi "k8s.io/api/batch/v1"
 )
 
-func TestJobSpecIndexedOptionalIntegerPresence(t *testing.T) {
+// Raw values bypass schema defaults; expansion still preserves pointer presence.
+func TestJobSpecIndexedRawIntegerPresence(t *testing.T) {
 	ctx := context.Background()
 	var response resource.SchemaResponse
 	(&JobV1{}).Schema(ctx, resource.SchemaRequest{}, &response)
@@ -23,7 +24,7 @@ func TestJobSpecIndexedOptionalIntegerPresence(t *testing.T) {
 		name, value string
 		present     bool
 	}{
-		{"omitted", "null", false},
+		{"raw null", "null", false},
 		{"explicit zero", "0", true},
 	} {
 		t.Run(test.name, func(t *testing.T) {

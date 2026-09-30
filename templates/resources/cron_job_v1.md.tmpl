@@ -11,6 +11,15 @@ description: |-
 
 ~> The Framework migration changes selected nested blocks to list-of-object attributes. Review the [Job and CronJob migration guide](../guides/batch-v1-framework-migration.md) before upgrading existing configurations.
 
+## Indexed Job retry defaults
+
+`spec.job_template.spec.backoff_limit_per_index` and `spec.job_template.spec.max_failed_indexes` have **provider defaults of `0`**, preserving provider `3.2.1` behavior for Indexed Job templates. These are not Kubernetes API defaults. These two fields are exceptions to the optional-field null normalization described in the migration guide.
+
+Omitting or removing either argument selects `0`; it does not unset the corresponding Indexed Job template API field or select unlimited failures. Leaving an implicit `0` omitted, or removing an explicit `0`, does not change these retry settings.
+
+- Changing a nonzero `backoff_limit_per_index` to its default `0`, including by removing the argument, requires replacement of the CronJob. The provider retains this replacement behavior even though Kubernetes supports updates to CronJob templates.
+- Changing a nonzero `max_failed_indexes` to its default `0`, including by removing the argument, updates the CronJob in place.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage

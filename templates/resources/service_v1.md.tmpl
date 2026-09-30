@@ -19,6 +19,99 @@ description: |-
 
 {{tffile "examples/resources/service_v1/example_2.tf"}}
 
+## Framework migration: session affinity syntax
+
+The `metadata`, `spec`, and `port` blocks keep their existing syntax. If you
+configure `session_affinity_config`, use list-of-object assignment for it and
+its nested `client_ip`. This allows omitted values to remain API-computed without
+changing the stored list shape.
+
+Before:
+
+```terraform
+session_affinity_config {
+  client_ip {
+    timeout_seconds = 300
+  }
+}
+```
+
+After, inside the same `spec` block:
+
+```terraform
+session_affinity_config = [{
+  client_ip = [{
+    timeout_seconds = 300
+  }]
+}]
+```
+
+An empty `session_affinity_config {}` becomes `session_affinity_config = [{}]`.
+If the configuration omitted session affinity configuration entirely, keep it
+omitted. The syntax change must not alter the Service's affinity settings.
+
+With `session_affinity = "ClientIP"`, do not use `[]` for either
+`session_affinity_config` or `client_ip`: Kubernetes requires a populated
+configuration. Use omission, `null`, or `[{}]` for API-computed values.
+
+### Empty collections and automatic ports
+
+Some SDK states store `null` for explicitly empty `metadata.annotations`,
+`metadata.labels`, `spec.selector`, `spec.external_ips`, or
+`spec.load_balancer_source_ranges`. Keeping `{}` or `[]` in configuration can
+produce a state-only normalization to an empty collection. The Service is not
+patched for this normalization, but expressions that distinguish `null` from
+an empty collection can change. Review dependent resources as well as the Service.
+
+For automatic node-port allocation, omit `node_port` or set it to `null`; do not
+set it to `0`. The Framework resource rejects an explicit zero when the Service
+would allocate a port. Released SDK versions could allocate a port while still
+planning it back to zero and exposing zero in outputs. Remove the zero setting
+using the previous provider version, review any output or dependent-resource
+changes, and establish a clean plan before migrating.
+
+An explicit `target_port = ""` or `target_port = "0"` must also become omission or `null`.
+Kubernetes resolves these markers to a concrete target port. The Framework rejects
+these markers instead of recording a value that differs from the API.
+Omitting the argument retains an existing computed target port.
+
+For Services other than `ExternalName`, replace `cluster_ips = []` and
+`ip_families = []` with omission or `null`. Kubernetes populates these lists.
+The SDK could produce perpetual updates or a replacement plan for these empty
+markers; establish a clean SDK plan before migration. The Framework rejects
+them before API writes rather than storing empty lists over existing allocations.
+
+## Migration from `kubernetes_service`
+
+Terraform 1.8 or later can move an existing Service from the deprecated
+`kubernetes_service` resource to `kubernetes_service_v1`:
+
+```terraform
+moved {
+  from = kubernetes_service.example
+  to   = kubernetes_service_v1.example
+}
+```
+
+Change the existing resource declaration to `kubernetes_service_v1` and update
+references to its Terraform address. Do not retain both resource declarations or
+import a second copy of the same Service. Keep the provider connection pointed
+at the same Kubernetes cluster, and keep the name, namespace, ports, selectors
+and other service settings unchanged.
+
+A whole-resource move also covers existing `count` or `for_each` instances when
+their instance keys stay unchanged. A same-type address rename can use a
+`moved` block with `kubernetes_service_v1` on both sides.
+
+An existing `kubernetes_service_v1` resource needs no `moved` block merely to
+upgrade the provider. The Kubernetes Service should retain its UID, cluster IPs
+and allocated ports. Review the plan before applying: an unchanged migration must
+not delete or replace the Service or change its networking settings. Stop and
+investigate an unexpected replacement rather than applying it.
+
+The reverse cross-type move to `kubernetes_service` is not supported: that
+deprecated destination remains on SDKv2.
+
 ## Import
 
 Service can be imported using its namespace and name, e.g.

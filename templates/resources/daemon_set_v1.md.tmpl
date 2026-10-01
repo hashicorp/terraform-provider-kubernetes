@@ -15,6 +15,10 @@ description: |-
 
 {{tffile "examples/resources/daemon_set_v1/example_1.tf"}}
 
+## Migration to Plugin Framework
+
+Existing `kubernetes_daemon_set_v1` state is supported without re-importing or editing state. No `moved` block is needed when keeping the same resource address. Some nested arguments now use list-assignment syntax; see the [workload migration guide](../guides/apps-v1-framework-migration.md) before upgrading.
+
 ## Import
 
 DaemonSet can be imported using the namespace and name, e.g.

@@ -5,6 +5,7 @@ package common
 
 import (
 	"context"
+	"maps"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -20,6 +21,40 @@ import (
 // see FIX_namespace_v1_metadata_patch_ops.md for this provider-wide limitation.
 func MetadataPatchOps(pathPrefix string, state, plan MetadataModel) kubernetes.PatchOperations {
 	return BaseMetadataPatchOps(pathPrefix, state.MetadataBase, plan.MetadataBase)
+}
+
+// MetadataPatchOpsAgainstLive preserves unmanaged keys, including when adding the
+// first managed key to a map already populated by admission or another controller.
+func MetadataPatchOpsAgainstLive(pathPrefix string, state, plan MetadataModel, live metav1.ObjectMeta) kubernetes.PatchOperations {
+	ops := metadataMapPatchOpsAgainstLive(pathPrefix+"annotations", state.Annotations, plan.Annotations, live.Annotations)
+	return append(ops, metadataMapPatchOpsAgainstLive(pathPrefix+"labels", state.Labels, plan.Labels, live.Labels)...)
+}
+
+func metadataMapPatchOpsAgainstLive(path string, state, plan types.Map, live map[string]string) kubernetes.PatchOperations {
+	if state.Equal(plan) {
+		return nil
+	}
+	oldManaged, newManaged := ExpandMapForPatch(state), ExpandMapForPatch(plan)
+	before := make(map[string]interface{}, len(live))
+	for key, value := range live {
+		before[key] = value
+	}
+	after := maps.Clone(before)
+	for key := range oldManaged {
+		if _, exists := newManaged[key]; !exists {
+			delete(after, key)
+		}
+	}
+	for key, value := range newManaged {
+		if previous, existed := oldManaged[key]; existed && previous == value {
+			continue
+		}
+		after[key] = value
+	}
+	if maps.Equal(before, after) {
+		return nil
+	}
+	return kubernetes.DiffStringMap(path, before, after)
 }
 
 // BaseMetadataPatchOps diffs the mutable maps shared by all metadata variants.

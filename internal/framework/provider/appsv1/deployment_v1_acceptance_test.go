@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package appsv1_test
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func TestAccKubernetesDeploymentV1_minimal(t *testing.T) {
@@ -28,9 +29,9 @@ func TestAccKubernetesDeploymentV1_minimal(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_minimal(name, imageName),
@@ -55,9 +56,9 @@ func TestAccKubernetesDeploymentV1_identity(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},
@@ -91,9 +92,9 @@ func TestAccKubernetesDeploymentV1_basic(t *testing.T) {
 	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_basic(name, imageName),
@@ -132,9 +133,9 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 	initCommand := "until nslookup " + name + "-init-service." + namespace + ".svc.cluster.local; do echo waiting for init-service; sleep 2; done"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesConfig_ignoreAnnotations() +
@@ -238,9 +239,9 @@ func TestAccKubernetesDeploymentV1_generatedName(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_generatedName(prefix, imageName),
@@ -273,9 +274,9 @@ func TestAccKubernetesDeploymentV1_with_security_context(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithSecurityContext(deploymentName, imageName),
@@ -301,9 +302,9 @@ func TestAccKubernetesDeploymentV1_with_security_context_run_as_group(t *testing
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithSecurityContextRunAsGroup(deploymentName, imageName),
@@ -329,9 +330,9 @@ func TestAccKubernetesDeploymentV1_with_security_context_sysctl(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithSecurityContextSysctl(deploymentName, imageName),
@@ -362,9 +363,9 @@ func TestAccKubernetesDeploymentV1_with_tolerations(t *testing.T) {
 	operator := "Equal"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithTolerations(deploymentName, imageName, key, operator, "", &tolerationSeconds),
@@ -392,9 +393,9 @@ func TestAccKubernetesDeploymentV1_with_tolerations_unset_toleration_seconds(t *
 	value := "value"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithTolerations(deploymentName, imageName, key, operator, value, nil),
@@ -422,9 +423,9 @@ func TestAccKubernetesDeploymentV1_with_well_known_tolerations(t *testing.T) {
 	operator := "Exists"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithTolerations(deploymentName, imageName, key, operator, "", &tolerationSeconds),
@@ -449,9 +450,9 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_exec(t *t
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingExec(deploymentName, imageName),
@@ -479,9 +480,9 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_http_get(
 	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingHTTPGet(deploymentName, imageName),
@@ -510,9 +511,9 @@ func TestAccKubernetesDeploymentV1_with_container_liveness_probe_using_tcp(t *te
 	imageName := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLivenessProbeUsingTCP(deploymentName, imageName),
@@ -536,9 +537,9 @@ func TestAccKubernetesDeploymentV1_with_container_lifecycle(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithLifeCycle(deploymentName, imageName),
@@ -568,9 +569,9 @@ func TestAccKubernetesDeploymentV1_with_container_security_context(t *testing.T)
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContext(deploymentName, imageName),
@@ -609,9 +610,9 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_run_as_group(
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextRunAsGroup(deploymentName, imageName),
@@ -642,9 +643,9 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_seccomp_profi
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.19.0") },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfile(deploymentName, imageName, "Unconfined"),
@@ -674,9 +675,9 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_seccomp_local
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfileLocalhost(deploymentName, imageName),
@@ -701,9 +702,9 @@ func TestAccKubernetesDeploymentV1_with_volume_mount(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithVolumeMounts(secretName, deploymentName, imageName),
@@ -737,9 +738,9 @@ func TestAccKubernetesDeploymentV1_ForceNew(t *testing.T) {
 	imageName1 := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_ForceNew("secret1", "label1", "deployment1", imageName),
@@ -800,9 +801,9 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithResourceRequirements(deploymentName, imageName),
@@ -856,9 +857,9 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_volume(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumes(deploymentName, imageName),
@@ -895,9 +896,9 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_huge_page(t *testing.T) {
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithEmptyDirHugePage(deploymentName, imageName),
@@ -921,9 +922,9 @@ func TestAccKubernetesDeploymentV1Update_basic(t *testing.T) {
 	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1Config_basic(deploymentName, imageName),
@@ -966,9 +967,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate(t *tes
 	resourceName := "kubernetes_deployment_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName),
@@ -1013,9 +1014,9 @@ func TestAccKubernetesDeploymentV1_with_share_process_namespace(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithShareProcessNamespace(deploymentName, imageName),
@@ -1036,9 +1037,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "30%", "40%", imageName),
@@ -1063,9 +1064,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "200%", "0%", imageName),
@@ -1090,9 +1091,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "0", "1", imageName),
@@ -1117,9 +1118,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "1", "0", imageName),
@@ -1144,9 +1145,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "1", "2", imageName),
@@ -1171,9 +1172,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_recreate(t *testing.
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "Recreate", imageName),
@@ -1196,9 +1197,9 @@ func TestAccKubernetesDeploymentV1_with_host_aliases(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigHostAliases(deploymentName, imageName),
@@ -1224,9 +1225,9 @@ func TestAccKubernetesDeploymentV1_with_resource_field_selector(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				ExpectError: regexp.MustCompile("quantities must match the regular expression"),
@@ -1277,9 +1278,9 @@ func TestAccKubernetesDeploymentV1_config_with_automount_service_account_token(t
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithAutomountServiceAccountToken(deploymentName, imageName),
@@ -1299,9 +1300,9 @@ func TestAccKubernetesDeploymentV1_with_restart_policy(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDeploymentV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, "Never"),
@@ -1336,7 +1337,7 @@ func testAccCheckKubernetesDeploymentForceNew(old, new *appsv1.Deployment, wantN
 }
 
 func testAccCheckKubernetesDeploymentV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccWorkloadClient()
 	if err != nil {
 		return err
 	}
@@ -1352,12 +1353,14 @@ func testAccCheckKubernetesDeploymentV1Destroy(s *terraform.State) error {
 			return err
 		}
 
-		resp, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("Deployment still exists: %s", rs.Primary.ID)
-			}
+		_, err = conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			continue
 		}
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("Deployment still exists: %s", rs.Primary.ID)
 	}
 
 	return nil
@@ -1369,7 +1372,7 @@ func getDeploymentFromResourceName(s *terraform.State, n string) (*appsv1.Deploy
 		return nil, fmt.Errorf("Not found: %s", n)
 	}
 
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccWorkloadClient()
 	if err != nil {
 		return nil, err
 	}
@@ -1397,6 +1400,15 @@ func testAccCheckKubernetesDeploymentV1Exists(n string, obj *appsv1.Deployment) 
 		*obj = *d
 		return nil
 	}
+}
+
+func testAccKubernetesConfig_ignoreAnnotations() string {
+	return `provider "kubernetes" {
+  ignore_annotations = [
+    "cloud\\.google\\.com\\/neg",
+  ]
+}
+`
 }
 
 func testAccKubernetesDeploymentV1Config_minimal(name, imageName string) string {
@@ -1520,12 +1532,12 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
             }
           }
 
-          resources {
+          resources = [{
             requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -1632,7 +1644,7 @@ resource "kubernetes_deployment_v1" "test" {
               }
             }
           }
-          resources {
+          resources = [{
             requests = {
               memory = "%s"
               cpu    = "50m"
@@ -1641,7 +1653,7 @@ resource "kubernetes_deployment_v1" "test" {
               memory = "100Mi"
               cpu    = "100m"
             }
-          }
+          }]
           env {
             name = "LIMITS_CPU"
             value_from {
@@ -2583,9 +2595,9 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirements(deploymentName,
           image = "%s"
           name  = "containername"
 
-          resources {
+          resources = [{
             limits = {
-              cpu          = "0.5"
+              cpu          = "500m"
               memory       = "512Mi"
               "nvidia/gpu" = "1"
             }
@@ -2595,7 +2607,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirements(deploymentName,
               memory       = "50Mi"
               "nvidia/gpu" = "1"
             }
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -2636,10 +2648,10 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyResourceRequirements(deployment
           image = "%s"
           name  = "containername"
 
-          resources {
+          resources = [{
             limits   = {}
             requests = {}
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -2680,12 +2692,12 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirementsLimitsOnly(deplo
           image = "%s"
           name  = "containername"
 
-          resources {
+          resources = [{
             limits = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -2726,12 +2738,12 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirementsRequestsOnly(dep
           image = "%s"
           name  = "containername"
 
-          resources {
+          resources = [{
             requests = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -2918,9 +2930,9 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, s
       }
     }
 
-    strategy {
+    strategy = [{
       type = "%s"
-    }
+    }]
 
     template {
       metadata {
@@ -3004,14 +3016,14 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(depl
       }
     }
 
-    strategy {
+    strategy = [{
       type = "RollingUpdate"
 
-      rolling_update {
+      rolling_update = [{
         max_surge       = "%s"
         max_unavailable = "%s"
-      }
-    }
+      }]
+    }]
 
     template {
       metadata {
@@ -3077,12 +3089,12 @@ func testAccKubernetesDeploymentV1ConfigHostAliases(name string, imageName strin
           name    = "tf-acc-test"
           command = ["sleep", "300"]
 
-          resources {
+          resources = [{
             requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
-          }
+          }]
         }
 
         host_aliases {
@@ -3224,11 +3236,11 @@ func testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageN
           image   = "%s"
           name    = "containername"
           command = ["sleep", "300"]
-          resources {
+          resources = [{
             limits = {
               memory = "512Mi"
             }
-          }
+          }]
           env {
             name = "K8S_LIMITS_CPU"
             value_from {

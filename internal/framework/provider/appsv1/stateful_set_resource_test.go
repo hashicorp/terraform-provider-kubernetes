@@ -1,13 +1,14 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package appsv1_test
 
 import (
 	"context"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -15,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -27,9 +29,9 @@ func TestAccKubernetesStatefulSetV1_minimal(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName),
@@ -50,9 +52,9 @@ func TestAccKubernetesStatefulSetV1_identity(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},
@@ -91,8 +93,8 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigBasic(name, imageName),
@@ -168,8 +170,8 @@ func TestAccKubernetesStatefulSetV1_basic_idempotency(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigBasic(name, imageName),
@@ -201,8 +203,8 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName),
@@ -344,9 +346,9 @@ func TestAccKubernetesStatefulSetV1_waitForRollout(t *testing.T) {
 	resourceName := "kubernetes_stateful_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInEks(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t); skipIfRunningInEks(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigWaitForRollout(name, imageName, "true", "rev1"),
@@ -383,9 +385,9 @@ func TestAccKubernetesStatefulSetV1_minimalWithTemplateNamespace(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName),
@@ -414,6 +416,88 @@ func TestAccKubernetesStatefulSetV1_minimalWithTemplateNamespace(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStatefulSetV1_generatedName(t *testing.T) {
+	var before, after appsv1.StatefulSet
+	prefix := fmt.Sprintf("tf-acc-sts-%s-", strings.ToLower(acctest.RandStringFromCharSet(6, acctest.CharSetAlpha)))
+	resourceName := "kubernetes_stateful_set_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigGeneratedName(prefix, busyboxImage, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &before),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
+				),
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigGeneratedName(prefix, busyboxImage, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &after),
+					testAccCheckKubernetesStatefulSetForceNew(&before, &after, false),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.updated", "true"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesStatefulSetV1_disappears(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_stateful_set_v1.test"
+	config := testAccKubernetesStatefulSetV1ConfigMinimal(name, busyboxImage)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &appsv1.StatefulSet{}),
+					testAccDeleteKubernetesStatefulSetV1(resourceName),
+				),
+			},
+			{
+				Config: config,
+				Check:  testAccCheckKubernetesStatefulSetV1Exists(resourceName, &appsv1.StatefulSet{}),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesStatefulSetV1_importPlan(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_stateful_set_v1.test"
+	config := testAccKubernetesStatefulSetV1ConfigMinimal(name, busyboxImage)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{Config: config},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"wait_for_rollout",
+				},
+			},
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesStatefulSetForceNew(old, new *appsv1.StatefulSet, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -430,14 +514,14 @@ func testAccCheckKubernetesStatefulSetForceNew(old, new *appsv1.StatefulSet, wan
 }
 
 func testAccCheckKubernetesStatefulSetV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccWorkloadClient()
 	if err != nil {
 		return err
 	}
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_stateful_set_v1" {
+		if rs.Type != "kubernetes_stateful_set_v1" && rs.Type != "kubernetes_stateful_set" {
 			continue
 		}
 
@@ -451,6 +535,8 @@ func testAccCheckKubernetesStatefulSetV1Destroy(s *terraform.State) error {
 			if resp.Namespace == namespace && resp.Name == name {
 				return fmt.Errorf("StatefulSet still exists: %s: (Generation %#v)", rs.Primary.ID, resp.Status.ObservedGeneration)
 			}
+		} else if !errors.IsNotFound(err) {
+			return fmt.Errorf("checking StatefulSet %s deletion: %w", rs.Primary.ID, err)
 		}
 
 		// StatefulSet can create a PVC via volumeClaimTemplate. However, once the StatefulSet is removed, the PVC remains.
@@ -488,7 +574,7 @@ func getStatefulSetFromResourceName(s *terraform.State, n string) (*appsv1.State
 		return nil, fmt.Errorf("Not found: %s", n)
 	}
 
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccWorkloadClient()
 	if err != nil {
 		return nil, err
 	}
@@ -515,6 +601,30 @@ func testAccCheckKubernetesStatefulSetV1Exists(n string, obj *appsv1.StatefulSet
 		}
 		*obj = *d
 		return nil
+	}
+}
+
+func testAccDeleteKubernetesStatefulSetV1(n string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		obj, err := getStatefulSetFromResourceName(s, n)
+		if err != nil {
+			return err
+		}
+		conn, err := testAccWorkloadClient()
+		if err != nil {
+			return err
+		}
+		propagation := metav1.DeletePropagationForeground
+		if err := conn.AppsV1().StatefulSets(obj.Namespace).Delete(context.Background(), obj.Name, metav1.DeleteOptions{PropagationPolicy: &propagation}); err != nil {
+			return err
+		}
+		return wait.PollUntilContextTimeout(context.Background(), 500*time.Millisecond, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+			_, err := conn.AppsV1().StatefulSets(obj.Namespace).Get(ctx, obj.Name, metav1.GetOptions{})
+			if errors.IsNotFound(err) {
+				return true, nil
+			}
+			return false, err
+		})
 	}
 }
 
@@ -548,6 +658,46 @@ func testAccKubernetesStatefulSetV1ConfigMinimal(name, imageName string) string 
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesStatefulSetV1ConfigGeneratedName(prefix, imageName string, updated bool) string {
+	labels := ""
+	if updated {
+		labels = `
+    labels = {
+      updated = "true"
+    }`
+	}
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    generate_name = %q%s
+  }
+  spec {
+    selector {
+      match_labels = {
+        app = "ss-generated"
+      }
+    }
+    service_name = "ss-test-service"
+    template {
+      metadata {
+        labels = {
+          app = "ss-generated"
+        }
+      }
+      spec {
+        container {
+          name    = "ss-test"
+          image   = %q
+          command = ["sleep", "300"]
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+  wait_for_rollout = false
+}
+`, prefix, labels, imageName)
 }
 
 func testAccKubernetesStatefulSetV1Config_identity(name, imageName string) string {
@@ -614,10 +764,10 @@ func testAccKubernetesStatefulSetV1ConfigBasic(name, imageName string) string {
 
     service_name = "ss-test-service"
 
-    persistent_volume_claim_retention_policy {
+    persistent_volume_claim_retention_policy = [{
       when_deleted = "Delete"
       when_scaled  = "Delete"
-    }
+    }]
 
     template {
       metadata {
@@ -1389,10 +1539,10 @@ func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPol
 
     service_name = "ss-test-service"
 
-    persistent_volume_claim_retention_policy {
+    persistent_volume_claim_retention_policy = [{
       when_deleted = "Retain"
       when_scaled  = "Retain"
-    }
+    }]
 
     template {
       metadata {

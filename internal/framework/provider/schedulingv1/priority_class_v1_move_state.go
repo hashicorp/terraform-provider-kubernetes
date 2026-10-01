@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // ---------------------------------------------------------------------------
@@ -100,26 +101,25 @@ func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resour
 
 	m := raw.Metadata[0]
 
-	meta := MetadataModel{
-		Name:            types.StringValue(m.Name),
-		Generation:      types.Int64Value(m.Generation),
-		ResourceVersion: types.StringValue(m.ResourceVersion),
-		UID:             types.StringValue(m.UID),
+	meta := common.MetadataModel{
+		MetadataBase: common.MetadataBase{
+			Name:            types.StringValue(m.Name),
+			Generation:      types.Int64Value(m.Generation),
+			ResourceVersion: types.StringValue(m.ResourceVersion),
+			UID:             types.StringValue(m.UID),
+			// Empty maps → null to avoid perpetual plan diff.
+			// SDKv2 stored null for absent maps; if they're empty here they were also absent.
+			Annotations: buildMovedMap(ctx, m.Annotations, resp),
+			Labels:      buildMovedMap(ctx, m.Labels, resp),
+		},
+		// generate_name: empty string → null to avoid perpetual plan diff
+		GenerateName: types.StringNull(),
 	}
-
-	// generate_name: empty string → null to avoid perpetual plan diff
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	if m.GenerateName != "" {
 		meta.GenerateName = types.StringValue(m.GenerateName)
-	} else {
-		meta.GenerateName = types.StringNull()
-	}
-
-	// Empty maps → nil to avoid perpetual plan diff
-	if len(m.Annotations) > 0 {
-		meta.Annotations = flattenStringMap(m.Annotations)
-	}
-	if len(m.Labels) > 0 {
-		meta.Labels = flattenStringMap(m.Labels)
 	}
 
 	// preemption_policy: default to PreemptLowerPriority if empty (SDKv2 stores the default)
@@ -130,7 +130,7 @@ func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resour
 
 	moved := PriorityClassModel{
 		ID:               types.StringValue(raw.ID),
-		Metadata:         []MetadataModel{meta},
+		Metadata:         []common.MetadataModel{meta},
 		Value:            types.Int64Value(raw.Value),
 		Description:      types.StringValue(raw.Description),
 		GlobalDefault:    types.BoolValue(raw.GlobalDefault),
@@ -142,9 +142,22 @@ func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resour
 		return
 	}
 
-	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, PriorityClassIdentityModel{
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
 		Kind:       types.StringValue("PriorityClass"),
 		Name:       types.StringValue(m.Name),
 	})...)
+}
+
+// buildMovedMap converts a map[string]string from SDKv2 state into a types.Map.
+// Empty maps become types.MapNull — SDKv2 wrote null for absent maps, so an empty
+// map in SDKv2 state represents "not set" and should not become an empty {} in
+// Framework state (which would differ from a null and cause a perpetual diff).
+func buildMovedMap(ctx context.Context, m map[string]string, resp *resource.MoveStateResponse) types.Map {
+	if len(m) == 0 {
+		return types.MapNull(types.StringType)
+	}
+	val, diags := types.MapValueFrom(ctx, types.StringType, m)
+	resp.Diagnostics.Append(diags...)
+	return val
 }

@@ -94,8 +94,9 @@ func testAccPriorityClassV1MigrationFrom(t *testing.T, sdkv2Version, config stri
 	})
 }
 
-// testAccPriorityClassV1MigrationExpectingUpdate asserts the upgrade plans an in-place update
-// instead of nothing (e.g. for configs declaring explicit empty maps {} where SDKv2 wrote null).
+// testAccPriorityClassV1MigrationExpectingUpdate is testAccPriorityClassV1Migration for the shapes
+// that cannot migrate with an empty plan due to SDKv2 null vs Framework empty map handling.
+// It asserts the upgrade plans an in-place update instead of nothing.
 func testAccPriorityClassV1MigrationExpectingUpdate(t *testing.T, config string) {
 	t.Helper()
 

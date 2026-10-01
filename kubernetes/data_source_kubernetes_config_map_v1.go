@@ -52,7 +52,7 @@ func dataSourceKubernetesConfigMapV1Read(ctx context.Context, d *schema.Resource
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading config map %s", metadata.Name)
 	cfgMap, err := conn.CoreV1().ConfigMaps(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

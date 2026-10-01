@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package corev1_test
 
 import (
 	"fmt"
@@ -20,8 +20,8 @@ func TestAccKubernetesDataSourcePodV1_basic(t *testing.T) {
 	oneOrMore := regexp.MustCompile(`^[1-9][0-9]*$`)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourcePodV1_basic(name, imageName),
@@ -48,8 +48,8 @@ func TestAccKubernetesDataSourcePodV1_not_found(t *testing.T) {
 	name := fmt.Sprintf("ceci-n.est-pas-une-pod-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourcePodV1_nonexistent(name),

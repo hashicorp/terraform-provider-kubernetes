@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package corev1_test
 
 import (
 	"fmt"
@@ -20,9 +20,9 @@ func TestAccKubernetesPodV1_with_node_affinity_with_required_during_scheduling_i
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName),
@@ -69,9 +69,9 @@ func TestAccKubernetesPodV1_with_node_affinity_with_preferred_during_scheduling_
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName),
@@ -123,9 +123,9 @@ func TestAccKubernetesPodV1_with_pod_affinity_with_required_during_scheduling_ig
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -164,9 +164,9 @@ func TestAccKubernetesPodV1_with_pod_affinity_with_preferred_during_scheduling_i
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -208,9 +208,9 @@ func TestAccKubernetesPodV1_with_pod_anti_affinity_with_required_during_scheduli
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t); skipIfRunningInKind(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { testAccPodV1PreCheck(t); skipIfRunningInMinikube(t); skipIfRunningInKind(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -249,9 +249,9 @@ func TestAccKubernetesPodV1_with_pod_anti_affinity_with_preferred_during_schedul
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { testAccPodV1PreCheck(t); skipIfRunningInMinikube(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -322,12 +322,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "50m"
           memory = "64M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }
@@ -368,12 +368,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "50m"
           memory = "64M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }
@@ -420,12 +420,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "50m"
           memory = "50M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }
@@ -467,12 +467,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "50m"
           memory = "50M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }
@@ -524,12 +524,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }
@@ -585,12 +585,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }
@@ -642,12 +642,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }
@@ -702,12 +702,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = [{
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }
+      }]
     }
     termination_grace_period_seconds = 1
   }

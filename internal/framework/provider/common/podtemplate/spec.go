@@ -60,6 +60,7 @@ func FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, 
 		diagnostics.AddAttributeError(at, "Unable to Flatten Pod Template Specification", err.Error())
 		return types.ListNull(objectType), diagnostics
 	}
+	preserveProjectedSourceGroups(ctx, spec, baseline, raw)
 	blocks := map[string]bool{}
 	podSpecBlockPaths(podSpecObject(), "spec", blocks)
 	value := podSpecStateValue(ctx, types.ListType{ElemType: objectType}, raw, baseline, []string{"spec"}, "spec", blocks, &diagnostics)

@@ -26,7 +26,6 @@ var (
 	_ resource.ResourceWithIdentity        = (*StatefulSetV1)(nil)
 	_ resource.ResourceWithImportState     = (*StatefulSetV1)(nil)
 	_ resource.ResourceWithMoveState       = (*StatefulSetV1)(nil)
-	_ resource.ResourceWithModifyPlan      = (*StatefulSetV1)(nil)
 	_ resource.ResourceWithUpgradeIdentity = (*StatefulSetV1)(nil)
 	_ resource.ResourceWithUpgradeState    = (*StatefulSetV1)(nil)
 )
@@ -54,29 +53,6 @@ func (r *StatefulSetV1) Configure(_ context.Context, req resource.ConfigureReque
 		return
 	}
 	r.SDKv2Meta = meta
-}
-
-func (r *StatefulSetV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
-		return
-	}
-	var plan StatefulSetV1Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	var state StatefulSetV1Model
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
-	if resp.Diagnostics.HasError() || len(plan.Spec) != 1 || len(state.Spec) != 1 {
-		return
-	}
-	replicas := plan.Spec[0].Replicas
-	if replicas.IsNull() || replicas.IsUnknown() || replicas.ValueString() != "" {
-		return
-	}
-	prior := state.Spec[0].Replicas
-	if prior.IsNull() || prior.IsUnknown() {
-		return
-	}
-	plan.Spec[0].Replicas = prior
-	resp.Diagnostics.Append(resp.Plan.Set(ctx, &plan)...)
 }
 
 func (r *StatefulSetV1) sdkv2Meta() (kubernetes.KubeClientsets, kubernetes.MetadataFilters, diag.Diagnostics) {
@@ -107,6 +83,7 @@ func (r *StatefulSetV1) IdentitySchema(ctx context.Context, req resource.Identit
 func (r *StatefulSetV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	if req.ID != "" {
 		resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_rollout"), true)...)
 		return
 	}
 
@@ -127,6 +104,7 @@ func (r *StatefulSetV1) ImportState(ctx context.Context, req resource.ImportStat
 	}
 	id := fmt.Sprintf("%s/%s", ns, name)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_rollout"), false)...)
 }
 
 func (r *StatefulSetV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {

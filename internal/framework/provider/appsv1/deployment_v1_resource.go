@@ -22,6 +22,7 @@ var (
 	_ resource.ResourceWithConfigure       = (*DeploymentV1)(nil)
 	_ resource.ResourceWithIdentity        = (*DeploymentV1)(nil)
 	_ resource.ResourceWithImportState     = (*DeploymentV1)(nil)
+	_ resource.ResourceWithModifyPlan      = (*DeploymentV1)(nil)
 	_ resource.ResourceWithMoveState       = (*DeploymentV1)(nil)
 	_ resource.ResourceWithUpgradeIdentity = (*DeploymentV1)(nil)
 	_ resource.ResourceWithUpgradeState    = (*DeploymentV1)(nil)
@@ -68,6 +69,20 @@ func (d *DeploymentV1) Configure(_ context.Context, req resource.ConfigureReques
 		return
 	}
 	d.SDKv2Meta = sdkv2Meta
+}
+
+func (d *DeploymentV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() || req.Config.Raw.IsNull() {
+		return
+	}
+	plan, usePriorState, err := workloadNoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to normalize deployment plan", err.Error())
+		return
+	}
+	if usePriorState {
+		resp.Plan.Raw = plan
+	}
 }
 
 func (d *DeploymentV1) sdkv2Meta() (kubernetes.KubeClientsets, kubernetes.MetadataFilters, diag.Diagnostics) {
@@ -124,6 +139,8 @@ func (d *DeploymentV1) ImportState(ctx context.Context, req resource.ImportState
 	}
 	id := namespace + "/" + identity.Name.ValueString()
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+	// SDKv2 identity imports leave this local policy at its zero value.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("wait_for_rollout"), false)...)
 }
 
 func (d *DeploymentV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {

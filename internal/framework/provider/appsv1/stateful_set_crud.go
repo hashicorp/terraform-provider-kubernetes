@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -405,11 +406,13 @@ func (r *StatefulSetV1) patchStatefulSetSpec(ctx context.Context, plan, state St
 			previous, d := expandPodTemplateSpec(ctx, state.Template[0].Spec, at)
 			diags.Append(d...)
 			if !diags.HasError() {
-				merged, err := mergeStatefulSetPodSpec(previous, planned, live.Template.Spec)
-				if err != nil {
-					diags.AddAttributeError(at, "Unable to preserve live Pod specification", err.Error())
-				} else {
-					ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/template/spec", Value: merged})
+				if !reflect.DeepEqual(planned, previous) {
+					merged, err := mergeStatefulSetPodSpec(previous, planned, live.Template.Spec)
+					if err != nil {
+						diags.AddAttributeError(at, "Unable to preserve live Pod specification", err.Error())
+					} else {
+						ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/template/spec", Value: merged})
+					}
 				}
 			}
 		}

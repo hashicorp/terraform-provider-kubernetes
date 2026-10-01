@@ -17,8 +17,8 @@ import (
 func podContainerObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"args":                       podList(false, types.StringType),
-			"command":                    podList(false, types.StringType),
+			"args":                       podEmptyCompatibleList(types.StringType),
+			"command":                    podEmptyCompatibleList(types.StringType),
 			"image":                      podString(false, false, false, ""),
 			"image_pull_policy":          podString(false, true, false, ""),
 			"name":                       podString(true, false, false, ""),

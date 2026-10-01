@@ -1345,8 +1345,9 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsRequestsOnly(depl
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
 
           resources = [{
             requests = {

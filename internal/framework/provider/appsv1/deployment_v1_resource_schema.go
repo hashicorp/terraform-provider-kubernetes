@@ -49,7 +49,7 @@ func (d *DeploymentV1) Schema(ctx context.Context, _ resource.SchemaRequest, res
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"metadata": common.NamespacedMetadataSchema("deployment", true),
+			"metadata": common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("deployment", true)),
 			"spec":     deploymentSpecBlock(),
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true, Update: true, Delete: true}),
 		},
@@ -97,6 +97,7 @@ func deploymentSpecBlock() schema.ListNestedBlock {
 						stringvalidator.RegexMatches(regexp.MustCompile(`^$|^[+-]?\d+$`), "must be an integer string or empty"),
 					},
 					PlanModifiers: []planmodifier.String{
+						deploymentEmptyReplicasUseState{},
 						stringplanmodifier.UseStateForUnknown(),
 					},
 				},
@@ -112,6 +113,9 @@ func deploymentSpecBlock() schema.ListNestedBlock {
 					Description: "The deployment strategy used to replace existing pods with new ones.",
 					Optional:    true,
 					Computed:    true,
+					PlanModifiers: []planmodifier.List{
+						listplanmodifier.UseStateForUnknown(),
+					},
 					Validators: []validator.List{
 						listvalidator.SizeAtMost(1),
 					},
@@ -213,6 +217,14 @@ func selectorBlock() schema.ListNestedBlock {
 }
 
 func templateBlock() schema.ListNestedBlock {
+	spec := podtemplate.SpecBlock(podtemplate.Options{RestartPolicyAlways: true})
+	spec.Validators = append(spec.Validators, listvalidator.SizeAtLeast(1), listvalidator.IsRequired())
+	restartPolicy := spec.NestedObject.Attributes["restart_policy"].(schema.StringAttribute)
+	for i, validation := range restartPolicy.Validators {
+		restartPolicy.Validators[i] = deploymentRestartPolicyDiagnostics{String: validation}
+	}
+	spec.NestedObject.Attributes["restart_policy"] = restartPolicy
+	deploymentPodSpecDiagnostics(spec.NestedObject)
 	return schema.ListNestedBlock{
 		Validators: []validator.List{
 			listvalidator.SizeAtLeast(1),
@@ -222,20 +234,19 @@ func templateBlock() schema.ListNestedBlock {
 		NestedObject: schema.NestedBlockObject{
 			Blocks: map[string]schema.Block{
 				"metadata": templateMetadataBlock(),
-				"spec": podtemplate.SpecBlock(podtemplate.Options{
-					RestartPolicyAlways: true,
-				}),
+				"spec":     spec,
 			},
 		},
 	}
 }
 
 func templateMetadataBlock() schema.ListNestedBlock {
-	block := common.NamespacedMetadataSchema("pod", true)
+	block := common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true))
 	namespace := block.NestedObject.Attributes["namespace"].(schema.StringAttribute)
-	namespace.Computed = false
-	namespace.Default = nil
+	namespace.Computed = true
+	namespace.Default = workloadTemplateNamespace{}
 	namespace.PlanModifiers = []planmodifier.String{
+		workloadTemplateNamespace{},
 		stringplanmodifier.RequiresReplace(),
 	}
 	block.NestedObject.Attributes["namespace"] = namespace
@@ -256,4 +267,24 @@ func deploymentStrategyObjectType() types.ObjectType {
 			},
 		},
 	}
+
+}
+
+// Like SDKv2, an explicitly empty replicas string delegates scaling to the API.
+type deploymentEmptyReplicasUseState struct{}
+
+func (deploymentEmptyReplicasUseState) Description(context.Context) string {
+	return "Retains the API replica count when configuration delegates scaling with an empty string."
+}
+
+func (modifier deploymentEmptyReplicasUseState) MarkdownDescription(ctx context.Context) string {
+	return modifier.Description(ctx)
+}
+
+func (deploymentEmptyReplicasUseState) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || req.ConfigValue.ValueString() != "" ||
+		req.StateValue.IsNull() || req.StateValue.IsUnknown() {
+		return
+	}
+	resp.PlanValue = req.StateValue
 }

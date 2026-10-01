@@ -182,8 +182,11 @@ func TestSpecBlockSchemaMatchesSDK(t *testing.T) {
 					checkListCardinality(ctx, t, p, info, legacy)
 				}
 				if info.kind == "List" || info.kind == "Set" || info.kind == "Map" {
-					if legacy.Computed != info.computed {
-						t.Errorf("%s: computed %t, want %t", p, info.computed, legacy.Computed)
+					if legacy.Computed != (info.computed && info.defaultValue == nil) {
+						t.Errorf("%s: SDK computed ownership %t not preserved (computed %t, default %v)", p, legacy.Computed, info.computed, info.defaultValue)
+					}
+					if info.defaultValue != nil && !info.defaultValue.IsNull() {
+						t.Errorf("%s: compatibility collection default must remain null, got %v", p, info.defaultValue)
 					}
 					if !info.block && info.required != legacy.Required {
 						t.Errorf("%s: required %t, want %t", p, info.required, legacy.Required)
@@ -385,6 +388,7 @@ func collectNativeAttribute(ctx context.Context, p string, a schema.Attribute, o
 		info.defaultValue = nativeDefault(ctx, v.Default)
 	case schema.ListAttribute:
 		info.kind, info.listValidators = "List", v.Validators
+		info.defaultValue = nativeDefault(ctx, v.Default)
 		if object, ok := v.ElementType.(types.ObjectType); ok {
 			for name, childType := range object.AttrTypes {
 				out[p+"."+name] = schemaPathInfo{kind: strings.TrimSuffix(strings.TrimPrefix(fmt.Sprintf("%T", childType), "basetypes."), "Type"), inline: true}
@@ -394,6 +398,7 @@ func collectNativeAttribute(ctx context.Context, p string, a schema.Attribute, o
 		info.kind, info.forceNew = "Set", podModifiersRequireReplacement(v.PlanModifiers)
 	case schema.MapAttribute:
 		info.kind, info.forceNew = "Map", podModifiersRequireReplacement(v.PlanModifiers)
+		info.defaultValue = nativeDefault(ctx, v.Default)
 	case schema.ListNestedAttribute:
 		info.kind, info.listValidators = "List", v.Validators
 		for name, child := range v.NestedObject.Attributes {
@@ -418,6 +423,14 @@ func nativeDefault(ctx context.Context, d any) attr.Value {
 	case defaults.Int64:
 		var response defaults.Int64Response
 		v.DefaultInt64(ctx, defaults.Int64Request{}, &response)
+		return response.PlanValue
+	case defaults.List:
+		var response defaults.ListResponse
+		v.DefaultList(ctx, defaults.ListRequest{}, &response)
+		return response.PlanValue
+	case defaults.Map:
+		var response defaults.MapResponse
+		v.DefaultMap(ctx, defaults.MapRequest{}, &response)
 		return response.PlanValue
 	}
 	return nil

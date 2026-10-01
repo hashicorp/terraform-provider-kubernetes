@@ -19,6 +19,7 @@ const statefulSetSDKv2ProviderVersion = "3.2.1"
 
 func TestAccKubernetesStatefulSetV1_migrationFromSDKv2(t *testing.T) {
 	var before, after appsv1.StatefulSet
+	var snapshot statefulSetMigrationSnapshot
 	name := acctest.RandomWithPrefix("tf-apps-sts-migrate")
 	config := testAccKubernetesStatefulSetV1ConfigMinimal(name, busyboxImage)
 	resourceName := "kubernetes_stateful_set_v1.test"
@@ -35,7 +36,10 @@ func TestAccKubernetesStatefulSetV1_migrationFromSDKv2(t *testing.T) {
 					},
 				},
 				Config: config,
-				Check:  testAccCheckKubernetesStatefulSetV1Exists(resourceName, &before),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &before),
+					statefulSetCaptureMigrationSnapshot(resourceName, &snapshot),
+				),
 			},
 			{
 				ProtoV6ProviderFactories: testAccProviderFactories,
@@ -48,6 +52,7 @@ func TestAccKubernetesStatefulSetV1_migrationFromSDKv2(t *testing.T) {
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &after),
 					testAccCheckKubernetesStatefulSetForceNew(&before, &after, false),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					statefulSetCheckMigrationSnapshot(resourceName, &snapshot),
 				),
 			},
 		},
@@ -56,6 +61,7 @@ func TestAccKubernetesStatefulSetV1_migrationFromSDKv2(t *testing.T) {
 
 func TestAccKubernetesStatefulSetV1_aliasMove(t *testing.T) {
 	var before, after appsv1.StatefulSet
+	var snapshot statefulSetMigrationSnapshot
 	name := acctest.RandomWithPrefix("tf-apps-sts-move")
 	targetConfig := testAccKubernetesStatefulSetV1ConfigMinimal(name, busyboxImage)
 	sourceConfig := strings.Replace(targetConfig, `resource "kubernetes_stateful_set_v1" "test"`, `resource "kubernetes_stateful_set" "test"`, 1)
@@ -81,7 +87,10 @@ moved {
 					},
 				},
 				Config: sourceConfig,
-				Check:  testAccCheckKubernetesStatefulSetV1Exists("kubernetes_stateful_set.test", &before),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists("kubernetes_stateful_set.test", &before),
+					statefulSetCaptureMigrationSnapshot("kubernetes_stateful_set.test", &snapshot),
+				),
 			},
 			{
 				ProtoV6ProviderFactories: testAccProviderFactories,
@@ -93,6 +102,7 @@ moved {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists("kubernetes_stateful_set_v1.test", &after),
 					testAccCheckKubernetesStatefulSetForceNew(&before, &after, false),
+					statefulSetCheckMigrationSnapshot("kubernetes_stateful_set_v1.test", &snapshot),
 				),
 			},
 		},

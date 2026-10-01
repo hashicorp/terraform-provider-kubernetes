@@ -44,6 +44,37 @@ func mustExpand(t *testing.T, value types.List) corev1.PodSpec {
 	return spec
 }
 
+func TestFlattenSpecDetectsRemovedAPICollections(t *testing.T) {
+	original := fullTemplateSpec()
+	prior := mustFlatten(t, original, types.ListNull(specType()))
+	cases := []struct {
+		name   string
+		remove func(*corev1.PodSpec)
+		steps  []any
+	}{
+		{"arguments", func(s *corev1.PodSpec) { s.Containers[0].Args = nil }, []any{0, "container", 0, "args"}},
+		{"environment", func(s *corev1.PodSpec) { s.Containers[0].Env = nil }, []any{0, "container", 0, "env"}},
+		{"node-selector", func(s *corev1.PodSpec) { s.NodeSelector = nil }, []any{0, "node_selector"}},
+		{"image-pull-secrets", func(s *corev1.PodSpec) { s.ImagePullSecrets = nil }, []any{0, "image_pull_secrets"}},
+		{"readiness-gates", func(s *corev1.PodSpec) { s.ReadinessGates = nil }, []any{0, "readiness_gate"}},
+		{"resource-limits", func(s *corev1.PodSpec) { s.Containers[0].Resources.Limits = nil }, []any{0, "container", 0, "resources", 0, "limits"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			current := original.DeepCopy()
+			tc.remove(current)
+			refreshed := mustFlatten(t, *current, prior)
+			before, after := get(prior, tc.steps...), get(refreshed, tc.steps...)
+			if before.Equal(after) {
+				t.Fatalf("removed API collection was retained in state: %s", after)
+			}
+			if after.IsUnknown() {
+				t.Fatal("refresh returned an unknown collection")
+			}
+		})
+	}
+}
+
 // get walks object attribute names and list indexes (ints) from a value.
 func get(value attr.Value, steps ...any) attr.Value {
 	for _, step := range steps {

@@ -66,10 +66,12 @@ func TestWorkloadMuxSchemas(t *testing.T) {
 			source := legacySchemas.ResourceSchemas[alias]
 			if source == nil || schemas.ResourceSchemas[alias] == nil {
 				t.Fatal("deprecated SDKv2 alias is missing")
+				return
 			}
 			destination := schemas.ResourceSchemas[target]
 			if destination == nil {
 				t.Fatal("Framework resource is missing from the production mux")
+				return
 			}
 			if destination.Version != source.Version {
 				t.Errorf("schema version = %d, want %d", destination.Version, source.Version)

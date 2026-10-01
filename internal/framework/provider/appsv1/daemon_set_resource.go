@@ -31,6 +31,7 @@ var (
 	_ resource.ResourceWithConfigure       = (*DaemonSetV1)(nil)
 	_ resource.ResourceWithImportState     = (*DaemonSetV1)(nil)
 	_ resource.ResourceWithIdentity        = (*DaemonSetV1)(nil)
+	_ resource.ResourceWithModifyPlan      = (*DaemonSetV1)(nil)
 	_ resource.ResourceWithUpgradeIdentity = (*DaemonSetV1)(nil)
 	_ resource.ResourceWithMoveState       = (*DaemonSetV1)(nil)
 	_ resource.ResourceWithUpgradeState    = (*DaemonSetV1)(nil)
@@ -104,6 +105,21 @@ func (d *DaemonSetV1) Configure(_ context.Context, req resource.ConfigureRequest
 		return
 	}
 	d.SDKv2Meta = sdkv2Meta
+}
+
+func (d *DaemonSetV1) ModifyPlan(_ context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() || req.Config.Raw.IsNull() {
+		return
+	}
+
+	plan, usePriorState, err := workloadNoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to normalize daemonset plan", err.Error())
+		return
+	}
+	if usePriorState {
+		resp.Plan.Raw = plan
+	}
 }
 
 func (d *DaemonSetV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {

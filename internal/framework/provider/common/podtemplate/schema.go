@@ -24,7 +24,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
@@ -32,6 +34,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	kquantity "k8s.io/apimachinery/pkg/api/resource"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -54,7 +57,7 @@ func SpecBlock(options Options) schema.ListNestedBlock {
 	object := podSpecWithDescriptions(podSpecObject())
 	if options.RestartPolicyAlways {
 		restartPolicy := object.Attributes["restart_policy"].(schema.StringAttribute)
-		restartPolicy.Validators = []validator.String{stringvalidator.OneOf("Always")}
+		restartPolicy.Validators = []validator.String{podStringRule("restart-policy-always")}
 		restartPolicy.Description = restartPolicyAlwaysDescription
 		restartPolicy.MarkdownDescription = restartPolicy.Description
 		object.Attributes["restart_policy"] = restartPolicy
@@ -111,6 +114,22 @@ func podList(required bool, element attr.Type, validators ...validator.List) sch
 	return schema.ListAttribute{Required: required, Optional: !required, ElementType: element, Validators: validators}
 }
 
+func podEmptyCompatibleList(element attr.Type) schema.ListAttribute {
+	return schema.ListAttribute{
+		Optional: true, Computed: true, ElementType: element,
+		Default:       listdefault.StaticValue(types.ListNull(element)),
+		PlanModifiers: []planmodifier.List{common.EmptyListCompatibility{}},
+	}
+}
+
+func podEmptyCompatibleMap() schema.MapAttribute {
+	return schema.MapAttribute{
+		Optional: true, Computed: true, ElementType: types.StringType,
+		Default:       mapdefault.StaticValue(types.MapNull(types.StringType)),
+		PlanModifiers: []planmodifier.Map{common.EmptyMapCompatibility{}},
+	}
+}
+
 func podSet(replace bool, element attr.Type) schema.SetAttribute {
 	a := schema.SetAttribute{Optional: true, ElementType: element}
 	if replace {
@@ -159,7 +178,7 @@ func podSpecObject() schema.NestedBlockObject {
 			"hostname":                         podString(false, true, false, ""),
 			"image_pull_secrets":               podComputedReferences("name"),
 			"node_name":                        podString(false, true, false, ""),
-			"node_selector":                    podMap(false, false),
+			"node_selector":                    podEmptyCompatibleMap(),
 			"priority_class_name":              podString(false, false, false, ""),
 			"readiness_gate":                   podComputedReferences("condition_type"),
 			"restart_policy":                   podString(false, false, false, "Always", stringvalidator.OneOf("Always", "OnFailure", "Never")),
@@ -351,7 +370,13 @@ func (v podStringRule) ValidateString(_ context.Context, req validator.StringReq
 		}
 	case "quantity":
 		if _, err := kquantity.ParseQuantity(s); err != nil {
-			messages = append(messages, "must be a Kubernetes resource quantity: "+err.Error())
+			messages = append(messages, err.Error())
+		}
+	case "restart-policy-always":
+		if s != "Always" {
+			legacyPath := strings.NewReplacer("[", ".", "]", "").Replace(req.Path.String())
+			// Keep the legacy diagnostic in the summary, which Terraform does not wrap.
+			resp.Diagnostics.AddAttributeError(req.Path, fmt.Sprintf("expected %s to be one of [\"Always\"], got %s", legacyPath, s), "")
 		}
 	}
 	for _, message := range messages {

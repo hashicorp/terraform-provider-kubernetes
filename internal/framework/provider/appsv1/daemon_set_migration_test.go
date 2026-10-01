@@ -5,7 +5,6 @@ package appsv1_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -27,22 +26,6 @@ const (
 
 type daemonSetObjectCheck func(*appsv1.DaemonSet) error
 
-type daemonSetDebugPlan struct{}
-
-func (daemonSetDebugPlan) CheckPlan(_ context.Context, req plancheck.CheckPlanRequest, resp *plancheck.CheckPlanResponse) {
-	for _, change := range req.Plan.ResourceChanges {
-		if change.Address != daemonSetResourceName {
-			continue
-		}
-		data, err := json.MarshalIndent(change.Change, "", "  ")
-		if err != nil {
-			resp.Error = err
-			return
-		}
-		fmt.Printf("DAEMONSET PLAN CHANGE:\n%s\n", data)
-	}
-}
-
 type daemonSetMigrationCase struct {
 	name            string
 	sdkConfig       string
@@ -50,6 +33,51 @@ type daemonSetMigrationCase struct {
 	apiCheck        daemonSetObjectCheck
 	updateConfig    string
 	updateCheck     daemonSetObjectCheck
+}
+
+func TestAccDaemonSetV1_UpgradeFromSDKV2_AfterNoOpApply(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-ds-refreshed-upgrade")
+	config := strings.ReplaceAll(daemonSetSDKConfigMinimal("refreshed", busyboxImage), "${NAME}", name)
+	external := map[string]resource.ExternalProvider{
+		"kubernetes": {
+			VersionConstraint: daemonSetSDKv2ProviderV321,
+			Source:            "hashicorp/kubernetes",
+		},
+	}
+	var before, after appsv1.DaemonSet
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccCheckDaemonSetDestroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: external,
+				Config:            config,
+				Check:             testAccCheckDaemonSetExists(daemonSetResourceName, &before),
+			},
+			{
+				ExternalProviders: external,
+				Config:            config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckDaemonSetExists(daemonSetResourceName, &after),
+					testAccCheckDaemonSetNotRecreated(&before, &after),
+					testAccCheckDaemonSetSpecUnchanged(&before, &after),
+				),
+			},
+		},
+	})
 }
 
 func TestAccDaemonSetV1_MoveFromSDKV2Alias(t *testing.T) {
@@ -170,6 +198,12 @@ func TestAccDaemonSetV1_UpgradeFromSDKV2_CompatibilityMatrix(t *testing.T) {
 			apiCheck:        checkStrategyType(appsv1.RollingUpdateDaemonSetStrategyType),
 		},
 		{
+			name:            "explicit-empty-template-namespace",
+			sdkConfig:       withEmptyTemplateNamespace(t, daemonSetSDKConfigMinimal("empty-template-namespace", busyboxImage)),
+			frameworkConfig: withEmptyTemplateNamespace(t, daemonSetSDKConfigMinimal("empty-template-namespace", busyboxImage)),
+			apiCheck:        checkStrategyType(appsv1.RollingUpdateDaemonSetStrategyType),
+		},
+		{
 			name:            "strategy-empty",
 			sdkConfig:       daemonSetSDKConfigWithStrategy("strategy-empty", busyboxImage, "strategy {}"),
 			frameworkConfig: daemonSetFrameworkConfigWithStrategy("strategy-empty", busyboxImage, "strategy = [{}]"),
@@ -218,6 +252,12 @@ func TestAccDaemonSetV1_UpgradeFromSDKV2_CompatibilityMatrix(t *testing.T) {
 			sdkConfig := strings.ReplaceAll(tc.sdkConfig, "${NAME}", name)
 			frameworkConfig := strings.ReplaceAll(tc.frameworkConfig, "${NAME}", name)
 			updateConfig := strings.ReplaceAll(tc.updateConfig, "${NAME}", name)
+			if tc.name == "readiness-gate-and-lifecycle-update" {
+				// No controller supplies this custom readiness condition.
+				sdkConfig = daemonSetNoRolloutConfig(sdkConfig)
+				frameworkConfig = daemonSetNoRolloutConfig(frameworkConfig)
+				updateConfig = daemonSetNoRolloutConfig(updateConfig)
+			}
 
 			var before appsv1.DaemonSet
 			var after appsv1.DaemonSet
@@ -238,12 +278,13 @@ func TestAccDaemonSetV1_UpgradeFromSDKV2_CompatibilityMatrix(t *testing.T) {
 					ProtoV6ProviderFactories: testAccProviderFactories,
 					Config:                   frameworkConfig,
 					ConfigPlanChecks: resource.ConfigPlanChecks{
-						PreApply:             []plancheck.PlanCheck{daemonSetDebugPlan{}, plancheck.ExpectEmptyPlan()},
+						PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 						PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					},
 					Check: resource.ComposeAggregateTestCheckFunc(
 						testAccCheckDaemonSetExists(daemonSetResourceName, &after),
 						testAccCheckDaemonSetNotRecreated(&before, &after),
+						testAccCheckDaemonSetSpecUnchanged(&before, &after),
 						testAccCheckDaemonSetStateIdentity(daemonSetResourceName, &after),
 						testAccCheckDaemonSetObject(&after, tc.apiCheck),
 					),

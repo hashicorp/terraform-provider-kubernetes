@@ -232,6 +232,9 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 
 	if baseline != nil && len(baseline.UpdateStrategy) > 0 {
 		out.UpdateStrategy = []StatefulSetUpdateStrategyModel{flattenStatefulSetUpdateStrategy(spec.UpdateStrategy)}
+		if len(baseline.UpdateStrategy[0].RollingUpdate) == 0 {
+			out.UpdateStrategy[0].RollingUpdate = nil
+		}
 	}
 
 	if spec.PersistentVolumeClaimRetentionPolicy != nil {
@@ -468,20 +471,36 @@ func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolum
 	preserveEmbeddedMetadataNamespace(meta, priorMetadata, in.Namespace)
 	out.Metadata = meta
 
-	spec, d := flattenPersistentVolumeClaimSpec(ctx, in.Spec)
+	var priorSpec *PersistentVolumeClaimSpecModel
+	if baseline != nil && len(baseline.Spec) > 0 {
+		priorSpec = &baseline.Spec[0]
+	}
+	spec, d := flattenPersistentVolumeClaimSpec(ctx, in.Spec, priorSpec)
 	diags.Append(d...)
 	out.Spec = []PersistentVolumeClaimSpecModel{spec}
 
 	return out, diags
 }
 
-func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentVolumeClaimSpec) (PersistentVolumeClaimSpecModel, diag.Diagnostics) {
+func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentVolumeClaimSpec, prior *PersistentVolumeClaimSpecModel) (PersistentVolumeClaimSpecModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := PersistentVolumeClaimSpecModel{
 		AccessModes:      types.SetNull(types.StringType),
 		VolumeName:       types.StringNull(),
 		StorageClassName: types.StringNull(),
 		VolumeMode:       types.StringNull(),
+	}
+	if prior != nil {
+		if !prior.VolumeName.IsUnknown() {
+			out.VolumeName = prior.VolumeName
+		}
+		if !prior.StorageClassName.IsUnknown() {
+			out.StorageClassName = prior.StorageClassName
+		}
+		if !prior.VolumeMode.IsUnknown() {
+			out.VolumeMode = prior.VolumeMode
+		}
+		out.Selector = prior.Selector
 	}
 
 	modes := make([]string, 0, len(in.AccessModes))
@@ -494,6 +513,12 @@ func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentV
 
 	resources, d := flattenVolumeResources(ctx, in.Resources)
 	diags.Append(d...)
+	if prior != nil && len(prior.Resources) > 0 {
+		resources.Limits, d = statefulSetPreserveQuantityMap(resources.Limits, prior.Resources[0].Limits)
+		diags.Append(d...)
+		resources.Requests, d = statefulSetPreserveQuantityMap(resources.Requests, prior.Resources[0].Requests)
+		diags.Append(d...)
+	}
 	out.Resources = []VolumeResourcesModel{resources}
 
 	if in.Selector != nil {
@@ -698,7 +723,8 @@ func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
 	return []resource.StateMover{
 		{
 			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-				if req.SourceTypeName != "kubernetes_stateful_set" || req.SourceSchemaVersion != schemaResp.Schema.Version {
+				if req.SourceTypeName != "kubernetes_stateful_set" ||
+					(req.SourceSchemaVersion != 0 && req.SourceSchemaVersion != schemaResp.Schema.Version) {
 					return
 				}
 				if req.SourceProviderAddress == "" || !hasProviderSuffix(req.SourceProviderAddress) {
@@ -708,7 +734,16 @@ func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
 					resp.Diagnostics.AddError("Unable to move StatefulSet state", "The source state has no JSON data")
 					return
 				}
-				value, err := req.SourceRawState.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
+				var value tftypes.Value
+				var err error
+				if req.SourceSchemaVersion == 0 {
+					var raw map[string]interface{}
+					if err = json.Unmarshal(req.SourceRawState.JSON, &raw); err == nil {
+						value, err = decodeStatefulSetStateValue(ctx, applyStatefulSetV0ResourceUpgrade(raw), schemaResp.Schema)
+					}
+				} else {
+					value, err = req.SourceRawState.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
+				}
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to move StatefulSet state", fmt.Sprintf("The source state could not be decoded: %s", err))
 					return

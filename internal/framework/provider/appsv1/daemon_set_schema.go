@@ -49,7 +49,7 @@ func (d *DaemonSetV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"metadata": common.NamespacedMetadataSchema("daemonset", true),
+			"metadata": common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("daemonset", true)),
 			"spec":     daemonSetSpecSchema(),
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true, Update: true, Delete: true}),
 		},
@@ -163,12 +163,13 @@ func daemonSetTemplateSchema() schema.ListNestedBlock {
 }
 
 func daemonSetTemplateMetadataSchema() schema.ListNestedBlock {
-	block := common.NamespacedMetadataSchema("pod", true)
+	block := common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true))
 	namespace, ok := block.NestedObject.Attributes["namespace"].(schema.StringAttribute)
 	if ok {
-		namespace.Computed = false
-		namespace.Default = nil
+		namespace.Computed = true
+		namespace.Default = workloadTemplateNamespace{}
 		namespace.PlanModifiers = []planmodifier.String{
+			workloadTemplateNamespace{},
 			stringplanmodifier.RequiresReplace(),
 		}
 		block.NestedObject.Attributes["namespace"] = namespace
@@ -181,6 +182,9 @@ func daemonSetStrategyAttribute() schema.ListNestedAttribute {
 		Description: "The deployment strategy used to replace existing pods with new ones.",
 		Optional:    true,
 		Computed:    true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(1),
 		},

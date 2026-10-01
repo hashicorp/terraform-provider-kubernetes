@@ -120,7 +120,12 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 		Spec:       *spec,
 	}, metav1.CreateOptions{})
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating deployment", err.Error())
+		if apierrors.IsInvalid(err) {
+			// Preserve SDKv2's unwrapped Kubernetes validation diagnostic.
+			resp.Diagnostics.AddError(err.Error(), "")
+		} else {
+			resp.Diagnostics.AddError("Error creating deployment", err.Error())
+		}
 		return
 	}
 
@@ -681,7 +686,7 @@ func flattenTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta, prior 
 	if meta.GenerateName != "" {
 		result.GenerateName = types.StringValue(meta.GenerateName)
 	}
-	if meta.Namespace != "" {
+	if meta.Namespace != "" || previous.Namespace.Equal(types.StringValue("")) {
 		result.Namespace = types.StringValue(meta.Namespace)
 	}
 	var diags diag.Diagnostics

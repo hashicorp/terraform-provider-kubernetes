@@ -6,12 +6,14 @@ package appsv1_test
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -446,6 +448,7 @@ func TestAccKubernetesStatefulSetV1_generatedName(t *testing.T) {
 }
 
 func TestAccKubernetesStatefulSetV1_disappears(t *testing.T) {
+	var before, after appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
 	config := testAccKubernetesStatefulSetV1ConfigMinimal(name, busyboxImage)
@@ -456,15 +459,29 @@ func TestAccKubernetesStatefulSetV1_disappears(t *testing.T) {
 		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: config,
+				Config:             config,
+				ExpectNonEmptyPlan: true,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionCreate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &appsv1.StatefulSet{}),
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &before),
 					testAccDeleteKubernetesStatefulSetV1(resourceName),
 				),
 			},
 			{
 				Config: config,
-				Check:  testAccCheckKubernetesStatefulSetV1Exists(resourceName, &appsv1.StatefulSet{}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionCreate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &after),
+					testAccCheckKubernetesStatefulSetForceNew(&before, &after, true),
+				),
 			},
 		},
 	})
@@ -549,12 +566,29 @@ func testAccCheckKubernetesStatefulSetV1Destroy(s *terraform.State) error {
 		if err != nil {
 			return fmt.Errorf("Failed to list PVCs in %q namespace", namespace)
 		}
+		count := 0
+		if rawCount := rs.Primary.Attributes["spec.0.volume_claim_template.#"]; rawCount != "" {
+			count, err = strconv.Atoi(rawCount)
+			if err != nil {
+				return fmt.Errorf("reading StatefulSet claim template count: %w", err)
+			}
+		}
 		for _, p := range pvc.Items {
-			// PVC gets generated in the following format:
-			// *.volumeClaimTemplate.metatada.name-statefulSet.metatada.name
-			//
-			// Since statefulSet.metatada.name is uniq, we could use it as a match.
-			if strings.Contains(p.Name, name) {
+			// Restrict cleanup to this test's exact template name, StatefulSet
+			// name, and numeric ordinal, including claims retained after scaling.
+			owned := false
+			for i := 0; i < count; i++ {
+				template := rs.Primary.Attributes[fmt.Sprintf("spec.0.volume_claim_template.%d.metadata.0.name", i)]
+				prefix := template + "-" + name + "-"
+				if template != "" && strings.HasPrefix(p.Name, prefix) {
+					_, err := strconv.ParseUint(strings.TrimPrefix(p.Name, prefix), 10, 32)
+					owned = err == nil
+					if owned {
+						break
+					}
+				}
+			}
+			if owned {
 				err := conn.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, p.Name, metav1.DeleteOptions{})
 				if err != nil {
 					if !errors.IsNotFound(err) {
@@ -670,7 +704,8 @@ func testAccKubernetesStatefulSetV1ConfigGeneratedName(prefix, imageName string,
 	}
 	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
   metadata {
-    generate_name = %q%s
+    generate_name = %q
+%s
   }
   spec {
     selector {

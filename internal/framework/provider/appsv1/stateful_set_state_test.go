@@ -9,8 +9,11 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	jsonpatch "gopkg.in/evanphx/json-patch.v4"
 	k8sappsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -253,7 +256,7 @@ func TestStatefulSetMoveStateGuardsBeforeDecode(t *testing.T) {
 		{
 			SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
 			SourceTypeName:        "kubernetes_stateful_set",
-			SourceSchemaVersion:   0,
+			SourceSchemaVersion:   2,
 		},
 	} {
 		var resp resource.MoveStateResponse
@@ -299,7 +302,8 @@ func TestFlattenStatefulSetSpecStrategyIsConfiguredOnly(t *testing.T) {
 	baseline := StatefulSetSpecModel{
 		Template: []StatefulSetTemplateModel{{Spec: withoutConfig.Template[0].Spec}},
 		UpdateStrategy: []StatefulSetUpdateStrategyModel{{
-			Type: types.StringValue("RollingUpdate"),
+			Type:          types.StringValue("RollingUpdate"),
+			RollingUpdate: []StatefulSetRollingUpdateModel{{Partition: types.Int64Value(2)}},
 		}},
 	}
 	withConfig, diags := flattenStatefulSetSpec(context.Background(), spec, &baseline, testMetadataFilters{})
@@ -311,5 +315,84 @@ func TestFlattenStatefulSetSpecStrategyIsConfiguredOnly(t *testing.T) {
 	}
 	if got := withConfig.UpdateStrategy[0].RollingUpdate[0].Partition.ValueInt64(); got != 2 {
 		t.Fatalf("partition = %d, want 2", got)
+	}
+}
+
+func TestStatefulSetImportUsesDefaultRolloutPolicy(t *testing.T) {
+	ctx := context.Background()
+	r := &StatefulSetV1{}
+	var schemaResp resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	resp := resource.ImportStateResponse{State: tfsdk.State{
+		Schema: schemaResp.Schema,
+		Raw:    tftypes.NewValue(schemaResp.Schema.Type().TerraformType(ctx), nil),
+	}}
+	r.ImportState(ctx, resource.ImportStateRequest{ID: "default/imported"}, &resp)
+	if resp.Diagnostics.HasError() {
+		t.Fatal(resp.Diagnostics)
+	}
+	var rollout types.Bool
+	if diags := resp.State.GetAttribute(ctx, path.Root("wait_for_rollout"), &rollout); diags.HasError() {
+		t.Fatal(diags)
+	}
+	if !rollout.Equal(types.BoolValue(true)) {
+		t.Fatalf("imported rollout policy = %s, want schema default true", rollout)
+	}
+}
+
+func TestStatefulSetClaimComputedValuesResolve(t *testing.T) {
+	prior := &PersistentVolumeClaimSpecModel{
+		VolumeName:       types.StringUnknown(),
+		StorageClassName: types.StringUnknown(),
+		VolumeMode:       types.StringUnknown(),
+	}
+	got, diags := flattenPersistentVolumeClaimSpec(context.Background(), corev1.PersistentVolumeClaimSpec{}, prior)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if got.VolumeName.IsUnknown() || got.StorageClassName.IsUnknown() || got.VolumeMode.IsUnknown() {
+		t.Fatalf("API flatten retained unknown computed claim values: %#v", got)
+	}
+}
+
+func TestStatefulSetNoopPlanComputedValues(t *testing.T) {
+	typ := tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+		"configured": tftypes.String, "resource_version": tftypes.String,
+	}}
+	value := func(configured, version any) tftypes.Value {
+		return tftypes.NewValue(typ, map[string]tftypes.Value{
+			"configured":       tftypes.NewValue(tftypes.String, configured),
+			"resource_version": tftypes.NewValue(tftypes.String, version),
+		})
+	}
+	for name, tc := range map[string]struct {
+		config, plan tftypes.Value
+		preserve     bool
+	}{
+		"no-op":          {value("same", nil), value("same", tftypes.UnknownValue), true},
+		"update":         {value("changed", nil), value("changed", tftypes.UnknownValue), false},
+		"unknown config": {value(tftypes.UnknownValue, nil), value("same", tftypes.UnknownValue), false},
+		"destroy":        {tftypes.NewValue(typ, nil), tftypes.NewValue(typ, nil), false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			state := value("same", "42")
+			req := resource.ModifyPlanRequest{
+				Config: tfsdk.Config{Raw: tc.config},
+				State:  tfsdk.State{Raw: state},
+				Plan:   tfsdk.Plan{Raw: tc.plan},
+			}
+			resp := resource.ModifyPlanResponse{Plan: req.Plan}
+			(&StatefulSetV1{}).ModifyPlan(context.Background(), req, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+			want := tc.plan
+			if tc.preserve {
+				want = state
+			}
+			if !resp.Plan.Raw.Equal(want) {
+				t.Fatalf("plan = %s, want %s", resp.Plan.Raw, want)
+			}
+		})
 	}
 }

@@ -23,6 +23,26 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
+func TestDeploymentSpecPatch_EmptyCollectionNormalizationDoesNotWrite(t *testing.T) {
+	before := appsv1.DeploymentSpec{
+		Template: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "main", Image: "pause"}}},
+		},
+	}
+	after := before.DeepCopy()
+	after.Template.Annotations = map[string]string{}
+	after.Template.Spec.NodeSelector = map[string]string{}
+	after.Template.Spec.Containers[0].Args = []string{}
+	after.Template.Spec.Containers[0].Command = []string{}
+	patch, err := deploymentSpecPatch(before, *after, before)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(patch) != "{}" {
+		t.Fatalf("empty collection normalization must not write to Kubernetes: %s", patch)
+	}
+}
+
 func TestDeploymentStrategyNestedSchema(t *testing.T) {
 	strategy, ok := deploymentSpecBlock().NestedObject.Attributes["strategy"].(schema.ListNestedAttribute)
 	if !ok {

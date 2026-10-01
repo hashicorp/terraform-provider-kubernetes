@@ -51,7 +51,7 @@ func (r *StatefulSetV1) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"metadata": common.NamespacedMetadataSchema("stateful set", true),
+			"metadata": common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("stateful set", true)),
 			"spec": schema.ListNestedBlock{
 				Description: "Spec defines the desired identities of pods in this set.",
 				Validators: []validator.List{
@@ -76,6 +76,10 @@ func (r *StatefulSetV1) Schema(ctx context.Context, req resource.SchemaRequest, 
 							Optional:   true,
 							Computed:   true,
 							Validators: []validator.String{nullableIntStringValidator{}},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+								preserveReplicasOnEmpty{},
+							},
 						},
 						"revision_history_limit": schema.Int64Attribute{
 							Optional: true,
@@ -112,13 +116,15 @@ func (r *StatefulSetV1) Schema(ctx context.Context, req resource.SchemaRequest, 
 }
 
 func statefulSetTemplateBlock() schema.ListNestedBlock {
+	spec := podtemplate.SpecBlock(statefulSetPodTemplateOptions())
+	spec.Validators = append([]validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1)}, spec.Validators...)
 	return schema.ListNestedBlock{
 		Description: "The object that describes the pod that will be created if insufficient replicas are detected.",
 		Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
 		NestedObject: schema.NestedBlockObject{
 			Blocks: map[string]schema.Block{
 				"metadata": statefulSetTemplateMetadataBlock("stateful set"),
-				"spec":     podtemplate.SpecBlock(statefulSetPodTemplateOptions()),
+				"spec":     spec,
 			},
 		},
 	}
@@ -129,13 +135,18 @@ func statefulSetPodTemplateOptions() podtemplate.Options {
 }
 
 func statefulSetTemplateMetadataBlock(objectName string) schema.ListNestedBlock {
-	return schema.ListNestedBlock{
+	block := schema.ListNestedBlock{
 		Description: fmt.Sprintf("Standard %s template metadata.", objectName),
 		Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
 		NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
 			"annotations": schema.MapAttribute{Optional: true, ElementType: types.StringType, Validators: []validator.Map{common.AnnotationsValidator()}},
 			"labels":      schema.MapAttribute{Optional: true, ElementType: types.StringType, Validators: []validator.Map{common.LabelsValidator()}},
-			"generation":  schema.Int64Attribute{Computed: true},
+			"generation": schema.Int64Attribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+			},
 			"name": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
@@ -164,10 +175,21 @@ func statefulSetTemplateMetadataBlock(objectName string) schema.ListNestedBlock 
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"resource_version": schema.StringAttribute{Computed: true},
-			"uid":              schema.StringAttribute{Computed: true},
+			"resource_version": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"uid": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		}},
 	}
+	return common.WithEmptyMetadataCompatibility(block)
 }
 
 func pathMatchParent(name string) path.Expression {
@@ -243,6 +265,9 @@ func persistentVolumeClaimRetentionPolicyAttribute() schema.ListNestedAttribute 
 	return schema.ListNestedAttribute{
 		Optional: true,
 		Computed: true,
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+		},
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"when_deleted": schema.StringAttribute{
@@ -264,10 +289,10 @@ func persistentVolumeClaimRetentionPolicyAttribute() schema.ListNestedAttribute 
 
 func persistentVolumeClaimBlock() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
+		PlanModifiers: []planmodifier.List{statefulSetVolumeClaimRequiresReplace{}},
 		NestedObject: schema.NestedBlockObject{
 			Blocks: map[string]schema.Block{
-				"metadata": common.NamespacedMetadataSchema("persistent volume claim", true),
+				"metadata": common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("persistent volume claim", true)),
 				"spec": schema.ListNestedBlock{
 					Validators: []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
 					NestedObject: schema.NestedBlockObject{
@@ -303,8 +328,8 @@ func persistentVolumeClaimBlock() schema.ListNestedBlock {
 							"resources": schema.ListNestedBlock{
 								Validators: []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
 								NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-									"limits":   schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()}},
-									"requests": schema.MapAttribute{Optional: true, ElementType: types.StringType},
+									"limits":   schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}, mapplanmodifier.RequiresReplace()}},
+									"requests": schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}}},
 								}},
 							},
 							"selector": labelSelectorBlock(false),
@@ -317,6 +342,28 @@ func persistentVolumeClaimBlock() schema.ListNestedBlock {
 }
 
 type nullableIntStringValidator struct{}
+
+type preserveReplicasOnEmpty struct{}
+
+func (m preserveReplicasOnEmpty) Description(context.Context) string {
+	return "preserves the current replica count when configured as an empty string"
+}
+
+func (m preserveReplicasOnEmpty) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m preserveReplicasOnEmpty) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || req.ConfigValue.ValueString() != "" {
+		return
+	}
+	if req.StateValue.IsNull() || req.StateValue.IsUnknown() || req.StateValue.ValueString() == "" {
+		return
+	}
+	// Empty means leave scaling to another controller. Core permits retaining
+	// the exact non-null prior value for an equivalent configured value.
+	resp.PlanValue = req.StateValue
+}
 
 func (v nullableIntStringValidator) Description(context.Context) string {
 	return "must be an integer string or empty"

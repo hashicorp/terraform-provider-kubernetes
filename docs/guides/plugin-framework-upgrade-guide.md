@@ -73,6 +73,29 @@ Run `terraform plan` to verify the move and review any in-place changes describe
 
 - **Required name:** Omitting `metadata.name` now fails validation instead of failing during the read.
 - **Read-only maps:** Configuring `metadata.annotations` or `metadata.labels` now produces `Invalid Configuration for Read-Only Attribute`; remove those inputs. Earlier provider versions accepted them but ignored them during lookup and replaced them with the API response.
+
+  Before: Accepted by earlier versions, but configured labels and annotations were ignored.
+
+  ```terraform
+  data "kubernetes_namespace_v1" "app" {
+    metadata {
+      name        = "app"
+      labels      = { team = "example" }
+      annotations = { owner = "example" }
+    }
+  }
+  ```
+
+  After:
+
+  ```terraform
+  data "kubernetes_namespace_v1" "app" {
+    metadata {
+      name = "app"
+    }
+  }
+  ```
+
 - **Missing namespace:** A not-found response is not an error; `id` retains the requested name. Unset computed metadata is now `null` rather than SDKv2's empty maps, empty strings, or zero. Do not use `id` as proof of existence.
 
 An existence check using only `uid != ""` changes meaning because `null != ""` is true. Handle both representations:

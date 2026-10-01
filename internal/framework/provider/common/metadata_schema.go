@@ -20,6 +20,18 @@ import (
 
 const generateNameRequiresReplaceDescription = "Replaces the object when generate_name changes, except when SDKv2-written state holds an empty string for an unset value."
 
+// GenerateNameRequiresReplace permits normalization of SDKv2's unset value without refresh.
+func GenerateNameRequiresReplace() planmodifier.String {
+	return stringplanmodifier.RequiresReplaceIf(
+		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+			sdkv2UnsetBecomingNull := req.StateValue.Equal(types.StringValue("")) && req.PlanValue.IsNull()
+			resp.RequiresReplace = !sdkv2UnsetBecomingNull
+		},
+		generateNameRequiresReplaceDescription,
+		generateNameRequiresReplaceDescription,
+	)
+}
+
 // MetadataSchema mirrors SDKv2 metadataSchema for cluster-scoped objects.
 // generatableName adds generate_name and its conflict with name; match the SDKv2 flag.
 // Decode into MetadataModel when true, MetadataBase when false.
@@ -107,16 +119,7 @@ func metadataAttributes(objectName string, generatableName bool) map[string]sche
 			Description: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:    true,
 			PlanModifiers: []planmodifier.String{
-				// SDKv2 stores unset as ""; Framework uses null. Exempt that transition
-				// so plan -refresh=false does not recreate upgraded resources.
-				stringplanmodifier.RequiresReplaceIf(
-					func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-						sdkv2UnsetBecomingNull := req.StateValue.Equal(types.StringValue("")) && req.PlanValue.IsNull()
-						resp.RequiresReplace = !sdkv2UnsetBecomingNull
-					},
-					generateNameRequiresReplaceDescription,
-					generateNameRequiresReplaceDescription,
-				),
+				GenerateNameRequiresReplace(),
 			},
 			Validators: []validator.String{
 				stringvalidator.ConflictsWith(

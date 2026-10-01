@@ -161,7 +161,7 @@ func statefulSetTemplateMetadataBlock(objectName string) schema.ListNestedBlock 
 			},
 			"generate_name": schema.StringAttribute{
 				Optional:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				PlanModifiers: []planmodifier.String{common.GenerateNameRequiresReplace()},
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(pathMatchParent("name")),
 					common.DNSLabelPrefixValidator(),
@@ -328,7 +328,8 @@ func persistentVolumeClaimBlock() schema.ListNestedBlock {
 							"resources": schema.ListNestedBlock{
 								Validators: []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
 								NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-									"limits":   schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}, mapplanmodifier.RequiresReplace()}},
+									// The claim-level modifier handles immutable changes and legacy empty maps.
+									"limits":   schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}}},
 									"requests": schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}}},
 								}},
 							},

@@ -27,6 +27,10 @@ func TestStatefulSetVolumeClaimTemplateReplacementProtocol(t *testing.T) {
 		"computed_metadata":           {`{"metadata":[{"name":"data","namespace":"default","generation":1,"resource_version":"42","uid":"claim-template"}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"}}],"storage_class_name":"standard"}]}`, before, false},
 		"legacy_empty_metadata":       {`{"metadata":[{"name":"data","namespace":"default","annotations":{},"labels":{},"generation":0,"resource_version":"","uid":""}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"}}],"storage_class_name":"standard"}]}`, before, false},
 		"legacy_empty_generated_name": {`{"metadata":[{"name":"data","namespace":"default","generate_name":""}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"}}],"storage_class_name":"standard"}]}`, before, false},
+		"legacy_empty_limits":         {`{"metadata":[{"name":"data","namespace":"default"}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"},"limits":{}}],"storage_class_name":"standard"}]}`, before, false},
+		"add_limits":                  {before, `{"metadata":[{"name":"data","namespace":"default"}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"},"limits":{"storage":"2Gi"}}],"storage_class_name":"standard"}]}`, true},
+		"remove_limits":               {`{"metadata":[{"name":"data","namespace":"default"}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"},"limits":{"storage":"2Gi"}}],"storage_class_name":"standard"}]}`, before, true},
+		"change_limits":               {`{"metadata":[{"name":"data","namespace":"default"}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"},"limits":{"storage":"2Gi"}}],"storage_class_name":"standard"}]}`, `{"metadata":[{"name":"data","namespace":"default"}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"},"limits":{"storage":"3Gi"}}],"storage_class_name":"standard"}]}`, true},
 		"remove_nonempty_metadata":    {`{"metadata":[{"name":"data","namespace":"default","labels":{"managed":"true"}}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1Gi"}}],"storage_class_name":"standard"}]}`, before, true},
 		"equivalent_quantity":         {before, `{"metadata":[{"name":"data","namespace":"default"}],"spec":[{"access_modes":["ReadWriteOnce"],"resources":[{"requests":{"storage":"1024Mi"}}],"storage_class_name":"standard"}]}`, false},
 	} {
@@ -56,6 +60,90 @@ func TestStatefulSetVolumeClaimTemplateReplacementProtocol(t *testing.T) {
 			}
 			if got := len(resp.RequiresReplace) != 0; got != tc.replace {
 				t.Fatalf("replacement = %t, want %t: %v", got, tc.replace, resp.RequiresReplace)
+			}
+		})
+	}
+}
+
+func TestStatefulSetTemplateGenerateNameWithoutRefreshProtocol(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		state, config string
+		replace       bool
+	}{
+		{name: "legacy-empty-to-omitted", state: `""`, config: `null`},
+		{name: "omitted", state: `null`, config: `null`},
+		{name: "unchanged-prefix", state: `"database-"`, config: `"database-"`},
+		{name: "add-prefix", state: `null`, config: `"database-"`, replace: true},
+		{name: "legacy-empty-to-prefix", state: `""`, config: `"database-"`, replace: true},
+		{name: "remove-prefix", state: `"database-"`, config: `null`, replace: true},
+		{name: "change-prefix", state: `"database-"`, config: `"other-"`, replace: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			server, err := testAccProviderFactories["kubernetes"]()
+			if err != nil {
+				t.Fatal(err)
+			}
+			schemas, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			typ := schemas.ResourceSchemas["kubernetes_stateful_set_v1"].ValueType()
+			const value = `{
+			  "id":%s,
+			  "metadata":[{"name":"database","namespace":"default"}],
+			  "spec":[{
+			    "service_name":"database",
+			    "selector":[{"match_labels":{"app":"database"}}],
+			    "template":[{
+			      "metadata":[{"generate_name":%s,"labels":{"app":"database"}}],
+			      "spec":[{"container":[{"name":"database","image":"busybox:1.36"}]}]
+			    }]
+			  }]
+			}`
+			config := statefulSetProtocolValue(t, typ, fmt.Sprintf(value, `null`, tc.config))
+			state := statefulSetProtocolValue(t, typ, fmt.Sprintf(value, `"default/database"`, tc.state))
+			// Deliberately omit ReadResource: refresh would hide the legacy empty string.
+			resp, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
+				TypeName: "kubernetes_stateful_set_v1", Config: &config, PriorState: &state, ProposedNewState: &config,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, d := range resp.Diagnostics {
+				if d.Severity == tfprotov6.DiagnosticSeverityError {
+					t.Fatalf("%s: %s", d.Summary, d.Detail)
+				}
+			}
+			at := tftypes.NewAttributePath().WithAttributeName("spec").WithElementKeyInt(0).
+				WithAttributeName("template").WithElementKeyInt(0).
+				WithAttributeName("metadata").WithElementKeyInt(0).WithAttributeName("generate_name")
+			if tc.replace {
+				if len(resp.RequiresReplace) != 1 || !resp.RequiresReplace[0].Equal(at) {
+					t.Fatalf("replacement paths = %v, want only %s", resp.RequiresReplace, at)
+				}
+			} else if len(resp.RequiresReplace) != 0 {
+				t.Fatalf("unexpected replacement paths: %v", resp.RequiresReplace)
+			}
+			plan, err := resp.PlannedState.Unmarshal(typ)
+			if err != nil {
+				t.Fatal(err)
+			}
+			planned, _, err := tftypes.WalkAttributePath(plan, at)
+			if err != nil {
+				t.Fatal(err)
+			}
+			configValue, err := config.Unmarshal(typ)
+			if err != nil {
+				t.Fatal(err)
+			}
+			configured, _, err := tftypes.WalkAttributePath(configValue, at)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !planned.(tftypes.Value).Equal(configured.(tftypes.Value)) {
+				t.Fatalf("planned generate_name = %s, want configured %s", planned, configured)
 			}
 		})
 	}

@@ -240,6 +240,29 @@ func TestPatchStatefulSetSpecEmptyReplicasPreservesLiveCount(t *testing.T) {
 	}
 }
 
+func TestPatchStatefulSetSpecNormalizesLegacyGenerateNameWithoutWrites(t *testing.T) {
+	state := StatefulSetSpecModel{
+		Template: []StatefulSetTemplateModel{{Metadata: []common.NamespacedMetadataModel{{
+			MetadataModel: common.MetadataModel{GenerateName: types.StringValue("")},
+		}}}},
+	}
+	plan := StatefulSetSpecModel{
+		Template: []StatefulSetTemplateModel{{Metadata: []common.NamespacedMetadataModel{{
+			MetadataModel: common.MetadataModel{GenerateName: types.StringNull()},
+		}}}},
+	}
+	live := k8sappsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "database"}},
+	}}
+	ops, diags := (&StatefulSetV1{}).patchStatefulSetSpec(context.Background(), plan, state, live)
+	if diags.HasError() {
+		t.Fatal(diags.Errors())
+	}
+	if len(ops) != 0 {
+		t.Fatalf("legacy generate_name normalization generated %d patch operations", len(ops))
+	}
+}
+
 func TestStatefulSetMoveStateGuardsBeforeDecode(t *testing.T) {
 	mover := (&StatefulSetV1{}).MoveState(context.Background())[0]
 	for _, req := range []resource.MoveStateRequest{

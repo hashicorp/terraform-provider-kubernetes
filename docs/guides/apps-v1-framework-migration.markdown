@@ -92,6 +92,8 @@ Previously stored empty metadata maps, container arguments or commands, and node
 
 Refresh can normalize unconfigured metadata `generate_name` values from empty strings to null. Previously stored empty pod-template namespaces remain empty, so an explicit `namespace = ""` does not force replacement. An unused `rolling_update` value for Deployment `Recreate` or DaemonSet `OnDelete` can normalize from an empty list to null. These state-only differences do not change the Kubernetes workload.
 
+With `terraform plan -refresh=false`, SDKv2-written empty `generate_name` values and omitted PVC resource `limits` stored as empty maps can instead appear as in-place state normalizations. These differences alone do not replace the StatefulSet or send a Kubernetes update. Changes to a non-empty `generate_name` or non-empty PVC limits still require replacement.
+
 ## Move from a deprecated resource type
 
 The deprecated resource types remain available. To adopt the versioned type, replace the old resource declaration, update references and configuration syntax, and add the matching `moved` block. Cross-type moves require Terraform 1.8 or later.

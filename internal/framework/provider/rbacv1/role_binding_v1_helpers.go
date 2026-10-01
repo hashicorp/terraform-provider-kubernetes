@@ -49,18 +49,76 @@ func expandSubjects(in []SubjectModel) []rbacv1api.Subject {
 }
 
 // flattenSubjects converts Kubernetes Subject API objects to a slice of SubjectModel.
+// When a subject has no namespace (e.g. User or Group kinds), the Kubernetes API
+// returns an empty string. The schema declares Default: "default" for namespace, which
+// Terraform applies during planning but not during Read. To keep state consistent with
+// the plan default — and to match SDKv2 behaviour (Default: "default" in schema_rbac.go)
+// — we write "default" whenever the API returns an empty namespace.
 func flattenSubjects(in []rbacv1api.Subject) []SubjectModel {
 	result := make([]SubjectModel, 0, len(in))
 	for _, s := range in {
+		ns := s.Namespace
+		if ns == "" {
+			ns = "default"
+		}
 		m := SubjectModel{
 			Kind:      types.StringValue(s.Kind),
 			Name:      types.StringValue(s.Name),
 			APIGroup:  types.StringValue(s.APIGroup),
-			Namespace: types.StringValue(s.Namespace),
+			Namespace: types.StringValue(ns),
 		}
 		result = append(result, m)
 	}
 	return result
+}
+
+// applySubjectComputedFields resolves unknown computed fields in plan subjects from the
+// Kubernetes API response, while preserving all configured values.
+//
+// subject.api_group is Optional+Computed with no default. When a subject is configured
+// without api_group (e.g. a ServiceAccount), the plan carries an unknown value for that
+// field. After the API call succeeds, Kubernetes returns a concrete value. This helper
+// fills in only those unknown slots; configured (known) values are left untouched.
+//
+// If the response has a different number of subjects than the plan — which should not
+// happen in practice but is possible if the server normalised the request — we fall back
+// to a full flatten for the mismatched tail so the state is still consistent.
+func applySubjectComputedFields(plan *[]SubjectModel, apiSubjects []rbacv1api.Subject) {
+	for i := range *plan {
+		if i >= len(apiSubjects) {
+			break
+		}
+		s := &(*plan)[i]
+		api := apiSubjects[i]
+
+		// Resolve api_group only when the plan left it unknown (omitted by the caller).
+		if s.APIGroup.IsUnknown() {
+			s.APIGroup = types.StringValue(api.APIGroup)
+		}
+		// Resolve namespace only when the plan left it unknown.
+		if s.Namespace.IsUnknown() {
+			ns := api.Namespace
+			if ns == "" {
+				ns = "default"
+			}
+			s.Namespace = types.StringValue(ns)
+		}
+	}
+
+	// Append any extra API subjects that have no matching plan entry.
+	for i := len(*plan); i < len(apiSubjects); i++ {
+		api := apiSubjects[i]
+		ns := api.Namespace
+		if ns == "" {
+			ns = "default"
+		}
+		*plan = append(*plan, SubjectModel{
+			Kind:      types.StringValue(api.Kind),
+			Name:      types.StringValue(api.Name),
+			APIGroup:  types.StringValue(api.APIGroup),
+			Namespace: types.StringValue(ns),
+		})
+	}
 }
 
 // ── Subject patch helper ──────────────────────────────────────────────────────

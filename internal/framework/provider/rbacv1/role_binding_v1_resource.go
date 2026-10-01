@@ -5,10 +5,13 @@ package rbacv1
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
 // Compile-time interface assertions — ensure RoleBindingV1 implements all
@@ -47,6 +50,37 @@ func (r *RoleBindingV1) Configure(_ context.Context, req resource.ConfigureReque
 		return
 	}
 	r.SDKv2Meta = req.ProviderData.(func() any)
+}
+
+// sdkv2Meta resolves the SDKv2 provider metadata into the two interfaces this resource
+// needs. The call is deferred until the request rather than made in Configure, because the
+// mux server configures the SDKv2 provider independently and its meta is not populated
+// until that happens.
+func (r *RoleBindingV1) sdkv2Meta() (kubernetes.KubeClientsets, kubernetes.MetadataFilters, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if r.SDKv2Meta == nil {
+		diags.AddError("Provider not configured",
+			"The SDKv2 provider metadata is unavailable. This is a bug in the provider.")
+		return nil, nil, diags
+	}
+
+	meta := r.SDKv2Meta()
+	clients, ok := meta.(kubernetes.KubeClientsets)
+	if !ok {
+		diags.AddError("Unexpected provider data",
+			fmt.Sprintf("Expected kubernetes.KubeClientsets, got %T. This is a bug in the provider.", meta))
+		return nil, nil, diags
+	}
+
+	filters, ok := meta.(kubernetes.MetadataFilters)
+	if !ok {
+		diags.AddError("Unexpected provider data",
+			fmt.Sprintf("Expected kubernetes.MetadataFilters, got %T. This is a bug in the provider.", meta))
+		return nil, nil, diags
+	}
+
+	return clients, filters, diags
 }
 
 // IdentitySchema defines the identity schema for kubernetes_role_binding_v1.

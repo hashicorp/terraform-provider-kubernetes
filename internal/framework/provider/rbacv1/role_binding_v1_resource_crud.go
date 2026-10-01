@@ -34,8 +34,12 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, _, metaDiags := r.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -71,6 +75,10 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
 	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 
+	// Preserve configured subject values; resolve only unknown computed fields
+	// (e.g. api_group omitted by the caller) from the Kubernetes response.
+	applySubjectComputedFields(&plan.Subject, out.Subjects)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
 		ResourceIdentity: common.ResourceIdentity{
@@ -97,8 +105,12 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, filters, metaDiags := r.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -119,7 +131,7 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	// Read filters the API response against prior state and ignore lists.
 	metadata, diags := common.FlattenNamespacedMetadata(ctx, out.ObjectMeta, state.Metadata,
-		meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())
+		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -162,8 +174,12 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, _, metaDiags := r.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -207,6 +223,10 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
 	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 
+	// Preserve configured subject values; resolve only unknown computed fields
+	// (e.g. api_group omitted by the caller) from the Kubernetes response.
+	applySubjectComputedFields(&plan.Subject, out.Subjects)
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
 		ResourceIdentity: common.ResourceIdentity{
@@ -233,7 +253,12 @@ func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
+	clients, _, metaDiags := r.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -271,8 +296,12 @@ func (r *RoleBindingV1) ImportState(ctx context.Context, req resource.ImportStat
 		name = identityData.Name.ValueString()
 	}
 
-	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
-	conn, err := meta.MainClientset()
+	clients, filters, metaDiags := r.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -289,7 +318,7 @@ func (r *RoleBindingV1) ImportState(ctx context.Context, req resource.ImportStat
 
 	// Import uses an empty prior state — nothing declared, so nothing is exempt from filtering.
 	flatMetadata, diags := common.FlattenNamespacedMetadata(ctx, out.ObjectMeta, nil,
-		meta.GetIgnoreAnnotations(), meta.GetIgnoreLabels())
+		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

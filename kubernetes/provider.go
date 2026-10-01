@@ -378,8 +378,6 @@ type KubeClientsets interface {
 	AggregatorClientset() (*aggregator.Clientset, error)
 	DynamicClient() (dynamic.Interface, error)
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
-	GetIgnoreAnnotations() []string
-	GetIgnoreLabels() []string
 }
 
 // MetadataFilters exposes the provider-level ignore lists that control which

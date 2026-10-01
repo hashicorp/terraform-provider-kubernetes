@@ -1,3 +1,11 @@
 ```release-note:feature
-`kubernetes_role_binding_v1`: Migrate resource from SDKv2 to the Terraform Plugin Framework. Existing state is compatible with no configuration changes required. Users of the deprecated `kubernetes_role_binding` resource type may migrate to `kubernetes_role_binding_v1` using a `moved` block.
+`kubernetes_role_binding_v1`: Migrate resource from SDKv2 to the Terraform Plugin Framework. Existing state is automatically compatible; no state migration or configuration rewrite is required for users whose configuration does not hit the breaking changes below. Users of the deprecated `kubernetes_role_binding` resource type may migrate to `kubernetes_role_binding_v1` using a `moved` block.
+```
+
+```release-note:breaking-change
+`kubernetes_role_binding_v1`: Annotation and label map values must now be strings. A `null` value (e.g. `annotations = { key = null }`) previously silently dropped the key; it now produces a plan-time error. Replace `null` values with an empty string `""` or remove the key entirely.
+```
+
+```release-note:breaking-change
+`kubernetes_role_binding_v1`: Setting both `metadata.name` and `metadata.generate_name` in the same block is now rejected at plan time. Previously the Kubernetes API silently ignored `generate_name` when `name` was set. Remove one of the two fields.
 ```

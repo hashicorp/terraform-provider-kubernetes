@@ -94,6 +94,8 @@ Refresh can normalize unconfigured metadata `generate_name` values from empty st
 
 With `terraform plan -refresh=false`, SDKv2-written empty `generate_name` values and omitted PVC resource `limits` stored as empty maps can instead appear as in-place state normalizations. These differences alone do not replace the StatefulSet or send a Kubernetes update. Changes to a non-empty `generate_name` or non-empty PVC limits still require replacement.
 
+For all three workloads, empty and null selector `match_labels`, `match_expressions`, and expression `values` are equivalent for replacement checks. This also applies to StatefulSet claim-template selectors. Read preserves explicitly configured empty collections. Legacy empty collections can produce a one-time in-place state normalization, with or without refresh, but do not replace or update the Kubernetes workload. Actual selector changes still require replacement; this exception does not equate an absent selector with a present selector or discard non-empty entries.
+
 ## Move from a deprecated resource type
 
 The deprecated resource types remain available. To adopt the versioned type, replace the old resource declaration, update references and configuration syntax, and add the matching `moved` block. Cross-type moves require Terraform 1.8 or later.

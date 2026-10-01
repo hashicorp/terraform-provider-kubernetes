@@ -53,16 +53,9 @@ type deploymentTemplateModel struct {
 	Spec     types.List                       `tfsdk:"spec"`
 }
 
-type deploymentSelectorModel struct {
-	MatchExpressions []deploymentSelectorRequirementModel `tfsdk:"match_expressions"`
-	MatchLabels      types.Map                            `tfsdk:"match_labels"`
-}
+type deploymentSelectorModel = LabelSelectorModel
 
-type deploymentSelectorRequirementModel struct {
-	Key      types.String `tfsdk:"key"`
-	Operator types.String `tfsdk:"operator"`
-	Values   types.Set    `tfsdk:"values"`
-}
+type deploymentSelectorRequirementModel = LabelSelectorRequirementModel
 
 type deploymentStrategyModel struct {
 	Type          types.String `tfsdk:"type"`
@@ -477,12 +470,6 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	if spec.Replicas != nil {
 		model.Replicas = types.StringValue(fmt.Sprintf("%d", *spec.Replicas))
 	}
-	if spec.Selector != nil {
-		selector, d := flattenSelector(ctx, *spec.Selector)
-		diags.Append(d...)
-		model.Selector = []deploymentSelectorModel{selector}
-	}
-
 	strategyValue, d := flattenDeploymentStrategy(ctx, spec.Strategy)
 	diags.Append(d...)
 	model.Strategy = strategyValue
@@ -492,11 +479,15 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 
 	var priorTemplateSpec types.List
 	var priorTemplateMetadata []common.NamespacedMetadataModel
+	var priorSelector []LabelSelectorModel
 	if !baseline.IsNull() && !baseline.IsUnknown() {
 		var priorSpecs []deploymentSpecModel
 		diags.Append(baseline.ElementsAs(ctx, &priorSpecs, false)...)
 		if diags.HasError() {
 			return types.ListNull(deploymentSpecListType().ElemType), diags
+		}
+		if len(priorSpecs) == 1 {
+			priorSelector = priorSpecs[0].Selector
 		}
 		if len(priorSpecs) == 1 && len(priorSpecs[0].Template) == 1 {
 			priorTemplateSpec = priorSpecs[0].Template[0].Spec
@@ -511,6 +502,8 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 			}
 		}
 	}
+	model.Selector, d = flattenWorkloadSelector(ctx, spec.Selector, priorSelector)
+	diags.Append(d...)
 	if priorTemplateSpec.IsNull() || priorTemplateSpec.IsUnknown() {
 		priorTemplateSpec = templateSpecNull()
 	}
@@ -548,28 +541,6 @@ func expandSelector(ctx context.Context, in deploymentSelectorModel, at path.Pat
 	}
 	if diags.HasError() {
 		diags.AddAttributeError(at, "Invalid selector", "Unable to decode selector values.")
-	}
-	return out, diags
-}
-
-func flattenSelector(ctx context.Context, selector metav1.LabelSelector) (deploymentSelectorModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	out := deploymentSelectorModel{
-		MatchLabels: types.MapNull(types.StringType),
-	}
-	if selector.MatchLabels != nil {
-		matchLabels, d := types.MapValueFrom(ctx, types.StringType, selector.MatchLabels)
-		diags.Append(d...)
-		out.MatchLabels = matchLabels
-	}
-	for _, expression := range selector.MatchExpressions {
-		values, d := types.SetValueFrom(ctx, types.StringType, expression.Values)
-		diags.Append(d...)
-		out.MatchExpressions = append(out.MatchExpressions, deploymentSelectorRequirementModel{
-			Key:      types.StringValue(expression.Key),
-			Operator: types.StringValue(string(expression.Operator)),
-			Values:   values,
-		})
 	}
 	return out, diags
 }

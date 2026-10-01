@@ -62,16 +62,9 @@ type DaemonSetTemplateModel struct {
 	Spec     types.List                       `tfsdk:"spec"`
 }
 
-type DaemonSetLabelSelectorModel struct {
-	MatchExpressions []DaemonSetMatchExpressionModel `tfsdk:"match_expressions"`
-	MatchLabels      types.Map                       `tfsdk:"match_labels"`
-}
+type DaemonSetLabelSelectorModel = LabelSelectorModel
 
-type DaemonSetMatchExpressionModel struct {
-	Key      types.String `tfsdk:"key"`
-	Operator types.String `tfsdk:"operator"`
-	Values   types.Set    `tfsdk:"values"`
-}
+type DaemonSetMatchExpressionModel = LabelSelectorRequirementModel
 
 type DaemonSetStrategyModel struct {
 	Type          types.String `tfsdk:"type"`

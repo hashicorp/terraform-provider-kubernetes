@@ -17,9 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -92,7 +90,7 @@ func daemonSetSelectorSchema() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
 		Description: "A label query over pods that are managed by the DaemonSet.",
 		PlanModifiers: []planmodifier.List{
-			listplanmodifier.RequiresReplace(),
+			workloadSelectorRequiresReplace(),
 		},
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(1),
@@ -103,37 +101,22 @@ func daemonSetSelectorSchema() schema.ListNestedBlock {
 					Description: "A map of {key,value} pairs. The requirements are ANDed.",
 					Optional:    true,
 					ElementType: types.StringType,
-					PlanModifiers: []planmodifier.Map{
-						mapplanmodifier.RequiresReplace(),
-					},
 				},
 			},
 			Blocks: map[string]schema.Block{
 				"match_expressions": schema.ListNestedBlock{
 					Description: "A list of label selector requirements. The requirements are ANDed.",
-					PlanModifiers: []planmodifier.List{
-						listplanmodifier.RequiresReplace(),
-					},
 					NestedObject: schema.NestedBlockObject{
 						Attributes: map[string]schema.Attribute{
 							"key": schema.StringAttribute{
 								Optional: true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.RequiresReplace(),
-								},
 							},
 							"operator": schema.StringAttribute{
 								Optional: true,
-								PlanModifiers: []planmodifier.String{
-									stringplanmodifier.RequiresReplace(),
-								},
 							},
 							"values": schema.SetAttribute{
 								Optional:    true,
 								ElementType: types.StringType,
-								PlanModifiers: []planmodifier.Set{
-									setplanmodifier.RequiresReplace(),
-								},
 							},
 						},
 					},

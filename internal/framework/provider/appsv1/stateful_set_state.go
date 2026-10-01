@@ -55,17 +55,6 @@ type StatefulSetTemplateModel struct {
 	Spec     types.List                       `tfsdk:"spec"`
 }
 
-type LabelSelectorModel struct {
-	MatchExpressions []LabelSelectorRequirementModel `tfsdk:"match_expressions"`
-	MatchLabels      types.Map                       `tfsdk:"match_labels"`
-}
-
-type LabelSelectorRequirementModel struct {
-	Key      types.String `tfsdk:"key"`
-	Operator types.String `tfsdk:"operator"`
-	Values   types.Set    `tfsdk:"values"`
-}
-
 type StatefulSetUpdateStrategyModel struct {
 	Type          types.String                    `tfsdk:"type"`
 	RollingUpdate []StatefulSetRollingUpdateModel `tfsdk:"rolling_update"`
@@ -206,11 +195,13 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 	if spec.RevisionHistoryLimit != nil {
 		out.RevisionHistoryLimit = types.Int64Value(int64(*spec.RevisionHistoryLimit))
 	}
-	if spec.Selector != nil {
-		sel, d := flattenLabelSelector(ctx, spec.Selector)
-		diags.Append(d...)
-		out.Selector = []LabelSelectorModel{sel}
+	var selectorBaseline []LabelSelectorModel
+	if baseline != nil {
+		selectorBaseline = baseline.Selector
 	}
+	selectors, selectorDiags := flattenWorkloadSelector(ctx, spec.Selector, selectorBaseline)
+	diags.Append(selectorDiags...)
+	out.Selector = selectors
 	if spec.ServiceName != "" {
 		out.ServiceName = types.StringValue(spec.ServiceName)
 	}
@@ -314,29 +305,6 @@ func expandLabelSelector(ctx context.Context, in LabelSelectorModel) (*metav1.La
 		}
 	}
 
-	return out, diags
-}
-
-func flattenLabelSelector(ctx context.Context, in *metav1.LabelSelector) (LabelSelectorModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	out := LabelSelectorModel{MatchLabels: types.MapNull(types.StringType)}
-	if len(in.MatchLabels) > 0 {
-		mv, d := types.MapValueFrom(ctx, types.StringType, in.MatchLabels)
-		diags.Append(d...)
-		out.MatchLabels = mv
-	}
-	if len(in.MatchExpressions) > 0 {
-		out.MatchExpressions = make([]LabelSelectorRequirementModel, len(in.MatchExpressions))
-		for i, req := range in.MatchExpressions {
-			values, d := types.SetValueFrom(ctx, types.StringType, req.Values)
-			diags.Append(d...)
-			out.MatchExpressions[i] = LabelSelectorRequirementModel{
-				Key:      types.StringValue(req.Key),
-				Operator: types.StringValue(string(req.Operator)),
-				Values:   values,
-			}
-		}
-	}
 	return out, diags
 }
 
@@ -522,9 +490,9 @@ func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentV
 	out.Resources = []VolumeResourcesModel{resources}
 
 	if in.Selector != nil {
-		sel, sd := flattenLabelSelector(ctx, in.Selector)
+		selectors, sd := flattenWorkloadSelector(ctx, in.Selector, out.Selector)
 		diags.Append(sd...)
-		out.Selector = []LabelSelectorModel{sel}
+		out.Selector = selectors
 	}
 	if in.VolumeName != "" {
 		out.VolumeName = types.StringValue(in.VolumeName)

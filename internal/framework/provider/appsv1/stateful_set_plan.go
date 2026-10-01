@@ -82,6 +82,15 @@ func statefulSetClaimComparisonState(plan, state tftypes.Value) (tftypes.Value, 
 			return value, nil
 		}
 		plannedValue := planned.(tftypes.Value)
+		if at.LastStep() == tftypes.AttributeName("selector") {
+			equal, err := workloadSelectorsEqual(plannedValue, value)
+			if err != nil {
+				return value, err
+			}
+			if equal {
+				return plannedValue, nil
+			}
+		}
 		if !plannedValue.IsNull() {
 			if _, quantityEntry := at.LastStep().(tftypes.ElementKeyString); quantityEntry && plannedValue.IsKnown() {
 				switch at.WithoutLastStep().LastStep() {

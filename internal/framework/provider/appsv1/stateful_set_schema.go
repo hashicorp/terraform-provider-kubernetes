@@ -20,9 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -204,21 +202,19 @@ func labelSelectorBlock(required bool) schema.ListNestedBlock {
 	return schema.ListNestedBlock{
 		Description:   "A label query over pods that should match the replica count.",
 		Validators:    validators,
-		PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
+		PlanModifiers: []planmodifier.List{workloadSelectorRequiresReplace()},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
-				"match_labels": schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{mapplanmodifier.RequiresReplace()}},
+				"match_labels": schema.MapAttribute{Optional: true, ElementType: types.StringType},
 			},
 			Blocks: map[string]schema.Block{
 				"match_expressions": schema.ListNestedBlock{
-					PlanModifiers: []planmodifier.List{listplanmodifier.RequiresReplace()},
 					NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-						"key":      schema.StringAttribute{Optional: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
-						"operator": schema.StringAttribute{Optional: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}},
+						"key":      schema.StringAttribute{Optional: true},
+						"operator": schema.StringAttribute{Optional: true},
 						"values": schema.SetAttribute{
-							Optional:      true,
-							ElementType:   types.StringType,
-							PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()},
+							Optional:    true,
+							ElementType: types.StringType,
 						},
 					}},
 				},

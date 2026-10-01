@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -386,6 +385,10 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 	specType := podtemplate.SpecBlock(podtemplate.Options{RestartPolicyAlways: false}).NestedObject.Type()
 	templateBaseline := types.ListNull(specType)
 	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
+	var selectorBaseline []LabelSelectorModel
+	if len(baseline) == 1 {
+		selectorBaseline = baseline[0].Selector
+	}
 	if len(baseline) == 1 && len(baseline[0].Template) == 1 {
 		templateBaseline = baseline[0].Template[0].Spec
 		templateMetadataBaseline = baseline[0].Template[0].Metadata
@@ -399,6 +402,8 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 	diagnostics.Append(templateSpecDiags...)
 	templateMetadata, templateMetadataDiags := flattenDaemonSetTemplateMetadata(ctx, spec.Template.ObjectMeta, templateMetadataBaseline)
 	diagnostics.Append(templateMetadataDiags...)
+	selector, selectorDiags := flattenWorkloadSelector(ctx, spec.Selector, selectorBaseline)
+	diagnostics.Append(selectorDiags...)
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
@@ -411,7 +416,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 		{
 			MinReadySeconds:      types.Int64Value(int64(spec.MinReadySeconds)),
 			RevisionHistoryLimit: revisionHistoryLimit,
-			Selector:             flattenDaemonSetSelectorModel(ctx, spec.Selector),
+			Selector:             selector,
 			Strategy:             flattenDaemonSetStrategyModel(ctx, spec.UpdateStrategy, &diagnostics),
 			Template: []DaemonSetTemplateModel{
 				{
@@ -465,33 +470,6 @@ func expandDaemonSetSelector(ctx context.Context, in []DaemonSetLabelSelectorMod
 		}
 	}
 	return selector, diagnostics
-}
-
-func flattenDaemonSetSelectorModel(ctx context.Context, in *metav1.LabelSelector) []DaemonSetLabelSelectorModel {
-	if in == nil {
-		return nil
-	}
-	model := DaemonSetLabelSelectorModel{
-		MatchLabels: types.MapNull(types.StringType),
-	}
-	if in.MatchLabels != nil {
-		model.MatchLabels = types.MapValueMust(types.StringType, mapStringAttrValues(in.MatchLabels))
-	}
-	if len(in.MatchExpressions) > 0 {
-		model.MatchExpressions = make([]DaemonSetMatchExpressionModel, 0, len(in.MatchExpressions))
-		for _, expression := range in.MatchExpressions {
-			values := types.SetNull(types.StringType)
-			if len(expression.Values) > 0 {
-				values = types.SetValueMust(types.StringType, stringValues(expression.Values))
-			}
-			model.MatchExpressions = append(model.MatchExpressions, DaemonSetMatchExpressionModel{
-				Key:      types.StringValue(expression.Key),
-				Operator: types.StringValue(string(expression.Operator)),
-				Values:   values,
-			})
-		}
-	}
-	return []DaemonSetLabelSelectorModel{model}
 }
 
 func expandDaemonSetStrategyModel(ctx context.Context, in types.List, at path.Path) (appsv1.DaemonSetUpdateStrategy, diag.Diagnostics) {
@@ -605,22 +583,6 @@ func flattenDaemonSetTemplateMetadata(ctx context.Context, in metav1.ObjectMeta,
 			Namespace: namespace,
 		},
 	}, diagnostics
-}
-
-func mapStringAttrValues(in map[string]string) map[string]attr.Value {
-	out := make(map[string]attr.Value, len(in))
-	for key, value := range in {
-		out[key] = types.StringValue(value)
-	}
-	return out
-}
-
-func stringValues(in []string) []attr.Value {
-	out := make([]attr.Value, len(in))
-	for i, value := range in {
-		out[i] = types.StringValue(value)
-	}
-	return out
 }
 
 func daemonSetMetadataPatchOps(state, plan DaemonSetV1Model, live metav1.ObjectMeta) kubernetes.PatchOperations {

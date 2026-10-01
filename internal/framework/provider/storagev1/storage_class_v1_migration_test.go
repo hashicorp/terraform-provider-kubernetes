@@ -150,17 +150,12 @@ func TestAccStorageClassV1_UpgradeFromSDKV2_labels(t *testing.T) {
 
 func TestAccStorageClassV1_UpgradeFromSDKV2_emptyValuesName(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	// SDKv2 v3.2.1 normalises annotations={} and labels={} to null in state.
-	// The Framework plan against null state with an {} config is a no-op (semantic
-	// equality), not an update. The one-time patch only appears after the first
-	// Framework apply, which is outside this test's scope.
-	testAccStorageClassV1Migration(t, testAccKubernetesStorageClassV1Config_emptyValuesName(name))
+	testAccStorageClassV1MigrationExpectingUpdate(t, testAccKubernetesStorageClassV1Config_emptyValuesName(name))
 }
 
 func TestAccStorageClassV1_UpgradeFromSDKV2_emptyValuesGenerateName(t *testing.T) {
 	prefix := fmt.Sprintf("tf-migration-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	// Same reasoning as emptyValuesName above.
-	testAccStorageClassV1Migration(t, testAccKubernetesStorageClassV1Config_emptyValuesGenerateName(prefix))
+	testAccStorageClassV1MigrationExpectingUpdate(t, testAccKubernetesStorageClassV1Config_emptyValuesGenerateName(prefix))
 }
 
 func TestAccStorageClassV1_UpgradeFromSDKV2_completeName(t *testing.T) {

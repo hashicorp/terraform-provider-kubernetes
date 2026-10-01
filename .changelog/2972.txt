@@ -1,3 +1,7 @@
 ```release-note:enhancement
 `resource/kubernetes_storage_class_v1`: Migrated resource to Terraform Plugin Framework. Users of the deprecated `kubernetes_storage_class` resource type can migrate to `kubernetes_storage_class_v1` using a `moved` block with no state drift. Changes to `reclaim_policy` now correctly force replacement to align with Kubernetes API immutability.
 ```
+
+```release-note:breaking-change
+`resource/kubernetes_storage_class_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions silently dropped such entries; they are now rejected during plan. Remove the key or give it a string value.
+```

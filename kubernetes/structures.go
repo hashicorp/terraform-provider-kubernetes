@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func idParts(id string) (string, string, error) {
+func IdParts(id string) (string, string, error) {
 	parts := strings.Split(id, "/")
 	if len(parts) != 2 {
 		err := fmt.Errorf("Unexpected ID format (%q), expected %q.", id, "namespace/name")
@@ -26,7 +26,7 @@ func idParts(id string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-func buildId(meta metav1.ObjectMeta) string {
+func BuildId(meta metav1.ObjectMeta) string {
 	return meta.Namespace + "/" + meta.Name
 }
 
@@ -139,29 +139,29 @@ func flattenMetadata(meta metav1.ObjectMeta, d *schema.ResourceData, providerMet
 	metadataLabels := d.Get("metadata.0.labels").(map[string]interface{})
 
 	ignoreAnnotations := providerMeta.(providerMetadata).IgnoreAnnotations
-	removeInternalKeys(meta.Annotations, metadataAnnotations)
-	removeKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
+	RemoveInternalKeys(meta.Annotations, metadataAnnotations)
+	RemoveKeys(meta.Annotations, metadataAnnotations, ignoreAnnotations)
 
 	ignoreLabels := providerMeta.(providerMetadata).IgnoreLabels
-	removeInternalKeys(meta.Labels, metadataLabels)
-	removeKeys(meta.Labels, metadataLabels, ignoreLabels)
+	RemoveInternalKeys(meta.Labels, metadataLabels)
+	RemoveKeys(meta.Labels, metadataLabels, ignoreLabels)
 
 	return flattenMetadataFields(meta)
 }
 
-func removeInternalKeys(m map[string]string, d map[string]interface{}) {
+func RemoveInternalKeys(m map[string]string, d map[string]interface{}) {
 	for k := range m {
-		if IsInternalKey(k) && !isKeyInMap(k, d) {
+		if isInternalKey(k) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
 }
 
-// removeKeys removes given Kubernetes metadata(annotations and labels) keys.
+// RemoveKeys removes given Kubernetes metadata(annotations and labels) keys.
 // In that case, they won't be available in the TF state file and will be ignored during apply/plan operations.
-func removeKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) {
+func RemoveKeys(m map[string]string, d map[string]interface{}, ignoreKubernetesMetadataKeys []string) {
 	for k := range m {
-		if IgnoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
+		if ignoreKey(k, ignoreKubernetesMetadataKeys) && !isKeyInMap(k, d) {
 			delete(m, k)
 		}
 	}
@@ -172,7 +172,7 @@ func isKeyInMap(key string, d map[string]interface{}) bool {
 	return ok
 }
 
-func IsInternalKey(annotationKey string) bool {
+func isInternalKey(annotationKey string) bool {
 	u, err := url.Parse("//" + annotationKey)
 	if err != nil {
 		return false
@@ -200,9 +200,9 @@ func IsInternalKey(annotationKey string) bool {
 	return false
 }
 
-// IgnoreKey reports whether the Kubernetes metadata(annotations and labels) key contains
+// ignoreKey reports whether the Kubernetes metadata(annotations and labels) key contains
 // any match of the regular expression pattern from the expressions slice.
-func IgnoreKey(key string, expressions []string) bool {
+func ignoreKey(key string, expressions []string) bool {
 	for _, e := range expressions {
 		if ok, _ := regexp.MatchString(e, key); ok {
 			return true

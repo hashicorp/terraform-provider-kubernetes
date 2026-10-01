@@ -367,7 +367,7 @@ func testAccCheckKubernetesServiceAccountV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -396,7 +396,7 @@ func testAccCheckKubernetesServiceAccountV1Exists(n string, obj *corev1.ServiceA
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

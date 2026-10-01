@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -261,9 +262,20 @@ func TestMigration_MoveState_basic(t *testing.T) {
 	if !got.AllowVolumeExpansion.ValueBool() {
 		t.Error("allow_volume_expansion: expected true")
 	}
-	if got.Parameters["type"].ValueString() != "pd-ssd" {
-		t.Errorf("parameters.type: got %q, want pd-ssd", got.Parameters["type"].ValueString())
+
+	// Parameters is now types.Map — extract value via ElementsAs.
+	if got.Parameters.IsNull() || got.Parameters.IsUnknown() {
+		t.Fatal("parameters: expected non-null map")
 	}
+	var params map[string]string
+	resp.Diagnostics.Append(got.Parameters.ElementsAs(context.Background(), &params, false)...)
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("parameters ElementsAs: %s", resp.Diagnostics)
+	}
+	if params["type"] != "pd-ssd" {
+		t.Errorf("parameters.type: got %q, want pd-ssd", params["type"])
+	}
+
 	if got.MountOptions.IsNull() || len(got.MountOptions.Elements()) != 2 {
 		t.Errorf("mount_options: expected 2 elements, got %v", got.MountOptions)
 	}
@@ -280,11 +292,30 @@ func TestMigration_MoveState_basic(t *testing.T) {
 	if len(expr.Values.Elements()) != 2 {
 		t.Errorf("topology values: expected 2, got %d", len(expr.Values.Elements()))
 	}
-	if got.Metadata[0].Annotations["example.com/note"].ValueString() != "test" {
-		t.Errorf("annotation: got %q, want test", got.Metadata[0].Annotations["example.com/note"].ValueString())
+
+	// Annotations and Labels are now types.Map — check via Elements().
+	annotations := got.Metadata[0].Annotations
+	if annotations.IsNull() || annotations.IsUnknown() {
+		t.Fatal("annotations: expected non-null map")
 	}
-	if got.Metadata[0].Labels["managed-by"].ValueString() != "terraform" {
-		t.Errorf("label: got %q, want terraform", got.Metadata[0].Labels["managed-by"].ValueString())
+	annotationElems := annotations.Elements()
+	noteVal, ok := annotationElems["example.com/note"]
+	if !ok {
+		t.Error("annotations: key 'example.com/note' not found")
+	} else if s, ok := noteVal.(types.String); !ok || s.ValueString() != "test" {
+		t.Errorf("annotation example.com/note: got %v, want 'test'", noteVal)
+	}
+
+	labels := got.Metadata[0].Labels
+	if labels.IsNull() || labels.IsUnknown() {
+		t.Fatal("labels: expected non-null map")
+	}
+	labelElems := labels.Elements()
+	managedByVal, ok := labelElems["managed-by"]
+	if !ok {
+		t.Error("labels: key 'managed-by' not found")
+	} else if s, ok := managedByVal.(types.String); !ok || s.ValueString() != "terraform" {
+		t.Errorf("label managed-by: got %v, want 'terraform'", managedByVal)
 	}
 }
 
@@ -331,12 +362,15 @@ func TestMigration_MoveState_nonEmptyGenerateNamePreserved(t *testing.T) {
 	}
 }
 
-func TestMigration_MoveState_emptyAnnotationsAndLabelsAreNil(t *testing.T) {
+// TestMigration_MoveState_nullAnnotationsAndLabelsAreNull verifies that nil
+// (JSON null) maps from SDKv2 state become null types.Map values, not empty maps.
+// SDKv2 writes null for unset annotations/labels; MoveState must preserve this.
+func TestMigration_MoveState_nullAnnotationsAndLabelsAreNull(t *testing.T) {
 	t.Parallel()
 
 	raw := sdkv2SCRawJSON(
-		"sc-empty-meta", "sc-empty-meta", "",
-		map[string]string{}, map[string]string{},
+		"sc-nil-meta", "sc-nil-meta", "",
+		nil, nil, // nil maps → JSON null
 		"1", "uid-3", 0,
 		"rancher.io/local-path", nil,
 		"Delete", "Immediate", true,
@@ -346,15 +380,48 @@ func TestMigration_MoveState_emptyAnnotationsAndLabelsAreNil(t *testing.T) {
 	resp := runMoveState(t, "kubernetes_storage_class", raw)
 	got := readMovedModel(t, resp)
 
-	if got.Metadata[0].Annotations != nil {
-		t.Errorf("annotations: expected nil for empty map, got %v", got.Metadata[0].Annotations)
+	if !got.Metadata[0].Annotations.IsNull() {
+		t.Errorf("annotations: expected null for JSON null, got %v", got.Metadata[0].Annotations)
 	}
-	if got.Metadata[0].Labels != nil {
-		t.Errorf("labels: expected nil for empty map, got %v", got.Metadata[0].Labels)
+	if !got.Metadata[0].Labels.IsNull() {
+		t.Errorf("labels: expected null for JSON null, got %v", got.Metadata[0].Labels)
 	}
 }
 
-func TestMigration_MoveState_emptyParametersAreNil(t *testing.T) {
+// TestMigration_MoveState_emptyAnnotationsAndLabelsAreEmpty verifies that empty
+// maps {} from SDKv2 state become known empty types.Map values (not null).
+// SDKv2 writes {} when the user explicitly sets empty maps; MoveState preserves the distinction.
+func TestMigration_MoveState_emptyAnnotationsAndLabelsAreEmpty(t *testing.T) {
+	t.Parallel()
+
+	raw := sdkv2SCRawJSON(
+		"sc-empty-meta", "sc-empty-meta", "",
+		map[string]string{}, map[string]string{}, // empty maps → JSON {}
+		"1", "uid-3b", 0,
+		"rancher.io/local-path", nil,
+		"Delete", "Immediate", true,
+		nil, nil,
+	)
+
+	resp := runMoveState(t, "kubernetes_storage_class", raw)
+	got := readMovedModel(t, resp)
+
+	// {} from SDKv2 becomes a known empty map, not null — preserving the distinction.
+	if got.Metadata[0].Annotations.IsNull() {
+		t.Error("annotations: expected known empty map for {}, got null")
+	}
+	if len(got.Metadata[0].Annotations.Elements()) != 0 {
+		t.Errorf("annotations: expected 0 elements, got %d", len(got.Metadata[0].Annotations.Elements()))
+	}
+	if got.Metadata[0].Labels.IsNull() {
+		t.Error("labels: expected known empty map for {}, got null")
+	}
+	if len(got.Metadata[0].Labels.Elements()) != 0 {
+		t.Errorf("labels: expected 0 elements, got %d", len(got.Metadata[0].Labels.Elements()))
+	}
+}
+
+func TestMigration_MoveState_emptyParametersAreNull(t *testing.T) {
 	t.Parallel()
 
 	raw := sdkv2SCRawJSON(
@@ -369,8 +436,9 @@ func TestMigration_MoveState_emptyParametersAreNil(t *testing.T) {
 	resp := runMoveState(t, "kubernetes_storage_class", raw)
 	got := readMovedModel(t, resp)
 
-	if got.Parameters != nil {
-		t.Errorf("parameters: expected nil for empty map, got %v", got.Parameters)
+	// Empty parameters map → null (no user-configured parameters).
+	if !got.Parameters.IsNull() {
+		t.Errorf("parameters: expected null for empty map, got %v", got.Parameters)
 	}
 }
 

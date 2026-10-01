@@ -5,13 +5,15 @@ package storagev1
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+)
+
+const (
+	storageClassKind       = "StorageClass"
+	storageClassAPIVersion = "storage.k8s.io/v1"
 )
 
 // StorageClassV1 is the Plugin Framework resource for kubernetes_storage_class_v1.
@@ -44,59 +46,21 @@ func (r *StorageClassV1) Configure(_ context.Context, req resource.ConfigureRequ
 	r.SDKv2Meta = req.ProviderData.(func() any)
 }
 
+// IdentitySchema implements [resource.ResourceWithIdentity].
+// Uses common.IdentitySchema which matches SDKv2 resourceIdentitySchemaNonNamespaced at Version 1.
 func (r *StorageClassV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = identityschema.Schema{
-		Version: 1,
-		Attributes: map[string]identityschema.Attribute{
-			"api_version": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"kind": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-			"name": identityschema.StringAttribute{
-				RequiredForImport: true,
-			},
-		},
-	}
+	resp.IdentitySchema = common.IdentitySchema()
 }
 
-// UpgradeIdentity handles version-0 identity from provider versions before 2.38.0
-// (e.g. v2.37.1) where identity_schema_version was 0 or identity was absent.
+// UpgradeIdentity implements [resource.ResourceWithUpgradeIdentity].
+//
+// Without this, any object created by provider 2.37.x or older fails its first plan with
+// "Unable to Upgrade Resource Identity": identity shipped in 2.38.0, so older state carries
+// identity_schema_version 0 and no identity, and Terraform asks for an upgrade whenever the
+// stored version differs from the declared one. SDKv2 answers that generically in its gRPC
+// server; the framework requires each resource to supply it.
 func (r *StorageClassV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
-	return map[int64]resource.IdentityUpgrader{
-		0: {
-			IdentityUpgrader: func(ctx context.Context, req resource.UpgradeIdentityRequest, resp *resource.UpgradeIdentityResponse) {
-				if resp.Identity == nil {
-					return
-				}
-
-				identity := StorageClassIdentityModel{
-					Name:       types.StringNull(),
-					Kind:       types.StringNull(),
-					APIVersion: types.StringNull(),
-				}
-
-				if req.RawIdentity != nil && len(req.RawIdentity.JSON) > 0 {
-					var prior struct {
-						Name string `json:"name"`
-					}
-					if err := json.Unmarshal(req.RawIdentity.JSON, &prior); err != nil {
-						resp.Diagnostics.AddError(
-							"Unable to upgrade resource identity",
-							fmt.Sprintf("Could not decode the stored identity: %s", err),
-						)
-						return
-					}
-					identity.Name = types.StringValue(prior.Name)
-					identity.Kind = types.StringValue("StorageClass")
-					identity.APIVersion = types.StringValue("storage.k8s.io/v1")
-				}
-
-				resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
-			},
-		},
-	}
+	return common.UpgradeIdentity(storageClassKind, storageClassAPIVersion)
 }
 
 func (r *StorageClassV1) MoveState(_ context.Context) []resource.StateMover {

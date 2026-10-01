@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // Schema defines the Framework schema for data.kubernetes_secret_v1.
@@ -35,10 +37,10 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.String{
-								dnsSubdomainValidator{},
 								stringvalidator.ConflictsWith(
 									path.MatchRelative().AtParent().AtName("generate_name"),
 								),
+								common.DNSSubdomainNameValidator(),
 							},
 						},
 						"namespace": schema.StringAttribute{
@@ -51,10 +53,10 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.String{
-								dnsLabelValidator{},
 								stringvalidator.ConflictsWith(
 									path.MatchRelative().AtParent().AtName("name"),
 								),
+								common.DNSLabelPrefixValidator(),
 							},
 						},
 						"annotations": schema.MapAttribute{
@@ -63,7 +65,7 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.Map{
-								annotationKeysValidator{},
+								common.AnnotationsValidator(),
 							},
 						},
 						"labels": schema.MapAttribute{
@@ -72,7 +74,7 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.Map{
-								labelKeysAndValuesValidator{},
+								common.LabelsValidator(),
 							},
 						},
 						"generation": schema.Int64Attribute{
@@ -106,6 +108,7 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "A map of the secret data with values encoded in base64 format",
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 				Sensitive:   true,
 			},
 			"type": schema.StringAttribute{

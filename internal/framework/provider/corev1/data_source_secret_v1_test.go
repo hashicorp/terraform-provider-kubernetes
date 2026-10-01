@@ -20,7 +20,7 @@ func TestAccKubernetesDataSourceSecretV1_basic(t *testing.T) {
 	resourceName := "kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				// Create the secret.
@@ -64,7 +64,7 @@ func TestAccKubernetesDataSourceSecretV1_generateName(t *testing.T) {
 	resourceName := "kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceSecretV1Config_generateName(generateName),
@@ -96,7 +96,7 @@ func TestAccKubernetesDataSourceSecretV1_not_found(t *testing.T) {
 	datasourceName := "data.kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceSecretV1Config_notFound(name),
@@ -117,7 +117,7 @@ func TestAccKubernetesDataSourceSecretV1_binaryData(t *testing.T) {
 	datasourceName := "data.kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceSecretV1Config_binaryData(name),
@@ -143,7 +143,7 @@ func TestAccKubernetesDataSourceSecretV1_ignoreMetadata(t *testing.T) {
 	datasourceName := "data.kubernetes_secret_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceSecretV1Config_ignoreMetadata(name),

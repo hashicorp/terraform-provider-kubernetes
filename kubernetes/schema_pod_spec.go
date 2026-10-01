@@ -186,7 +186,6 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Default:     conditionalDefault(!isComputed, false),
 			Description: "Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified.",
 		},
-
 		"host_pid": {
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -195,7 +194,14 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Default:     conditionalDefault(!isComputed, false),
 			Description: "Use the host's pid namespace.",
 		},
-
+		"host_users": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    isComputed,
+			ForceNew:    !isUpdatable,
+			Default:     conditionalDefault(!isComputed, true),
+			Description: "Use the host's user namespace. Optional: Defaults to true.",
+		},
 		"hostname": {
 			Type:        schema.TypeString,
 			Optional:    true,

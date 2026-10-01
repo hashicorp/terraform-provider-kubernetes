@@ -53,15 +53,10 @@ func (d *NamespaceV1DataSource) Read(
 	ns, err := conn.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Namespace does not exist. Return without an error, as SDKv2 does, and
-			// write the config-decoded model: id and metadata.name are set, everything
-			// else is null.
-			//
-			// This is the documented divergence: SDKv2 recorded empty values instead —
-			// {} for the metadata maps, "" for uid and resource_version, 0 for
-			// generation. An existence check written as metadata[0].uid != "" therefore
-			// flips from false to true, because HCL treats null as equal only to null.
-			// See the changelog entry and the migration test, which pins both shapes.
+			// Namespace does not exist. Return without an error and record the same state
+			// as SDKv2: configured values kept, unset metadata as zero values ({}, "", 0),
+			// spec null. Existence checks such as metadata[0].uid != "" depend on this.
+			model.Metadata[0] = common.NormalizeNotFoundMetadata(model.Metadata[0])
 			resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 			return
 		}

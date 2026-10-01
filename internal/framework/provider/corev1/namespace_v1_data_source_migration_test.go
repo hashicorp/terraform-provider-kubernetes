@@ -27,102 +27,84 @@ func sdkv2ExternalProvider() map[string]resource.ExternalProvider {
 	}
 }
 
-// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2 establishes state with the
-// published SDKv2 provider, then runs the identical config against the local framework
-// implementation. The empty plan proves the attribute values, captured in a
-// terraform_data anchor, are unchanged.
+// namespaceMigrationSteps runs config under the published SDKv2 provider, then under the
+// local framework implementation, asserting an empty plan and the same state checks after
+// both steps — so a pass means the framework matches SDKv2, not merely itself.
+func namespaceMigrationSteps(config string, checks []statecheck.StateCheck) []resource.TestStep {
+	return []resource.TestStep{
+		{
+			ExternalProviders: sdkv2ExternalProvider(),
+			Config:            config,
+			ConfigStateChecks: checks,
+		},
+		{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Config:                   config,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+			},
+			ConfigStateChecks: checks,
+		},
+	}
+}
+
+// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2 covers a namespace that exists.
 func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
-		Steps: []resource.TestStep{
-			{
-				ExternalProviders: sdkv2ExternalProvider(),
-				Config:            testAccNamespaceDataSourceAnchoredConfig("kube-system"),
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccNamespaceDataSourceAnchoredConfig("kube-system"),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-			},
-		},
+		Steps: namespaceMigrationSteps(withNamespaceAnchor(testAccNamespaceDataSourceConfig("kube-system")), nil),
 	})
 }
 
-// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound records the one
-// place this migration deliberately does not preserve SDKv2's state, so it expects a
-// changed plan rather than an empty one. Both sides are pinned: step 1 asserts what
-// SDKv2 writes, step 2 what the framework writes. Anyone restoring parity will fail
-// this test and have to change it on purpose.
-//
-// SDKv2 returns nil before either d.Set call, so its state is a flatmap artifact:
-// metadata was in the diff and gets zero-filled ({} maps, "" strings, 0 generation),
-// while spec was never set and so comes back null. The framework records the requested
-// name and leaves the rest null.
-//
-// Practitioner impact, also in the changelog: the SDKv2 idiom for detecting absence is
-// metadata[0].uid != "", and HCL treats null as equal only to null, so that expression
-// flips from false to true.
+// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound covers a namespace
+// that does not exist. The read succeeds under both, and unset metadata must be recorded
+// as SDKv2's zero values rather than null: existence checks written as
+// metadata[0].uid != "" depend on it, and null would silently invert them.
 func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound(t *testing.T) {
-	// Randomised so a concurrent test cannot create it, and held in a variable so both
-	// steps read the same name.
+	// Randomised so a concurrent test cannot create it.
 	name := fmt.Sprintf("tf-acc-ns-absent-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
 
-	meta := func(field string) tfjsonpath.Path {
-		return tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field)
-	}
-
-	// id and metadata.name agree: the framework sets the synthetic ID before the API
-	// call, as SDKv2's d.SetId does. spec is null under both, for different reasons.
-	sdkv2Shape := []statecheck.StateCheck{
+	checks := append([]statecheck.StateCheck{
 		statecheck.ExpectKnownValue(namespaceDataSourceName, tfjsonpath.New("id"), knownvalue.StringExact(name)),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("name"), knownvalue.StringExact(name)),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, tfjsonpath.New("spec"), knownvalue.Null()),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("uid"), knownvalue.StringExact("")),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("resource_version"), knownvalue.StringExact("")),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("generation"), knownvalue.Int64Exact(0)),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("annotations"), knownvalue.MapSizeExact(0)),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("labels"), knownvalue.MapSizeExact(0)),
-	}
-
-	frameworkShape := append([]statecheck.StateCheck{
-		statecheck.ExpectKnownValue(namespaceDataSourceName, tfjsonpath.New("id"), knownvalue.StringExact(name)),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("name"), knownvalue.StringExact(name)),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, namespaceMetadataPath("name"), knownvalue.StringExact(name)),
 	}, namespaceNotFoundStateChecks()...)
 
 	resource.ParallelTest(t, resource.TestCase{
-		Steps: []resource.TestStep{
-			{
-				// That this step applies at all is part of the check: the SDKv2 read
-				// must not error on a 404.
-				ExternalProviders: sdkv2ExternalProvider(),
-				Config:            testAccNamespaceDataSourceAnchoredConfig(name),
-				ConfigStateChecks: sdkv2Shape,
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccNamespaceDataSourceAnchoredConfig(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("terraform_data.anchor", plancheck.ResourceActionUpdate),
-					},
-				},
-				ConfigStateChecks: frameworkShape,
-			},
-		},
+		Steps: namespaceMigrationSteps(withNamespaceAnchor(testAccNamespaceDataSourceConfig(name)), checks),
 	})
 }
 
-// testAccNamespaceDataSourceAnchoredConfig is testAccNamespaceDataSourceConfig plus a
-// terraform_data resource capturing every attribute the data source exposes.
+// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFoundWithInputs covers a
+// missing namespace whose configuration sets annotations and labels. SDKv2 keeps the
+// configured values on a 404 but drops null entries, so "null-key" must be absent.
+func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFoundWithInputs(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-ns-absent-in-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+
+	checks := []statecheck.StateCheck{
+		statecheck.ExpectKnownValue(namespaceDataSourceName, namespaceMetadataPath("annotations"),
+			knownvalue.MapExact(map[string]knownvalue.Check{"anno-key": knownvalue.StringExact("anno-value")})),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, namespaceMetadataPath("labels"),
+			knownvalue.MapExact(map[string]knownvalue.Check{"label-key": knownvalue.StringExact("label-value")})),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, tfjsonpath.New("spec"), knownvalue.Null()),
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		Steps: namespaceMigrationSteps(withNamespaceAnchor(testAccNamespaceDataSourceWithInputsConfig(name)), checks),
+	})
+}
+
+func namespaceMetadataPath(field string) tfjsonpath.Path {
+	return tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field)
+}
+
+// withNamespaceAnchor appends a terraform_data resource capturing every attribute the
+// data source exposes.
 //
 // Only migration tests need this. A data source is re-read on every plan, so its values
 // differing between provider versions produces no planned change unless something
 // depends on them; the anchor is that dependant. jsonencode keeps null distinguishable
-// from "" and {}, which is the distinction these tests turn on, and keeps the anchor's
-// object type stable when values go null.
-func testAccNamespaceDataSourceAnchoredConfig(name string) string {
-	return testAccNamespaceDataSourceConfig(name) + `
+// from "" and {}, which is the distinction these tests turn on.
+func withNamespaceAnchor(dataSourceConfig string) string {
+	return dataSourceConfig + `
 
 resource "terraform_data" "anchor" {
   input = {

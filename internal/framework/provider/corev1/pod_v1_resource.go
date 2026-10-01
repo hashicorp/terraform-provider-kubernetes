@@ -7,8 +7,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
@@ -30,6 +33,14 @@ const (
 
 type PodV1 struct {
 	SDKv2Meta func() any
+}
+
+type PodV1Model struct {
+	ID          types.String                     `tfsdk:"id"`
+	Metadata    []common.NamespacedMetadataModel `tfsdk:"metadata"`
+	Spec        types.List                       `tfsdk:"spec"`
+	TargetState types.List                       `tfsdk:"target_state"`
+	Timeouts    timeouts.Value                   `tfsdk:"timeouts"`
 }
 
 func NewPodV1() resource.Resource {

@@ -5,6 +5,7 @@ package corev1_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -102,7 +103,68 @@ func TestAccKubernetesDataSourceSecretV1_not_found(t *testing.T) {
 				Config: testAccKubernetesDataSourceSecretV1Config_notFound(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(datasourceName, "id", fmt.Sprintf("default/%s", name)),
 					resource.TestCheckResourceAttr(datasourceName, "data.%", "0"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesDataSourceSecretV1_metadataRequired verifies that omitting the
+// SDKv2-required metadata block fails during planning rather than reaching Read.
+func TestAccKubernetesDataSourceSecretV1_metadataRequired(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      `data "kubernetes_secret_v1" "test" {}`,
+				ExpectError: regexp.MustCompile(`metadata`),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesDataSourceSecretV1_metadataMaxItems verifies SDKv2's
+// MaxItems: 1 metadata contract is preserved by the Framework schema.
+func TestAccKubernetesDataSourceSecretV1_metadataMaxItems(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `data "kubernetes_secret_v1" "test" {
+  metadata { name = "tf-acc-unused-one" }
+  metadata { name = "tf-acc-unused-two" }
+}`,
+				ExpectError: regexp.MustCompile(`(?i)metadata list must contain at most 1 elements`),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesDataSourceSecretV1_nullAnnotation preserves SDKv2's
+// validateAnnotations quirk: annotation values are not validated, so a null
+// value is accepted at plan time.
+func TestAccKubernetesDataSourceSecretV1_nullAnnotation(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-null-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`data "kubernetes_secret_v1" "test" {
+  metadata {
+    name = %q
+    annotations = {
+      "example.com/probe" = null
+    }
+  }
+}
+`, name),
+				Check: resource.TestCheckResourceAttr(
+					"data.kubernetes_secret_v1.test",
+					"id",
+					fmt.Sprintf("default/%s", name),
 				),
 			},
 		},

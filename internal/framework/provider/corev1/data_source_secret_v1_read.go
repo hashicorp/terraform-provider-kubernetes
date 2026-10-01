@@ -7,7 +7,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,6 +44,12 @@ func (d *SecretV1DataSource) Read(ctx context.Context, req datasource.ReadReques
 		namespace = "default"
 	}
 	name := meta.Name.ValueString()
+	// SDKv2 assigns the configured namespace/name ID before issuing the API request,
+	// and keeps it when the Secret is not found.
+	model.ID = types.StringValue(kubernetes.BuildId(metav1.ObjectMeta{
+		Namespace: namespace,
+		Name:      name,
+	}))
 
 	conn, metaDiags := d.clientset()
 	resp.Diagnostics.Append(metaDiags...)
@@ -114,7 +119,9 @@ func (d *SecretV1DataSource) Read(ctx context.Context, req datasource.ReadReques
 		}
 		model.BinaryData = binaryData
 	} else {
-		model.BinaryData = types.MapValueMust(types.StringType, map[string]attr.Value{})
+		// SDKv2's GetOk treats both an omitted and explicitly empty map as absent;
+		// in either case Read leaves binary_data null in state.
+		model.BinaryData = types.MapNull(types.StringType)
 	}
 
 	dataMap, dataDiags := types.MapValueFrom(ctx, types.StringType, flattenByteMapToStringMap(workingData))

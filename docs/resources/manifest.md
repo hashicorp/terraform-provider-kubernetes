@@ -2,7 +2,7 @@
 subcategory: "manifest"
 page_title: "Kubernetes: kubernetes_manifest"
 description: |-
-  The resource provides a way to create and manage custom resources 
+  The resource provides a way to create and manage custom resources
 ---
 
 # kubernetes_manifest
@@ -25,6 +25,7 @@ Once applied, the `object` attribute contains the state of the resource as retur
 - `computed_fields` (List of String) List of manifest fields whose values can be altered by the API server during 'apply'. Defaults to: ["metadata.annotations", "metadata.labels"]
 - `field_manager` (Block List, Max: 1) Configure field manager options. (see [below for nested schema](#nestedblock--field_manager))
 - `object` (Dynamic) The resulting resource state, as returned by the API server after applying the desired state from `manifest`.
+- `skip_validation` (Boolean) When set to `true`, skips validation of the manifest against the Kubernetes API server during the plan phase. This can be useful when the cluster is not available or when you want to defer validation until apply time. Defaults to `false`.
 - `timeouts` (Block List, Max: 1) (see [below for nested schema](#nestedblock--timeouts))
 - `wait` (Block List, Max: 1) Configure waiter options. (see [below for nested schema](#nestedblock--wait))
 - `wait_for` (Object, Deprecated) A map of attribute paths and desired patterns to be matched. After each apply the provider will wait for all attributes listed here to reach a value that matches the desired pattern. (see [below for nested schema](#nestedatt--wait_for))
@@ -79,7 +80,7 @@ Optional:
 
 ### Before you use this resource
 
-- This resource requires API access during planning time. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.
+- This resource requires API access during planning time by default. This means the cluster has to be accessible at plan time and thus cannot be created in the same apply operation. However, you can use the `skip_validation` attribute to defer validation until apply time, which allows creating the cluster and its resources in the same Terraform run. We recommend only using this resource for custom resources or resources not yet fully supported by the provider.
 
 - This resource uses [Server-side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to carry out apply operations. A minimum Kubernetes version of 1.16.x is required, but versions 1.17+ are strongly recommended as the SSA implementation in Kubernetes 1.16.x is incomplete and unstable.
 
@@ -299,3 +300,63 @@ A field path is a string that describes the fully qualified address of a field w
   > type(kubernetes_manifest.my-secret.object.data)
     map(string)
   ```
+
+## Skipping validation during plan phase
+
+By default, the `kubernetes_manifest` resource validates the manifest against the Kubernetes API server during the plan phase. This includes checking if the resource type exists, verifying CRD schemas, and validating namespace requirements. However, there are scenarios where you may want to skip this validation:
+
+- When the cluster is not available during plan time (e.g., creating the cluster and its resources in the same Terraform run)
+- When deploying CRDs and their custom resources in the same apply operation
+- When you want to defer validation until apply time
+
+To skip validation during plan phase, set the `skip_validation` attribute to `true`:
+
+```terraform
+resource "kubernetes_manifest" "test" {
+  manifest = {
+    apiVersion = "apps/v1"
+    kind       = "Deployment"
+    metadata = {
+      name      = "test-deployment"
+      namespace = "default"
+    }
+    spec = {
+      replicas = 3
+      selector = {
+        matchLabels = {
+          app = "test"
+        }
+      }
+      template = {
+        metadata = {
+          labels = {
+            app = "test"
+          }
+        }
+        spec = {
+          containers = [
+            {
+              name  = "nginx"
+              image = "nginx:1.21"
+            }
+          ]
+        }
+      }
+    }
+  }
+
+  skip_validation = true
+}
+```
+
+**Important notes:**
+
+- When `skip_validation` is enabled, the provider will not connect to the Kubernetes cluster during plan phase, which means:
+  - CRD validation will be skipped
+  - Namespace validation will be skipped
+  - OpenAPI schema validation will be skipped
+  - The resource will be treated as requiring replacement on updates
+
+- Validation will still occur during the apply phase when the resource is actually created or updated in the cluster.
+
+- It is recommended to use this feature only when necessary, as it reduces the ability to catch configuration errors early during planning.

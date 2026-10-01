@@ -49,20 +49,43 @@ func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2(t *testing.T) {
 	})
 }
 
-// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound records the one
-// place this migration deliberately does not preserve SDKv2's state, so it expects a
-// changed plan rather than an empty one. Both sides are pinned: step 1 asserts what
-// SDKv2 writes, step 2 what the framework writes. Anyone restoring parity will fail
-// this test and have to change it on purpose.
-//
-// SDKv2 returns nil before either d.Set call, so its state is a flatmap artifact:
-// metadata was in the diff and gets zero-filled ({} maps, "" strings, 0 generation),
-// while spec was never set and so comes back null. The framework records the requested
-// name and leaves the rest null.
-//
-// Practitioner impact, also in the changelog: the SDKv2 idiom for detecting absence is
-// metadata[0].uid != "", and HCL treats null as equal only to null, so that expression
-// flips from false to true.
+// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_withInputs covers a namespace
+// that exists, with annotations and labels set in configuration — one label null, which
+// SDKv2 accepted. The read reports what the namespace carries, not what was configured.
+func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_withInputs(t *testing.T) {
+	check := resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttr(namespaceDataSourceName, "id", "kube-system"),
+		resource.TestCheckResourceAttrSet(namespaceDataSourceName, "metadata.0.uid"),
+		resource.TestCheckResourceAttr(namespaceDataSourceName, "metadata.0.labels.kubernetes.io/metadata.name", "kube-system"),
+		resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.labels.label-key"),
+		resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.labels.null-key"),
+		resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.annotations.anno-key"),
+	)
+
+	resource.ParallelTest(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: sdkv2ExternalProvider(),
+				Config:            testAccNamespaceDataSourceAnchoredWithInputsConfig("kube-system"),
+				Check:             check,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccNamespaceDataSourceAnchoredWithInputsConfig("kube-system"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: check,
+			},
+		},
+	})
+}
+
+// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound covers a namespace
+// that does not exist. Step 1 pins what SDKv2 records, step 2 that the framework records
+// the same — unset metadata as zero values ({} maps, "" strings, 0 generation) and a null
+// spec — so the plan stays empty. Existence checks written as metadata[0].uid != ""
+// depend on those zero values.
 func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound(t *testing.T) {
 	// Randomised so a concurrent test cannot create it, and held in a variable so both
 	// steps read the same name.
@@ -103,11 +126,46 @@ func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound(t *testing
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccNamespaceDataSourceAnchoredConfig(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("terraform_data.anchor", plancheck.ResourceActionUpdate),
-					},
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				ConfigStateChecks: frameworkShape,
+			},
+		},
+	})
+}
+
+// TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFoundWithInputs covers a
+// missing namespace whose configuration sets annotations and labels. SDKv2 keeps the
+// configured values on a 404 but drops null entries, so null-key must be absent.
+func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFoundWithInputs(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-ns-absent-in-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+
+	meta := func(field string) tfjsonpath.Path {
+		return tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field)
+	}
+
+	checks := []statecheck.StateCheck{
+		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("annotations"),
+			knownvalue.MapExact(map[string]knownvalue.Check{"anno-key": knownvalue.StringExact("anno-value")})),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("labels"),
+			knownvalue.MapExact(map[string]knownvalue.Check{"label-key": knownvalue.StringExact("label-value")})),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, tfjsonpath.New("spec"), knownvalue.Null()),
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: sdkv2ExternalProvider(),
+				Config:            testAccNamespaceDataSourceAnchoredWithInputsConfig(name),
+				ConfigStateChecks: checks,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccNamespaceDataSourceAnchoredWithInputsConfig(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: checks,
 			},
 		},
 	})
@@ -136,4 +194,30 @@ resource "terraform_data" "anchor" {
     spec             = jsonencode(data.kubernetes_namespace_v1.test.spec)
   }
 }`
+}
+
+// testAccNamespaceDataSourceAnchoredWithInputsConfig is testAccNamespaceDataSourceAnchoredConfig
+// with both settable metadata maps set, one label null, which SDKv2 accepted on data sources.
+func testAccNamespaceDataSourceAnchoredWithInputsConfig(name string) string {
+	return fmt.Sprintf(`
+data "kubernetes_namespace_v1" "test" {
+  metadata {
+    name        = %q
+    annotations = { "anno-key" = "anno-value" }
+    labels      = { "label-key" = "label-value", "null-key" = null }
+  }
+}
+
+resource "terraform_data" "anchor" {
+  input = {
+    id               = jsonencode(data.kubernetes_namespace_v1.test.id)
+    name             = jsonencode(data.kubernetes_namespace_v1.test.metadata[0].name)
+    uid              = jsonencode(data.kubernetes_namespace_v1.test.metadata[0].uid)
+    resource_version = jsonencode(data.kubernetes_namespace_v1.test.metadata[0].resource_version)
+    generation       = jsonencode(data.kubernetes_namespace_v1.test.metadata[0].generation)
+    annotations      = jsonencode(data.kubernetes_namespace_v1.test.metadata[0].annotations)
+    labels           = jsonencode(data.kubernetes_namespace_v1.test.metadata[0].labels)
+    spec             = jsonencode(data.kubernetes_namespace_v1.test.spec)
+  }
+}`, name)
 }

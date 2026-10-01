@@ -47,7 +47,7 @@ func TestAccKubernetesDataSourceNamespaceV1_basic(t *testing.T) {
 }
 
 // TestAccKubernetesDataSourceNamespaceV1_not_found verifies the 404 path: no error,
-// id still set to the requested name, and only metadata.name recorded.
+// id still set to the requested name, and unset metadata recorded as SDKv2 zero values.
 func TestAccKubernetesDataSourceNamespaceV1_not_found(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-ns-absent-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
 
@@ -157,19 +157,19 @@ func TestAccKubernetesDataSourceNamespaceV1_disappearance(t *testing.T) {
 	})
 }
 
-// namespaceNotFoundStateChecks asserts the 404 state shape: the requested name, and
-// null for everything else. Shared so the plain and migration tests cannot drift.
+// namespaceNotFoundStateChecks asserts the 404 state shape: SDKv2 zero values for
+// unset metadata, and a null spec. Shared so the plain and migration tests cannot drift.
 func namespaceNotFoundStateChecks() []statecheck.StateCheck {
 	meta := func(field string) tfjsonpath.Path {
 		return tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field)
 	}
 	return []statecheck.StateCheck{
 		statecheck.ExpectKnownValue(namespaceDataSourceName, tfjsonpath.New("spec"), knownvalue.Null()),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("uid"), knownvalue.Null()),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("resource_version"), knownvalue.Null()),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("generation"), knownvalue.Null()),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("annotations"), knownvalue.Null()),
-		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("labels"), knownvalue.Null()),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("uid"), knownvalue.StringExact("")),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("resource_version"), knownvalue.StringExact("")),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("generation"), knownvalue.Int64Exact(0)),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("annotations"), knownvalue.MapSizeExact(0)),
+		statecheck.ExpectKnownValue(namespaceDataSourceName, meta("labels"), knownvalue.MapSizeExact(0)),
 	}
 }
 

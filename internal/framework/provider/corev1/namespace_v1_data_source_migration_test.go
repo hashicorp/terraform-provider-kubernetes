@@ -55,6 +55,24 @@ func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_withInputs(t *testing.T) {
+	steps := namespaceMigrationSteps(withNamespaceAnchor(testAccNamespaceDataSourceWithInputsConfig("kube-system")), nil)
+	for index := range steps {
+		steps[index].Check = resource.ComposeAggregateTestCheckFunc(
+			resource.TestCheckResourceAttr(namespaceDataSourceName, "id", "kube-system"),
+			resource.TestCheckResourceAttrSet(namespaceDataSourceName, "metadata.0.uid"),
+			resource.TestCheckResourceAttr(namespaceDataSourceName, "metadata.0.labels.kubernetes.io/metadata.name", "kube-system"),
+			resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.labels.label-key"),
+			resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.labels.null-key"),
+			resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.annotations.anno-key"),
+		)
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		Steps: steps,
+	})
+}
+
 // TestAccKubernetesDataSourceNamespaceV1_MigrateFromSDKv2_notFound covers a namespace
 // that does not exist. The read succeeds under both, and unset metadata must be recorded
 // as SDKv2's zero values rather than null: existence checks written as

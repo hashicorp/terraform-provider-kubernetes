@@ -46,8 +46,8 @@ func TestAccKubernetesDataSourceNamespaceV1_basic(t *testing.T) {
 	})
 }
 
-// TestAccKubernetesDataSourceNamespaceV1_not_found verifies the 404 path: no error, id
-// set to the requested name, and unset metadata recorded as SDKv2 zero values.
+// TestAccKubernetesDataSourceNamespaceV1_not_found verifies the 404 path: no error,
+// id still set to the requested name, and unset metadata recorded as SDKv2 zero values.
 func TestAccKubernetesDataSourceNamespaceV1_not_found(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-ns-absent-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
 
@@ -61,30 +61,9 @@ func TestAccKubernetesDataSourceNamespaceV1_not_found(t *testing.T) {
 					resource.TestCheckResourceAttr(namespaceDataSourceName, "metadata.0.name", name),
 				),
 				// State checks, not TestCheckResourceAttr: that helper accepts an absent
-				// key whenever a ".#" or ".%" is expected to be "0", so it cannot tell a
-				// null collection from an empty one — the distinction being asserted here.
+				// key whenever a ".#" is expected to be "0", so it cannot tell a null
+				// collection from an empty one — the distinction being asserted here.
 				ConfigStateChecks: namespaceNotFoundStateChecks(),
-			},
-		},
-	})
-}
-
-// TestAccKubernetesDataSourceNamespaceV1_explicit_metadata_inputs verifies that
-// annotations and labels remain settable, as in SDKv2, including a null value, and that
-// the read reports what the namespace carries rather than what was configured.
-func TestAccKubernetesDataSourceNamespaceV1_explicit_metadata_inputs(t *testing.T) {
-	resource.ParallelTest(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccNamespaceDataSourceWithInputsConfig("kube-system"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(namespaceDataSourceName, "id", "kube-system"),
-					resource.TestCheckResourceAttrSet(namespaceDataSourceName, "metadata.0.uid"),
-					resource.TestCheckResourceAttr(namespaceDataSourceName, "metadata.0.labels.kubernetes.io/metadata.name", "kube-system"),
-					resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.labels.label-key"),
-					resource.TestCheckNoResourceAttr(namespaceDataSourceName, "metadata.0.annotations.anno-key"),
-				),
 			},
 		},
 	})
@@ -178,9 +157,8 @@ func TestAccKubernetesDataSourceNamespaceV1_disappearance(t *testing.T) {
 	})
 }
 
-// namespaceNotFoundStateChecks asserts the 404 state shape for an unconfigured lookup:
-// SDKv2 zero values for unset metadata, and a null spec. Shared so the plain and
-// migration tests cannot drift.
+// namespaceNotFoundStateChecks asserts the 404 state shape: SDKv2 zero values for
+// unset metadata, and a null spec. Shared so the plain and migration tests cannot drift.
 func namespaceNotFoundStateChecks() []statecheck.StateCheck {
 	meta := func(field string) tfjsonpath.Path {
 		return tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field)
@@ -234,25 +212,12 @@ func deleteTestNamespace(t *testing.T, name string) {
 }
 
 // testAccNamespaceDataSourceConfig reads the named namespace. Migration tests wrap
-// configs like this one with a terraform_data anchor; see withNamespaceAnchor.
+// this with a terraform_data anchor; see testAccNamespaceDataSourceAnchoredConfig.
 func testAccNamespaceDataSourceConfig(name string) string {
 	return fmt.Sprintf(`
 data "kubernetes_namespace_v1" "test" {
   metadata {
     name = %q
-  }
-}`, name)
-}
-
-// testAccNamespaceDataSourceWithInputsConfig sets both settable metadata maps, one with a
-// null value, which SDKv2 accepted on data sources.
-func testAccNamespaceDataSourceWithInputsConfig(name string) string {
-	return fmt.Sprintf(`
-data "kubernetes_namespace_v1" "test" {
-  metadata {
-    name        = %q
-    annotations = { "anno-key" = "anno-value" }
-    labels      = { "label-key" = "label-value", "null-key" = null }
   }
 }`, name)
 }

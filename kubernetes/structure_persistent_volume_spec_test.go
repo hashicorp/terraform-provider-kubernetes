@@ -41,3 +41,57 @@ func TestFlattenObjectRef(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenNFSVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          *v1.NFSVolumeSource
+		ExpectedOutput []interface{}
+	}{
+		{
+			&v1.NFSVolumeSource{
+				Server:   "192.168.1.1",
+				Path:     "/exports/data",
+				ReadOnly: true,
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"server":    "192.168.1.1",
+					"path":      "/exports/data",
+					"read_only": true,
+				},
+			},
+		},
+		{
+			&v1.NFSVolumeSource{
+				Server:   "192.168.1.2",
+				Path:     "/exports/ro",
+				ReadOnly: false,
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"server":    "192.168.1.2",
+					"path":      "/exports/ro",
+					"read_only": false,
+				},
+			},
+		},
+		{
+			&v1.NFSVolumeSource{},
+			[]interface{}{
+				map[string]interface{}{
+					"server":    "",
+					"path":      "",
+					"read_only": false,
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenNFSVolumeSource(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}

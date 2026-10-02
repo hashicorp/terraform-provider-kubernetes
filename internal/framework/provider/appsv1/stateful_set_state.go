@@ -5,7 +5,6 @@ package appsv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -14,11 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -567,6 +563,11 @@ func statefulSetPVCRetentionPolicyModels(ctx context.Context, value types.List, 
 	return models, diags
 }
 
+func upgradeStatefulSetV0State(rawState map[string]any) error {
+	applyStatefulSetV0ResourceUpgrade(rawState)
+	return nil
+}
+
 func applyStatefulSetV0ResourceUpgrade(rawState map[string]interface{}) map[string]interface{} {
 	s, ok := rawState["spec"].([]interface{})
 	if !ok || len(s) == 0 {
@@ -659,34 +660,15 @@ func (r *StatefulSetV1) UpgradeState(ctx context.Context) map[int64]resource.Sta
 				if resp.Diagnostics.HasError() {
 					return
 				}
-				if req.RawState == nil || len(req.RawState.JSON) == 0 {
-					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", "Source state is empty")
-					return
-				}
-
-				var raw map[string]interface{}
-				if err := json.Unmarshal(req.RawState.JSON, &raw); err != nil {
-					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", err.Error())
-					return
-				}
-				upgraded := applyStatefulSetV0ResourceUpgrade(raw)
-				value, err := decodeStatefulSetStateValue(ctx, upgraded, targetSchema)
+				value, err := common.DecodeLegacyState(ctx, req.RawState, targetSchema, upgradeStatefulSetV0State)
 				if err != nil {
-					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", fmt.Sprintf("Could not decode upgraded state: %s", err))
+					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", err.Error())
 					return
 				}
 				resp.State = tfsdk.State{Schema: targetSchema, Raw: value}
 			},
 		},
 	}
-}
-
-func decodeStatefulSetStateValue(ctx context.Context, raw map[string]interface{}, targetSchema schema.Schema) (tftypes.Value, error) {
-	stateJSON, err := json.Marshal(raw)
-	if err != nil {
-		return tftypes.Value{}, err
-	}
-	return (&tfprotov6.RawState{JSON: stateJSON}).Unmarshal(targetSchema.Type().TerraformType(ctx))
 }
 
 func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
@@ -702,20 +684,11 @@ func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
 				if req.SourceProviderAddress == "" || !hasProviderSuffix(req.SourceProviderAddress) {
 					return
 				}
-				if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {
-					resp.Diagnostics.AddError("Unable to move StatefulSet state", "The source state has no JSON data")
-					return
-				}
-				var value tftypes.Value
-				var err error
+				var rewrite func(map[string]any) error
 				if req.SourceSchemaVersion == 0 {
-					var raw map[string]interface{}
-					if err = json.Unmarshal(req.SourceRawState.JSON, &raw); err == nil {
-						value, err = decodeStatefulSetStateValue(ctx, applyStatefulSetV0ResourceUpgrade(raw), schemaResp.Schema)
-					}
-				} else {
-					value, err = req.SourceRawState.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
+					rewrite = upgradeStatefulSetV0State
 				}
+				value, err := common.DecodeLegacyState(ctx, req.SourceRawState, schemaResp.Schema, rewrite)
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to move StatefulSet state", fmt.Sprintf("The source state could not be decoded: %s", err))
 					return

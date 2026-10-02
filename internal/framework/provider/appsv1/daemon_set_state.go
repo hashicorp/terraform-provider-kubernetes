@@ -5,7 +5,6 @@ package appsv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -14,8 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -86,20 +83,13 @@ func (d *DaemonSetV1) MoveState(ctx context.Context) []resource.StateMover {
 					return
 				}
 
-				decoded, ok := decodeDaemonSetRawState(req.SourceRawState, &resp.Diagnostics)
-				if !ok {
-					return
-				}
+				var rewrite func(map[string]any) error
 				if req.SourceSchemaVersion == 0 {
-					if err := validateDaemonSetV0State(decoded); err != nil {
-						resp.Diagnostics.AddError("Unable to move daemon set state", err.Error())
-						return
-					}
-					decoded = kubernetes.UpgradeTemplatePodSpecWithResourcesFieldV0ForFramework(ctx, decoded)
+					rewrite = upgradeDaemonSetV0State(ctx)
 				}
-
-				value, ok := encodeDaemonSetStateValue(ctx, decoded, resourceSchema, &resp.Diagnostics)
-				if !ok {
+				value, err := common.DecodeLegacyState(ctx, req.SourceRawState, resourceSchema, rewrite)
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to move daemon set state", err.Error())
 					return
 				}
 				target := tfsdk.State{Schema: resourceSchema, Raw: value}
@@ -131,18 +121,9 @@ func (d *DaemonSetV1) UpgradeState(ctx context.Context) map[int64]resource.State
 				resp.Diagnostics.Append(schemaDiags...)
 				return
 			}
-			decoded, ok := decodeDaemonSetRawState(req.RawState, &resp.Diagnostics)
-			if !ok {
-				return
-			}
-
-			if err := validateDaemonSetV0State(decoded); err != nil {
+			value, err := common.DecodeLegacyState(ctx, req.RawState, resourceSchema, upgradeDaemonSetV0State(ctx))
+			if err != nil {
 				resp.Diagnostics.AddError("Unable to upgrade daemon set state", err.Error())
-				return
-			}
-			upgraded := kubernetes.UpgradeTemplatePodSpecWithResourcesFieldV0ForFramework(ctx, decoded)
-			value, ok := encodeDaemonSetStateValue(ctx, upgraded, resourceSchema, &resp.Diagnostics)
-			if !ok {
 				return
 			}
 
@@ -151,6 +132,17 @@ func (d *DaemonSetV1) UpgradeState(ctx context.Context) map[int64]resource.State
 	}
 	return map[int64]resource.StateUpgrader{
 		0: upgrader,
+	}
+}
+
+// upgradeDaemonSetV0State converts schema version 0 container resources.
+func upgradeDaemonSetV0State(ctx context.Context) func(map[string]any) error {
+	return func(raw map[string]any) error {
+		if err := validateDaemonSetV0State(raw); err != nil {
+			return err
+		}
+		kubernetes.UpgradeTemplatePodSpecWithResourcesFieldV0ForFramework(ctx, raw)
+		return nil
 	}
 }
 
@@ -222,33 +214,6 @@ func (d *DaemonSetV1) schemasForStateMoves(ctx context.Context) (schema.Schema, 
 	}
 
 	return schemaResp.Schema, diags
-}
-
-func decodeDaemonSetRawState(raw *tfprotov6.RawState, diags *diag.Diagnostics) (map[string]interface{}, bool) {
-	if raw == nil || len(raw.JSON) == 0 {
-		diags.AddError("Unable to move daemon set state", "The source state has no JSON data.")
-		return nil, false
-	}
-	var decoded map[string]interface{}
-	if err := json.Unmarshal(raw.JSON, &decoded); err != nil {
-		diags.AddError("Unable to move daemon set state", fmt.Sprintf("Could not decode source state JSON: %s", err))
-		return nil, false
-	}
-	return decoded, true
-}
-
-func encodeDaemonSetStateValue(ctx context.Context, raw map[string]interface{}, targetSchema schema.Schema, diags *diag.Diagnostics) (tftypes.Value, bool) {
-	stateJSON, err := json.Marshal(raw)
-	if err != nil {
-		diags.AddError("Unable to encode daemon set state", fmt.Sprintf("Could not encode upgraded state JSON: %s", err))
-		return tftypes.Value{}, false
-	}
-	value, err := (&tfprotov6.RawState{JSON: stateJSON}).Unmarshal(targetSchema.Type().TerraformType(ctx))
-	if err != nil {
-		diags.AddError("Unable to decode daemon set state", fmt.Sprintf("Could not decode upgraded state: %s", err))
-		return tftypes.Value{}, false
-	}
-	return value, true
 }
 
 func daemonSetIdentityFields(model DaemonSetV1Model, diags *diag.Diagnostics) (string, string, bool) {

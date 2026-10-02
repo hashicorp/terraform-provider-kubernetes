@@ -4,9 +4,7 @@
 package appsv1
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -78,36 +76,15 @@ func (d *DeploymentV1) decodeHistoricalState(ctx context.Context, raw *tfprotov6
 	d.Schema(ctx, resource.SchemaRequest{}, &response)
 	diagnostics.Append(response.Diagnostics...)
 	state := tfsdk.State{Schema: response.Schema}
-	if raw == nil || len(raw.JSON) == 0 {
-		diagnostics.AddError(moveStateErrSummary, "The source state has no JSON data.")
-		return state, diagnostics
-	}
+	var rewrite func(map[string]any) error
 	if version == 0 {
-		var values map[string]any
-		decoder := json.NewDecoder(bytes.NewReader(raw.JSON))
-		decoder.UseNumber()
-		if err := decoder.Decode(&values); err != nil {
-			diagnostics.AddError(moveStateErrSummary, err.Error())
-			return state, diagnostics
+		rewrite = func(values map[string]any) error {
+			return upgradeDeploymentV0Resources(values, "state", []string{"spec", "template", "spec"})
 		}
-		if err := upgradeDeploymentV0Resources(values, "state", []string{"spec", "template", "spec"}); err != nil {
-			diagnostics.AddError(moveStateErrSummary, err.Error())
-			return state, diagnostics
-		}
-		encoded, err := json.Marshal(values)
-		if err != nil {
-			diagnostics.AddError(moveStateErrSummary, err.Error())
-			return state, diagnostics
-		}
-		raw = &tfprotov6.RawState{JSON: encoded}
 	}
-	value, err := raw.Unmarshal(response.Schema.Type().TerraformType(ctx))
+	value, err := common.DecodeLegacyState(ctx, raw, response.Schema, rewrite)
 	if err != nil {
-		diagnostics.AddError(moveStateErrSummary, err.Error())
-		return state, diagnostics
-	}
-	if value.IsNull() {
-		diagnostics.AddError(moveStateErrSummary, "The source state must be an object, not null.")
+		diagnostics.AddError("Unable to decode legacy deployment state", err.Error())
 		return state, diagnostics
 	}
 	state.Raw = value

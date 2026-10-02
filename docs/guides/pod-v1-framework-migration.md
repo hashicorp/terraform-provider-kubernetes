@@ -1,0 +1,197 @@
+---
+subcategory: ""
+page_title: "Kubernetes: Pod Plugin Framework Migration"
+description: |-
+  Update kubernetes_pod_v1 configuration when upgrading to its Plugin Framework implementation.
+---
+
+# Migrating kubernetes_pod_v1 to Plugin Framework
+
+The managed `kubernetes_pod_v1` resource retains its name, schema version, identity
+version, and `namespace/name` import ID. An existing `kubernetes_pod_v1` does not
+need a resource rename, `moved` block, or re-import. Pod data sources and the
+deprecated managed `kubernetes_pod` resource remain on SDKv2.
+
+## Change container resources from blocks to list assignments
+
+The `resources` argument in both regular and init containers now uses a list of
+objects. This lets Kubernetes populate resource defaults when the whole argument
+or either of its `limits` and `requests` maps is omitted.
+
+Before:
+
+```hcl
+container {
+  name  = "app"
+  image = "nginx:1.21.6"
+
+  resources {
+    limits   = { cpu = "100m", memory = "64Mi" }
+    requests = { cpu = "100m", memory = "64Mi" }
+  }
+}
+```
+
+After:
+
+```hcl
+container {
+  name  = "app"
+  image = "nginx:1.21.6"
+
+  resources = [{
+    limits   = { cpu = "100m", memory = "64Mi" }
+    requests = { cpu = "100m", memory = "64Mi" }
+  }]
+}
+```
+
+Make the same edit inside every `init_container`. The outer `container`,
+`init_container`, `spec`, and `metadata` blocks retain block syntax. Do not apply
+this edit to other resource types merely because they also contain Pod templates.
+
+An omitted `resources` argument can remain omitted. Replace an explicit empty
+`resources {}` block with `resources = [{}]`. Preserve any explicitly supplied
+maps, including empty maps, rather than substituting API values.
+Use `null`, not `[]`, to omit the argument: a configured empty list cannot contain
+the resource defaults returned by Kubernetes.
+
+### Dynamic resources blocks
+
+Replace a dynamic block with an expression that produces `null` for omission or
+a one-element list. For example, given a nullable `var.container_resources` object:
+
+Before:
+
+```hcl
+dynamic "resources" {
+  for_each = var.container_resources == null ? [] : [var.container_resources]
+  content {
+    limits   = resources.value.limits
+    requests = resources.value.requests
+  }
+}
+```
+
+After:
+
+```hcl
+resources = var.container_resources == null ? null : [{
+  limits   = var.container_resources.limits
+  requests = var.container_resources.requests
+}]
+```
+
+The stored value remains a list of objects. Existing expressions such as
+`kubernetes_pod_v1.app.spec[0].container[0].resources[0].requests` retain their
+indexing.
+
+## Change image-pull secret and readiness-gate references
+
+Two other Optional+Computed Pod fields use list assignment:
+
+```hcl
+spec {
+  image_pull_secrets = [{ name = "registry-credentials" }]
+  readiness_gate    = [{ condition_type = "example.com/ready" }]
+}
+```
+
+These replace `image_pull_secrets { name = "registry-credentials" }` and
+`readiness_gate { condition_type = "example.com/ready" }` blocks, respectively.
+Keep all list entries and their order. An omitted field can remain omitted;
+convert a conditional dynamic block to `null` when no references are configured.
+An explicitly configured empty list is rejected; use omission or `null` instead.
+The stored collection types and existing indexed expressions are unchanged.
+
+Terraform's legacy block-to-attribute decoding does not apply when the surrounding
+schema contains nested attributes. Consequently, retaining plain object-list
+attributes for these two fields does not retain their former block syntax in the
+complete Pod schema.
+
+## Resource quantity representation
+
+Newly created Pods retain configured quantity strings. For example, a configured
+CPU limit of `"0.5"` remains `"0.5"` in Terraform state even though Kubernetes
+returns the equivalent `"500m"`. SDKv2 could normalize the configured spelling to
+the API's spelling. This changes string-valued outputs, not the CPU allocation.
+
+Existing SDKv2-written quantity strings are retained when they are equivalent to
+the API value. Equivalent quantity edits do not require replacement. An import
+has no prior configured representation and uses the API's spelling instead;
+outputs can therefore change from `"0.5"` to `"500m"` after an import. Neither
+representation is a reason to delete or recreate a Pod.
+
+## Review the upgrade
+
+1. Back up state securely and retain the previous provider version and configuration.
+2. Update the provider version and make the syntax edits above without changing
+   names, images, resource quantities, or other Pod settings.
+3. Run `terraform init -upgrade` and `terraform plan`.
+4. Check all resources, not just the Pod. The syntax edit must not cause Pod
+   deletion, replacement, or a change to its Kubernetes settings. Stop and
+   investigate any unexpected operation before applying.
+5. Apply the reviewed plan and run `terraform plan` again to check convergence.
+
+An unset `metadata.generate_name` can normalize from the SDKv2 empty string to
+`null` during refresh. Explicit empty metadata maps can need a one-time state
+normalization from legacy `null` to the configured empty map. Outputs exposing
+these values can reflect that distinction; do not use an output change as a
+reason to recreate the Pod.
+
+Older state, including state moved from `kubernetes_pod`, can instead contain
+empty collections for omitted `metadata.annotations`, container `args`/`command`,
+or `spec.node_selector`. These can normalize to `null` in a one-time in-place
+plan. This is a state representation change, not a request to change the Pod's
+settings; the following plan should be empty.
+
+Do not remove the Pod from state or delete it to resolve a configuration error.
+Updating HCL syntax is separate from upgrading stored state; the provider retains
+the historical version-0 container resource-map conversion.
+
+## Move from the deprecated resource
+
+Terraform 1.8 or later supports the cross-type move from `kubernetes_pod` to
+`kubernetes_pod_v1`. Both refer to the same Kubernetes `core/v1` Pod.
+
+Change the resource type in configuration, make the syntax edits above,
+and add:
+
+```hcl
+moved {
+  from = kubernetes_pod.app
+  to   = kubernetes_pod_v1.app
+}
+```
+
+Preserve the namespace, name, and all other settings. A `moved` block changes the
+Terraform address, not the remote Pod, and does not override replacement rules
+for a real configuration change.
+
+## Import
+
+The existing command-line import format is unchanged:
+
+```shell
+terraform import kubernetes_pod_v1.app default/app
+```
+
+With Terraform 1.12 or later, identity import is also supported:
+
+```hcl
+import {
+  to = kubernetes_pod_v1.app
+  identity = {
+    api_version = "v1"
+    kind        = "Pod"
+    namespace   = "default"
+    name        = "app"
+  }
+}
+```
+
+If identity import omits `namespace`, it defaults to `default`; an explicitly empty
+namespace is invalid. `api_version` and `kind` must be `v1` and `Pod`.
+
+Import does not recreate the Pod. Provide configuration matching the imported
+object and review the next plan before applying.

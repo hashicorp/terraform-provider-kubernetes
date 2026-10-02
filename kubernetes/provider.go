@@ -264,7 +264,6 @@ func Provider() *schema.Provider {
 			"kubernetes_secret_v1":                  resourceKubernetesSecretV1(""),
 			"kubernetes_secret_v1_data":             resourceKubernetesSecretV1Data(),
 			"kubernetes_pod":                        resourceKubernetesPodV1("Deprecated; use kubernetes_pod_v1."),
-			"kubernetes_pod_v1":                     resourceKubernetesPodV1(""),
 			"kubernetes_endpoints":                  resourceKubernetesEndpointsV1("Deprecated; use kubernetes_endpoints_v1."),
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpointsV1(""),
 			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSliceV1(),
@@ -291,10 +290,8 @@ func Provider() *schema.Provider {
 			"kubernetes_stateful_set": resourceKubernetesStatefulSetV1("Deprecated; use kubernetes_stateful_set_v1."),
 
 			// batch
-			"kubernetes_job":         resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
-			"kubernetes_job_v1":      resourceKubernetesJobV1(""),
-			"kubernetes_cron_job":    resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
-			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(""),
+			"kubernetes_job":      resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
+			"kubernetes_cron_job": resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
 
 			// autoscaling
 			"kubernetes_horizontal_pod_autoscaler":         resourceKubernetesHorizontalPodAutoscaler(),

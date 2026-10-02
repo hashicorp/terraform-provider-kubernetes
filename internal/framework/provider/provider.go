@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/admissionregistrationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/appsv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/authenticationv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/batchv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
@@ -200,7 +201,10 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		appsv1.NewDeploymentV1,
 		appsv1.NewDaemonSetV1,
 		appsv1.NewStatefulSetV1,
+		batchv1.NewJobV1,
+		batchv1.NewCronJobV1,
 		corev1.NewNamespaceV1,
+		corev1.NewPodV1,
 	}
 }
 

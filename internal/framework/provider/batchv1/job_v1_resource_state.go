@@ -1,0 +1,240 @@
+// Copyright IBM Corp. 2017, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package batchv1
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+)
+
+func (r *JobV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	id := req.ID
+	if req.Identity != nil && !req.Identity.Raw.IsNull() {
+		var identity common.NamespacedResourceIdentity
+		resp.Diagnostics.Append(req.Identity.Get(ctx, &identity)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if identity.APIVersion.ValueString() != "batch/v1" || identity.Kind.ValueString() != "Job" {
+			resp.Diagnostics.AddError("Invalid Job identity", "Expected api_version batch/v1 and kind Job.")
+			return
+		}
+		namespace := identity.Namespace.ValueString()
+		if namespace == "" {
+			namespace = "default"
+		}
+		id = namespace + "/" + identity.Name.ValueString()
+	}
+	namespace, name, err := jobIDParts(id)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid Job import ID", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
+	}
+}
+
+func jobIDParts(id string) (string, string, error) {
+	parts := strings.Split(id, "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("expected namespace/name, got %q", id)
+	}
+	return parts[0], parts[1], nil
+}
+
+func (r *JobV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return map[int64]resource.StateUpgrader{
+		0: {
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				state, diags := r.jobLegacyState(ctx, req.RawState, 0)
+				resp.Diagnostics.Append(diags...)
+				if !resp.Diagnostics.HasError() {
+					resp.State = state
+				}
+			},
+		},
+	}
+}
+
+func (r *JobV1) MoveState(context.Context) []resource.StateMover {
+	return []resource.StateMover{{
+		StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+			if req.SourceTypeName != "kubernetes_job" ||
+				(req.SourceSchemaVersion != 0 && req.SourceSchemaVersion != 1) ||
+				!strings.HasSuffix(req.SourceProviderAddress, "/hashicorp/kubernetes") {
+				return
+			}
+			state, diags := r.jobLegacyState(ctx, req.SourceRawState, req.SourceSchemaVersion)
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			resp.TargetState = state
+			if resp.TargetIdentity != nil {
+				var model JobV1Model
+				resp.Diagnostics.Append(state.Get(ctx, &model)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				namespace, name, err := jobIDParts(model.ID.ValueString())
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to move Job state", err.Error())
+					return
+				}
+				resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, jobIdentity(namespace, name))...)
+			}
+		},
+	}}
+}
+
+func (r *JobV1) jobLegacyState(ctx context.Context, raw *tfprotov6.RawState, version int64) (tfsdk.State, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	var schemaResponse resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
+	state := tfsdk.State{Schema: schemaResponse.Schema}
+	if raw == nil || len(raw.JSON) == 0 {
+		diags.AddError("Unable to upgrade Job state", "The source state has no JSON data. Legacy flatmap state is not supported.")
+		return state, diags
+	}
+	var data map[string]interface{}
+	decoder := json.NewDecoder(bytes.NewReader(raw.JSON))
+	decoder.UseNumber()
+	if err := decoder.Decode(&data); err != nil {
+		diags.AddError("Unable to upgrade Job state", err.Error())
+		return state, diags
+	}
+	id, _ := data["id"].(string)
+	namespace, name, err := jobIDParts(id)
+	if err != nil {
+		diags.AddError("Unable to upgrade Job state", err.Error())
+		return state, diags
+	}
+	metadata, ok := jobLegacyObject(data["metadata"])
+	if !ok {
+		diags.AddError("Unable to upgrade Job state", "Expected exactly one metadata element.")
+		return state, diags
+	}
+	if metadata["name"] != name || metadata["namespace"] != namespace {
+		diags.AddError("Unable to upgrade Job state", "The source metadata name and namespace must match the resource ID.")
+		return state, diags
+	}
+	spec, ok := jobLegacyObject(data["spec"])
+	if !ok {
+		diags.AddError("Unable to upgrade Job state", "Expected exactly one spec element.")
+		return state, diags
+	}
+	if version == 0 {
+		if err := upgradeJobResourcesV0(spec); err != nil {
+			diags.AddError("Unable to upgrade Job state", err.Error())
+			return state, diags
+		}
+	}
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		diags.AddError("Unable to upgrade Job state", err.Error())
+		return state, diags
+	}
+	converted := tfprotov6.RawState{JSON: encoded}
+	state.Raw, err = converted.Unmarshal(state.Schema.Type().TerraformType(ctx))
+	if err != nil {
+		diags.AddError("Unable to upgrade Job state", err.Error())
+	}
+	return state, diags
+}
+
+func jobLegacyObject(value interface{}) (map[string]interface{}, bool) {
+	list, ok := value.([]interface{})
+	if !ok || len(list) != 1 {
+		return nil, false
+	}
+	object, ok := list[0].(map[string]interface{})
+	return object, ok
+}
+
+// Schema v0 stored resource requests/limits as singleton blocks, including in
+// init containers. Upgrade directly to today's map values; Framework does not
+// chain state upgraders.
+func upgradeJobResourcesV0(spec map[string]interface{}) error {
+	template, ok := jobLegacyObject(spec["template"])
+	if !ok {
+		return fmt.Errorf("expected exactly one pod template in Job v0 state")
+	}
+	pod, err := jobOptionalLegacyObject(template["spec"], "template.spec")
+	if err != nil {
+		return err
+	}
+	if pod == nil {
+		return nil
+	}
+	for _, name := range []string{"container", "init_container"} {
+		if pod[name] == nil {
+			continue
+		}
+		containers, ok := pod[name].([]interface{})
+		if !ok {
+			return fmt.Errorf("expected %s to be a list in Job v0 state", name)
+		}
+		for _, value := range containers {
+			container, ok := value.(map[string]interface{})
+			if !ok || container == nil {
+				return fmt.Errorf("invalid %s in Job v0 state", name)
+			}
+			resources, err := jobOptionalLegacyObject(container["resources"], name+".resources")
+			if err != nil {
+				return err
+			}
+			if resources == nil {
+				continue
+			}
+			for _, field := range []string{"limits", "requests"} {
+				list, ok := resources[field].([]interface{})
+				if !ok && resources[field] != nil {
+					return fmt.Errorf("expected v0 %s to be a list", field)
+				}
+				if len(list) == 0 {
+					resources[field] = map[string]interface{}{}
+				} else if len(list) == 1 {
+					object, ok := list[0].(map[string]interface{})
+					if !ok {
+						return fmt.Errorf("invalid v0 %s object", field)
+					}
+					resources[field] = object
+				} else {
+					return fmt.Errorf("expected at most one v0 %s element", field)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func jobOptionalLegacyObject(value interface{}, field string) (map[string]interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+	list, ok := value.([]interface{})
+	if !ok || len(list) > 1 {
+		return nil, fmt.Errorf("expected %s to be a list with at most one element in Job v0 state", field)
+	}
+	if len(list) == 0 {
+		return nil, nil
+	}
+	object, ok := list[0].(map[string]interface{})
+	if !ok || object == nil {
+		return nil, fmt.Errorf("invalid %s object in Job v0 state", field)
+	}
+	return object, nil
+}

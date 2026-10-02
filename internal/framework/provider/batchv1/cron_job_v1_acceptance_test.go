@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package batchv1_test
 
 import (
 	"context"
@@ -11,8 +11,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	batchv1 "k8s.io/api/batch/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -32,8 +34,8 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.25.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1Config_basic(name, imageName),
@@ -97,8 +99,8 @@ func TestAccKubernetesCronJobV1_extra(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.25.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1Config_extra(name, imageName),
@@ -142,8 +144,8 @@ func TestAccKubernetesCronJobV1_identity(t *testing.T) {
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1Config_basic(name, imageName),
@@ -175,9 +177,9 @@ func TestAccKubernetesCronJobV1_minimalWithTemplateNamespace(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1ConfigMinimal(name, imageName),
@@ -219,8 +221,8 @@ func TestAccKubernetesCronJobV1_minimalWithPodFailurePolicy(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.25.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1ConfigMinimal(name, imageName),
@@ -271,8 +273,8 @@ func TestAccKubernetesCronJobV1_minimalWithBackoffLimitPerIndex(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.29.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1ConfigMinimal(name, imageName),
@@ -313,7 +315,7 @@ func TestAccKubernetesCronJobV1_minimalWithBackoffLimitPerIndex(t *testing.T) {
 }
 
 func testAccCheckKubernetesCronJobV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -324,16 +326,17 @@ func testAccCheckKubernetesCronJobV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		resp, err := conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
+		_, err = conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("CronJob still exists: %s", rs.Primary.ID)
-			}
+			return fmt.Errorf("CronJob still exists: %s", rs.Primary.ID)
+		}
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
 	}
 
@@ -347,13 +350,13 @@ func testAccCheckKubernetesCronJobV1Exists(n string, obj *batchv1.CronJob) resou
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

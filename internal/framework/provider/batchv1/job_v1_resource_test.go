@@ -262,8 +262,13 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
           security_context {
             allow_privilege_escalation = false
           }`, 1)
+	podNonRoot := strings.Replace(noEscalation, `restart_policy = "Never"`, `restart_policy = "Never"
+        security_context {
+          fs_group        = "2000"
+          run_as_non_root = false
+        }`, 1)
 	// A Job's pod template cannot change, so each of these replaces the Job.
-	step := func(config string, check func(corev1.Container) error) resource.TestStep {
+	step := func(config string, check func(corev1.PodSpec) error) resource.TestStep {
 		return resource.TestStep{
 			Config: config,
 			ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -275,14 +280,14 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 				testAccCheckKubernetesJobV1ForceNew(&before, &after, true),
 				func(*terraform.State) error {
 					before = after
-					return check(after.Spec.Template.Spec.Containers[0])
+					return check(after.Spec.Template.Spec)
 				},
 			),
 		}
 	}
-	subPath := func(want string) func(corev1.Container) error {
-		return func(c corev1.Container) error {
-			if got := c.VolumeMounts[0].SubPath; got != want {
+	subPath := func(want string) func(corev1.PodSpec) error {
+		return func(spec corev1.PodSpec) error {
+			if got := spec.Containers[0].VolumeMounts[0].SubPath; got != want {
 				return fmt.Errorf("live subPath = %q, want %q", got, want)
 			}
 			return nil
@@ -300,9 +305,18 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 			step(withoutSubPath, subPath("")),
 			step(withSubPath, subPath("data")),
 			step(emptySubPath, subPath("")),
-			step(noEscalation, func(c corev1.Container) error {
-				if sc := c.SecurityContext; sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation {
+			step(podNonRoot, func(spec corev1.PodSpec) error {
+				if sc := spec.Containers[0].SecurityContext; sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation {
 					return fmt.Errorf("live securityContext = %+v, want allowPrivilegeEscalation false", sc)
+				}
+				if sc := spec.SecurityContext; sc == nil || sc.RunAsNonRoot == nil || *sc.RunAsNonRoot {
+					return fmt.Errorf("live pod securityContext = %+v, want runAsNonRoot false", sc)
+				}
+				return nil
+			}),
+			step(noEscalation, func(spec corev1.PodSpec) error {
+				if sc := spec.SecurityContext; sc != nil && (sc.RunAsNonRoot != nil || sc.FSGroup != nil) {
+					return fmt.Errorf("live pod securityContext = %+v, want no runAsNonRoot", sc)
 				}
 				return nil
 			}),

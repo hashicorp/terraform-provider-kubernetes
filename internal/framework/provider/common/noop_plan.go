@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package appsv1
+package common
 
 import (
 	"errors"
@@ -10,10 +10,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-// Keep computed-only differences from scheduling a spurious update. Unlike
+// NoOpPlan keeps computed-only differences from scheduling a spurious update. Unlike
 // UseStateForUnknown on mutable metadata, this leaves all computed values unknown
 // when any configured value changes or configuration is not yet fully known.
-func workloadNoOpPlan(config, plan, state tftypes.Value) (tftypes.Value, bool, error) {
+func NoOpPlan(config, plan, state tftypes.Value) (tftypes.Value, bool, error) {
 	if config.IsNull() || plan.IsNull() || state.IsNull() {
 		return plan, false, nil
 	}

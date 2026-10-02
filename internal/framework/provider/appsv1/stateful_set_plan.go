@@ -10,12 +10,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 var _ resource.ResourceWithModifyPlan = (*StatefulSetV1)(nil)
 
 func (r *StatefulSetV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	candidate, unchanged, err := workloadNoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
+	candidate, unchanged, err := common.NoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to compare StatefulSet plan", err.Error())
 		return
@@ -61,7 +62,7 @@ func (statefulSetVolumeClaimRequiresReplace) PlanModifyList(ctx context.Context,
 		resp.Diagnostics.AddError("Unable to compare volume claim templates", err.Error())
 		return
 	}
-	_, unchanged, err := workloadNoOpPlan(config, plan, comparisonState)
+	_, unchanged, err := common.NoOpPlan(config, plan, comparisonState)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to compare volume claim templates", err.Error())
 		return

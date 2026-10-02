@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -325,9 +326,8 @@ func persistentVolumeClaimBlock() schema.ListNestedBlock {
 							"resources": schema.ListNestedBlock{
 								Validators: []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
 								NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-									// The claim-level modifier handles immutable changes and legacy empty maps.
-									"limits":   schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}}},
-									"requests": schema.MapAttribute{Optional: true, ElementType: types.StringType, PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}}},
+									"limits":   claimQuantitiesAttribute(),
+									"requests": claimQuantitiesAttribute(),
 								}},
 							},
 							"selector": labelSelectorBlock(false),
@@ -336,6 +336,18 @@ func persistentVolumeClaimBlock() schema.ListNestedBlock {
 				},
 			},
 		},
+	}
+}
+
+// claimQuantitiesAttribute keeps an empty map SDKv2 wrote to state when the
+// configuration omits it; replacement is decided by the claim-level modifier.
+func claimQuantitiesAttribute() schema.MapAttribute {
+	return schema.MapAttribute{
+		Optional:      true,
+		Computed:      true,
+		ElementType:   types.StringType,
+		Default:       mapdefault.StaticValue(types.MapNull(types.StringType)),
+		PlanModifiers: []planmodifier.Map{statefulSetQuantityMapModifier{}, common.EmptyMapCompatibility{}},
 	}
 }
 

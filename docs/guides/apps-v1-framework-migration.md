@@ -88,6 +88,8 @@ For an empty collection, omit this optional argument or use `null`.
 
 The first plan is normally empty. State written by earlier provider versions can contain empty values where the Plugin Framework stores `null`, such as empty metadata maps, empty selector collections, an empty `generate_name`, or an unused `rolling_update`. These can show a one-time in-place update that changes only Terraform state; it does not update or replace the workload. Computed metadata such as `resource_version` and `generation` can show as `(known after apply)` in an update plan.
 
+A pod-level `security_context` block that sets only empty or `false` values, such as `security_context { run_as_non_root = false }`, is sent to Kubernetes as an empty security context; earlier versions sent `runAsNonRoot: false` for it. Kubernetes treats an unset `runAsNonRoot` as false, so the Pods run the same way.
+
 ## Move from a deprecated resource type
 
 The deprecated resource types remain available. To adopt the versioned type, replace the old resource declaration, update references and configuration syntax, and add the matching `moved` block. Cross-type moves require Terraform 1.8 or later.

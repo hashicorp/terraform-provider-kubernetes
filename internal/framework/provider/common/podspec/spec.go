@@ -128,6 +128,9 @@ func (b *Built) RefreshSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 // SDKv2 passed a block with nothing configured as [nil]. For the pod security
 // context that omits runAsNonRoot rather than sending false, so a block such as
 // security_context { supplemental_groups = [] } leaves the API object unchanged.
+// The plan cannot tell a configured false from the zero default, so a block
+// with only run_as_non_root = false is sent as unset too; Kubernetes treats
+// both alike.
 var podZeroBlockUnset = map[string]bool{"spec.security_context": true}
 
 // This boundary translates known Framework values to the input of the shared

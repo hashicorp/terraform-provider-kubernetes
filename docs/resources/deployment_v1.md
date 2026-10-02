@@ -2426,7 +2426,7 @@ resource "kubernetes_deployment_v1" "example" {
 
 ## Migration to Plugin Framework
 
-Existing `kubernetes_deployment_v1` state is supported without re-importing or editing state. No `moved` block is needed when keeping the same resource address. Some nested arguments now use list-assignment syntax; see the [workload migration guide](../guides/apps-v1-framework-migration.markdown) before upgrading.
+Existing `kubernetes_deployment_v1` state and import IDs are kept, so no re-import or `moved` block is needed. Some nested arguments use list-of-object assignment syntax; see the [workload migration guide](../guides/apps-v1-framework-migration.md) before upgrading.
 
 ## Import
 

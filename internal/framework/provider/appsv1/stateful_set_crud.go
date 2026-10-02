@@ -274,10 +274,12 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	stateOut, identOut, d := r.readStateFromAPI(ctx, conn, filters, plan)
 	resp.Diagnostics.Append(d...)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &stateOut)...)
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, identOut)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	keepPlannedClaimTemplateChanges(stateOut.Spec, plan.Spec)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &stateOut)...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identOut)...)
 }
 
 func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -428,6 +430,27 @@ func statefulSetPatchSpecs(original, desired, live appsv1.StatefulSetSpec) (apps
 		from.PersistentVolumeClaimRetentionPolicy = live.PersistentVolumeClaimRetentionPolicy
 	}
 	return from, to
+}
+
+// keepPlannedClaimTemplateChanges records the planned claim-template fields an
+// update cannot send (see statefulSetVolumeClaimRequiresReplace).
+func keepPlannedClaimTemplateChanges(out, plan []StatefulSetSpecModel) {
+	if len(out) != 1 || len(plan) != 1 {
+		return
+	}
+	for i := range out[0].VolumeClaimTemplate {
+		if i >= len(plan[0].VolumeClaimTemplate) {
+			return
+		}
+		got, want := &out[0].VolumeClaimTemplate[i], plan[0].VolumeClaimTemplate[i]
+		if len(got.Metadata) == 1 && len(want.Metadata) == 1 {
+			got.Metadata[0].Labels = want.Metadata[0].Labels
+			got.Metadata[0].Annotations = want.Metadata[0].Annotations
+		}
+		if len(got.Spec) == 1 && len(want.Spec) == 1 && len(got.Spec[0].Resources) == 1 && len(want.Spec[0].Resources) == 1 {
+			got.Spec[0].Resources[0].Requests = want.Spec[0].Resources[0].Requests
+		}
+	}
 }
 
 func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *k8sclient.Clientset, ns, name string) retry.RetryFunc {

@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 )
 
 func TestDaemonSetEmptyCollectionPlanModifiers(t *testing.T) {
@@ -23,7 +23,7 @@ func TestDaemonSetEmptyCollectionPlanModifiers(t *testing.T) {
 	(&DaemonSetV1{}).Schema(ctx, resource.SchemaRequest{}, &response)
 	metadata := response.Schema.Blocks["metadata"].(schema.ListNestedBlock).NestedObject.Attributes
 	templateMetadata := daemonSetTemplateMetadataSchema().NestedObject.Attributes
-	pod := podtemplate.SpecBlock(podtemplate.Options{}).NestedObject
+	pod := podspec.SpecBlock(podspec.Options{}).NestedObject
 	container := pod.Blocks["container"].(schema.ListNestedBlock).NestedObject
 	raw := tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{}}, map[string]tftypes.Value{})
 

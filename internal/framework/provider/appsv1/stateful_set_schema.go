@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -121,7 +121,7 @@ func buildStatefulSetSchema(ctx context.Context, _ resource.SchemaRequest, resp 
 }
 
 func statefulSetTemplateBlock() schema.ListNestedBlock {
-	spec := podtemplate.SpecBlock(statefulSetPodTemplateOptions())
+	spec := podspec.SpecBlock(statefulSetPodTemplateOptions())
 	spec.Validators = append([]validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1)}, spec.Validators...)
 	return schema.ListNestedBlock{
 		Description: "The object that describes the pod that will be created if insufficient replicas are detected.",
@@ -135,8 +135,8 @@ func statefulSetTemplateBlock() schema.ListNestedBlock {
 	}
 }
 
-func statefulSetPodTemplateOptions() podtemplate.Options {
-	return podtemplate.Options{RestartPolicyAlways: false}
+func statefulSetPodTemplateOptions() podspec.Options {
+	return podspec.Options{RestartPolicyAlways: false}
 }
 
 func statefulSetTemplateMetadataBlock(objectName string) schema.ListNestedBlock {

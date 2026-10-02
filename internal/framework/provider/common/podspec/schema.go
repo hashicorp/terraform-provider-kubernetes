@@ -1,10 +1,10 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-// Package podtemplate provides the native Framework schema and pure API
+// Package podspec provides the native Framework schema and pure API
 // conversions for the PodSpec of workload pod templates (Deployment,
 // DaemonSet, StatefulSet). It mirrors SDKv2's podSpecFields(true, false).
-package podtemplate
+package podspec
 
 import (
 	"context"

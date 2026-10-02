@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -390,7 +390,7 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 	template := in.Template[0]
 	templateMetadata, templateMetadataDiags := common.ExpandNamespacedMetadata(ctx, template.Metadata)
 	diagnostics.Append(templateMetadataDiags...)
-	templateSpec, templateSpecDiags := podtemplate.ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	templateSpec, templateSpecDiags := podspec.ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diagnostics.Append(templateSpecDiags...)
 	if diagnostics.HasError() {
 		return out, diagnostics
@@ -406,7 +406,7 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, baseline []DaemonSetV1SpecModel) ([]DaemonSetV1SpecModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 
-	specType := podtemplate.SpecObjectType()
+	specType := podspec.SpecObjectType()
 	templateBaseline := types.ListNull(specType)
 	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
 	var selectorBaseline []LabelSelectorModel
@@ -417,7 +417,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 		templateBaseline = baseline[0].Template[0].Spec
 		templateMetadataBaseline = baseline[0].Template[0].Metadata
 	}
-	templateSpec, templateSpecDiags := podtemplate.FlattenSpec(
+	templateSpec, templateSpecDiags := podspec.FlattenSpec(
 		ctx,
 		spec.Template.Spec,
 		templateBaseline,

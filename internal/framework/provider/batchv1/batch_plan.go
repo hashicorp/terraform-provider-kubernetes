@@ -17,7 +17,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	batchapi "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,14 +38,24 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	if noOpPlan(req, resp) {
 		return
 	}
+	at := tftypes.NewAttributePath().WithAttributeName("spec").WithElementKeyInt(0).WithAttributeName("template")
+	planned, plannedOK := valueAt(resp.Plan.Raw, at)
+	prior, priorOK := valueAt(req.State.Raw, at)
+	if !plannedOK || !priorOK || planned.Equal(prior) {
+		return
+	}
 	apiDefaulted := apiDefaultedStrings(ctx, req.Plan.Schema)
 	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw, apiDefaulted)
-	if replace {
-		// State written without a refresh can disagree with Kubernetes; decide
-		// against the Job as it is now.
-		if live, ok := r.liveState(ctx, req.State); ok {
-			replace, diags = jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, live, apiDefaulted)
+	// Decide against the Job as it is now: state written without a refresh can
+	// be stale, and the API comparison reads a zero value as unset, so it cannot
+	// see a removed block that Kubernetes holds with zero values.
+	if job, filters, ok := r.liveJob(ctx, req.State); ok {
+		if replace {
+			if live, ok := liveState(ctx, job, req.State, filters); ok {
+				replace, diags = jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, live, apiDefaulted)
+			}
 		}
+		replace = replace || !jobTemplateSpecSatisfied(ctx, job, resp.Plan)
 	}
 	resp.Diagnostics.Append(diags...)
 	if replace {
@@ -51,25 +63,34 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	}
 }
 
-func (r *JobV1) liveState(ctx context.Context, state tfsdk.State) (tftypes.Value, bool) {
-	var model JobV1Model
-	if state.Get(ctx, &model).HasError() || r.SDKv2Meta == nil {
-		return tftypes.Value{}, false
+func (r *JobV1) liveJob(ctx context.Context, state tfsdk.State) (*batchapi.Job, kubernetes.MetadataFilters, bool) {
+	var id types.String
+	if state.GetAttribute(ctx, path.Root("id"), &id).HasError() || r.SDKv2Meta == nil {
+		return nil, nil, false
 	}
-	namespace, name, err := kubernetes.IdParts(model.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(id.ValueString())
 	if err != nil {
-		return tftypes.Value{}, false
+		return nil, nil, false
 	}
 	clients, filters, diags := r.sdkv2Meta()
 	if diags.HasError() {
-		return tftypes.Value{}, false
+		return nil, nil, false
 	}
 	conn, err := clients.MainClientset()
 	if err != nil {
-		return tftypes.Value{}, false
+		return nil, nil, false
 	}
 	job, err := conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil || flattenJob(ctx, job, &model, filters, true).HasError() {
+	if err != nil {
+		return nil, nil, false
+	}
+	return job, filters, true
+}
+
+// liveState is the state a refresh would record for the Job.
+func liveState(ctx context.Context, job *batchapi.Job, state tfsdk.State, filters kubernetes.MetadataFilters) (tftypes.Value, bool) {
+	var model JobV1Model
+	if state.Get(ctx, &model).HasError() || flattenJob(ctx, job, &model, filters, true).HasError() {
 		return tftypes.Value{}, false
 	}
 	live := tfsdk.State{Schema: state.Schema}
@@ -77,6 +98,18 @@ func (r *JobV1) liveState(ctx context.Context, state tfsdk.State) (tftypes.Value
 		return tftypes.Value{}, false
 	}
 	return live.Raw, true
+}
+
+// jobTemplateSpecSatisfied reports whether the Job's pod spec, which an update
+// leaves as it is, already satisfies the planned one.
+func jobTemplateSpecSatisfied(ctx context.Context, job *batchapi.Job, plan tfsdk.Plan) bool {
+	at := jobTemplatePath.AtListIndex(0).AtName("spec")
+	var planned types.List
+	if plan.GetAttribute(ctx, at, &planned).HasError() {
+		return true
+	}
+	flattened, diags := flattenPodSpec(ctx, job.Spec.Template.Spec, planned, true, false, at)
+	return diags.HasError() || podspec.Satisfies(flattened, planned)
 }
 
 func (r *CronJobV1) ModifyPlan(_ context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
@@ -137,8 +170,8 @@ func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftype
 	return !podTemplatesEqual(previous, desired), diags
 }
 
-// podTemplatesEqual reports whether Kubernetes holding have already gives
-// want.
+// podTemplatesEqual reports whether a Job holding the template have already
+// has want, as the API would store them.
 func podTemplatesEqual(have, want corev1.PodTemplateSpec) bool {
 	have, want = *have.DeepCopy(), *want.DeepCopy()
 	for _, template := range []*corev1.PodTemplateSpec{&have, &want} {

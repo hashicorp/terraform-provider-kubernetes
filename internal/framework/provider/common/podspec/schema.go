@@ -89,7 +89,7 @@ func (b builder) str(required, computed bool, f forceNew, fallback string, valid
 	}
 	if computed {
 		// API-defaulted Pod fields are unchanged by metadata/provider-only updates.
-		a.PlanModifiers = append(a.PlanModifiers, stringplanmodifier.UseStateForUnknown())
+		a.PlanModifiers = append(a.PlanModifiers, stringplanmodifier.UseStateForUnknown(), podEmptyStringKeepsState{})
 	}
 	if b.replace(f) {
 		a.PlanModifiers = append(a.PlanModifiers, podStringRequiresReplace{stringplanmodifier.RequiresReplace()})

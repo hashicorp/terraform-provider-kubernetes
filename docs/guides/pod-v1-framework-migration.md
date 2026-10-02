@@ -111,6 +111,13 @@ limit configured as `"0.5"` stays `"0.5"` even though Kubernetes returns `"500m"
 Existing state values and equivalent quantity edits do not cause a diff, and an
 import uses the API's spelling. This can change string outputs, not allocations.
 
+## Empty strings on API-defaulted fields
+
+An empty string on a field that Kubernetes defaults, such as `image_pull_policy`,
+`service_account_name`, `scheduler_name` or `node_name`, leaves the value to
+Kubernetes. A new Pod records `""` for it until the next refresh, which records
+the value Kubernetes chose. The empty string never forces replacement.
+
 ## Review the upgrade
 
 1. Back up state securely and retain the previous provider version and configuration.

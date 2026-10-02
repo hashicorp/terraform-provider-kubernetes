@@ -175,7 +175,7 @@ func expandPodTemplateSpec(ctx context.Context, value types.List, at path.Path) 
 	return podspec.For(podspec.StatefulSet()).ExpandSpec(ctx, value, at)
 }
 
-func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters) (StatefulSetSpecModel, diag.Diagnostics) {
+func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters, refresh bool) (StatefulSetSpecModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := StatefulSetSpecModel{
 		PodManagementPolicy:                  types.StringNull(),
@@ -206,7 +206,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		out.ServiceName = types.StringValue(spec.ServiceName)
 	}
 
-	template, d := flattenTemplate(ctx, spec.Template, baseline, filters)
+	template, d := flattenTemplate(ctx, spec.Template, baseline, filters, refresh)
 	diags.Append(d...)
 	out.Template = []StatefulSetTemplateModel{template}
 
@@ -402,7 +402,7 @@ func expandMapToResourceListFromMap(ctx context.Context, m types.Map) (corev1.Re
 	return out, diags
 }
 
-func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters) (StatefulSetTemplateModel, diag.Diagnostics) {
+func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters, refresh bool) (StatefulSetTemplateModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := StatefulSetTemplateModel{}
 
@@ -419,7 +419,11 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	if baseline != nil && len(baseline.Template) > 0 {
 		baselineSpec = baseline.Template[0].Spec
 	}
-	podSpec, d2 := podspec.For(podspec.StatefulSet()).FlattenSpec(ctx, in.Spec, baselineSpec, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"))
+	flatten := podspec.For(podspec.StatefulSet()).FlattenSpec
+	if refresh {
+		flatten = podspec.For(podspec.StatefulSet()).RefreshSpec
+	}
+	podSpec, d2 := flatten(ctx, in.Spec, baselineSpec, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d2...)
 	out.Spec = podSpec
 

@@ -76,7 +76,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createdState := d.daemonSetStateFromObject(ctx, plan, created, filters, &resp.Diagnostics)
+	createdState := d.daemonSetStateFromObject(ctx, plan, created, filters, false, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &createdState)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(created.Namespace, created.Name))...)
 	if resp.Diagnostics.HasError() {
@@ -91,7 +91,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 	}
 
-	fresh, exists := d.readDaemonSetState(ctx, createdState, filters, conn, &resp.Diagnostics)
+	fresh, exists := d.readDaemonSetState(ctx, createdState, filters, conn, false, &resp.Diagnostics)
 	if !exists || resp.Diagnostics.HasError() {
 		return
 	}
@@ -117,7 +117,7 @@ func (d *DaemonSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	fresh, exists := d.readDaemonSetState(ctx, state, filters, conn, &resp.Diagnostics)
+	fresh, exists := d.readDaemonSetState(ctx, state, filters, conn, true, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -235,7 +235,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	updatedState := d.daemonSetStateFromObject(ctx, plan, updated, filters, &resp.Diagnostics)
+	updatedState := d.daemonSetStateFromObject(ctx, plan, updated, filters, false, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &updatedState)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(updated.Namespace, updated.Name))...)
 	if resp.Diagnostics.HasError() {
@@ -250,7 +250,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 	}
 
-	fresh, exists := d.readDaemonSetState(ctx, plan, filters, conn, &resp.Diagnostics)
+	fresh, exists := d.readDaemonSetState(ctx, plan, filters, conn, false, &resp.Diagnostics)
 	if !exists || resp.Diagnostics.HasError() {
 		return
 	}
@@ -313,6 +313,7 @@ func (d *DaemonSetV1) readDaemonSetState(
 	prior DaemonSetV1Model,
 	filters kubernetes.MetadataFilters,
 	conn *k8sclient.Clientset,
+	refresh bool,
 	diags *diag.Diagnostics,
 ) (DaemonSetV1Model, bool) {
 	namespace, name, err := kubernetes.IdParts(prior.ID.ValueString())
@@ -329,7 +330,7 @@ func (d *DaemonSetV1) readDaemonSetState(
 		return DaemonSetV1Model{}, false
 	}
 
-	return d.daemonSetStateFromObject(ctx, prior, current, filters, diags), true
+	return d.daemonSetStateFromObject(ctx, prior, current, filters, refresh, diags), true
 }
 
 func (d *DaemonSetV1) daemonSetStateFromObject(
@@ -337,6 +338,7 @@ func (d *DaemonSetV1) daemonSetStateFromObject(
 	prior DaemonSetV1Model,
 	current *appsv1.DaemonSet,
 	filters kubernetes.MetadataFilters,
+	refresh bool,
 	diags *diag.Diagnostics,
 ) DaemonSetV1Model {
 	metadata, metadataDiags := common.FlattenNamespacedMetadata(
@@ -347,7 +349,7 @@ func (d *DaemonSetV1) daemonSetStateFromObject(
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
-	spec, specDiags := flattenDaemonSetSpecModel(ctx, current.Spec, prior.Spec)
+	spec, specDiags := flattenDaemonSetSpecModel(ctx, current.Spec, prior.Spec, refresh)
 	diags.Append(specDiags...)
 	if diags.HasError() {
 		return DaemonSetV1Model{}
@@ -407,7 +409,7 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 	return out, diagnostics
 }
 
-func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, baseline []DaemonSetV1SpecModel) ([]DaemonSetV1SpecModel, diag.Diagnostics) {
+func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, baseline []DaemonSetV1SpecModel, refresh bool) ([]DaemonSetV1SpecModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 
 	podSpec := podspec.For(podspec.DaemonSet())
@@ -422,7 +424,11 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 		templateBaseline = baseline[0].Template[0].Spec
 		templateMetadataBaseline = baseline[0].Template[0].Metadata
 	}
-	templateSpec, templateSpecDiags := podSpec.FlattenSpec(
+	flatten := podSpec.FlattenSpec
+	if refresh {
+		flatten = podSpec.RefreshSpec
+	}
+	templateSpec, templateSpecDiags := flatten(
 		ctx,
 		spec.Template.Spec,
 		templateBaseline,

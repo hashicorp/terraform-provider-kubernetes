@@ -182,3 +182,27 @@ func TestQuantityMapKeepsPriorSpellingWholesale(t *testing.T) {
 		})
 	}
 }
+
+// "" and null both mean "unset" for an API-defaulted string. A write keeps the
+// planned "" so the result matches the plan; a read records the live value.
+func TestKeepUnsetString(t *testing.T) {
+	for _, tc := range []struct {
+		baseline types.String
+		api      string
+		refresh  bool
+		keep     bool
+	}{
+		{types.StringValue(""), "IfNotPresent", false, true},
+		{types.StringValue(""), "IfNotPresent", true, false},
+		{types.StringValue(""), "", false, true},
+		{types.StringNull(), "", false, true},
+		{types.StringNull(), "", true, true},
+		{types.StringNull(), "Always", true, false},
+		{types.StringValue("Always"), "IfNotPresent", false, false},
+		{types.StringUnknown(), "IfNotPresent", false, false},
+	} {
+		if got := podKeepUnsetString(tc.baseline, tc.api, tc.refresh); got != tc.keep {
+			t.Errorf("baseline %s, API %q, refresh %t: keep = %t, want %t", tc.baseline, tc.api, tc.refresh, got, tc.keep)
+		}
+	}
+}

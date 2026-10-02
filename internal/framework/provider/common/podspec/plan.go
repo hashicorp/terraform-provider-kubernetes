@@ -178,6 +178,25 @@ func podPreserveHTTPGetPath(prior, current attr.Value) attr.Value {
 	return current
 }
 
+// As in SDKv2, "" on an API-defaulted string means "unset": it keeps the value
+// already in state instead of planning a change to "".
+type podEmptyStringKeepsState struct{}
+
+func (podEmptyStringKeepsState) Description(context.Context) string {
+	return "an empty string keeps the API-populated value"
+}
+func (m podEmptyStringKeepsState) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (podEmptyStringKeepsState) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.State.Raw.IsNull() || req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || req.ConfigValue.ValueString() != "" {
+		return
+	}
+	if !req.StateValue.IsNull() && !req.StateValue.IsUnknown() {
+		resp.PlanValue = req.StateValue
+	}
+}
+
 // Removed list elements do not run their leaf plan modifiers. Carry immutable
 // descendants' replacement rules up to the collection's structural boundary.
 type podReplacementBoundary interface {

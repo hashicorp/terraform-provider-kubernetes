@@ -72,7 +72,7 @@ func batchValueTestBlock() schema.ListNestedBlock {
 func TestBatchValueFromAPI(t *testing.T) {
 	ctx := context.Background()
 	block := batchValueTestBlock()
-	value, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{
+	value, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{
 		"text": "",
 		"resources": []interface{}{map[string]interface{}{
 			"limits": map[string]string{}, "requests": map[string]string{"memory": "64Mi"},
@@ -103,24 +103,38 @@ func TestBatchValueFromAPI(t *testing.T) {
 func TestBatchValuePreservesExplicitEmptyAndDetectsDrift(t *testing.T) {
 	ctx := context.Background()
 	block := batchValueTestBlock()
-	prior, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{"text": "before"}},
+	prior, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{"text": "before"}},
 		types.ListNull(block.NestedObject.Type()))
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}
-	updated, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{"text": "after"}}, prior)
+	updated, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{"text": "after"}}, prior)
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}
 	if updated.Elements()[0].(types.Object).Attributes()["text"] != types.StringValue("after") {
 		t.Fatal("Read retained a stale configured value instead of detecting drift")
 	}
-	empty, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{"text": ""}}, updated)
+	empty, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{"text": ""}}, updated)
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}
 	if empty.Elements()[0].(types.Object).Attributes()["text"] != types.StringValue("") {
 		t.Fatal("explicit empty string was collapsed")
+	}
+	// The API omits zero values; a known zero prior must survive the omission
+	// instead of turning into null (which would plan a perpetual diff).
+	for name, raw := range map[string]map[string]interface{}{
+		"omitted": {},
+		"nil":     {"text": nil},
+	} {
+		kept, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{raw}, empty)
+		if diagnostics.HasError() {
+			t.Fatal(diagnostics)
+		}
+		if got := kept.Elements()[0].(types.Object).Attributes()["text"]; got != types.StringValue("") {
+			t.Fatalf("%s: known empty prior became %s", name, got)
+		}
 	}
 }
 
@@ -132,7 +146,7 @@ func TestBatchValueRejectsInvalidAPIShape(t *testing.T) {
 		map[string]interface{}{"resources": "not-a-list"},
 		map[string]interface{}{"resources": []interface{}{"not-an-object"}},
 	} {
-		_, diagnostics := valueFromAPI(ctx, block, []interface{}{raw}, types.ListNull(block.NestedObject.Type()))
+		_, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{raw}, types.ListNull(block.NestedObject.Type()))
 		if !diagnostics.HasError() {
 			t.Fatalf("invalid API shape accepted: %#v", raw)
 		}
@@ -156,7 +170,7 @@ func TestBatchValuePreservesZeroCollectionElements(t *testing.T) {
 		"args":   schema.ListAttribute{Optional: true, ElementType: types.StringType},
 		"groups": schema.SetAttribute{Optional: true, ElementType: types.Int64Type},
 	}}}
-	actual, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{
+	actual, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{
 		"args": []string{"", "value"}, "groups": []int{0, 1000},
 	}}, types.ListNull(block.NestedObject.Type()))
 	if diagnostics.HasError() {
@@ -176,19 +190,19 @@ func TestBatchValuePreservesZeroCollectionElements(t *testing.T) {
 func TestBatchPlannedValueRejectsAPIDifferences(t *testing.T) {
 	ctx := context.Background()
 	block := batchValueTestBlock()
-	plan, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{
+	plan, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{
 		"text": "configured",
 	}}, types.ListNull(block.NestedObject.Type()))
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}
-	api, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{
+	api, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{
 		"text": "changed-by-admission",
 	}}, plan)
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}
-	if _, diagnostics := preservePlannedValue(ctx, block, plan, api); !diagnostics.HasError() {
+	if _, diagnostics := preservePlannedValueField(ctx, blockValueField(block), plan, api); !diagnostics.HasError() {
 		t.Fatal("genuine API changes must not be hidden by planned state")
 	}
 }
@@ -196,7 +210,7 @@ func TestBatchPlannedValueRejectsAPIDifferences(t *testing.T) {
 func TestBatchPlannedValueResolvesComputedParents(t *testing.T) {
 	ctx := context.Background()
 	block := batchValueTestBlock()
-	actual, diagnostics := valueFromAPI(ctx, block, []interface{}{map[string]interface{}{
+	actual, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{map[string]interface{}{
 		"text":      "configured",
 		"resources": []interface{}{map[string]interface{}{"limits": map[string]string{}, "requests": map[string]string{}}},
 	}}, types.ListNull(block.NestedObject.Type()))
@@ -209,7 +223,7 @@ func TestBatchPlannedValueResolvesComputedParents(t *testing.T) {
 	plan := types.ListValueMust(block.NestedObject.Type(), []attr.Value{
 		types.ObjectValueMust(object.AttributeTypes(ctx), fields),
 	})
-	result, diagnostics := preservePlannedValue(ctx, block, plan, actual)
+	result, diagnostics := preservePlannedValueField(ctx, blockValueField(block), plan, actual)
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}

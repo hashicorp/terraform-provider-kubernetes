@@ -182,13 +182,9 @@ func objectValueFields(attributes map[string]schema.Attribute, blocks map[string
 	return result
 }
 
-// valueFromAPI reconstructs the explicit Framework schema from the shared pure
-// flatteners. JSON normalizes Kubernetes enum, pointer and integer representations.
-func valueFromAPI(ctx context.Context, block schema.ListNestedBlock, raw []interface{}, prior types.List) (types.List, diag.Diagnostics) {
-	return valueFromAPIField(ctx, blockValueField(block), raw, prior)
-}
-
-// valueFromAPIField is valueFromAPI for a precomputed (memoised) block field.
+// valueFromAPIField reconstructs the explicit Framework value of a block field
+// (see blockValueField) from the shared pure flatteners. JSON normalizes
+// Kubernetes enum, pointer and integer representations.
 func valueFromAPIField(ctx context.Context, field valueField, raw []interface{}, prior types.List) (types.List, diag.Diagnostics) {
 	elemType := field.typ.(types.ListType).ElemType
 	var diagnostics diag.Diagnostics
@@ -487,13 +483,9 @@ func fieldDefault(ctx context.Context, attribute schema.Attribute) (attr.Value, 
 	return nil, false, nil
 }
 
-// preservePlannedValue resolves computed values without overwriting known plan
-// values with API normalization. Read independently detects subsequent drift.
-func preservePlannedValue(ctx context.Context, block schema.ListNestedBlock, plan, actual types.List) (types.List, diag.Diagnostics) {
-	return preservePlannedValueField(ctx, blockValueField(block), plan, actual)
-}
-
-// preservePlannedValueField is preservePlannedValue for a precomputed (memoised) block field.
+// preservePlannedValueField resolves computed values of a block field without
+// overwriting known plan values with API normalization. Read independently
+// detects subsequent drift.
 func preservePlannedValueField(ctx context.Context, field valueField, plan, actual types.List) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	plannedRaw, err := plan.ToTerraformValue(ctx)

@@ -19,6 +19,22 @@ description: |-
 
 {{tffile "examples/resources/ingress_v1/example_2.tf"}}
 
+## Migration to Plugin Framework
+
+`kubernetes_ingress_v1` is implemented using the Terraform Plugin Framework. The resource type, configuration syntax, state schema version (0), and identity schema version (1) are unchanged. Existing `kubernetes_ingress_v1` state does not require a `moved` block or re-import.
+
+Before upgrading, confirm that the current configuration has an empty plan. Review the plan after upgrading; do not apply unexpected replacement or specification changes.
+
+`wait_for_load_balancer` remains optional. When omitted, its state value remains `null` and creation does not wait for a load balancer endpoint; set it to `true` to enable that wait.
+
+There is one narrow compatibility exception: if `metadata.labels = {}` or `metadata.annotations = {}` was explicitly configured but stored as `null` by the previous provider, the first upgrade plan can show an in-place update from `null` to `{}` for those maps. This update changes Terraform state only: it must not write to the Kubernetes API or replace the object, and the next plan must be empty. This exception does not cover omitted metadata arguments, selectors, TLS hosts, or other configuration changes.
+
+The deprecated `kubernetes_ingress` resource remains on SDKv2 and uses the incompatible v1beta1 ingress schema. A cross-type `moved` block from `kubernetes_ingress` to `kubernetes_ingress_v1` is not supported. The `kubernetes_ingress_v1` data source remains on SDKv2.
+
+### Resource identity
+
+With Terraform 1.12 or later, resource identity contains `api_version` (`networking.k8s.io/v1`), `kind` (`Ingress`), `name`, and `namespace`. The existing namespace/name import identifier is unchanged.
+
 ## Import
 
 Ingress can be imported using its namespace and name:

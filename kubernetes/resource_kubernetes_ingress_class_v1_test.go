@@ -26,9 +26,9 @@ func TestAccKubernetesIngressClassV1_basic(t *testing.T) {
 	resourceName := "kubernetes_ingress_class_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressClassV1ConfigBasic(rName),
@@ -61,9 +61,9 @@ func TestAccKubernetesIngressClassV1_identity(t *testing.T) {
 	resourceName := "kubernetes_ingress_class_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressClassV1Destroy,
 
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
@@ -97,9 +97,9 @@ func TestAccKubernetesIngressClassV1_parameters(t *testing.T) {
 	resourceName := "kubernetes_ingress_class_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressClassV1ConfigParameters(rName, rName),
@@ -149,9 +149,9 @@ func TestAccKubernetesIngressClassV1_parameters_apiGroup(t *testing.T) {
 	resourceName := "kubernetes_ingress_class_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressClassV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressClassV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressClassV1ConfigParametersApiGroup(rName, rName),

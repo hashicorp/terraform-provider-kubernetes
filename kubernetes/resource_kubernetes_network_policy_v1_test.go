@@ -25,9 +25,9 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 	resourceName := "kubernetes_network_policy_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesNetworkPolicyV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesNetworkPolicyV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesNetworkPolicyV1Config_basic(name),
@@ -308,9 +308,9 @@ func TestAccKubernetesNetworkPolicyV1_withEgressAtCreation(t *testing.T) {
 	resourceName := "kubernetes_network_policy_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesNetworkPolicyV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesNetworkPolicyV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesNetworkPolicyV1Config_withEgress(name),
@@ -372,9 +372,9 @@ func TestAccKubernetesNetworkPolicyV1_identity(t *testing.T) {
 	resourceName := "kubernetes_network_policy_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesNetworkPolicyV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesNetworkPolicyV1Destroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},

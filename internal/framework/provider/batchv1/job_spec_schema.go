@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // updatable controls PodSpec field modifiers. SDKv2's Job-level ForceNew fields
@@ -151,7 +153,20 @@ func jobSpecBlock(updatable bool) schema.ListNestedBlock {
 }
 
 func jobSpecType() types.ObjectType {
-	return jobSpecBlock(false).NestedObject.Type().(types.ObjectType)
+	return jobSpecValueField().typ.(types.ListType).ElemType.(types.ObjectType)
+}
+
+// Value-field trees of the frozen Job and CronJob spec blocks, built once per
+// process. Assigned in init because the blocks' plan modifiers refer to them.
+var jobSpecValueField, cronJobSpecValueField func() valueField
+
+func init() {
+	jobSpecValueField = sync.OnceValue(func() valueField {
+		return blockValueField(common.FreezeListNestedBlock(jobSpecBlock(false)))
+	})
+	cronJobSpecValueField = sync.OnceValue(func() valueField {
+		return blockValueField(common.FreezeListNestedBlock(cronJobSpecBlock()))
+	})
 }
 
 type jobTTLValidator struct{}

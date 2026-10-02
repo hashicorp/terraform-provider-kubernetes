@@ -54,5 +54,5 @@ func flattenJobSpec(ctx context.Context, spec batchapi.JobSpec, prior types.List
 		diags.AddError("Unable to read Job specification", err.Error())
 		return types.ListNull(jobSpecType()), diags
 	}
-	return valueFromAPI(ctx, jobSpecBlock(false), raw, prior)
+	return valueFromAPIField(ctx, jobSpecValueField(), raw, prior)
 }

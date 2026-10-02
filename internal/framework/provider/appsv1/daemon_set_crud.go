@@ -382,7 +382,7 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, baseline []DaemonSetV1SpecModel) ([]DaemonSetV1SpecModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 
-	specType := podtemplate.SpecBlock(podtemplate.Options{RestartPolicyAlways: false}).NestedObject.Type()
+	specType := podtemplate.SpecObjectType()
 	templateBaseline := types.ListNull(specType)
 	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
 	var selectorBaseline []LabelSelectorModel

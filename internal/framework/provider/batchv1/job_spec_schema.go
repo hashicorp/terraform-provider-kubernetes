@@ -15,61 +15,150 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 )
 
-// updatable controls PodSpec field modifiers. SDKv2's Job-level ForceNew fields
-// also apply to the JobSpec embedded in a CronJob.
-func jobSpecBlock(updatable bool) schema.ListNestedBlock {
-	immutableInt := []planmodifier.Int64{jobSpecInt64RequiresReplace()}
-	immutableString := []planmodifier.String{jobSpecStringRequiresReplace()}
-	immutableObjectList := []planmodifier.List{workloadObjectListRequiresReplace()}
+// jobPodSpec is the pod spec of a Job's template, which Kubernetes does not
+// allow to change, or of a CronJob's job template, which it does.
+func jobPodSpec(job bool) *podspec.Built {
+	if job {
+		return podspec.For(podspec.Job())
+	}
+	return podspec.For(podspec.CronJob())
+}
 
-	selector := schema.ListNestedAttribute{
-		Optional:      true,
-		Computed:      true,
-		Description:   "A label query selecting the pods owned by this job. Changes require replacement, including within a CronJob template.",
-		Validators:    []validator.List{listvalidator.SizeAtMost(1)},
-		PlanModifiers: immutableObjectList,
-		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-			"match_labels": schema.MapAttribute{
-				Optional: true, ElementType: types.StringType,
-				PlanModifiers: []planmodifier.Map{jobSpecMapRequiresReplace()},
-			},
-			"match_expressions": schema.ListNestedAttribute{
-				Optional: true, PlanModifiers: immutableObjectList,
-				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-					"key":      schema.StringAttribute{Optional: true, PlanModifiers: immutableString},
-					"operator": schema.StringAttribute{Optional: true, PlanModifiers: immutableString},
-					"values": schema.SetAttribute{
-						Optional: true, ElementType: types.StringType,
-						PlanModifiers: []planmodifier.Set{jobSpecSetRequiresReplace()},
+// jobSpecBlock is the JobSpec of a Job or of a CronJob's job template. Omitted
+// scalars plan SDKv2's zero values, so state written by SDKv2 plans no change.
+// The Job-level fields SDKv2 declared ForceNew replace a CronJob too.
+func jobSpecBlock(job bool) schema.ListNestedBlock {
+	policy := podFailurePolicyBlock()
+	if job {
+		// Kubernetes does not allow a Job's policy to change.
+		policy.PlanModifiers = []planmodifier.List{jobPolicyRequiresReplace{}}
+		policy.Description = "Rules for handling pod failures. Rules are evaluated in order; unmatched failures count toward the job's backoff limit. Kubernetes does not allow changing the policy of a Job, so any change replaces it."
+	}
+	return schema.ListNestedBlock{
+		Description: "Specification of the job. Exactly one spec block is required.",
+		Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeBetween(1, 1)},
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"active_deadline_seconds": schema.Int64Attribute{
+					Description: "Maximum time in seconds the job may be active. Zero means no deadline.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(0),
+					Validators: []validator.Int64{int64validator.AtLeast(1)},
+				},
+				"backoff_limit": schema.Int64Attribute{
+					Description: "Number of retries before the job is marked failed. Defaults to 6.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(6),
+					Validators: []validator.Int64{int64validator.AtLeast(0)},
+				},
+				"backoff_limit_per_index": schema.Int64Attribute{
+					Description: "Maximum retries per index in an Indexed job. Applies only when completion_mode is Indexed, where omission sends zero. Changes require replacement.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(0),
+					Validators:    []validator.Int64{int64validator.AtLeast(0)},
+					PlanModifiers: []planmodifier.Int64{zeroEquivalentInt64RequiresReplace{}},
+				},
+				"completions": schema.Int64Attribute{
+					Description: "Desired number of successfully finished pods. Defaults to 1. Changes require replacement.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(1),
+					Validators:    []validator.Int64{int64validator.AtLeast(1)},
+					PlanModifiers: []planmodifier.Int64{zeroEquivalentInt64RequiresReplace{}},
+				},
+				"completion_mode": schema.StringAttribute{
+					Description: "Whether pod completions are tracked as `NonIndexed` (the Kubernetes default) or `Indexed`. Changes require replacement.",
+					Optional:    true, Computed: true,
+					Validators: []validator.String{stringvalidator.OneOf("Indexed", "NonIndexed")},
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+						apiDefaultedStringRequiresReplace{},
 					},
+				},
+				"manual_selector": schema.BoolAttribute{
+					Description: "Whether the caller controls pod labels and selectors.",
+					Optional:    true, Computed: true, Default: booldefault.StaticBool(false),
+				},
+				"max_failed_indexes": schema.Int64Attribute{
+					Description: "Maximum number of failed indexes before an Indexed job is marked failed. Applies only when completion_mode is Indexed, where omission sends zero.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(0),
+					Validators: []validator.Int64{int64validator.AtLeast(0)},
+				},
+				"parallelism": schema.Int64Attribute{
+					Description: "Maximum number of pods the job runs at any time. Defaults to 1.",
+					Optional:    true, Computed: true, Default: int64default.StaticInt64(1),
+					Validators: []validator.Int64{int64validator.AtLeast(0)},
+				},
+				"selector": jobSelectorAttribute(),
+				"ttl_seconds_after_finished": schema.StringAttribute{
+					Description: "Seconds to retain a finished job. Zero allows immediate deletion; omission disables automatic deletion.",
+					Optional:    true, Computed: true, Default: stringdefault.StaticString(""),
+					Validators: []validator.String{jobTTLValidator{}},
+				},
+			},
+			Blocks: map[string]schema.Block{
+				"pod_failure_policy": policy,
+				"template": schema.ListNestedBlock{
+					Description: "Describes the pod that will be created when executing a job. More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/",
+					Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeBetween(1, 1)},
+					NestedObject: schema.NestedBlockObject{Blocks: map[string]schema.Block{
+						"metadata": templateMetadataBlock(common.MetadataSchema("job", true)),
+						"spec":     jobPodSpec(job).Spec,
+					}},
+				},
+			},
+		},
+	}
+}
+
+func jobSelectorAttribute() schema.ListNestedAttribute {
+	return schema.ListNestedAttribute{
+		Description: "A label query over the pods owned by the job. Omit it to keep the selector Kubernetes generates; a configured list must contain exactly one object. Changes require replacement.",
+		Optional:    true, Computed: true,
+		Validators: []validator.List{listvalidator.SizeBetween(1, 1)},
+		PlanModifiers: []planmodifier.List{
+			listplanmodifier.UseStateForUnknown(),
+			jobSelectorRequiresReplace{},
+		},
+		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+			"match_labels": schema.MapAttribute{Optional: true, ElementType: types.StringType},
+			"match_expressions": schema.ListNestedAttribute{
+				Optional: true,
+				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+					"key":      schema.StringAttribute{Optional: true},
+					"operator": schema.StringAttribute{Optional: true},
+					"values":   schema.SetAttribute{Optional: true, ElementType: types.StringType},
 				}},
 			},
 		}},
 	}
-	policy := schema.ListNestedBlock{
-		Description:   "Rules for handling pod failures. Rules are evaluated in order; unmatched failures count toward the job's backoff limit. Adding or removing this block requires replacement, including within a CronJob template.",
+}
+
+func podFailurePolicyBlock() schema.ListNestedBlock {
+	emptyString := func() schema.StringAttribute {
+		return schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("")}
+	}
+	return schema.ListNestedBlock{
+		Description:   "Rules for handling pod failures. Rules are evaluated in order; unmatched failures count toward the job's backoff limit. Adding or removing the block requires replacement.",
 		Validators:    []validator.List{listvalidator.SizeAtMost(1)},
-		PlanModifiers: immutableObjectList,
+		PlanModifiers: []planmodifier.List{listSizeRequiresReplace{}},
 		NestedObject: schema.NestedBlockObject{Blocks: map[string]schema.Block{
 			"rule": schema.ListNestedBlock{
 				Validators: []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1)},
 				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"action": schema.StringAttribute{Optional: true},
-					},
+					Attributes: map[string]schema.Attribute{"action": emptyString()},
 					Blocks: map[string]schema.Block{
 						"on_exit_codes": schema.ListNestedBlock{
 							Validators: []validator.List{listvalidator.SizeAtMost(1)},
 							NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-								"container_name": schema.StringAttribute{Optional: true},
-								"operator":       schema.StringAttribute{Optional: true},
+								"container_name": emptyString(),
+								"operator":       emptyString(),
 								"values": schema.ListAttribute{
 									Required: true, ElementType: types.Int64Type,
 									Validators: []validator.List{
@@ -82,7 +171,7 @@ func jobSpecBlock(updatable bool) schema.ListNestedBlock {
 						"on_pod_condition": schema.ListNestedBlock{
 							NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
 								"status": schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("True")},
-								"type":   schema.StringAttribute{Optional: true},
+								"type":   emptyString(),
 							}},
 						},
 					},
@@ -90,83 +179,44 @@ func jobSpecBlock(updatable bool) schema.ListNestedBlock {
 			},
 		}},
 	}
-	if !updatable {
-		// Kubernetes Job policies are immutable. The SDK's cardinality-only
-		// parent rule allowed ineffective in-place edits that Update ignored.
-		policy.PlanModifiers = []planmodifier.List{jobSpecPolicyRequiresReplace()}
-		policy.Description = "Rules for handling pod failures. Rules are evaluated in order; unmatched failures count toward the job's backoff limit. The policy is immutable for an existing Job, so changes require replacement."
-	}
-
-	return schema.ListNestedBlock{
-		Description: "Specification of the job. Exactly one spec block is required.",
-		Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeBetween(1, 1)},
-		NestedObject: schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{
-				"active_deadline_seconds": schema.Int64Attribute{
-					Optional: true, Validators: []validator.Int64{int64validator.AtLeast(1)},
-					Description: "Maximum time in seconds the job may be active.",
-				},
-				"backoff_limit": schema.Int64Attribute{
-					Optional: true, Computed: true, Default: int64default.StaticInt64(6),
-					Validators: []validator.Int64{int64validator.AtLeast(0)},
-				},
-				"backoff_limit_per_index": schema.Int64Attribute{
-					Description: "Maximum retries per index in an Indexed job. Omission uses the provider default of zero rather than unsetting the API field. Changes require replacement, including within a CronJob template.",
-					Optional:    true, Computed: true, Default: int64default.StaticInt64(0), PlanModifiers: immutableInt,
-					Validators: []validator.Int64{int64validator.AtLeast(0)},
-				},
-				"completions": schema.Int64Attribute{
-					Description: "Desired number of successfully finished pods. Changes require replacement, including within a CronJob template.",
-					Optional:    true, Computed: true, Default: int64default.StaticInt64(1),
-					PlanModifiers: immutableInt, Validators: []validator.Int64{int64validator.AtLeast(1)},
-				},
-				"completion_mode": schema.StringAttribute{
-					Description: "Whether pod completions are tracked as Indexed or NonIndexed. Changes require replacement, including within a CronJob template.",
-					Optional:    true, Computed: true,
-					PlanModifiers: immutableString,
-					Validators:    []validator.String{stringvalidator.OneOf("Indexed", "NonIndexed")},
-				},
-				"manual_selector": schema.BoolAttribute{
-					Optional: true, Computed: true, Default: booldefault.StaticBool(false),
-					Description: "Whether the caller controls pod labels and selectors.",
-				},
-				"max_failed_indexes": schema.Int64Attribute{
-					Description: "Maximum number of failed indexes before an Indexed job is marked failed and its remaining pods are terminated. Requires backoff_limit_per_index. Omission uses the provider default of zero rather than unsetting the API field.",
-					Optional:    true, Computed: true, Default: int64default.StaticInt64(0), Validators: []validator.Int64{int64validator.AtLeast(0)},
-				},
-				"parallelism": schema.Int64Attribute{
-					Optional: true, Computed: true, Default: int64default.StaticInt64(1),
-					Validators: []validator.Int64{int64validator.AtLeast(0)},
-				},
-				"selector": selector,
-				"ttl_seconds_after_finished": schema.StringAttribute{
-					Optional: true, Validators: []validator.String{jobTTLValidator{}},
-					Description: "Seconds to retain a finished job. Zero allows immediate deletion; omission disables automatic deletion.",
-				},
-			},
-			Blocks: map[string]schema.Block{
-				"pod_failure_policy": policy,
-				"template":           podTemplateBlock(updatable),
-			},
-		},
-	}
 }
 
-func jobSpecType() types.ObjectType {
-	return jobSpecValueField().typ.(types.ListType).ElemType.(types.ObjectType)
+// templateMetadataBlock adapts object metadata to a pod or job template, as
+// for the apps/v1 workloads. SDKv2 declared its name, generate_name and
+// namespace ForceNew; the server never sets its other fields.
+func templateMetadataBlock(block schema.ListNestedBlock) schema.ListNestedBlock {
+	block = common.WithEmptyMetadataCompatibility(block)
+	attributes := block.NestedObject.Attributes
+	generateName := attributes["generate_name"].(schema.StringAttribute)
+	generateName.PlanModifiers = []planmodifier.String{zeroEquivalentStringRequiresReplace{}}
+	attributes["generate_name"] = generateName
+	for _, name := range []string{"resource_version", "uid"} {
+		a := attributes[name].(schema.StringAttribute)
+		a.PlanModifiers = []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
+		attributes[name] = a
+	}
+	generation := attributes["generation"].(schema.Int64Attribute)
+	generation.PlanModifiers = []planmodifier.Int64{int64planmodifier.UseStateForUnknown()}
+	attributes["generation"] = generation
+	return block
 }
 
-// Value-field trees of the frozen Job and CronJob spec blocks, built once per
-// process. Assigned in init because the blocks' plan modifiers refer to them.
-var jobSpecValueField, cronJobSpecValueField func() valueField
+// The JobSpec types of a Job and of a CronJob's job template, derived from the
+// frozen schema once per process.
+var (
+	jobSpecType         = sync.OnceValue(func() types.ObjectType { return jobSpecObjectType(true) })
+	jobTemplateSpecType = sync.OnceValue(func() types.ObjectType { return jobSpecObjectType(false) })
+)
 
-func init() {
-	jobSpecValueField = sync.OnceValue(func() valueField {
-		return blockValueField(common.FreezeListNestedBlock(jobSpecBlock(false)))
-	})
-	cronJobSpecValueField = sync.OnceValue(func() valueField {
-		return blockValueField(common.FreezeListNestedBlock(cronJobSpecBlock()))
-	})
+func jobSpecObjectType(job bool) types.ObjectType {
+	return common.FreezeListNestedBlock(jobSpecBlock(job)).NestedObject.Type().(types.ObjectType)
+}
+
+func jobSpecTypeFor(job bool) types.ObjectType {
+	if job {
+		return jobSpecType()
+	}
+	return jobTemplateSpecType()
 }
 
 type jobTTLValidator struct{}

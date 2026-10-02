@@ -33,7 +33,7 @@ func TestAccKubernetesJobV1_pod_failure_policy_update(t *testing.T) {
 				Config: initial,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesJobV1Exists(address, &before),
-					resource.TestCheckNoResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name"),
+					resource.TestCheckResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", ""),
 				),
 			},
 			{
@@ -48,7 +48,7 @@ func TestAccKubernetesJobV1_pod_failure_policy_update(t *testing.T) {
 					testAccCheckKubernetesJobV1Exists(address, &after),
 					testAccCheckKubernetesJobV1ForceNew(&before, &after, true),
 					resource.TestCheckResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.action", "Ignore"),
-					resource.TestCheckNoResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name"),
+					resource.TestCheckResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", ""),
 				),
 			},
 			{

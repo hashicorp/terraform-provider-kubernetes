@@ -23,9 +23,10 @@ func (r *JobV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *re
 }
 
 func buildJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	metadata := common.NamespacedMetadataSchema("job", true)
+	metadata := common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("job", true))
+	// Kubernetes copies the pod template's labels to a Job created without any.
 	labels := metadata.NestedObject.Attributes["labels"].(schema.MapAttribute)
-	labels.Computed = true
+	labels.Default, labels.PlanModifiers = nil, nil
 	metadata.NestedObject.Attributes["labels"] = labels
 	resp.Schema = schema.Schema{
 		Version:     1,
@@ -39,7 +40,7 @@ func buildJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resourc
 		},
 		Blocks: map[string]schema.Block{
 			"metadata": metadata,
-			"spec":     jobSpecBlock(false),
+			"spec":     jobSpecBlock(true),
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true, Update: true, Delete: true}),
 		},
 	}

@@ -918,3 +918,66 @@ func TestFlattenDataSourceMetadataFieldsDoesNotFilter(t *testing.T) {
 		t.Errorf("annotations has %d elements, want 1 — the internal key must not be filtered", n)
 	}
 }
+
+// TestNormalizeNotFoundMetadata pins the SDKv2 state shape for a data source read of a
+// missing object: unset fields become zero values, configured fields are left alone.
+func TestNormalizeNotFoundMetadata(t *testing.T) {
+	configured := types.MapValueMust(types.StringType, map[string]attr.Value{"k": types.StringValue("v")})
+
+	t.Run("unset fields become zero values", func(t *testing.T) {
+		out := NormalizeNotFoundMetadata(MetadataBase{Name: types.StringValue("absent")})
+
+		if out.Name.ValueString() != "absent" {
+			t.Errorf("Name = %v, want %q", out.Name, "absent")
+		}
+		if out.Annotations.IsNull() || len(out.Annotations.Elements()) != 0 {
+			t.Errorf("Annotations = %v, want empty non-null map", out.Annotations)
+		}
+		if out.Labels.IsNull() || len(out.Labels.Elements()) != 0 {
+			t.Errorf("Labels = %v, want empty non-null map", out.Labels)
+		}
+		if out.Generation.IsNull() || out.Generation.ValueInt64() != 0 {
+			t.Errorf("Generation = %v, want 0", out.Generation)
+		}
+		if out.ResourceVersion.IsNull() || out.ResourceVersion.ValueString() != "" {
+			t.Errorf("ResourceVersion = %v, want \"\"", out.ResourceVersion)
+		}
+		if out.UID.IsNull() || out.UID.ValueString() != "" {
+			t.Errorf("UID = %v, want \"\"", out.UID)
+		}
+	})
+
+	t.Run("configured values are kept", func(t *testing.T) {
+		out := NormalizeNotFoundMetadata(MetadataBase{
+			Name:        types.StringValue("absent"),
+			Annotations: configured,
+			Labels:      configured,
+		})
+
+		if !out.Annotations.Equal(configured) {
+			t.Errorf("Annotations = %v, want %v", out.Annotations, configured)
+		}
+		if !out.Labels.Equal(configured) {
+			t.Errorf("Labels = %v, want %v", out.Labels, configured)
+		}
+	})
+
+	t.Run("null values in a configured map are dropped", func(t *testing.T) {
+		withNull := types.MapValueMust(types.StringType, map[string]attr.Value{
+			"k":    types.StringValue("v"),
+			"gone": types.StringNull(),
+		})
+		out := NormalizeNotFoundMetadata(MetadataBase{
+			Name:        types.StringValue("absent"),
+			Annotations: withNull,
+			Labels:      withNull,
+		})
+
+		if !out.Annotations.Equal(configured) {
+			t.Errorf("Annotations = %v, want %v", out.Annotations, configured)
+		}
+		if !out.Labels.Equal(configured) {
+			t.Errorf("Labels = %v, want %v", out.Labels, configured)
+		}
+	})
+}

@@ -89,7 +89,19 @@ func AnnotationsValidator() validator.Map {
 	return annotationsValidator{}
 }
 
-type annotationsValidator struct{}
+// dataSourceAnnotationsValidator is AnnotationsValidator without the null-value check, for
+// data sources. SDKv2 accepted `annotations = { a = null }` there: validateAnnotations
+// checks keys only, and validateConfigNulls rejects null elements in lists and sets but not
+// in maps. Rejecting it would break configurations that validate today. The resource-side
+// reasons for the check do not apply either — a data source has no apply, and its read
+// replaces the map with the API response.
+func dataSourceAnnotationsValidator() validator.Map {
+	return annotationsValidator{allowNullValues: true}
+}
+
+type annotationsValidator struct {
+	allowNullValues bool
+}
 
 func (v annotationsValidator) Description(ctx context.Context) string {
 	return v.MarkdownDescription(ctx)
@@ -122,7 +134,7 @@ func (v annotationsValidator) ValidateMap(_ context.Context, req validator.MapRe
 		// provider, and Update silently drops the key while state keeps `a = null`,
 		// producing a permanent diff. SDKv2's validateAnnotations checks keys only, so
 		// this is a deliberate tightening;
-		if val.IsNull() {
+		if val.IsNull() && !v.allowNullValues {
 			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 				req.Path.AtMapKey(k), "value must be a string", val.String()))
 		}
@@ -135,7 +147,15 @@ func LabelsValidator() validator.Map {
 	return labelsValidator{}
 }
 
-type labelsValidator struct{}
+// dataSourceLabelsValidator is LabelsValidator without the null-value check, for data
+// sources. See dataSourceAnnotationsValidator for why.
+func dataSourceLabelsValidator() validator.Map {
+	return labelsValidator{allowNullValues: true}
+}
+
+type labelsValidator struct {
+	allowNullValues bool
+}
 
 func (v labelsValidator) Description(ctx context.Context) string {
 	return v.MarkdownDescription(ctx)
@@ -163,8 +183,10 @@ func (v labelsValidator) ValidateMap(_ context.Context, req validator.MapRequest
 			continue
 		}
 		if val.IsNull() {
-			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
-				req.Path.AtMapKey(k), "value must be a string", val.String()))
+			if !v.allowNullValues {
+				resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+					req.Path.AtMapKey(k), "value must be a string", val.String()))
+			}
 			continue
 		}
 		for _, msg := range utilValidation.IsValidLabelValue(val.ValueString()) {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"maps"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	corev1 "k8s.io/api/core/v1"
@@ -271,6 +272,58 @@ func stringMapValue(ctx context.Context, m map[string]string) (types.Map, diag.D
 		m = map[string]string{}
 	}
 	return types.MapValueFrom(ctx, types.StringType, m)
+}
+
+// NormalizeNotFoundMetadata gives a data source's metadata the state SDKv2 recorded when
+// the object does not exist: fields the configuration set are kept, and each unset field
+// becomes a zero value — {} for annotations and labels, "" for uid and resource_version,
+// 0 for generation — rather than null. Null values inside configured annotations or labels
+// are dropped, as SDKv2 dropped them.
+//
+// Preserving this is deliberate. The read does not error on a 404, so these values are how
+// practitioners detect absence, and the common idiom is metadata[0].uid != "". Returning
+// null would make that comparison true for a missing object, because HCL treats null as
+// equal only to null, silently inverting existence checks on upgrade.
+//
+// Attributes populated only from the API response, such as a namespace's spec, are a
+// different case: SDKv2 never set them on a 404, so they stay null and callers leave them
+// alone. Namespaced callers normalize the embedded MetadataBase and keep their namespace.
+func NormalizeNotFoundMetadata(in MetadataBase) MetadataBase {
+	out := in
+	out.Annotations = notFoundStringMap(out.Annotations)
+	out.Labels = notFoundStringMap(out.Labels)
+	if out.Generation.IsNull() {
+		out.Generation = types.Int64Value(0)
+	}
+	if out.ResourceVersion.IsNull() {
+		out.ResourceVersion = types.StringValue("")
+	}
+	if out.UID.IsNull() {
+		out.UID = types.StringValue("")
+	}
+	return out
+}
+
+// notFoundStringMap is NormalizeNotFoundMetadata's rule for annotations and labels: null
+// becomes {}, and a configured map keeps its entries except null ones.
+func notFoundStringMap(m types.Map) types.Map {
+	if m.IsNull() {
+		return types.MapValueMust(types.StringType, map[string]attr.Value{})
+	}
+	if m.IsUnknown() {
+		return m
+	}
+	elems := m.Elements()
+	kept := make(map[string]attr.Value, len(elems))
+	for k, v := range elems {
+		if !v.IsNull() {
+			kept[k] = v
+		}
+	}
+	if len(kept) == len(elems) {
+		return m
+	}
+	return types.MapValueMust(types.StringType, kept)
 }
 
 // ResolveDataSourceNamespace returns the namespace a namespaced data source should read,

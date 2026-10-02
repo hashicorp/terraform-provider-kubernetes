@@ -137,29 +137,32 @@ func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftype
 	return !podTemplatesEqual(previous, desired), diags
 }
 
-func podTemplatesEqual(a, b corev1.PodTemplateSpec) bool {
-	for _, template := range []*corev1.PodTemplateSpec{&a, &b} {
-		*template = *template.DeepCopy()
+// podTemplatesEqual reports whether Kubernetes holding have already gives
+// want.
+func podTemplatesEqual(have, want corev1.PodTemplateSpec) bool {
+	have, want = *have.DeepCopy(), *want.DeepCopy()
+	for _, template := range []*corev1.PodTemplateSpec{&have, &want} {
 		for _, key := range jobGeneratedLabels {
 			delete(template.Labels, key)
 		}
 		clearUnsetFalse(&template.Spec)
 	}
-	return payloadsEqual(a, b)
+	return payloadsEqual(have, want)
 }
 
-func podSpecsEqual(a, b corev1.PodSpec) bool {
-	a, b = *a.DeepCopy(), *b.DeepCopy()
-	clearUnsetFalse(&a)
-	clearUnsetFalse(&b)
-	return payloadsEqual(a, b)
+// podSpecsEqual reports whether Kubernetes holding have already gives want.
+func podSpecsEqual(have, want corev1.PodSpec) bool {
+	have, want = *have.DeepCopy(), *want.DeepCopy()
+	clearUnsetFalse(&have)
+	clearUnsetFalse(&want)
+	return payloadsEqual(have, want)
 }
 
 // clearUnsetFalse clears the pointer booleans whose false is what Kubernetes
 // does when they are unset. Every other false is a request of its own:
 // allowPrivilegeEscalation, automountServiceAccountToken and
-// enableServiceLinks default to true, and a container's runAsNonRoot overrides
-// the pod's.
+// enableServiceLinks default to true, and the restricted Pod Security Standard
+// rejects runAsNonRoot false.
 func clearUnsetFalse(spec *corev1.PodSpec) {
 	unset := func(b **bool) {
 		if *b != nil && !**b {
@@ -167,9 +170,6 @@ func clearUnsetFalse(spec *corev1.PodSpec) {
 		}
 	}
 	unset(&spec.ShareProcessNamespace)
-	if spec.SecurityContext != nil {
-		unset(&spec.SecurityContext.RunAsNonRoot)
-	}
 	for _, containers := range [][]corev1.Container{spec.InitContainers, spec.Containers} {
 		for i := range containers {
 			if sc := containers[i].SecurityContext; sc != nil {
@@ -233,14 +233,15 @@ func apiDefaultedStrings(ctx context.Context, s any) func(*tftypes.AttributePath
 	return func(at *tftypes.AttributePath) bool {
 		attribute, err := resourceSchema.AttributeAtTerraformPath(ctx, at)
 		str, ok := attribute.(schema.StringAttribute)
-		return err == nil && ok && str.Computed && str.Default == nil
+		return err == nil && ok && str.Optional && str.Computed && str.Default == nil
 	}
 }
 
 // resolveUnconfigured replaces unknown values, and API-defaulted strings
 // configured as "", with their prior values, so that comparing API payloads
-// ignores server-populated values. It reports false when a configured value is
-// unknown.
+// ignores server-populated values. An unconfigured unknown value without a
+// prior, such as one in a new element, stays unknown and is left to the API.
+// It reports false when a configured value is unknown.
 func resolveUnconfigured(at *tftypes.AttributePath, config, plan, state tftypes.Value, apiDefaulted func(*tftypes.AttributePath) bool) (tftypes.Value, bool) {
 	if !config.IsKnown() {
 		return plan, false
@@ -251,7 +252,7 @@ func resolveUnconfigured(at *tftypes.AttributePath, config, plan, state tftypes.
 	}
 	switch {
 	case config.IsNull() && !plan.IsKnown():
-		return prior, prior.IsKnown()
+		return prior, true
 	case config.IsNull() && isScalar(plan.Type()) && state.IsNull() && isZero(plan):
 		// SDKv2 state may lack a field that later releases default to zero.
 		return state, true

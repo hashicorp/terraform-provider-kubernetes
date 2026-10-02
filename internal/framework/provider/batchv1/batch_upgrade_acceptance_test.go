@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	batchv1 "k8s.io/api/batch/v1"
 )
 
@@ -86,6 +87,14 @@ func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesCronJobV1Exists(address, &after),
 					testAccCheckKubernetesCronJobV1ForceNew(&before, &after, false),
+					func(*terraform.State) error {
+						// 3.3.0 sent no pod security context for this block, and
+						// the restricted Pod Security Standard rejects runAsNonRoot false.
+						if sc := after.Spec.JobTemplate.Spec.Template.Spec.SecurityContext; sc != nil && sc.RunAsNonRoot != nil {
+							return fmt.Errorf("live pod securityContext = %+v, want no runAsNonRoot", sc)
+						}
+						return nil
+					},
 				),
 			},
 			{

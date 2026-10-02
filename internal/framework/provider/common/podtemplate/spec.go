@@ -7,17 +7,40 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var podSpecOmitted = &struct{}{}
+
+// podSpecMeta holds values derived from the static spec schema, computed once.
+type podSpecMeta struct {
+	objectType basetypes.ObjectTypable
+	computed   map[string]bool
+	blocks     map[string]bool
+}
+
+var podSpecDerived = sync.OnceValue(func() podSpecMeta {
+	object := common.FreezeNestedBlockObject(podSpecObject())
+	meta := podSpecMeta{objectType: object.Type(), computed: map[string]bool{}, blocks: map[string]bool{}}
+	podSpecComputedPaths(object.Attributes, object.Blocks, "spec", meta.computed)
+	podSpecBlockPaths(object, "spec", meta.blocks)
+	return meta
+})
+
+// SpecObjectType returns the type of one template "spec" element.
+func SpecObjectType() basetypes.ObjectTypable {
+	return podSpecDerived().objectType
+}
 
 // ExpandSpec converts the template "spec" list at the given path into a
 // PodSpec through the shared pure SDKv2 expander. A null or empty list yields an
@@ -33,10 +56,7 @@ func ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.Pod
 		diagnostics.AddAttributeError(at, "Invalid Pod Template Specification", "At most one pod template spec block is allowed.")
 		return corev1.PodSpec{}, diagnostics
 	}
-	object := podSpecObject()
-	computed := map[string]bool{}
-	podSpecComputedPaths(object.Attributes, object.Blocks, "spec", computed)
-	raw := podSpecAPIValue(ctx, value, at, "spec", computed, &diagnostics)
+	raw := podSpecAPIValue(ctx, value, at, "spec", podSpecDerived().computed, &diagnostics)
 	if diagnostics.HasError() {
 		return corev1.PodSpec{}, diagnostics
 	}
@@ -53,7 +73,8 @@ func ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.Pod
 // on writes and the prior state on reads; it decides null versus empty
 // collection ownership and retains semantically equal quantity spellings.
 func FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
-	objectType := podSpecObject().Type()
+	derived := podSpecDerived()
+	objectType := derived.objectType
 	var diagnostics diag.Diagnostics
 	raw, err := kubernetes.FlattenTemplatePodSpecForFramework(spec)
 	if err != nil {
@@ -61,9 +82,7 @@ func FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, 
 		return types.ListNull(objectType), diagnostics
 	}
 	preserveProjectedSourceGroups(ctx, spec, baseline, raw)
-	blocks := map[string]bool{}
-	podSpecBlockPaths(podSpecObject(), "spec", blocks)
-	value := podSpecStateValue(ctx, types.ListType{ElemType: objectType}, raw, baseline, []string{"spec"}, "spec", blocks, &diagnostics)
+	value := podSpecStateValue(ctx, types.ListType{ElemType: objectType}, raw, baseline, []string{"spec"}, "spec", derived.blocks, &diagnostics)
 	if diagnostics.HasError() {
 		return types.ListNull(objectType), diagnostics
 	}

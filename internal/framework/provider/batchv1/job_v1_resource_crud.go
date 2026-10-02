@@ -310,7 +310,7 @@ func flattenJobPlanned(ctx context.Context, job *batchapi.Job, model *JobV1Model
 	if diags.HasError() {
 		return diags
 	}
-	spec, specDiags := preservePlannedValue(ctx, jobSpecBlock(false), plannedSpec, model.Spec)
+	spec, specDiags := preservePlannedValueField(ctx, jobSpecValueField(), plannedSpec, model.Spec)
 	diags.Append(specDiags...)
 	model.Spec = spec
 	if len(plannedMetadata) == 1 && len(model.Metadata) == 1 {

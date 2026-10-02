@@ -7,15 +7,33 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	api "k8s.io/api/core/v1"
 )
+
+// podSpecMeta holds values derived from the static spec schema, computed once.
+type podSpecMeta struct {
+	objectType basetypes.ObjectTypable
+	computed   map[string]bool
+	blocks     map[string]bool
+}
+
+var podSpecDerived = sync.OnceValue(func() podSpecMeta {
+	object := common.FreezeNestedBlockObject(podSpecObject())
+	meta := podSpecMeta{objectType: object.Type(), computed: map[string]bool{}, blocks: map[string]bool{}}
+	podSpecComputedPaths(object.Attributes, object.Blocks, "spec", meta.computed)
+	podSpecBlockPaths(object, "spec", meta.blocks)
+	return meta
+})
 
 func expandPodV1Spec(ctx context.Context, spec types.List) (*api.PodSpec, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
@@ -23,10 +41,7 @@ func expandPodV1Spec(ctx context.Context, spec types.List) (*api.PodSpec, diag.D
 		diagnostics.AddAttributeError(path.Root("spec"), "Invalid Pod Specification", "A known spec block is required before creating or updating a Pod.")
 		return nil, diagnostics
 	}
-	object := podSpecObject()
-	computed := map[string]bool{}
-	podSpecComputedPaths(object.Attributes, object.Blocks, "spec", computed)
-	raw := podSpecAPIValue(ctx, spec, path.Root("spec"), "spec", computed, &diagnostics)
+	raw := podSpecAPIValue(ctx, spec, path.Root("spec"), "spec", podSpecDerived().computed, &diagnostics)
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
@@ -38,17 +53,15 @@ func expandPodV1Spec(ctx context.Context, spec types.List) (*api.PodSpec, diag.D
 }
 
 func flattenPodV1Spec(ctx context.Context, spec api.PodSpec, prior types.List) (types.List, diag.Diagnostics) {
-	object := podSpecObject()
-	objectType := object.Type()
+	derived := podSpecDerived()
+	objectType := derived.objectType
 	var diagnostics diag.Diagnostics
 	raw, err := kubernetes.FlattenPodSpecForFramework(spec)
 	if err != nil {
 		diagnostics.AddError("Unable to Flatten Pod Specification", err.Error())
 		return types.ListNull(objectType), diagnostics
 	}
-	blocks := map[string]bool{}
-	podSpecBlockPaths(object, "spec", blocks)
-	value := podSpecStateValue(ctx, types.ListType{ElemType: objectType}, raw, prior, []string{"spec"}, "spec", blocks, &diagnostics)
+	value := podSpecStateValue(ctx, types.ListType{ElemType: objectType}, raw, prior, []string{"spec"}, "spec", derived.blocks, &diagnostics)
 	if diagnostics.HasError() {
 		return types.ListNull(objectType), diagnostics
 	}

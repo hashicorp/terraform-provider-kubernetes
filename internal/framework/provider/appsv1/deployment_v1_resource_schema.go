@@ -27,7 +27,14 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
 )
 
-func (d *DeploymentV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+// The schema is built and frozen once per process; see common.FrozenSchema.
+var deploymentFrozenSchema = common.FrozenSchema(buildDeploymentSchema)
+
+func (d *DeploymentV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	deploymentFrozenSchema(ctx, req, resp)
+}
+
+func buildDeploymentSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     1,
 		Description: "A Deployment ensures that a specified number of pod replicas are running at any one time.",

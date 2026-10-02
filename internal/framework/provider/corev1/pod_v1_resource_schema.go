@@ -38,7 +38,14 @@ import (
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
-func (p *PodV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+// The schema is built and frozen once per process; see common.FrozenSchema.
+var podV1FrozenSchema = common.FrozenSchema(buildPodV1Schema)
+
+func (p *PodV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	podV1FrozenSchema(ctx, req, resp)
+}
+
+func buildPodV1Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	spec := podBlock(podSpecWithDescriptions(podSpecObject()), 1, 1, false)
 	spec.Description = "Specification of the desired behavior of the pod. Exactly one spec block is required."
 	resp.Schema = schema.Schema{

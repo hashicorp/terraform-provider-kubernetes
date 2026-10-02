@@ -182,31 +182,33 @@ func objectValueFields(attributes map[string]schema.Attribute, blocks map[string
 	return result
 }
 
-// valueFromAPI reconstructs the explicit Framework schema from the shared pure
-// flatteners. JSON normalizes Kubernetes enum, pointer and integer representations.
-func valueFromAPI(ctx context.Context, block schema.ListNestedBlock, raw []interface{}, prior types.List) (types.List, diag.Diagnostics) {
+// valueFromAPIField reconstructs the explicit Framework value of a block field
+// from the shared pure flatteners. JSON normalizes Kubernetes enum, pointer and
+// integer representations.
+func valueFromAPIField(ctx context.Context, field valueField, raw []interface{}, prior types.List) (types.List, diag.Diagnostics) {
+	elemType := field.typ.(types.ListType).ElemType
 	var diagnostics diag.Diagnostics
 	data, err := json.Marshal(normalizeLegacyCollections(raw))
 	if err != nil {
 		diagnostics.AddError("Unable to read batch workload", err.Error())
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
 	var decoded any
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
 	if err := decoder.Decode(&decoded); err != nil {
 		diagnostics.AddError("Unable to read batch workload", err.Error())
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
-	value, err := apiValue(ctx, blockValueField(block), decoded, prior)
+	value, err := apiValue(ctx, field, decoded, prior)
 	if err != nil {
 		diagnostics.AddError("Unable to read batch workload", err.Error())
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
 	list, ok := value.(types.List)
 	if !ok {
 		diagnostics.AddError("Invalid batch schema", fmt.Sprintf("Expected list, received %T", value))
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
 	return list, diagnostics
 }
@@ -477,9 +479,10 @@ func fieldDefault(ctx context.Context, attribute schema.Attribute) (attr.Value, 
 	return nil, false, nil
 }
 
-// preservePlannedValue resolves computed values without overwriting known plan
-// values with API normalization. Read independently detects subsequent drift.
-func preservePlannedValue(ctx context.Context, block schema.ListNestedBlock, plan, actual types.List) (types.List, diag.Diagnostics) {
+// preservePlannedValueField resolves computed values of a block field without
+// overwriting known plan values with API normalization. Read independently
+// detects subsequent drift.
+func preservePlannedValueField(ctx context.Context, field valueField, plan, actual types.List) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	plannedRaw, err := plan.ToTerraformValue(ctx)
 	if err != nil {
@@ -491,12 +494,12 @@ func preservePlannedValue(ctx context.Context, block schema.ListNestedBlock, pla
 		diagnostics.AddError("Invalid batch API value", err.Error())
 		return plan, diagnostics
 	}
-	value, err := resolveComputedValues(ctx, blockValueField(block), plannedRaw, actualRaw)
+	value, err := resolveComputedValues(ctx, field, plannedRaw, actualRaw)
 	if err != nil {
 		diagnostics.AddError("Unable to reconcile batch state", err.Error())
 		return plan, diagnostics
 	}
-	converted, err := block.Type().ValueFromTerraform(ctx, value)
+	converted, err := field.typ.ValueFromTerraform(ctx, value)
 	if err != nil {
 		diagnostics.AddError("Unable to reconcile batch state", err.Error())
 		return plan, diagnostics

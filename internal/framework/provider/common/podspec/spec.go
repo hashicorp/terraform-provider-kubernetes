@@ -291,6 +291,10 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		if count == 0 && !rv.IsValid() && !b.blocks[key] && prior == nil {
 			return types.ListNull(t.ElemType)
 		}
+		// As in SDKv2, a block holding only zero values is the same as no block.
+		if count == 0 && b.blocks[key] && len(previous) == 1 && podZeroValue(previous[0]) {
+			return prior
+		}
 		entries := make([]attr.Value, count)
 		for i := 0; i < count; i++ {
 			var old attr.Value
@@ -378,4 +382,24 @@ func podKeepUnsetString(baseline types.String, api string, refresh bool) bool {
 	default:
 		return !refresh && baseline.ValueString() == ""
 	}
+}
+
+func podZeroValue(value attr.Value) bool {
+	switch v := value.(type) {
+	case types.Object:
+		for _, child := range v.Attributes() {
+			if !podZeroValue(child) {
+				return false
+			}
+		}
+		return !v.IsUnknown()
+	case types.List:
+		for _, element := range v.Elements() {
+			if !podZeroValue(element) {
+				return false
+			}
+		}
+		return !v.IsUnknown()
+	}
+	return !podNonzeroValue(value)
 }

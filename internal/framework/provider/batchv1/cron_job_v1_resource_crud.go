@@ -100,7 +100,7 @@ func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *re
 		resp.Diagnostics.AddError("Error reading CronJob", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(flattenCronJob(ctx, out, &state, filters)...)
+	resp.Diagnostics.Append(flattenCronJob(ctx, out, &state, filters, true)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -282,7 +282,7 @@ func expandCronJobSpec(ctx context.Context, value types.List, at path.Path) (bat
 	return out, diags
 }
 
-func flattenCronJobSpec(ctx context.Context, in batch.CronJobSpec, prior types.List, at path.Path) (types.List, diag.Diagnostics) {
+func flattenCronJobSpec(ctx context.Context, in batch.CronJobSpec, prior types.List, refresh bool, at path.Path) (types.List, diag.Diagnostics) {
 	typ := cronJobSpecBlockType()
 	previous := priorAttributes(prior)
 	templateType := typ.AttrTypes["job_template"].(types.ListType).ElemType.(types.ObjectType)
@@ -292,7 +292,7 @@ func flattenCronJobSpec(ctx context.Context, in batch.CronJobSpec, prior types.L
 		jobSpecPrior = types.ListNull(jobTemplateSpecType())
 	}
 	var diags diag.Diagnostics
-	jobSpec, d := flattenJobSpec(ctx, in.JobTemplate.Spec, jobSpecPrior, false, at.AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec"))
+	jobSpec, d := flattenJobSpec(ctx, in.JobTemplate.Spec, jobSpecPrior, false, refresh, at.AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	metadata := flattenTemplateMetadata(in.JobTemplate.ObjectMeta, previousTemplate["metadata"], templateType.AttrTypes["metadata"].(types.ListType), nil, &diags)
 	if diags.HasError() {
@@ -315,10 +315,10 @@ func flattenCronJobSpec(ctx context.Context, in batch.CronJobSpec, prior types.L
 	}, &diags), diags
 }
 
-func flattenCronJob(ctx context.Context, out *batch.CronJob, model *CronJobV1Model, filters kubernetes.MetadataFilters) diag.Diagnostics {
+func flattenCronJob(ctx context.Context, out *batch.CronJob, model *CronJobV1Model, filters kubernetes.MetadataFilters, refresh bool) diag.Diagnostics {
 	metadata, diags := common.FlattenNamespacedMetadata(ctx, out.ObjectMeta, model.Metadata,
 		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
-	spec, d := flattenCronJobSpec(ctx, out.Spec, model.Spec, path.Root("spec"))
+	spec, d := flattenCronJobSpec(ctx, out.Spec, model.Spec, refresh, path.Root("spec"))
 	diags.Append(d...)
 	if diags.HasError() {
 		return diags
@@ -337,7 +337,7 @@ func cronJobWriteResult(ctx context.Context, state *tfsdk.State, plan CronJobV1M
 	diags := planned.Set(ctx, &plan)
 	actual := tfsdk.State{Schema: state.Schema, Raw: tftypes.NewValue(state.Schema.Type().TerraformType(ctx), nil)}
 	model := plan
-	if flattenDiags := flattenCronJob(ctx, out, &model, filters); flattenDiags.HasError() {
+	if flattenDiags := flattenCronJob(ctx, out, &model, filters, false); flattenDiags.HasError() {
 		diags.Append(flattenDiags...)
 	} else {
 		diags.Append(actual.Set(ctx, &model)...)

@@ -105,7 +105,7 @@ func (r *JobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		resp.Diagnostics.AddError("Failed to read Job", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(flattenJob(ctx, out, &state, filters)...)
+	resp.Diagnostics.Append(flattenJob(ctx, out, &state, filters, true)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -259,14 +259,14 @@ func waitForJobCompletion(ctx context.Context, jobs v1.JobInterface, namespace, 
 	})
 }
 
-func flattenJob(ctx context.Context, job *batchapi.Job, model *JobV1Model, filters kubernetes.MetadataFilters) diag.Diagnostics {
+func flattenJob(ctx context.Context, job *batchapi.Job, model *JobV1Model, filters kubernetes.MetadataFilters, refresh bool) diag.Diagnostics {
 	job = job.DeepCopy()
 	if job.Spec.ManualSelector == nil || !*job.Spec.ManualSelector {
 		removeJobGeneratedLabels(job.Labels)
 	}
 	metadata, diags := common.FlattenNamespacedMetadata(ctx, job.ObjectMeta, model.Metadata,
 		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
-	spec, specDiags := flattenJobSpec(ctx, job.Spec, model.Spec, true, path.Root("spec"))
+	spec, specDiags := flattenJobSpec(ctx, job.Spec, model.Spec, true, refresh, path.Root("spec"))
 	diags.Append(specDiags...)
 	if diags.HasError() {
 		return diags
@@ -288,7 +288,7 @@ func jobWriteResult(ctx context.Context, state *tfsdk.State, plan JobV1Model, ou
 	diags := planned.Set(ctx, &plan)
 	actual := tfsdk.State{Schema: state.Schema, Raw: tftypes.NewValue(state.Schema.Type().TerraformType(ctx), nil)}
 	model := plan
-	if flattenDiags := flattenJob(ctx, out, &model, filters); flattenDiags.HasError() {
+	if flattenDiags := flattenJob(ctx, out, &model, filters, false); flattenDiags.HasError() {
 		diags.Append(flattenDiags...)
 	} else {
 		diags.Append(actual.Set(ctx, &model)...)

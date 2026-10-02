@@ -212,3 +212,74 @@ func testAccKubernetesPodV1ConfigGroupedProjection(name, imageName string) strin
 }
 `, name, imageName)
 }
+
+// Kubernetes accepts only a few Pod spec updates. Those happen in place; any
+// other spec change, including fields SDKv2 left updatable, replaces the Pod.
+func TestAccKubernetesPodV1_specUpdateOrReplace(t *testing.T) {
+	var created, updated, replaced api.Pod
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 3600, "/data"),
+				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &created),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 1800, "/data"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &updated),
+					testAccCheckKubernetesPodForceNew(&created, &updated, false),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "1800"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 1800, "/other"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &replaced),
+					testAccCheckKubernetesPodForceNew(&updated, &replaced, true),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.mount_path", "/other"),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesPodV1ConfigSpecUpdate(name, imageName string, deadline int, mountPath string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = %q
+  }
+  spec {
+    active_deadline_seconds          = %d
+    termination_grace_period_seconds = 1
+    security_context {
+      supplemental_groups = []
+    }
+    container {
+      image   = %q
+      name    = "containername"
+      command = ["sleep", "3600"]
+      volume_mount {
+        name       = "data"
+        mount_path = %q
+      }
+    }
+    volume {
+      name = "data"
+      empty_dir {}
+    }
+  }
+}
+`, name, deadline, imageName, mountPath)
+}

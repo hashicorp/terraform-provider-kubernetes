@@ -452,6 +452,67 @@ func TestAccKubernetesCronJobV1_defaultsAfterRemoval(t *testing.T) {
 	})
 }
 
+// False and "" are values a CronJob update must send, not omissions.
+func TestAccKubernetesCronJobV1_falseAndEmptyValues(t *testing.T) {
+	var before, after batchv1.CronJob
+	name := "tf-acc-cron-false-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	const address = "kubernetes_cron_job_v1.test"
+	minimal := testAccKubernetesCronJobV1ConfigMinimal(name, busyboxImage)
+	utc := strings.Replace(minimal, `schedule = "*/1 * * * *"`, `schedule = "*/1 * * * *"
+    timezone = "UTC"`, 1)
+	noEscalation := strings.Replace(utc, `command = ["sleep", "5"]`, `command = ["sleep", "5"]
+              security_context {
+                allow_privilege_escalation = false
+              }`, 1)
+	noTimezone := strings.Replace(noEscalation, `timezone = "UTC"`, `timezone = ""`, 1)
+	update := resource.ConfigPlanChecks{
+		PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)},
+		PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+	}
+	live := func(check func(batchv1.CronJobSpec) error) resource.TestCheckFunc {
+		return resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesCronJobV1Exists(address, &after),
+			testAccCheckKubernetesCronJobV1ForceNew(&before, &after, false),
+			func(*terraform.State) error { return check(after.Spec) },
+		)
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: utc,
+				Check:  testAccCheckKubernetesCronJobV1Exists(address, &before),
+			},
+			{
+				Config:           noEscalation,
+				ConfigPlanChecks: update,
+				Check: live(func(spec batchv1.CronJobSpec) error {
+					sc := spec.JobTemplate.Spec.Template.Spec.Containers[0].SecurityContext
+					if sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation {
+						return fmt.Errorf("live securityContext = %+v, want allowPrivilegeEscalation false", sc)
+					}
+					return nil
+				}),
+			},
+			{
+				Config:           noTimezone,
+				ConfigPlanChecks: update,
+				Check: live(func(spec batchv1.CronJobSpec) error {
+					if spec.TimeZone != nil {
+						return fmt.Errorf("live timeZone = %q, want unset", *spec.TimeZone)
+					}
+					return nil
+				}),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesCronJobV1_keepsUnmanagedFields(t *testing.T) {
 	var before, after batchv1.CronJob
 	name := "tf-acc-cron-unmanaged-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)

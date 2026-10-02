@@ -34,7 +34,7 @@ func TestDeploymentSpecPatch_EmptyCollectionNormalizationDoesNotWrite(t *testing
 	after.Template.Spec.NodeSelector = map[string]string{}
 	after.Template.Spec.Containers[0].Args = []string{}
 	after.Template.Spec.Containers[0].Command = []string{}
-	patch, err := deploymentSpecPatch(before, *after, before)
+	patch, err := deploymentSpecPatch(before, *after)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +260,7 @@ func TestDeploymentSpecPatch_PreservesExternalTemplateFields(t *testing.T) {
 	current.Template.Spec.NodeSelector = map[string]string{"external": "keep"}
 	current.Template.Spec.Containers[0].Env = []corev1.EnvVar{{Name: "INJECTED", Value: "keep"}}
 
-	patch, err := deploymentSpecPatch(original, *modified, current)
+	patch, err := deploymentSpecPatch(original, *modified)
 	if err != nil {
 		t.Fatal(err)
 	}

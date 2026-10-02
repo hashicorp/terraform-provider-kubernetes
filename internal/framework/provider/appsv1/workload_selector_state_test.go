@@ -146,7 +146,7 @@ func TestWorkloadSelectorNormalizationNoPatch(t *testing.T) {
 					if d.HasError() {
 						t.Fatal(d)
 					}
-					patch, err := deploymentSpecPatch(*original, *modified, *original)
+					patch, err := deploymentSpecPatch(*original, *modified)
 					if err != nil || string(patch) != "{}" {
 						t.Fatalf("normalization patch = %s; error: %v", patch, err)
 					}
@@ -158,9 +158,8 @@ func TestWorkloadSelectorNormalizationNoPatch(t *testing.T) {
 					if d := plan.Get(ctx, &next); d.HasError() {
 						t.Fatal(d)
 					}
-					patch, d := daemonSetStrategicSpecPatch(ctx, old.Spec, next.Spec)
-					if d.HasError() || len(patch) != 0 {
-						t.Fatalf("normalization patch = %s; diagnostics: %v", patch, d)
+					if patch := daemonSetModelPatch(t, old.Spec, next.Spec); string(patch) != "{}" {
+						t.Fatalf("normalization patch = %s", patch)
 					}
 				case *StatefulSetV1:
 					var old, next StatefulSetV1Model

@@ -27,10 +27,7 @@ func TestDaemonSetStrategicSpecPatchPreservesLiveOnlyFields(t *testing.T) {
 	plan := append([]DaemonSetV1SpecModel(nil), state...)
 	plan[0].MinReadySeconds = types.Int64Value(5)
 
-	patch, diags := daemonSetStrategicSpecPatch(context.Background(), state, plan)
-	if diags.HasError() {
-		t.Fatalf("creating patch: %v", diags)
-	}
+	patch := daemonSetModelPatch(t, state, plan)
 
 	live := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{Name: "example", Namespace: "default"},
@@ -68,10 +65,7 @@ func TestDaemonSetStrategicSpecPatchOnDeleteClearsRollingUpdate(t *testing.T) {
 	plan := append([]DaemonSetV1SpecModel(nil), state...)
 	plan[0].Strategy = daemonSetStrategyValue(t, "OnDelete", "0", "1")
 
-	patch, diags := daemonSetStrategicSpecPatch(context.Background(), state, plan)
-	if diags.HasError() {
-		t.Fatalf("creating patch: %v", diags)
-	}
+	patch := daemonSetModelPatch(t, state, plan)
 	liveJSON, _ := json.Marshal(appsv1.DaemonSet{Spec: oldAPI})
 	updatedJSON, err := strategicpatch.StrategicMergePatch(liveJSON, patch, appsv1.DaemonSet{})
 	if err != nil {
@@ -87,6 +81,21 @@ func TestDaemonSetStrategicSpecPatchOnDeleteClearsRollingUpdate(t *testing.T) {
 	if updated.Spec.UpdateStrategy.RollingUpdate != nil {
 		t.Fatalf("rollingUpdate was not cleared: %#v", updated.Spec.UpdateStrategy.RollingUpdate)
 	}
+}
+
+func daemonSetModelPatch(t *testing.T, state, plan []DaemonSetV1SpecModel) []byte {
+	t.Helper()
+	oldSpec, diags := expandDaemonSetSpecModel(context.Background(), state, daemonSetSpecPath())
+	newSpec, newDiags := expandDaemonSetSpecModel(context.Background(), plan, daemonSetSpecPath())
+	diags.Append(newDiags...)
+	if diags.HasError() {
+		t.Fatalf("expanding specs: %v", diags)
+	}
+	patch, err := daemonSetSpecPatch(oldSpec, newSpec)
+	if err != nil {
+		t.Fatalf("creating patch: %v", err)
+	}
+	return patch
 }
 
 func daemonSetPatchTestSpec() appsv1.DaemonSetSpec {

@@ -25,9 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8types "k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/wait"
 	k8sclient "k8s.io/client-go/kubernetes"
+	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/kubectl/pkg/polymorphichelpers"
 )
 
@@ -207,40 +207,47 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	live, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		resp.Diagnostics.AddError("Error reading StatefulSet before update", err.Error())
-		return
-	}
-
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddAttributeError(path.Root("metadata"), "Invalid metadata", "Expected exactly one metadata block in state and plan")
 		return
 	}
-	ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live.ObjectMeta)
-	if len(plan.Spec) == 1 && len(state.Spec) == 1 {
-		specOps, d := r.patchStatefulSetSpec(ctx, plan.Spec[0], state.Spec[0], live.Spec)
-		resp.Diagnostics.Append(d...)
-		if resp.Diagnostics.HasError() {
-			return
+	var specDiags diag.Diagnostics
+	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
+		live, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-		ops = append(ops, specOps...)
-	}
-
-	if len(ops) > 0 {
+		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live.ObjectMeta)
+		if len(plan.Spec) == 1 && len(state.Spec) == 1 {
+			var specOps kubernetes.PatchOperations
+			specOps, specDiags = r.patchStatefulSetSpec(ctx, plan.Spec[0], state.Spec[0], live.Spec)
+			if specDiags.HasError() {
+				return nil
+			}
+			ops = append(ops, specOps...)
+		}
+		if len(ops) == 0 {
+			return nil
+		}
+		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(live.ResourceVersion)}, ops...)
 		payload, err := ops.MarshalJSON()
 		if err != nil {
-			resp.Diagnostics.AddError("Failed to marshal update patch", err.Error())
-			return
+			return err
 		}
-		if _, err := conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{}); err != nil {
-			resp.Diagnostics.AddError("Failed to update StatefulSet", err.Error())
-			return
-		}
+		_, err = conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{})
+		return err
+	})
+	if apierrors.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to update StatefulSet", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(specDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	if plan.WaitForRollout.ValueBool() {
@@ -498,15 +505,7 @@ func mergeStatefulSetPodSpec(previous, planned, live corev1.PodSpec) (corev1.Pod
 	if err != nil {
 		return corev1.PodSpec{}, err
 	}
-	patchMeta, err := strategicpatch.NewPatchMetaFromStruct(corev1.PodSpec{})
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	patchJSON, err := strategicpatch.CreateThreeWayMergePatch(previousJSON, plannedJSON, liveJSON, patchMeta, true)
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	mergedJSON, err := strategicpatch.StrategicMergePatch(liveJSON, patchJSON, corev1.PodSpec{})
+	mergedJSON, err := common.ThreeWayStrategicMerge(previousJSON, plannedJSON, liveJSON, corev1.PodSpec{})
 	if err != nil {
 		return corev1.PodSpec{}, err
 	}

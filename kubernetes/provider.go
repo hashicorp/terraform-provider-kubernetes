@@ -264,7 +264,6 @@ func Provider() *schema.Provider {
 			"kubernetes_secret_v1":                  resourceKubernetesSecretV1(""),
 			"kubernetes_secret_v1_data":             resourceKubernetesSecretV1Data(),
 			"kubernetes_pod":                        resourceKubernetesPodV1("Deprecated; use kubernetes_pod_v1."),
-			"kubernetes_pod_v1":                     resourceKubernetesPodV1(""),
 			"kubernetes_endpoints":                  resourceKubernetesEndpointsV1("Deprecated; use kubernetes_endpoints_v1."),
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpointsV1(""),
 			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSliceV1(),

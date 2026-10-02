@@ -1,18 +1,23 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package batchv1_test
 
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batchv1 "k8s.io/api/batch/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -27,9 +32,9 @@ func TestAccKubernetesJobV1_wait_for_completion(t *testing.T) {
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesJobV1Config_wait_for_completion(name, imageName),
@@ -49,18 +54,21 @@ func TestAccKubernetesJobV1_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	imageName := busyboxImage
 	resourceName := "kubernetes_job_v1.test"
+	// Import cannot discover this provider-only setting from Kubernetes.
+	config := strings.Replace(testAccKubernetesJobV1Config_basic(name, imageName),
+		"wait_for_completion = false", "wait_for_completion = true", 1)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},
 
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesJobV1Config_basic(name, imageName),
+				Config: config,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectIdentity(
 						resourceName, map[string]knownvalue.Check{
@@ -93,8 +101,8 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.26.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesJobV1Config_basic(name, imageName),
@@ -135,7 +143,7 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "0"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.active_deadline_seconds"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "6"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "1"),
@@ -162,8 +170,8 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.26.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesJobV1Config_basic(name, imageName),
@@ -249,9 +257,9 @@ func TestAccKubernetesJobV1_ttl_seconds_after_finished(t *testing.T) {
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesJobV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesJobV1Config_ttl_seconds_after_finished(name, imageName),
@@ -294,7 +302,7 @@ func testAccCheckKubernetesJobV1ForceNew(old, new *batchv1.Job, wantNew bool) re
 }
 
 func testAccCheckKubernetesJobV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
 		return err
 	}
@@ -305,16 +313,17 @@ func testAccCheckKubernetesJobV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		resp, err := conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
+		_, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("Job still exists: %s", rs.Primary.ID)
-			}
+			return fmt.Errorf("Job still exists: %s", rs.Primary.ID)
+		}
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
 	}
 
@@ -328,13 +337,13 @@ func testAccCheckKubernetesJobV1Exists(n string, obj *batchv1.Job) resource.Test
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
 		if err != nil {
 			return err
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -519,11 +528,11 @@ func testAccKubernetesJobV1Config_modified(name, imageName string) string {
   }
   spec {
     manual_selector = true
-    selector {
+    selector = [{
       match_labels = {
         "foo" = "bar"
       }
-    }
+    }]
     template {
       metadata {
         labels = {
@@ -541,4 +550,82 @@ func testAccKubernetesJobV1Config_modified(name, imageName string) string {
   }
   wait_for_completion = false
 }`, name, imageName)
+}
+
+func TestAccKubernetesJobV1_upgrade(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	config := testAccKubernetesJobV1Config_basic(name, busyboxImage)
+	var before, after batchv1.Job
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.26.0")
+		},
+		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.2.1"},
+				},
+				Check: testAccCheckKubernetesJobV1Exists("kubernetes_job_v1.test", &before),
+			},
+			{
+				Config:                   config,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				// The SDK stored omitted optional scalars as zero/empty.
+				// Framework normalizes them to null in a state-only update.
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("kubernetes_job_v1.test", plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists("kubernetes_job_v1.test", &after),
+					testAccCheckKubernetesJobV1ForceNew(&before, &after, false),
+					func(_ *terraform.State) error {
+						if !reflect.DeepEqual(before.Spec, after.Spec) {
+							return fmt.Errorf("migration changed the Job API spec:\nbefore: %#v\nafter: %#v", before.Spec, after.Spec)
+						}
+						return nil
+					},
+					resource.TestCheckResourceAttr("kubernetes_job_v1.test", "spec.0.backoff_limit", "10"),
+					resource.TestCheckResourceAttr("kubernetes_job_v1.test", "spec.0.pod_failure_policy.0.rule.#", "2"),
+				),
+			},
+			{
+				Config:                   config,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesJobV1_disappears(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	var job batchv1.Job
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{{
+			Config: testAccKubernetesJobV1Config_updateImmutableFields(name, busyboxImage, "1"),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				testAccCheckKubernetesJobV1Exists("kubernetes_job_v1.test", &job),
+				func(_ *terraform.State) error {
+					client, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
+					if err != nil {
+						return err
+					}
+					propagation := metav1.DeletePropagationBackground
+					return client.BatchV1().Jobs(job.Namespace).Delete(context.Background(), job.Name, metav1.DeleteOptions{PropagationPolicy: &propagation})
+				},
+			),
+			ExpectNonEmptyPlan: true,
+		}},
+	})
 }

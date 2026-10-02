@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package appsv1_test
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -26,9 +27,9 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1Config_minimal(name, imageName),
@@ -49,9 +50,9 @@ func TestAccKubernetesDaemonSetV1_identity(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
@@ -88,9 +89,9 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 	imageName1 := agnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1Config_basic(name, imageName),
@@ -163,8 +164,8 @@ func TestAccKubernetesDaemonSetV1_with_template_metadata(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -203,9 +204,9 @@ func TestAccKubernetesDaemonSetV1_initContainer(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1WithInitContainer(name, imageName),
@@ -225,9 +226,9 @@ func TestAccKubernetesDaemonSetV1_noTopLevelLabels(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1WithNoTopLevelLabels(name, imageName),
@@ -250,8 +251,8 @@ func TestAccKubernetesDaemonSetV1_with_tolerations(t *testing.T) {
 	operator := "Equal"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -280,8 +281,8 @@ func TestAccKubernetesDaemonSetV1_with_tolerations_unset_toleration_seconds(t *t
 	value := "value"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -307,9 +308,9 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_profil
 	resourceName := "kubernetes_daemon_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfile(name, imageName, "Unconfined"),
@@ -340,8 +341,8 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_localh
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfileLocalhost(name, imageName),
@@ -365,9 +366,9 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(daemonSetName, imageName),
@@ -427,9 +428,9 @@ func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1Config_minimal(name, imageName),
@@ -439,7 +440,7 @@ func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace", ""),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace"),
 				),
 			},
 			{
@@ -465,9 +466,9 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 	imageName := busyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "0"),
@@ -523,7 +524,7 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 }
 
 func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := testAccWorkloadClient()
 	if err != nil {
 		return err
 	}
@@ -541,9 +542,10 @@ func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
 
 		resp, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("DaemonSet still exists: %s", rs.Primary.ID)
-			}
+			return fmt.Errorf("DaemonSet still exists: %s/%s (uid %s)", namespace, resp.Name, resp.UID)
+		}
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
 	}
 
@@ -557,7 +559,7 @@ func testAccCheckKubernetesDaemonSetV1Exists(n string, obj *appsv1.DaemonSet) re
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := testAccWorkloadClient()
 		if err != nil {
 			return err
 		}
@@ -624,12 +626,12 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
       }
     }
 
-    strategy {
-      rolling_update {
+    strategy = [{
+      rolling_update = [{
         max_surge       = "%s"
         max_unavailable = "1" # Set maxUnavailable to 1 if maxSurge is 0
-      }
-    }
+      }]
+    }]
   }
 }
 `, name, imageName, maxSurge)
@@ -665,12 +667,12 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
       }
     }
 
-    strategy {
-      rolling_update {
+    strategy = [{
+      rolling_update = [{
         max_surge       = "%s"
         max_unavailable = "0" # Set maxUnavailable to 0 if maxSurge is set
-      }
-    }
+      }]
+    }]
   }
 }
 `, name, imageName, maxSurge)
@@ -1209,9 +1211,9 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(deploymentName, 
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources {
+          resources = [{
             limits = {
-              cpu    = "0.5"
+              cpu    = "500m"
               memory = "512Mi"
             }
 
@@ -1219,7 +1221,7 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(deploymentName, 
               cpu    = "250m"
               memory = "50Mi"
             }
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -1259,10 +1261,10 @@ func testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(deploymentN
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources {
+          resources = [{
             limits   = {}
             requests = {}
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -1302,12 +1304,12 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsLimitsOnly(deploy
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources {
+          resources = [{
             limits = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }
@@ -1343,15 +1345,16 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsRequestsOnly(depl
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
 
-          resources {
+          resources = [{
             requests = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }
+          }]
         }
         termination_grace_period_seconds = 1
       }

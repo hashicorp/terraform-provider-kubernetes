@@ -15,6 +15,42 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
+func TestMutableMetadataRemainsUnknownOnUpdate(t *testing.T) {
+	ctx := context.Background()
+	block := NamespacedMetadataSchema("workload", true)
+	generation := block.NestedObject.Attributes["generation"].(schema.Int64Attribute)
+	generationRequest := planmodifier.Int64Request{
+		ConfigValue: types.Int64Null(),
+		StateValue:  types.Int64Value(1),
+		PlanValue:   types.Int64Unknown(),
+		State:       nonNullState(),
+		Plan:        nonNullPlan(),
+	}
+	generationResponse := &planmodifier.Int64Response{PlanValue: generationRequest.PlanValue}
+	for _, modifier := range generation.PlanModifiers {
+		modifier.PlanModifyInt64(ctx, generationRequest, generationResponse)
+	}
+	if !generationResponse.PlanValue.IsUnknown() {
+		t.Errorf("generation was frozen to %s before a workload update", generationResponse.PlanValue)
+	}
+
+	version := block.NestedObject.Attributes["resource_version"].(schema.StringAttribute)
+	versionRequest := planmodifier.StringRequest{
+		ConfigValue: types.StringNull(),
+		StateValue:  types.StringValue("123"),
+		PlanValue:   types.StringUnknown(),
+		State:       nonNullState(),
+		Plan:        nonNullPlan(),
+	}
+	versionResponse := &planmodifier.StringResponse{PlanValue: versionRequest.PlanValue}
+	for _, modifier := range version.PlanModifiers {
+		modifier.PlanModifyString(ctx, versionRequest, versionResponse)
+	}
+	if !versionResponse.PlanValue.IsUnknown() {
+		t.Errorf("resource_version was frozen to %s before a workload update", versionResponse.PlanValue)
+	}
+}
+
 // TestRequiresReplaceUnlessSDKv2Unset covers the exemption that keeps a plan run without
 // refresh from destroying objects whose state SDKv2 wrote.
 //

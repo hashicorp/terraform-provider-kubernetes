@@ -9,11 +9,17 @@ description: |-
 
 {{ .Description }}
 
+The provider requires exactly one `metadata` block, one `spec` block, and a `spec.template` containing `metadata` and `spec` blocks. These requirements are validated even where the generated schema below lists blocks as optional.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage
 
 {{tffile "examples/resources/deployment_v1/example_1.tf"}}
+
+## Migration to Plugin Framework
+
+Existing `kubernetes_deployment_v1` state is supported without re-importing or editing state. No `moved` block is needed when keeping the same resource address. Some nested arguments now use list-assignment syntax; see the [workload migration guide](../guides/apps-v1-framework-migration.markdown) before upgrading.
 
 ## Import
 

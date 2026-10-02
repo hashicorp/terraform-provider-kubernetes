@@ -623,6 +623,9 @@ func flattenSecretProjection(in *v1.SecretProjection) []interface{} {
 func flattenConfigMapProjection(in *v1.ConfigMapProjection) []interface{} {
 	att := make(map[string]interface{})
 	att["name"] = in.Name
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
 	if len(in.Items) > 0 {
 		items := make([]interface{}, len(in.Items))
 		for i, v := range in.Items {

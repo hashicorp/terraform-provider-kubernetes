@@ -285,12 +285,9 @@ func Provider() *schema.Provider {
 			"kubernetes_api_service_v1": resourceKubernetesAPIServiceV1(""),
 
 			// apps
-			"kubernetes_deployment":      resourceKubernetesDeploymentV1("Deprecated; use kubernetes_deployment_v1."),
-			"kubernetes_deployment_v1":   resourceKubernetesDeploymentV1(""),
-			"kubernetes_daemonset":       resourceKubernetesDaemonSetV1("Deprecated; use kubernetes_daemon_set_v1."),
-			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSetV1(""),
-			"kubernetes_stateful_set":    resourceKubernetesStatefulSetV1("Deprecated; use kubernetes_stateful_set_v1."),
-			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSetV1(""),
+			"kubernetes_deployment":   resourceKubernetesDeploymentV1("Deprecated; use kubernetes_deployment_v1."),
+			"kubernetes_daemonset":    resourceKubernetesDaemonSetV1("Deprecated; use kubernetes_daemon_set_v1."),
+			"kubernetes_stateful_set": resourceKubernetesStatefulSetV1("Deprecated; use kubernetes_stateful_set_v1."),
 
 			// batch
 			"kubernetes_job":      resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),

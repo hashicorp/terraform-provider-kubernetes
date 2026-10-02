@@ -1,0 +1,15 @@
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Migrate to Terraform Plugin Framework while retaining existing state and namespace/name IDs. Support moved blocks from the deprecated resource types.
+```
+
+```release-note:bug
+`resource/kubernetes_stateful_set_v1`: Prevent replacement when planning an SDKv2 state upgrade with `-refresh=false` solely because an omitted pod-template `generate_name` or empty PVC resource `limits` normalize to null.
+```
+
+```release-note:bug
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Prevent replacement caused only by empty/null selector collection differences during upgrade, including StatefulSet claim-template selectors, and preserve explicitly configured empty selector collections during refresh.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Container and init-container `resources`, template `image_pull_secrets`, and template `readiness_gate` now use list-assignment syntax. Deployment and DaemonSet `strategy` and nested `rolling_update`, and StatefulSet `persistent_volume_claim_retention_policy`, also use list-assignment syntax. See the workload migration guide before upgrading.
+```

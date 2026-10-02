@@ -68,7 +68,7 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
             read_only  = true
           }
 
-          resources {
+          resources = [{
             limits = {
               cpu    = "10m"
               memory = "10Mi"
@@ -78,7 +78,7 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
               cpu    = "10m"
               memory = "10Mi"
             }
-          }
+          }]
         }
 
         container {
@@ -98,7 +98,7 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
             container_port = 9090
           }
 
-          resources {
+          resources = [{
             limits = {
               cpu    = "200m"
               memory = "1000Mi"
@@ -108,7 +108,7 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
               cpu    = "200m"
               memory = "1000Mi"
             }
-          }
+          }]
 
           volume_mount {
             name       = "config-volume"
@@ -180,9 +180,9 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
       }
     }
 
-    persistent_volume_claim_retention_policy {
+    persistent_volume_claim_retention_policy = [{
       when_deleted = "Delete"
       when_scaled  = "Delete"
-    }
+    }]
   }
 }

@@ -206,8 +206,8 @@ func TestAccKubernetesIngressV1Beta1_WaitForLoadBalancerGoogleCloud(t *testing.T
 			skipIfNotRunningInGke(t)
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
+		ProtoV6ProviderFactories: TestAccMuxProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Beta1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Beta1Config_waitForLoadBalancer(name),

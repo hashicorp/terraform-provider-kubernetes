@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package appsv1_test
 
 import (
 	"fmt"
@@ -24,8 +24,8 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName),
@@ -111,8 +111,8 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic_idempotency(t *testing
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName),
@@ -144,8 +144,8 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 			skipIfClusterVersionLessThan(t, "1.27.0")
 			skipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigMinimalWithVolumeDevice(name, imageName),
@@ -291,8 +291,8 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_waitForRollout(t *testing.T)
 			testAccPreCheck(t)
 			skipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutWithVolumeDevice(name, imageName, "true"),
@@ -376,10 +376,10 @@ func testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName s
 
     service_name = "ss-test-service"
 
-    persistent_volume_claim_retention_policy {
+    persistent_volume_claim_retention_policy = [{
       when_deleted = "Delete"
       when_scaled  = "Delete"
-    }
+    }]
 
     template {
       metadata {
@@ -1309,10 +1309,10 @@ func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPol
 
     service_name = "ss-test-service"
 
-    persistent_volume_claim_retention_policy {
+    persistent_volume_claim_retention_policy = [{
       when_deleted = "Retain"
       when_scaled  = "Retain"
-    }
+    }]
 
     template {
       metadata {

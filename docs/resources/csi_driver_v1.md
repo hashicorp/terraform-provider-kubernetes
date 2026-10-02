@@ -50,6 +50,7 @@ Required:
 
 Optional:
 
+- `fs_group_policy` (String) Defines if the underlying volume supports changing ownership and permission of the volume before being mounted. Defaults to `ReadWriteOnceWithFSType`. Valid options are `File`, `None`, and `ReadWriteOnceWithFSType`.
 - `pod_info_on_mount` (Boolean) Indicates that the CSI volume driver requires additional pod information (like podName, podUID, etc.) during mount operations
 - `volume_lifecycle_modes` (List of String) Defines what kind of volumes this CSI volume driver supports
 
@@ -68,6 +69,7 @@ resource "kubernetes_csi_driver_v1" "example" {
     attach_required        = true
     pod_info_on_mount      = true
     volume_lifecycle_modes = ["Ephemeral"]
+    fs_group_policy        = "File"
   }
 }
 ```

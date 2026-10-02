@@ -328,8 +328,7 @@ func Provider() *schema.Provider {
 			"kubernetes_network_policy_v1": resourceKubernetesNetworkPolicyV1(""),
 
 			// policy
-			"kubernetes_pod_disruption_budget":    resourceKubernetesPodDisruptionBudget(),
-			"kubernetes_pod_disruption_budget_v1": resourceKubernetesPodDisruptionBudgetV1(),
+			"kubernetes_pod_disruption_budget": resourceKubernetesPodDisruptionBudget(),
 
 			// scheduling
 			"kubernetes_priority_class":    resourceKubernetesPriorityClassV1("Deprecated; use kubernetes_priority_class_v1."),

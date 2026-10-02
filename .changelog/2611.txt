@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_node_taint`: Fix taint uniqueness check so it is enforced over key and effect and not solely key alone.
+```

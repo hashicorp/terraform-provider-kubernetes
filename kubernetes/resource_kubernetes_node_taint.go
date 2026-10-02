@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -33,11 +34,14 @@ func resourceKubernetesNodeTaint() *schema.Resource {
 			for _, t := range rd.Get("taint").([]interface{}) {
 				taint := t.(map[string]interface{})
 				key := taint["key"].(string)
-				taintkeys[key] = taintkeys[key] + 1
+				effect := taint["effect"].(string)
+				taintkey := fmt.Sprintf("%s:%s", key, effect)
+				taintkeys[taintkey] = taintkeys[taintkey] + 1
 			}
 			for k, v := range taintkeys {
 				if v > 1 {
-					return fmt.Errorf("taint: duplicate taint key %q: taint keys must be unique", k)
+					s := strings.Split(k, ":")
+					return fmt.Errorf("taint: duplicate taint for key %q and effect %q; taints must be unique over key and effect.", s[0], s[1])
 				}
 			}
 			return nil

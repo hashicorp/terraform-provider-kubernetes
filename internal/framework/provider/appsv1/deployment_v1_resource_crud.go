@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -538,9 +539,63 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 		Spec:     templateSpec,
 	}}
 
-	lt := deploymentSpecListType()
-	value, dValue := types.ListValueFrom(ctx, lt.ElemType, []deploymentSpecModel{model})
+	value, dValue := deploymentSpecListValue(ctx, model)
 	diags.Append(dValue...)
+	return value, diags
+}
+
+// deploymentSpecListValue is types.ListValueFrom for a single spec model,
+// built by hand so the large template PodSpec value is not reflected over.
+func deploymentSpecListValue(ctx context.Context, model deploymentSpecModel) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	listType := deploymentSpecListType()
+	specType := listType.ElemType.(types.ObjectType)
+	null := types.ListNull(specType)
+
+	selectorType := specType.AttrTypes["selector"].(types.ListType)
+	selector, d := types.ListValueFrom(ctx, selectorType.ElemType, model.Selector)
+	diags.Append(d...)
+
+	templateType := specType.AttrTypes["template"].(types.ListType)
+	templateObjectType := templateType.ElemType.(types.ObjectType)
+	metadataType := templateObjectType.AttrTypes["metadata"].(types.ListType)
+	template := types.ListNull(templateObjectType)
+	if model.Template != nil {
+		elements := make([]attr.Value, 0, len(model.Template))
+		for _, t := range model.Template {
+			metadata, d := types.ListValueFrom(ctx, metadataType.ElemType, t.Metadata)
+			diags.Append(d...)
+			element, d := types.ObjectValue(templateObjectType.AttrTypes, map[string]attr.Value{
+				"metadata": metadata,
+				"spec":     t.Spec,
+			})
+			diags.Append(d...)
+			elements = append(elements, element)
+		}
+		var d diag.Diagnostics
+		template, d = types.ListValue(templateObjectType, elements)
+		diags.Append(d...)
+	}
+	if diags.HasError() {
+		return null, diags
+	}
+
+	spec, d := types.ObjectValue(specType.AttrTypes, map[string]attr.Value{
+		"min_ready_seconds":         model.MinReadySeconds,
+		"paused":                    model.Paused,
+		"progress_deadline_seconds": model.ProgressDeadlineSeconds,
+		"replicas":                  model.Replicas,
+		"revision_history_limit":    model.RevisionHistoryLimit,
+		"selector":                  selector,
+		"strategy":                  model.Strategy,
+		"template":                  template,
+	})
+	diags.Append(d...)
+	if diags.HasError() {
+		return null, diags
+	}
+	value, d := types.ListValue(specType, []attr.Value{spec})
+	diags.Append(d...)
 	return value, diags
 }
 
@@ -705,13 +760,13 @@ func flattenTemplateMetadataMap(ctx context.Context, value map[string]string, pr
 }
 
 func templateSpecNull() types.List {
-	blockType := podtemplate.SpecBlock(podtemplate.Options{RestartPolicyAlways: true}).Type().(types.ListType)
-	return types.ListNull(blockType.ElemType)
+	return types.ListNull(podtemplate.SpecObjectType())
 }
 
-func deploymentSpecListType() types.ListType {
+// deploymentSpecListType depends only on the static schema; compute it once.
+var deploymentSpecListType = sync.OnceValue(func() types.ListType {
 	return deploymentSpecBlock().Type().(types.ListType)
-}
+})
 
 func strategyObjectRollingUpdateListType() types.ListType {
 	return deploymentStrategyObjectType().AttrTypes["rolling_update"].(types.ListType)

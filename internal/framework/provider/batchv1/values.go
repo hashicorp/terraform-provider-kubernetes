@@ -182,31 +182,33 @@ func objectValueFields(attributes map[string]schema.Attribute, blocks map[string
 	return result
 }
 
-// valueFromAPI reconstructs the explicit Framework schema from the shared pure
-// flatteners. JSON normalizes Kubernetes enum, pointer and integer representations.
-func valueFromAPI(ctx context.Context, block schema.ListNestedBlock, raw []interface{}, prior types.List) (types.List, diag.Diagnostics) {
+// valueFromAPIField reconstructs the explicit Framework value of a block field
+// from the shared pure flatteners. JSON normalizes Kubernetes enum, pointer and
+// integer representations.
+func valueFromAPIField(ctx context.Context, field valueField, raw []interface{}, prior types.List) (types.List, diag.Diagnostics) {
+	elemType := field.typ.(types.ListType).ElemType
 	var diagnostics diag.Diagnostics
 	data, err := json.Marshal(normalizeLegacyCollections(raw))
 	if err != nil {
 		diagnostics.AddError("Unable to read batch workload", err.Error())
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
 	var decoded any
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
 	if err := decoder.Decode(&decoded); err != nil {
 		diagnostics.AddError("Unable to read batch workload", err.Error())
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
-	value, err := apiValue(ctx, blockValueField(block), decoded, prior)
+	value, err := apiValue(ctx, field, decoded, prior)
 	if err != nil {
 		diagnostics.AddError("Unable to read batch workload", err.Error())
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
 	list, ok := value.(types.List)
 	if !ok {
 		diagnostics.AddError("Invalid batch schema", fmt.Sprintf("Expected list, received %T", value))
-		return types.ListNull(block.NestedObject.Type()), diagnostics
+		return types.ListNull(elemType), diagnostics
 	}
 	return list, diagnostics
 }
@@ -261,15 +263,26 @@ func normalizeLegacyCollections(raw any) any {
 }
 
 func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) (attr.Value, error) {
+	value, err := apiTerraformValue(ctx, field, raw, prior)
+	if err != nil {
+		return nil, err
+	}
+	return field.typ.ValueFromTerraform(ctx, value)
+}
+
+// apiTerraformValue builds the value as a tftypes tree; apiValue converts it
+// to an attr.Value once at the root. This relies on the schema's types
+// round-tripping through ValueFromTerraform.
+func apiTerraformValue(ctx context.Context, field valueField, raw any, prior attr.Value) (tftypes.Value, error) {
 	typ := field.typ.TerraformType(ctx)
-	null := func() (attr.Value, error) { return field.typ.ValueFromTerraform(ctx, tftypes.NewValue(typ, nil)) }
+	null := tftypes.NewValue(typ, nil)
 	if raw == nil && field.def != nil {
 		value, ok, err := fieldDefault(ctx, field.def)
 		if err != nil {
-			return nil, err
+			return tftypes.Value{}, err
 		}
 		if ok {
-			return value, nil
+			return value.ToTerraformValue(ctx)
 		}
 	}
 	switch collection := typ.(type) {
@@ -282,10 +295,10 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 		}
 		elements, ok := raw.([]interface{})
 		if raw != nil && !ok {
-			return nil, fmt.Errorf("expected collection, received %T", raw)
+			return tftypes.Value{}, fmt.Errorf("expected collection, received %T", raw)
 		}
 		if len(elements) == 0 && !field.block && (prior == nil || prior.IsNull()) && !field.computed {
-			return null()
+			return null, nil
 		}
 		var previous []attr.Value
 		switch p := prior.(type) {
@@ -296,7 +309,7 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 		}
 		childType, err := attrTypeForElement(field.typ)
 		if err != nil {
-			return nil, err
+			return tftypes.Value{}, err
 		}
 		values := make([]tftypes.Value, len(elements))
 		for i, element := range elements {
@@ -304,26 +317,22 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 			if i < len(previous) {
 				previousElement = previous[i]
 			}
-			value, err := apiValue(ctx, valueField{typ: childType, children: field.children, computed: true}, element, previousElement)
+			values[i], err = apiTerraformValue(ctx, valueField{typ: childType, children: field.children, computed: true}, element, previousElement)
 			if err != nil {
-				return nil, fmt.Errorf("[%d]: %w", i, err)
-			}
-			values[i], err = value.ToTerraformValue(ctx)
-			if err != nil {
-				return nil, err
+				return tftypes.Value{}, fmt.Errorf("[%d]: %w", i, err)
 			}
 			if !values[i].Type().Equal(elementType) {
-				return nil, fmt.Errorf("invalid collection element type %s", values[i].Type())
+				return tftypes.Value{}, fmt.Errorf("invalid collection element type %s", values[i].Type())
 			}
 		}
-		return field.typ.ValueFromTerraform(ctx, tftypes.NewValue(typ, values))
+		return tftypes.NewValue(typ, values), nil
 	case tftypes.Object:
 		if raw == nil {
-			return null()
+			return null, nil
 		}
 		fields, ok := raw.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("expected object, received %T", raw)
+			return tftypes.Value{}, fmt.Errorf("expected object, received %T", raw)
 		}
 		previous := map[string]attr.Value{}
 		if object, ok := prior.(types.Object); ok {
@@ -331,7 +340,7 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 		}
 		objectType, ok := field.typ.(types.ObjectType)
 		if !ok {
-			return nil, fmt.Errorf("unsupported workload object type %T", field.typ)
+			return tftypes.Value{}, fmt.Errorf("unsupported workload object type %T", field.typ)
 		}
 		values := make(map[string]tftypes.Value, len(collection.AttributeTypes))
 		for name := range collection.AttributeTypes {
@@ -339,27 +348,24 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 			if !ok {
 				child = valueField{typ: objectType.AttrTypes[name], computed: field.computed}
 			}
-			value, err := apiValue(ctx, child, fields[name], previous[name])
+			value, err := apiTerraformValue(ctx, child, fields[name], previous[name])
 			if err != nil {
-				return nil, fmt.Errorf("%s: %w", name, err)
+				return tftypes.Value{}, fmt.Errorf("%s: %w", name, err)
 			}
-			values[name], err = value.ToTerraformValue(ctx)
-			if err != nil {
-				return nil, err
-			}
+			values[name] = value
 		}
-		return field.typ.ValueFromTerraform(ctx, tftypes.NewValue(typ, values))
+		return tftypes.NewValue(typ, values), nil
 	case tftypes.Map:
 		fields, ok := raw.(map[string]interface{})
 		if raw != nil && !ok {
-			return nil, fmt.Errorf("expected map, received %T", raw)
+			return tftypes.Value{}, fmt.Errorf("expected map, received %T", raw)
 		}
 		if len(fields) == 0 && (prior == nil || prior.IsNull() || prior.IsUnknown()) {
-			return null()
+			return null, nil
 		}
 		childType, err := attrTypeForElement(field.typ)
 		if err != nil {
-			return nil, err
+			return tftypes.Value{}, err
 		}
 		var previous map[string]attr.Value
 		if m, ok := prior.(types.Map); ok {
@@ -367,25 +373,22 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 		}
 		values := make(map[string]tftypes.Value, len(fields))
 		for name, rawChild := range fields {
-			value, err := apiValue(ctx, valueField{typ: childType, computed: true}, rawChild, previous[name])
+			value, err := apiTerraformValue(ctx, valueField{typ: childType, computed: true}, rawChild, previous[name])
 			if err != nil {
-				return nil, fmt.Errorf("%s: %w", name, err)
+				return tftypes.Value{}, fmt.Errorf("%s: %w", name, err)
 			}
-			values[name], err = value.ToTerraformValue(ctx)
-			if err != nil {
-				return nil, err
-			}
+			values[name] = value
 		}
-		return field.typ.ValueFromTerraform(ctx, tftypes.NewValue(typ, values))
+		return tftypes.NewValue(typ, values), nil
 	default:
 		if raw == nil {
 			if prior != nil && !prior.IsUnknown() && !prior.IsNull() {
 				previous, err := legacyValue(ctx, prior)
 				if !err.HasError() && isZeroScalar(previous) {
-					return prior, nil
+					return prior.ToTerraformValue(ctx)
 				}
 			}
-			return null()
+			return null, nil
 		}
 		var value any
 		switch {
@@ -396,31 +399,36 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 			case json.Number:
 				value = v.String()
 			default:
-				return nil, fmt.Errorf("expected string, received %T", raw)
+				return tftypes.Value{}, fmt.Errorf("expected string, received %T", raw)
 			}
 		case typ.Is(tftypes.Number):
 			number, ok := raw.(json.Number)
 			if !ok {
-				return nil, fmt.Errorf("expected number, received %T", raw)
+				return tftypes.Value{}, fmt.Errorf("expected number, received %T", raw)
 			}
 			parsed, _, err := big.ParseFloat(number.String(), 10, 512, big.ToNearestEven)
 			if err != nil {
-				return nil, err
+				return tftypes.Value{}, err
 			}
 			value = parsed
 		case typ.Is(tftypes.Bool):
 			boolean, ok := raw.(bool)
 			if !ok {
-				return nil, fmt.Errorf("expected boolean, received %T", raw)
+				return tftypes.Value{}, fmt.Errorf("expected boolean, received %T", raw)
 			}
 			value = boolean
 		default:
-			return nil, fmt.Errorf("unsupported scalar %s", typ)
+			return tftypes.Value{}, fmt.Errorf("unsupported scalar %s", typ)
 		}
 		if !field.computed && isZeroScalar(value) && (prior == nil || prior.IsNull()) {
-			return null()
+			return null, nil
 		}
-		return field.typ.ValueFromTerraform(ctx, tftypes.NewValue(typ, value))
+		result := tftypes.NewValue(typ, value)
+		// Check the leaf here so that the error carries its attribute path.
+		if _, err := field.typ.ValueFromTerraform(ctx, result); err != nil {
+			return tftypes.Value{}, err
+		}
+		return result, nil
 	}
 }
 
@@ -477,9 +485,10 @@ func fieldDefault(ctx context.Context, attribute schema.Attribute) (attr.Value, 
 	return nil, false, nil
 }
 
-// preservePlannedValue resolves computed values without overwriting known plan
-// values with API normalization. Read independently detects subsequent drift.
-func preservePlannedValue(ctx context.Context, block schema.ListNestedBlock, plan, actual types.List) (types.List, diag.Diagnostics) {
+// preservePlannedValueField resolves computed values of a block field without
+// overwriting known plan values with API normalization. Read independently
+// detects subsequent drift.
+func preservePlannedValueField(ctx context.Context, field valueField, plan, actual types.List) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	plannedRaw, err := plan.ToTerraformValue(ctx)
 	if err != nil {
@@ -491,12 +500,12 @@ func preservePlannedValue(ctx context.Context, block schema.ListNestedBlock, pla
 		diagnostics.AddError("Invalid batch API value", err.Error())
 		return plan, diagnostics
 	}
-	value, err := resolveComputedValues(ctx, blockValueField(block), plannedRaw, actualRaw)
+	value, err := resolveComputedValues(ctx, field, plannedRaw, actualRaw)
 	if err != nil {
 		diagnostics.AddError("Unable to reconcile batch state", err.Error())
 		return plan, diagnostics
 	}
-	converted, err := block.Type().ValueFromTerraform(ctx, value)
+	converted, err := field.typ.ValueFromTerraform(ctx, value)
 	if err != nil {
 		diagnostics.AddError("Unable to reconcile batch state", err.Error())
 		return plan, diagnostics

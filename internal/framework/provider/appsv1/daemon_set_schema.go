@@ -28,7 +28,14 @@ import (
 
 var daemonSetRollingValuePattern = regexp.MustCompile(`^(\+?[0-9]+|[1-9][0-9]?%|100%)$`)
 
-func (d *DaemonSetV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+// The schema is built and frozen once per process; see common.FrozenSchema.
+var daemonSetFrozenSchema = common.FrozenSchema(buildDaemonSetSchema)
+
+func (d *DaemonSetV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	daemonSetFrozenSchema(ctx, req, resp)
+}
+
+func buildDaemonSetSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version: 1,
 		Description: "A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. " +

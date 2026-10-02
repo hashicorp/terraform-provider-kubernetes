@@ -15,7 +15,14 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
-func (r *JobV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+// The schema is built and frozen once per process; see common.FrozenSchema.
+var jobFrozenSchema = common.FrozenSchema(buildJobSchema)
+
+func (r *JobV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	jobFrozenSchema(ctx, req, resp)
+}
+
+func buildJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	metadata := common.NamespacedMetadataSchema("job", true)
 	labels := metadata.NestedObject.Attributes["labels"].(schema.MapAttribute)
 	labels.Computed = true

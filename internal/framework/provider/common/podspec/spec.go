@@ -343,5 +343,8 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 	if prior != nil && podQuantityPath(names) {
 		result = podPreserveQuantity(prior, result)
 	}
+	if prior != nil && podHTTPGetPath(names) {
+		result = podPreserveHTTPGetPath(prior, result)
+	}
 	return result
 }

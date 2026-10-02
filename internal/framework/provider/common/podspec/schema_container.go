@@ -138,7 +138,7 @@ func (b builder) podHandlerObject() schema.NestedBlockObject {
 		"http_get": b.block(schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"host":   b.str(false, false, updatable, ""),
-				"path":   b.str(false, false, updatable, ""),
+				"path":   b.httpGetPath(),
 				"scheme": b.str(false, false, updatable, "HTTP", stringvalidator.OneOf("HTTP", "HTTPS")),
 				"port":   b.str(false, false, updatable, "", podStringRule("port")),
 			},

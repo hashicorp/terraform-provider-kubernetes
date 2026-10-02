@@ -142,6 +142,42 @@ func podPreserveQuantity(prior, current attr.Value) attr.Value {
 	return value
 }
 
+// The API defaults an empty http_get path to "/", so the two are equivalent:
+// an unset path keeps a prior "/" when planning and keeps "" when flattening.
+const httpGetDefaultPath = "/"
+
+func (b builder) httpGetPath() schema.StringAttribute {
+	a := b.str(false, false, updatable, "")
+	a.PlanModifiers = append([]planmodifier.String{podHTTPGetPathPlanModifier{}}, a.PlanModifiers...)
+	return a
+}
+
+type podHTTPGetPathPlanModifier struct{}
+
+func (podHTTPGetPathPlanModifier) Description(context.Context) string {
+	return "treats an empty path as the API default \"/\""
+}
+func (v podHTTPGetPathPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (podHTTPGetPathPlanModifier) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.PlanValue.Equal(types.StringValue("")) && req.StateValue.Equal(types.StringValue(httpGetDefaultPath)) {
+		resp.PlanValue = req.StateValue
+	}
+}
+
+func podHTTPGetPath(path []string) bool {
+	n := len(path)
+	return n > 1 && path[n-1] == "path" && path[n-2] == "http_get"
+}
+
+func podPreserveHTTPGetPath(prior, current attr.Value) attr.Value {
+	if prior.Equal(types.StringValue("")) && current.Equal(types.StringValue(httpGetDefaultPath)) {
+		return prior
+	}
+	return current
+}
+
 // Removed list elements do not run their leaf plan modifiers. Carry immutable
 // descendants' replacement rules up to the collection's structural boundary.
 type podReplacementBoundary interface {

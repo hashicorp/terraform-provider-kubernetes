@@ -62,6 +62,55 @@ func testAccWorkloadsV1ContainerPortsConfig(name string, ports []string) string 
             protocol       = %q
           }`, number, protocol)
 	}
+	return testAccWorkloadsV1Config(name, portBlocks.String())
+}
+
+// An http_get path left unset is defaulted to "/" by the API and must not
+// produce an inconsistent result or a diff, including after it was set.
+func TestAccKubernetesWorkloadsV1_httpGetDefaultPath(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	var testSteps []resource.TestStep
+	for _, path := range []string{"", "/healthz", ""} {
+		attribute := ""
+		if path != "" {
+			attribute = fmt.Sprintf("\n              path = %q", path)
+		}
+		handler := fmt.Sprintf(`
+            http_get {
+              port = 8080%s
+            }`, attribute)
+		var checks []resource.TestCheckFunc
+		for _, resourceName := range []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"} {
+			prefix := "spec.0.template.0.spec.0.container.0."
+			checks = append(checks,
+				resource.TestCheckResourceAttr(resourceName, prefix+"liveness_probe.0.http_get.0.path", path),
+				resource.TestCheckResourceAttr(resourceName, prefix+"lifecycle.0.pre_stop.0.http_get.0.path", path),
+			)
+		}
+		testSteps = append(testSteps, resource.TestStep{
+			Config: testAccWorkloadsV1Config(name, fmt.Sprintf(`
+          liveness_probe {%s
+          }
+          lifecycle {
+            pre_stop {%s
+            }
+          }`, handler, handler)),
+			Check: resource.ComposeAggregateTestCheckFunc(checks...),
+		})
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesDeploymentV1Destroy,
+			testAccCheckKubernetesDaemonSetV1Destroy,
+			testAccCheckKubernetesStatefulSetV1Destroy,
+		),
+		Steps: testSteps,
+	})
+}
+
+func testAccWorkloadsV1Config(name, container string) string {
 	var config strings.Builder
 	for _, workload := range []struct{ resourceType, app, extraSpec string }{
 		{"kubernetes_deployment_v1", name + "-deploy", "replicas = 1"},
@@ -97,7 +146,7 @@ func testAccWorkloadsV1ContainerPortsConfig(name string, ports []string) string 
   }
   wait_for_rollout = false
 }
-`, workload.resourceType, name, workload.extraSpec, workload.app, workload.app, busyboxImage, portBlocks.String())
+`, workload.resourceType, name, workload.extraSpec, workload.app, workload.app, busyboxImage, container)
 	}
 	return config.String()
 }

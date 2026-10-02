@@ -73,6 +73,9 @@ func (b builder) specBlock() schema.ListNestedBlock {
 		block.Description = podSpecApplyDescription("spec", "", true)
 	} else {
 		block.Description = "Specification of the desired behavior of the pod."
+		if b.o.SpecRequired {
+			block.Description += " Exactly one spec block is required."
+		}
 	}
 	block.MarkdownDescription = block.Description
 	return block

@@ -20,7 +20,7 @@ A pod is a group of one or more containers, the shared storage for those contain
 ### Optional
 
 - `metadata` (Block List) Standard pod's metadata. Exactly one metadata block is required. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
-- `spec` (Block List) Specification of the desired behavior of the pod. (see [below for nested schema](#nestedblock--spec))
+- `spec` (Block List) Specification of the desired behavior of the pod. Exactly one spec block is required. (see [below for nested schema](#nestedblock--spec))
 - `target_state` (List of String) A list of the pod phases that indicate whether it was successfully created. Options: Pending, Running, Succeeded, Failed, Unknown. Defaults to Running.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 

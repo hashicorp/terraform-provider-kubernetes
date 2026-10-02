@@ -60,7 +60,7 @@ func preserveProjectedSourceGroups(ctx context.Context, spec corev1.PodSpec, bas
 		if diagnostics.HasError() {
 			continue
 		}
-		expanded, err := kubernetes.ExpandTemplatePodSpecForFramework([]interface{}{
+		expanded, err := kubernetes.ExpandPodSpecForFramework([]interface{}{
 			map[string]interface{}{"volume": []interface{}{
 				map[string]interface{}{"projected": []interface{}{
 					map[string]interface{}{"sources": rawSources},

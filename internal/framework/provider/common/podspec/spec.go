@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -82,7 +83,7 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) 
 	if diagnostics.HasError() {
 		return corev1.PodSpec{}, diagnostics
 	}
-	result, err := kubernetes.ExpandTemplatePodSpecForFramework(raw.([]interface{}))
+	result, err := kubernetes.ExpandPodSpecForFramework(raw.([]interface{}))
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Expand Pod Template Specification", err.Error())
 		return corev1.PodSpec{}, diagnostics
@@ -95,11 +96,7 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) 
 // empty collection ownership and retains semantically equal quantity spellings.
 func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
-	flatten := kubernetes.FlattenPodSpecForFramework
-	if b.template {
-		flatten = kubernetes.FlattenTemplatePodSpecForFramework
-	}
-	raw, err := flatten(spec)
+	raw, err := kubernetes.FlattenPodSpecForFramework(spec, b.template)
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Flatten Pod Template Specification", err.Error())
 		return types.ListNull(b.objectType), diagnostics
@@ -166,16 +163,20 @@ func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key st
 		}
 		return result
 	case types.Set:
-		result := make([]interface{}, len(v.Elements()))
+		result := make([]interface{}, 0, len(v.Elements()))
 		for index, entry := range v.Elements() {
 			if entry.IsUnknown() {
 				diagnostics.AddAttributeError(at, "Unknown Pod Template Specification", "A configured set element must be known before it is sent to Kubernetes.")
 				continue
 			}
-			result[index] = podSpecAPIValue(ctx, entry, at.AtListIndex(index), key, computed, diagnostics)
+			result = append(result, podSpecAPIValue(ctx, entry, at.AtListIndex(index), key, computed, diagnostics))
 		}
-
-		return result
+		// The SDKv2 expanders read sets as *schema.Set.
+		hash := sdkschema.HashString
+		if v.ElementType(ctx).Equal(types.Int64Type) {
+			hash = sdkschema.HashInt
+		}
+		return sdkschema.NewSet(hash, result)
 	default:
 		diagnostics.AddAttributeError(at, "Unable to Expand Pod Template Specification", fmt.Sprintf("Unsupported value type %T.", value))
 		return nil
@@ -233,6 +234,9 @@ func podSpecBlockPaths(object schema.NestedBlockObject, prefix string, blocks ma
 // Read those values through the native template PodSpec type so every SDKv2 path
 // has its declared Terraform type without erasing null/empty collection ownership.
 func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prior attr.Value, names []string, key string, blocks map[string]bool, diagnostics *diag.Diagnostics) attr.Value {
+	if set, ok := raw.(*sdkschema.Set); ok {
+		raw = set.List()
+	}
 	rv := reflect.ValueOf(raw)
 	for rv.IsValid() && (rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface) {
 		if rv.IsNil() {

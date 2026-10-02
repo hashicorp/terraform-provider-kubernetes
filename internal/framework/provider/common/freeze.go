@@ -5,7 +5,6 @@ package common
 
 import (
 	"context"
-	"sort"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -30,25 +29,25 @@ import (
 // CustomType is never replaced. Maps are copied, never mutated, so constructors
 // that share NestedBlockObject maps between parents remain safe.
 func FreezeSchema(s schema.Schema) schema.Schema {
-	s.Blocks = FreezeBlocks(s.Blocks)
+	s.Blocks = freezeBlocks(s.Blocks)
 	return s
 }
 
-// FreezeBlocks returns a copy of blocks with every block frozen; see FreezeSchema.
-func FreezeBlocks(blocks map[string]schema.Block) map[string]schema.Block {
+// freezeBlocks returns a copy of blocks with every block frozen; see FreezeSchema.
+func freezeBlocks(blocks map[string]schema.Block) map[string]schema.Block {
 	if blocks == nil {
 		return nil
 	}
 	out := make(map[string]schema.Block, len(blocks))
 	for name, block := range blocks {
-		out[name] = FreezeBlock(block)
+		out[name] = freezeBlock(block)
 	}
 	return out
 }
 
-// FreezeBlock returns block with its type, and the types of all nested blocks,
+// freezeBlock returns block with its type, and the types of all nested blocks,
 // precomputed; see FreezeSchema. Unknown block implementations are returned as-is.
-func FreezeBlock(block schema.Block) schema.Block {
+func freezeBlock(block schema.Block) schema.Block {
 	switch b := block.(type) {
 	case schema.ListNestedBlock:
 		return FreezeListNestedBlock(b)
@@ -59,7 +58,7 @@ func FreezeBlock(block schema.Block) schema.Block {
 		}
 		return b
 	case schema.SingleNestedBlock:
-		b.Blocks = FreezeBlocks(b.Blocks)
+		b.Blocks = freezeBlocks(b.Blocks)
 		if b.CustomType == nil {
 			b.CustomType = b.Type().(types.ObjectType)
 		}
@@ -69,7 +68,7 @@ func FreezeBlock(block schema.Block) schema.Block {
 	}
 }
 
-// FreezeListNestedBlock is FreezeBlock for a ListNestedBlock.
+// FreezeListNestedBlock freezes a single ListNestedBlock; see FreezeSchema.
 func FreezeListNestedBlock(b schema.ListNestedBlock) schema.ListNestedBlock {
 	b.NestedObject = FreezeNestedBlockObject(b.NestedObject)
 	if b.CustomType == nil {
@@ -78,9 +77,9 @@ func FreezeListNestedBlock(b schema.ListNestedBlock) schema.ListNestedBlock {
 	return b
 }
 
-// FreezeNestedBlockObject is FreezeBlock for the object of a list or set block.
+// FreezeNestedBlockObject freezes the object of a list or set block; see FreezeSchema.
 func FreezeNestedBlockObject(o schema.NestedBlockObject) schema.NestedBlockObject {
-	o.Blocks = FreezeBlocks(o.Blocks)
+	o.Blocks = freezeBlocks(o.Blocks)
 	if o.CustomType == nil {
 		o.CustomType = o.Type()
 	}
@@ -106,36 +105,4 @@ func FrozenSchema(build SchemaFunc) SchemaFunc {
 		resp.Schema = frozen.Schema
 		resp.Diagnostics.Append(frozen.Diagnostics...)
 	}
-}
-
-// UnfrozenBlockPaths lists the nested blocks under blocks that have no
-// precomputed type. Tests use it to keep large schemas frozen.
-func UnfrozenBlockPaths(blocks map[string]schema.Block) []string {
-	var out []string
-	var walk func(prefix string, blocks map[string]schema.Block)
-	walk = func(prefix string, blocks map[string]schema.Block) {
-		for name, block := range blocks {
-			key := prefix + name
-			switch b := block.(type) {
-			case schema.ListNestedBlock:
-				if b.CustomType == nil || b.NestedObject.CustomType == nil {
-					out = append(out, key)
-				}
-				walk(key+".", b.NestedObject.Blocks)
-			case schema.SetNestedBlock:
-				if b.CustomType == nil || b.NestedObject.CustomType == nil {
-					out = append(out, key)
-				}
-				walk(key+".", b.NestedObject.Blocks)
-			case schema.SingleNestedBlock:
-				if b.CustomType == nil {
-					out = append(out, key)
-				}
-				walk(key+".", b.Blocks)
-			}
-		}
-	}
-	walk("", blocks)
-	sort.Strings(out)
-	return out
 }

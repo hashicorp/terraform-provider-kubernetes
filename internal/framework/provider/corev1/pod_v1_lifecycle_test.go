@@ -283,3 +283,69 @@ func testAccKubernetesPodV1ConfigSpecUpdate(name, imageName string, deadline int
 }
 `, name, deadline, imageName, mountPath)
 }
+
+// 3.3.0 sent an explicit pod-level runAsNonRoot false. Removing the block can
+// only reach the Pod by replacing it.
+func TestAccKubernetesPodV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
+	var created, upgraded, replaced api.Pod
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	securityContext := `security_context {
+      run_as_non_root = false
+    }`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPodV1PreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, securityContext),
+				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &created),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, securityContext),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &upgraded),
+					testAccCheckKubernetesPodForceNew(&created, &upgraded, false),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &replaced),
+					testAccCheckKubernetesPodForceNew(&upgraded, &replaced, true),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesPodV1ConfigSecurityContext(name, imageName, securityContext string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = %q
+  }
+  spec {
+    termination_grace_period_seconds = 1
+    %s
+    container {
+      image   = %q
+      name    = "containername"
+      command = ["sleep", "3600"]
+    }
+  }
+}
+`, name, securityContext, imageName)
+}

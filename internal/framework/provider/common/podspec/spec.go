@@ -500,3 +500,41 @@ func podRawAbsent(raw interface{}, names []string) bool {
 		rv = rv.MapIndex(reflect.ValueOf(names[i]))
 	}
 }
+
+// Satisfies reports whether a flattened value is one Terraform accepts for the
+// planned value after an apply: an unknown planned value matches anything and
+// an empty block list matches a null one.
+func Satisfies(actual, planned attr.Value) bool {
+	if planned.IsUnknown() {
+		return true
+	}
+	switch x := actual.(type) {
+	case types.List:
+		y, ok := planned.(types.List)
+		if !ok || x.IsUnknown() {
+			return actual.Equal(planned)
+		}
+		if len(x.Elements()) != len(y.Elements()) {
+			return false
+		}
+		for i, element := range x.Elements() {
+			if !Satisfies(element, y.Elements()[i]) {
+				return false
+			}
+		}
+		return true
+	case types.Object:
+		y, ok := planned.(types.Object)
+		if !ok || x.IsNull() || x.IsUnknown() || y.IsNull() {
+			return actual.Equal(planned)
+		}
+		for name, value := range y.Attributes() {
+			child, ok := x.Attributes()[name]
+			if !ok || !Satisfies(child, value) {
+				return false
+			}
+		}
+		return len(x.Attributes()) == len(y.Attributes())
+	}
+	return actual.Equal(planned)
+}

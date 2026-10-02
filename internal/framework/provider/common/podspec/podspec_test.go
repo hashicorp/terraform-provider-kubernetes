@@ -257,3 +257,30 @@ func TestZeroValueBlockReadBack(t *testing.T) {
 		}
 	}
 }
+
+func TestSatisfies(t *testing.T) {
+	block := types.ObjectType{AttrTypes: map[string]attr.Type{"value": types.BoolType}}
+	list := func(values ...attr.Value) types.List {
+		elements := make([]attr.Value, len(values))
+		for i, value := range values {
+			elements[i] = types.ObjectValueMust(block.AttrTypes, map[string]attr.Value{"value": value})
+		}
+		return types.ListValueMust(block, elements)
+	}
+	for name, test := range map[string]struct {
+		actual, planned attr.Value
+		want            bool
+	}{
+		"equal":                  {list(types.BoolValue(false)), list(types.BoolValue(false)), true},
+		"empty matches null":     {list(), types.ListNull(block), true},
+		"unknown matches value":  {list(types.BoolValue(true)), list(types.BoolUnknown()), true},
+		"different value":        {list(types.BoolValue(true)), list(types.BoolValue(false)), false},
+		"block the plan removes": {list(types.BoolValue(false)), list(), false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := Satisfies(test.actual, test.planned); got != test.want {
+				t.Fatalf("Satisfies = %t, want %t", got, test.want)
+			}
+		})
+	}
+}

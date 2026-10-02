@@ -60,6 +60,53 @@ func TestAccKubernetesJobV1_upgradeExplicitEmpty(t *testing.T) {
 	})
 }
 
+// 3.3.0 sent an explicit pod-level runAsNonRoot false. The template is
+// immutable, so removing the block replaces the Job.
+func TestAccKubernetesJobV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
+	name := "tf-acc-job-sc-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	const address = "kubernetes_job_v1.test"
+	const securityContext = `security_context {
+          run_as_non_root = false
+        }`
+	var created, upgraded, replaced batchv1.Job
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: testAccBatchSecurityContextJob(name, securityContext),
+				Check:  testAccCheckKubernetesJobV1Exists(address, &created),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccBatchSecurityContextJob(name, securityContext),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(address, &upgraded),
+					testAccCheckKubernetesJobV1ForceNew(&created, &upgraded, false),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccBatchSecurityContextJob(name, ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionDestroyBeforeCreate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(address, &replaced),
+					testAccCheckKubernetesJobV1ForceNew(&upgraded, &replaced, true),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {
 	name := "tf-acc-cron-empty-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	const address = "kubernetes_cron_job_v1.test"
@@ -210,4 +257,29 @@ func testAccBatchExplicitEmptyCronJob(name, resources, image string) string {
   }
 }
 `, name, image, resources)
+}
+
+func testAccBatchSecurityContextJob(name, securityContext string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    name = %q
+  }
+  spec {
+    template {
+      metadata {}
+      spec {
+        restart_policy                   = "Never"
+        termination_grace_period_seconds = 1
+        %s
+        container {
+          name    = "main"
+          image   = %q
+          command = ["sh", "-c", "true"]
+        }
+      }
+    }
+  }
+  wait_for_completion = false
+}
+`, name, securityContext, busyboxImage)
 }

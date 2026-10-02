@@ -192,7 +192,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	if !reflect.DeepEqual(plan.Spec, state.Spec) {
-		specPatch, patchDiags := daemonSetStrategicSpecPatch(ctx, state.Spec, plan.Spec)
+		specPatch, patchDiags := daemonSetStrategicSpecPatch(ctx, state.Spec, plan.Spec, &updated.Spec)
 		resp.Diagnostics.Append(patchDiags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -588,7 +588,9 @@ func daemonSetMetadataPatchOps(state, plan DaemonSetV1Model, live metav1.ObjectM
 	return common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live)
 }
 
-func daemonSetStrategicSpecPatch(ctx context.Context, state, plan []DaemonSetV1SpecModel) ([]byte, diag.Diagnostics) {
+// daemonSetStrategicSpecPatch returns the strategic merge patch from the prior
+// to the planned spec. live is the spec the server holds, or nil when unknown.
+func daemonSetStrategicSpecPatch(ctx context.Context, state, plan []DaemonSetV1SpecModel, live *appsv1.DaemonSetSpec) ([]byte, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	oldSpec, oldDiags := expandDaemonSetSpecModel(ctx, state, daemonSetSpecPath())
 	diagnostics.Append(oldDiags...)
@@ -607,7 +609,15 @@ func daemonSetStrategicSpecPatch(ctx context.Context, state, plan []DaemonSetV1S
 		diagnostics.AddError("Error encoding planned daemonset spec", err.Error())
 		return nil, diagnostics
 	}
-	patch, err := common.TwoWayStrategicMergePatch(oldJSON, newJSON, appsv1.DaemonSet{})
+	var liveJSON []byte
+	if live != nil {
+		liveJSON, err = json.Marshal(appsv1.DaemonSet{Spec: *live})
+		if err != nil {
+			diagnostics.AddError("Error encoding live daemonset spec", err.Error())
+			return nil, diagnostics
+		}
+	}
+	patch, err := common.TwoWayStrategicMergePatch(oldJSON, newJSON, liveJSON, appsv1.DaemonSet{})
 	if err != nil {
 		diagnostics.AddError("Error creating daemonset spec patch", err.Error())
 		return nil, diagnostics

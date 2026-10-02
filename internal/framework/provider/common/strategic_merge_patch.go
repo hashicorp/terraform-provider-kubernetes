@@ -4,15 +4,15 @@
 package common
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
-// AmbiguousMergeKeyLists names the strategic-merge lists whose patchMergeKey
+// ambiguousMergeKeyLists names the strategic-merge lists whose patchMergeKey
 // is narrower than the key the API uses to identify an entry. For these lists
 // the API accepts several entries that share the merge key, for example
 // 53/TCP and 53/UDP container ports, or two topology spread constraints on the
@@ -23,7 +23,7 @@ import (
 // The map is keyed by the JSON field name and its value is the merge key, so
 // any list with that field name and merge key is covered wherever it appears.
 // TestAmbiguousMergeKeyListsCoverWorkloadAPIs keeps it in step with k8s.io/api.
-var AmbiguousMergeKeyLists = map[string]string{
+var ambiguousMergeKeyLists = map[string]string{
 	"ports":                     "containerPort",
 	"topologySpreadConstraints": "topologyKey",
 }
@@ -38,8 +38,14 @@ const (
 // into modified. It matches strategicpatch.CreateTwoWayMergePatch, so fields that
 // Terraform does not manage are left as the server has them, except that a list
 // that cannot be merged entry by entry is replaced as a whole whenever it
-// changed. See AmbiguousMergeKeyLists.
-func TwoWayStrategicMergePatch(original, modified []byte, dataStruct any) ([]byte, error) {
+// changed between original and modified. See ambiguousMergeKeyLists.
+//
+// live is the object the server holds, as last read, or nil when it is not
+// known. It only tells which list entries the server already has, so that
+// lists inside an entry that the patch merges into an existing one are
+// replaced too, even when original lacks that entry. Pass nil to treat
+// original as the server object.
+func TwoWayStrategicMergePatch(original, modified, live []byte, dataStruct any) ([]byte, error) {
 	patch, err := strategicpatch.CreateTwoWayMergePatch(original, modified, dataStruct)
 	if err != nil {
 		return nil, err
@@ -48,7 +54,10 @@ func TwoWayStrategicMergePatch(original, modified []byte, dataStruct any) ([]byt
 	if err != nil {
 		return nil, err
 	}
-	return replaceAmbiguousLists(patch, original, modified, nil, meta)
+	if live == nil {
+		live = original
+	}
+	return replaceAmbiguousLists(patch, original, modified, live, false, meta)
 }
 
 // ThreeWayStrategicMerge applies the change from original to modified onto
@@ -64,15 +73,26 @@ func ThreeWayStrategicMerge(original, modified, current []byte, dataStruct any) 
 	if err != nil {
 		return nil, err
 	}
-	patch, err = replaceAmbiguousLists(patch, original, modified, current, meta)
+	patch, err = replaceAmbiguousLists(patch, original, modified, current, true, meta)
 	if err != nil {
 		return nil, err
 	}
 	return strategicpatch.StrategicMergePatch(current, patch, dataStruct)
 }
 
-func replaceAmbiguousLists(patchJSON, originalJSON, modifiedJSON, currentJSON []byte, meta strategicpatch.LookupPatchMeta) ([]byte, error) {
-	var patch, original, modified, current map[string]any
+// ambiguousListReplacer rewrites a strategic merge patch so that lists which
+// cannot be merged by their merge key are written whole. server is the
+// document the patch is applied to: current for a three-way merge, and the
+// live object (or original) for a two-way patch.
+type ambiguousListReplacer struct {
+	threeWay bool
+	// rewritten records whether the patch was changed at all, so that an
+	// untouched patch is returned exactly as strategicpatch produced it.
+	rewritten bool
+}
+
+func replaceAmbiguousLists(patchJSON, originalJSON, modifiedJSON, serverJSON []byte, threeWay bool, meta strategicpatch.LookupPatchMeta) ([]byte, error) {
+	var patch, original, modified, server map[string]any
 	for _, document := range []struct {
 		raw    []byte
 		target *map[string]any
@@ -80,11 +100,13 @@ func replaceAmbiguousLists(patchJSON, originalJSON, modifiedJSON, currentJSON []
 		{patchJSON, &patch},
 		{originalJSON, &original},
 		{modifiedJSON, &modified},
-		{currentJSON, &current},
+		{serverJSON, &server},
 	} {
 		if len(document.raw) == 0 {
 			continue
 		}
+		// util/json keeps integers as int64 rather than float64, so values
+		// above 2^53 are not rounded when the patch is encoded again.
 		if err := json.Unmarshal(document.raw, document.target); err != nil {
 			return nil, err
 		}
@@ -92,16 +114,20 @@ func replaceAmbiguousLists(patchJSON, originalJSON, modifiedJSON, currentJSON []
 	if patch == nil {
 		patch = map[string]any{}
 	}
-	if err := replaceAmbiguousListsInMap(patch, original, modified, current, currentJSON != nil, meta); err != nil {
+	replacer := &ambiguousListReplacer{threeWay: threeWay}
+	if err := replacer.inMap(patch, original, modified, server, meta); err != nil {
 		return nil, err
+	}
+	if !replacer.rewritten {
+		return patchJSON, nil
 	}
 	return json.Marshal(patch)
 }
 
-// replaceAmbiguousListsInMap walks original and modified together. When a list
-// that cannot be merged by its merge key has changed, it writes the whole
-// modified list into the patch with a $patch: replace directive.
-func replaceAmbiguousListsInMap(patch, original, modified, current map[string]any, threeWay bool, meta strategicpatch.LookupPatchMeta) error {
+// inMap walks original and modified together. When a list that cannot be
+// merged by its merge key has changed, it writes the whole modified list into
+// the patch with a $patch: replace directive.
+func (r *ambiguousListReplacer) inMap(patch, original, modified, server map[string]any, meta strategicpatch.LookupPatchMeta) error {
 	keys := map[string]struct{}{}
 	for key := range original {
 		keys[key] = struct{}{}
@@ -113,12 +139,12 @@ func replaceAmbiguousListsInMap(patch, original, modified, current map[string]an
 		if strings.HasPrefix(key, "$") {
 			continue
 		}
-		originalValue, modifiedValue, currentValue := original[key], modified[key], current[key]
+		originalValue, modifiedValue, serverValue := original[key], modified[key], server[key]
 		if patchValue, present := patch[key]; present && patchValue == nil {
 			// The patch removes the whole field.
 			continue
 		}
-		switch sample := firstNonNil(modifiedValue, originalValue).(type) {
+		switch firstNonNil(modifiedValue, originalValue).(type) {
 		case map[string]any:
 			nestedMeta, _, err := meta.LookupPatchMetadataForStruct(key)
 			if err != nil {
@@ -129,11 +155,12 @@ func replaceAmbiguousListsInMap(patch, original, modified, current map[string]an
 			if !existing {
 				nestedPatch = map[string]any{}
 			}
-			if err := replaceAmbiguousListsInMap(nestedPatch, asMap(originalValue), asMap(modifiedValue), asMap(currentValue), threeWay, nestedMeta); err != nil {
+			if err := r.inMap(nestedPatch, asMap(originalValue), asMap(modifiedValue), asMap(serverValue), nestedMeta); err != nil {
 				return err
 			}
 			if !existing && len(nestedPatch) > 0 {
 				patch[key] = nestedPatch
+				r.rewritten = true
 			}
 		case []any:
 			elementMeta, patchMeta, err := meta.LookupPatchMetadataForSlice(key)
@@ -141,31 +168,20 @@ func replaceAmbiguousListsInMap(patch, original, modified, current map[string]an
 				continue
 			}
 			mergeKey := patchMeta.GetPatchMergeKey()
-			if mergeKey == "" || !hasMergeStrategy(patchMeta.GetPatchStrategies()) || !isListOfMaps(sample) {
+			if mergeKey == "" || !hasMergeStrategy(patchMeta.GetPatchStrategies()) {
 				// Lists without a merge key are always replaced as a whole.
 				continue
 			}
-			originalList, modifiedList, currentList := asSlice(originalValue), asSlice(modifiedValue), asSlice(currentValue)
-			if AmbiguousMergeKeyLists[key] == mergeKey ||
+			originalList, modifiedList, serverList := asSlice(originalValue), asSlice(modifiedValue), asSlice(serverValue)
+			if ambiguousMergeKeyLists[key] == mergeKey ||
 				hasDuplicateMergeKeys(originalList, mergeKey) ||
 				hasDuplicateMergeKeys(modifiedList, mergeKey) ||
-				hasDuplicateMergeKeys(currentList, mergeKey) {
-				changed := !reflect.DeepEqual(originalList, modifiedList) ||
-					(threeWay && !reflect.DeepEqual(currentList, modifiedList))
-				delete(patch, setElementOrderPrefix+key)
-				switch {
-				case !changed:
-					delete(patch, key)
-				case modifiedValue == nil:
-					patch[key] = nil
-				default:
-					replacement := make([]any, 0, len(modifiedList)+1)
-					replacement = append(replacement, map[string]any{patchDirective: replaceDirective})
-					patch[key] = append(replacement, modifiedList...)
-				}
+				hasDuplicateMergeKeys(serverList, mergeKey) {
+				r.replaceList(patch, key, modifiedValue, !reflect.DeepEqual(originalList, modifiedList) ||
+					(r.threeWay && !reflect.DeepEqual(serverList, modifiedList)))
 				continue
 			}
-			if err := replaceAmbiguousListsInElements(patch, key, mergeKey, originalList, modifiedList, currentList, threeWay, elementMeta); err != nil {
+			if err := r.inElements(patch, key, mergeKey, originalList, modifiedList, serverList, elementMeta); err != nil {
 				return err
 			}
 		}
@@ -173,10 +189,39 @@ func replaceAmbiguousListsInMap(patch, original, modified, current map[string]an
 	return nil
 }
 
-// replaceAmbiguousListsInElements descends into the entries that original and
-// modified share, such as a container that keeps its name while its ports
-// change. Entries added by modified are already carried whole by the patch.
-func replaceAmbiguousListsInElements(patch map[string]any, key, mergeKey string, original, modified, current []any, threeWay bool, meta strategicpatch.LookupPatchMeta) error {
+// replaceList writes the whole modified list into the patch when it changed,
+// and otherwise makes sure the patch does not touch it.
+func (r *ambiguousListReplacer) replaceList(patch map[string]any, key string, modifiedValue any, changed bool) {
+	orderKey := setElementOrderPrefix + key
+	if _, ordered := patch[orderKey]; ordered {
+		delete(patch, orderKey)
+		r.rewritten = true
+	}
+	switch {
+	case !changed:
+		if _, present := patch[key]; present {
+			delete(patch, key)
+			r.rewritten = true
+		}
+	case modifiedValue == nil:
+		patch[key] = nil
+		r.rewritten = true
+	default:
+		modifiedList := asSlice(modifiedValue)
+		replacement := make([]any, 0, len(modifiedList)+1)
+		replacement = append(replacement, map[string]any{patchDirective: replaceDirective})
+		patch[key] = append(replacement, modifiedList...)
+		r.rewritten = true
+	}
+}
+
+// inElements descends into the modified entries that the server already holds,
+// such as a container that keeps its name while its ports change. The patch
+// is merged into those entries, so their lists need the same treatment. An
+// entry the server lacks is appended exactly as the patch carries it, and
+// strategicpatch does not process directives inside it, so it is left alone:
+// a three-way patch already carries such an entry whole.
+func (r *ambiguousListReplacer) inElements(patch map[string]any, key, mergeKey string, original, modified, server []any, meta strategicpatch.LookupPatchMeta) error {
 	patchList, _ := patch[key].([]any)
 	appended := false
 	for _, item := range modified {
@@ -188,8 +233,8 @@ func replaceAmbiguousListsInElements(patch map[string]any, key, mergeKey string,
 		if !ok {
 			continue
 		}
-		originalItem := findByMergeKey(original, mergeKey, mergeValue)
-		if originalItem == nil {
+		serverItem := findByMergeKey(server, mergeKey, mergeValue)
+		if serverItem == nil {
 			continue
 		}
 		patchItem := findByMergeKey(patchList, mergeKey, mergeValue)
@@ -197,7 +242,7 @@ func replaceAmbiguousListsInElements(patch map[string]any, key, mergeKey string,
 		if !existing {
 			patchItem = map[string]any{mergeKey: mergeValue}
 		}
-		if err := replaceAmbiguousListsInMap(patchItem, originalItem, modifiedItem, findByMergeKey(current, mergeKey, mergeValue), threeWay, meta); err != nil {
+		if err := r.inMap(patchItem, findByMergeKey(original, mergeKey, mergeValue), modifiedItem, serverItem, meta); err != nil {
 			return err
 		}
 		if !existing && len(patchItem) > 1 {
@@ -207,6 +252,7 @@ func replaceAmbiguousListsInElements(patch map[string]any, key, mergeKey string,
 	}
 	if appended {
 		patch[key] = patchList
+		r.rewritten = true
 	}
 	return nil
 }
@@ -237,15 +283,6 @@ func hasMergeStrategy(strategies []string) bool {
 		}
 	}
 	return false
-}
-
-func isListOfMaps(list []any) bool {
-	for _, item := range list {
-		if _, ok := item.(map[string]any); !ok {
-			return false
-		}
-	}
-	return true
 }
 
 // findByMergeKey returns the entry with the given merge key value, skipping

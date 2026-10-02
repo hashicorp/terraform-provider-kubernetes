@@ -158,7 +158,7 @@ func TestWorkloadSelectorNormalizationNoPatch(t *testing.T) {
 					if d := plan.Get(ctx, &next); d.HasError() {
 						t.Fatal(d)
 					}
-					patch, d := daemonSetStrategicSpecPatch(ctx, old.Spec, next.Spec)
+					patch, d := daemonSetStrategicSpecPatch(ctx, old.Spec, next.Spec, nil)
 					if d.HasError() || len(patch) != 0 {
 						t.Fatalf("normalization patch = %s; diagnostics: %v", patch, d)
 					}

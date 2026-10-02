@@ -27,7 +27,7 @@ func TestDaemonSetStrategicSpecPatchPreservesLiveOnlyFields(t *testing.T) {
 	plan := append([]DaemonSetV1SpecModel(nil), state...)
 	plan[0].MinReadySeconds = types.Int64Value(5)
 
-	patch, diags := daemonSetStrategicSpecPatch(context.Background(), state, plan)
+	patch, diags := daemonSetStrategicSpecPatch(context.Background(), state, plan, nil)
 	if diags.HasError() {
 		t.Fatalf("creating patch: %v", diags)
 	}
@@ -68,7 +68,7 @@ func TestDaemonSetStrategicSpecPatchOnDeleteClearsRollingUpdate(t *testing.T) {
 	plan := append([]DaemonSetV1SpecModel(nil), state...)
 	plan[0].Strategy = daemonSetStrategyValue(t, "OnDelete", "0", "1")
 
-	patch, diags := daemonSetStrategicSpecPatch(context.Background(), state, plan)
+	patch, diags := daemonSetStrategicSpecPatch(context.Background(), state, plan, nil)
 	if diags.HasError() {
 		t.Fatalf("creating patch: %v", diags)
 	}

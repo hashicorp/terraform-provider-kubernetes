@@ -21,6 +21,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
+	fwschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -41,6 +43,11 @@ import (
 // API allows several entries to share those values. These tests drive the real
 // Update methods against an API server double that applies each patch with the
 // same apimachinery and JSON-patch libraries the kube-apiserver uses.
+//
+// They test the update path only. The prior state and the plan are flattened
+// from API objects rather than planned by Terraform from a configuration, so
+// they cannot catch planning problems such as computed attributes of a newly
+// added container; the acceptance tests cover those.
 
 type workloadListMergeCase struct {
 	name   string
@@ -51,6 +58,12 @@ type workloadListMergeCase struct {
 	live func(*corev1.PodSpec)
 	// check verifies the server object beyond the planned Pod specification.
 	check func(*testing.T, corev1.PodSpec)
+	// threeWayOnly marks drift cases that only the StatefulSet update, which
+	// merges the plan into the live Pod specification, brings back to the
+	// plan. Deployment and DaemonSet send a two-way patch from the prior state
+	// to the plan, so a list that drifted after the last refresh and is
+	// unchanged in configuration is left as the server has it.
+	threeWayOnly bool
 }
 
 func port(number int32, protocol corev1.Protocol, name string) corev1.ContainerPort {
@@ -98,13 +111,13 @@ func both(fns ...func(*corev1.PodSpec)) func(*corev1.PodSpec) {
 func workloadListMergeCases() []workloadListMergeCase {
 	tcp53 := port(53, corev1.ProtocolTCP, "dns-tcp")
 	udp53 := port(53, corev1.ProtocolUDP, "dns-udp")
-	http := port(8080, corev1.ProtocolTCP, "http")
+	httpPort := port(8080, corev1.ProtocolTCP, "http")
 	zoneHard := spreadConstraint("topology.kubernetes.io/zone", corev1.DoNotSchedule, 1)
 	zoneSoft := spreadConstraint("topology.kubernetes.io/zone", corev1.ScheduleAnyway, 2)
 	return []workloadListMergeCase{
 		{name: "ports/add-udp-beside-tcp", before: setPorts(tcp53), after: setPorts(tcp53, udp53)},
 		{name: "ports/remove-udp-keeps-tcp", before: setPorts(tcp53, udp53), after: setPorts(tcp53)},
-		{name: "ports/remove-tcp-keeps-udp", before: setPorts(tcp53, udp53, http), after: setPorts(udp53, http)},
+		{name: "ports/remove-tcp-keeps-udp", before: setPorts(tcp53, udp53, httpPort), after: setPorts(udp53, httpPort)},
 		{name: "ports/rename-udp", before: setPorts(tcp53, udp53), after: setPorts(tcp53, port(53, corev1.ProtocolUDP, "dns-udp2"))},
 		{name: "ports/swap-order", before: setPorts(tcp53, udp53), after: setPorts(udp53, tcp53)},
 		{name: "ports/udp-to-sctp-beside-tcp", before: setPorts(tcp53, udp53), after: setPorts(tcp53, port(53, corev1.ProtocolSCTP, "dns-udp"))},
@@ -183,6 +196,73 @@ func workloadListMergeCases() []workloadListMergeCase {
 				}
 			},
 		},
+		// The cases below model a live object that drifted after the prior
+		// state was recorded, as with -refresh=false or a saved plan applied
+		// after an out-of-band change.
+		{
+			// A container added out of band and then added in configuration: the
+			// server merges the patch into its entry, so the ports must be
+			// replaced rather than merged by containerPort.
+			name:   "drift/container-added-out-of-band-then-in-config",
+			before: setPorts(tcp53),
+			after:  both(setPorts(tcp53), addSidecar(tcp53, udp53)),
+			live:   addSidecar(udp53),
+		},
+		{
+			name:         "drift/sidecar-removed-out-of-band-while-main-changes",
+			before:       both(setPorts(tcp53), addSidecar(httpPort)),
+			after:        both(setPorts(tcp53), addSidecar(httpPort), setImage("busybox:1.37")),
+			live:         func(spec *corev1.PodSpec) { spec.Containers = spec.Containers[:1] },
+			threeWayOnly: true,
+		},
+		{
+			name:         "drift/live-lost-a-planned-port",
+			before:       setPorts(tcp53, udp53),
+			after:        both(setPorts(tcp53, udp53), setImage("busybox:1.37")),
+			live:         setPorts(tcp53),
+			threeWayOnly: true,
+		},
+		{
+			name:         "drift/live-gained-a-port",
+			before:       setPorts(tcp53),
+			after:        both(setPorts(tcp53), setImage("busybox:1.37")),
+			live:         setPorts(tcp53, udp53),
+			threeWayOnly: true,
+		},
+		{
+			name:         "drift/live-gained-a-port-while-only-a-pod-field-changes",
+			before:       setPorts(tcp53),
+			after:        both(setPorts(tcp53), func(spec *corev1.PodSpec) { spec.DNSPolicy = corev1.DNSDefault }),
+			live:         setPorts(tcp53, udp53),
+			threeWayOnly: true,
+		},
+		{
+			name:   "drift/live-gained-a-duplicate-env",
+			before: func(spec *corev1.PodSpec) { spec.Containers[0].Env = []corev1.EnvVar{{Name: "MODE", Value: "a"}} },
+			after: func(spec *corev1.PodSpec) {
+				spec.Containers[0].Env = []corev1.EnvVar{{Name: "MODE", Value: "a"}}
+				spec.Containers[0].Image = "busybox:1.37"
+			},
+			live: func(spec *corev1.PodSpec) {
+				spec.Containers[0].Env = append(spec.Containers[0].Env, corev1.EnvVar{Name: "MODE", Value: "b"})
+			},
+			threeWayOnly: true,
+		},
+	}
+}
+
+func setImage(image string) func(*corev1.PodSpec) {
+	return func(spec *corev1.PodSpec) { spec.Containers[0].Image = image }
+}
+
+func addSidecar(ports ...corev1.ContainerPort) func(*corev1.PodSpec) {
+	return func(spec *corev1.PodSpec) {
+		sidecar := *spec.Containers[0].DeepCopy()
+		sidecar.Name = "sidecar"
+		sidecar.Image = "busybox:1.36"
+		sidecar.Env = nil
+		sidecar.Ports = ports
+		spec.Containers = append(spec.Containers, sidecar)
 	}
 }
 
@@ -340,7 +420,14 @@ type listMergeSchemaResource interface {
 	resource.ResourceWithIdentity
 }
 
-func listMergeRequest(t *testing.T, r listMergeSchemaResource, state, plan map[string]attr.Value) (resource.UpdateRequest, *resource.UpdateResponse) {
+// listMergeSchemas holds a resource's schemas, built once per test because
+// building them dominates the cost of each case.
+type listMergeSchemas struct {
+	resource fwschema.Schema
+	identity identityschema.Schema
+}
+
+func newListMergeSchemas(t *testing.T, r listMergeSchemaResource) listMergeSchemas {
 	t.Helper()
 	ctx := context.Background()
 	schemaResponse := resource.SchemaResponse{}
@@ -350,10 +437,16 @@ func listMergeRequest(t *testing.T, r listMergeSchemaResource, state, plan map[s
 	if schemaResponse.Diagnostics.HasError() || identityResponse.Diagnostics.HasError() {
 		t.Fatal(schemaResponse.Diagnostics, identityResponse.Diagnostics)
 	}
+	return listMergeSchemas{resource: schemaResponse.Schema, identity: identityResponse.IdentitySchema}
+}
+
+func listMergeRequest(t *testing.T, schemas listMergeSchemas, state, plan map[string]attr.Value) (resource.UpdateRequest, *resource.UpdateResponse) {
+	t.Helper()
+	ctx := context.Background()
 	build := func(values map[string]attr.Value) tftypes.Value {
 		target := tfsdk.State{
-			Schema: schemaResponse.Schema,
-			Raw:    tftypes.NewValue(schemaResponse.Schema.Type().TerraformType(ctx), nil),
+			Schema: schemas.resource,
+			Raw:    tftypes.NewValue(schemas.resource.Type().TerraformType(ctx), nil),
 		}
 		for name, value := range values {
 			if d := target.SetAttribute(ctx, path.Root(name), value); d.HasError() {
@@ -364,16 +457,16 @@ func listMergeRequest(t *testing.T, r listMergeSchemaResource, state, plan map[s
 	}
 	stateRaw, planRaw := build(state), build(plan)
 	identity := &tfsdk.ResourceIdentity{
-		Schema: identityResponse.IdentitySchema,
-		Raw:    tftypes.NewValue(identityResponse.IdentitySchema.Type().TerraformType(ctx), nil),
+		Schema: schemas.identity,
+		Raw:    tftypes.NewValue(schemas.identity.Type().TerraformType(ctx), nil),
 	}
 	request := resource.UpdateRequest{
-		State:  tfsdk.State{Schema: schemaResponse.Schema, Raw: stateRaw},
-		Plan:   tfsdk.Plan{Schema: schemaResponse.Schema, Raw: planRaw},
-		Config: tfsdk.Config{Schema: schemaResponse.Schema, Raw: planRaw},
+		State:  tfsdk.State{Schema: schemas.resource, Raw: stateRaw},
+		Plan:   tfsdk.Plan{Schema: schemas.resource, Raw: planRaw},
+		Config: tfsdk.Config{Schema: schemas.resource, Raw: planRaw},
 	}
 	response := &resource.UpdateResponse{
-		State:    tfsdk.State{Schema: schemaResponse.Schema, Raw: planRaw},
+		State:    tfsdk.State{Schema: schemas.resource, Raw: planRaw},
 		Identity: identity,
 	}
 	return request, response
@@ -433,8 +526,13 @@ func assertListMergeResult(t *testing.T, api *listMergeAPI, tc workloadListMerge
 }
 
 func TestDeploymentV1UpdateListMergeKeys(t *testing.T) {
+	schemas := newListMergeSchemas(t, &DeploymentV1{})
 	for _, tc := range workloadListMergeCases() {
+		if tc.threeWayOnly {
+			continue
+		}
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			api, clients := startListMergeAPI(t, "/apis/apps/v1/namespaces/default/deployments/merge", func() any { return &appsv1.Deployment{} })
 			object := func(spec corev1.PodSpec) *appsv1.Deployment {
@@ -452,12 +550,11 @@ func TestDeploymentV1UpdateListMergeKeys(t *testing.T) {
 				}
 			}
 			before, after := object(listMergePodSpec(tc.before)), object(listMergePodSpec(tc.after))
-			filters := clients
-			state, d := deploymentModelFromObject(ctx, before, DeploymentV1Model{WaitForRollout: types.BoolValue(false)}, filters)
+			state, d := deploymentModelFromObject(ctx, before, DeploymentV1Model{WaitForRollout: types.BoolValue(false)}, clients)
 			if d.HasError() {
 				t.Fatal(d)
 			}
-			plan, d := deploymentModelFromObject(ctx, after, state, filters)
+			plan, d := deploymentModelFromObject(ctx, after, state, clients)
 			if d.HasError() {
 				t.Fatal(d)
 			}
@@ -467,9 +564,9 @@ func TestDeploymentV1UpdateListMergeKeys(t *testing.T) {
 			}
 			api.set(t, live)
 
-			resource := &DeploymentV1{SDKv2Meta: func() any { return clients }}
-			request, response := listMergeRequest(t, resource, listMergeValues(t, resource, state.ID, state.Metadata, state.Spec), listMergeValues(t, resource, plan.ID, plan.Metadata, plan.Spec))
-			resource.Update(ctx, request, response)
+			r := &DeploymentV1{SDKv2Meta: func() any { return clients }}
+			request, response := listMergeRequest(t, schemas, listMergeValues(t, schemas, state.ID, state.Metadata, state.Spec), listMergeValues(t, schemas, plan.ID, plan.Metadata, plan.Spec))
+			r.Update(ctx, request, response)
 
 			var got appsv1.Deployment
 			api.get(t, &got)
@@ -479,8 +576,13 @@ func TestDeploymentV1UpdateListMergeKeys(t *testing.T) {
 }
 
 func TestDaemonSetV1UpdateListMergeKeys(t *testing.T) {
+	schemas := newListMergeSchemas(t, &DaemonSetV1{})
 	for _, tc := range workloadListMergeCases() {
+		if tc.threeWayOnly {
+			continue
+		}
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			api, clients := startListMergeAPI(t, "/apis/apps/v1/namespaces/default/daemonsets/merge", func() any { return &appsv1.DaemonSet{} })
 			object := func(spec corev1.PodSpec) *appsv1.DaemonSet {
@@ -496,10 +598,10 @@ func TestDaemonSetV1UpdateListMergeKeys(t *testing.T) {
 				}
 			}
 			before, after := object(listMergePodSpec(tc.before)), object(listMergePodSpec(tc.after))
-			resource := &DaemonSetV1{SDKv2Meta: func() any { return clients }}
+			r := &DaemonSetV1{SDKv2Meta: func() any { return clients }}
 			var d diag.Diagnostics
-			state := resource.daemonSetStateFromObject(ctx, DaemonSetV1Model{WaitForRollout: types.BoolValue(false)}, before, clients, &d)
-			plan := resource.daemonSetStateFromObject(ctx, state, after, clients, &d)
+			state := r.daemonSetStateFromObject(ctx, DaemonSetV1Model{WaitForRollout: types.BoolValue(false)}, before, clients, &d)
+			plan := r.daemonSetStateFromObject(ctx, state, after, clients, &d)
 			if d.HasError() {
 				t.Fatal(d)
 			}
@@ -509,8 +611,8 @@ func TestDaemonSetV1UpdateListMergeKeys(t *testing.T) {
 			}
 			api.set(t, live)
 
-			request, response := listMergeRequest(t, resource, listMergeValues(t, resource, state.ID, state.Metadata, state.Spec), listMergeValues(t, resource, plan.ID, plan.Metadata, plan.Spec))
-			resource.Update(ctx, request, response)
+			request, response := listMergeRequest(t, schemas, listMergeValues(t, schemas, state.ID, state.Metadata, state.Spec), listMergeValues(t, schemas, plan.ID, plan.Metadata, plan.Spec))
+			r.Update(ctx, request, response)
 
 			var got appsv1.DaemonSet
 			api.get(t, &got)
@@ -520,8 +622,10 @@ func TestDaemonSetV1UpdateListMergeKeys(t *testing.T) {
 }
 
 func TestStatefulSetV1UpdateListMergeKeys(t *testing.T) {
+	schemas := newListMergeSchemas(t, &StatefulSetV1{})
 	for _, tc := range workloadListMergeCases() {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ctx := context.Background()
 			api, clients := startListMergeAPI(t, "/apis/apps/v1/namespaces/default/statefulsets/merge", func() any { return &appsv1.StatefulSet{} })
 			object := func(spec corev1.PodSpec) *appsv1.StatefulSet {
@@ -540,12 +644,12 @@ func TestStatefulSetV1UpdateListMergeKeys(t *testing.T) {
 				}
 			}
 			before, after := object(listMergePodSpec(tc.before)), object(listMergePodSpec(tc.after))
-			resource := &StatefulSetV1{SDKv2Meta: func() any { return clients }}
-			state, _, d := resource.flattenStateFromObject(ctx, clients, StatefulSetV1Model{WaitForRollout: types.BoolValue(false)}, before, false)
+			r := &StatefulSetV1{SDKv2Meta: func() any { return clients }}
+			state, _, d := r.flattenStateFromObject(ctx, clients, StatefulSetV1Model{WaitForRollout: types.BoolValue(false)}, before, false)
 			if d.HasError() {
 				t.Fatal(d)
 			}
-			plan, _, d := resource.flattenStateFromObject(ctx, clients, state, after, false)
+			plan, _, d := r.flattenStateFromObject(ctx, clients, state, after, false)
 			if d.HasError() {
 				t.Fatal(d)
 			}
@@ -555,8 +659,8 @@ func TestStatefulSetV1UpdateListMergeKeys(t *testing.T) {
 			}
 			api.set(t, live)
 
-			request, response := listMergeRequest(t, resource, listMergeValues(t, resource, state.ID, state.Metadata, state.Spec), listMergeValues(t, resource, plan.ID, plan.Metadata, plan.Spec))
-			resource.Update(ctx, request, response)
+			request, response := listMergeRequest(t, schemas, listMergeValues(t, schemas, state.ID, state.Metadata, state.Spec), listMergeValues(t, schemas, plan.ID, plan.Metadata, plan.Spec))
+			r.Update(ctx, request, response)
 
 			var got appsv1.StatefulSet
 			api.get(t, &got)
@@ -567,16 +671,14 @@ func TestStatefulSetV1UpdateListMergeKeys(t *testing.T) {
 
 // listMergeValues converts a resource model into root attribute values using
 // the resource schema, so the fixtures follow schema changes automatically.
-func listMergeValues(t *testing.T, r resource.Resource, id types.String, metadata []common.NamespacedMetadataModel, spec any) map[string]attr.Value {
+func listMergeValues(t *testing.T, schemas listMergeSchemas, id types.String, metadata []common.NamespacedMetadataModel, spec any) map[string]attr.Value {
 	t.Helper()
 	ctx := context.Background()
-	schemaResponse := resource.SchemaResponse{}
-	r.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
 	attributeType := func(name string) attr.Type {
-		if block, ok := schemaResponse.Schema.GetBlocks()[name]; ok {
+		if block, ok := schemas.resource.GetBlocks()[name]; ok {
 			return block.Type()
 		}
-		return schemaResponse.Schema.GetAttributes()[name].GetType()
+		return schemas.resource.GetAttributes()[name].GetType()
 	}
 	metadataValue, d := types.ListValueFrom(ctx, attributeType("metadata").(types.ListType).ElemType, metadata)
 	if d.HasError() {

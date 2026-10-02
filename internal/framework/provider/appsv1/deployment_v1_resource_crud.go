@@ -764,7 +764,11 @@ func deploymentSpecPatch(original, modified, current appsv1.DeploymentSpec) ([]b
 	if err != nil {
 		return nil, err
 	}
-	return common.TwoWayStrategicMergePatch(originalJSON, modifiedJSON, appsv1.Deployment{})
+	currentJSON, err := json.Marshal(appsv1.Deployment{Spec: current})
+	if err != nil {
+		return nil, err
+	}
+	return common.TwoWayStrategicMergePatch(originalJSON, modifiedJSON, currentJSON, appsv1.Deployment{})
 }
 
 func strconvParseInt32(value string) (int32, error) {

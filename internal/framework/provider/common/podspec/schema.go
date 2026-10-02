@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // Package podspec provides the native Framework schema and pure API
-// conversions for the PodSpec of workload pod templates (Deployment,
-// DaemonSet, StatefulSet). It mirrors SDKv2's podSpecFields(true, false).
+// conversions for the PodSpec of Deployment, DaemonSet, StatefulSet, Pod, Job
+// and CronJob. It mirrors SDKv2's podSpecFields(isUpdatable, false); Options
+// carries the per-resource differences.
 package podspec
 
 import (
@@ -40,38 +41,47 @@ import (
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
-// Options selects the owner-specific variations of the template PodSpec.
-type Options struct {
-	// RestartPolicyAlways restricts spec.restart_policy to "Always", as the
-	// SDKv2 Deployment did. DaemonSet and StatefulSet keep the generic
-	// Always/OnFailure/Never validation.
-	RestartPolicyAlways bool
+// builder builds the PodSpec schema for one Options value.
+type builder struct{ o Options }
+
+// replace reports whether a field with the given SDKv2 ForceNew forces
+// replacement for this owner.
+func (b builder) replace(f forceNew) bool {
+	return f == alwaysNew || (f == immutable && b.o.Immutable)
 }
 
 const restartPolicyAlwaysDescription = "Restart policy for all containers within the pod. Defaults to Always as the only option. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy."
 
-// SpecBlock returns the template's "spec" block: an optional list of at most
-// one PodSpec object. Owners that require the block or need an owner-specific
-// description may append validators or set Description on the result.
-func SpecBlock(options Options) schema.ListNestedBlock {
-	object := podSpecWithDescriptions(podSpecObject())
-	if options.RestartPolicyAlways {
+func (b builder) specBlock() schema.ListNestedBlock {
+	object := podSpecWithDescriptions(b.podSpecObject())
+	if b.o.RestartPolicyAlwaysOnly {
 		restartPolicy := object.Attributes["restart_policy"].(schema.StringAttribute)
 		restartPolicy.Validators = []validator.String{podStringRule("restart-policy-always")}
 		restartPolicy.Description = restartPolicyAlwaysDescription
 		restartPolicy.MarkdownDescription = restartPolicy.Description
 		object.Attributes["restart_policy"] = restartPolicy
 	}
-	block := podBlock(object, 0, 1, false)
-	block.Description = podSpecApplyDescription("spec", "", true)
+	presence := updatable
+	if b.o.SpecForceNew {
+		presence = alwaysNew
+	}
+	block := b.block(object, 0, 1, presence)
+	if b.o.SpecRequired {
+		block.Validators = append(block.Validators, listvalidator.SizeAtLeast(1), listvalidator.IsRequired())
+	}
+	if b.o.Template {
+		block.Description = podSpecApplyDescription("spec", "", true)
+	} else {
+		block.Description = "Specification of the desired behavior of the pod."
+	}
 	block.MarkdownDescription = block.Description
 	return block
 }
 
-// These constructors describe the template PodSpec's static native schema. The
-// zero defaults preserve SDKv2's omitted-scalar values; null and unknown remain
+// These constructors describe the PodSpec's static native schema. The zero
+// defaults preserve SDKv2's omitted-scalar values; null and unknown remain
 // distinct until Framework planning applies the defaults or the API boundary is reached.
-func podString(required, computed, replace bool, fallback string, validators ...validator.String) schema.StringAttribute {
+func (b builder) str(required, computed bool, f forceNew, fallback string, validators ...validator.String) schema.StringAttribute {
 	a := schema.StringAttribute{Required: required, Optional: !required, Computed: computed, Validators: validators}
 	if !required && !computed {
 		a.Computed = true
@@ -81,13 +91,13 @@ func podString(required, computed, replace bool, fallback string, validators ...
 		// API-defaulted Pod fields are unchanged by metadata/provider-only updates.
 		a.PlanModifiers = append(a.PlanModifiers, stringplanmodifier.UseStateForUnknown())
 	}
-	if replace {
+	if b.replace(f) {
 		a.PlanModifiers = append(a.PlanModifiers, podStringRequiresReplace{stringplanmodifier.RequiresReplace()})
 	}
 	return a
 }
 
-func podBool(computed, fallback bool) schema.BoolAttribute {
+func (b builder) boolean(computed bool, f forceNew, fallback bool) schema.BoolAttribute {
 	a := schema.BoolAttribute{Optional: true, Computed: true}
 	if !computed {
 		a.Default = booldefault.StaticBool(fallback)
@@ -95,10 +105,13 @@ func podBool(computed, fallback bool) schema.BoolAttribute {
 	if computed {
 		a.PlanModifiers = append(a.PlanModifiers, boolplanmodifier.UseStateForUnknown())
 	}
+	if b.replace(f) {
+		a.PlanModifiers = append(a.PlanModifiers, podBoolRequiresReplace{boolplanmodifier.RequiresReplace()})
+	}
 	return a
 }
 
-func podInt(required, computed bool, fallback int64, validators ...validator.Int64) schema.Int64Attribute {
+func (b builder) integer(required, computed bool, f forceNew, fallback int64, validators ...validator.Int64) schema.Int64Attribute {
 	a := schema.Int64Attribute{Required: required, Optional: !required, Computed: computed, Validators: validators}
 	if !required && !computed {
 		a.Computed = true
@@ -107,217 +120,240 @@ func podInt(required, computed bool, fallback int64, validators ...validator.Int
 	if computed {
 		a.PlanModifiers = append(a.PlanModifiers, int64planmodifier.UseStateForUnknown())
 	}
+	if b.replace(f) {
+		a.PlanModifiers = append(a.PlanModifiers, podInt64RequiresReplace{int64planmodifier.RequiresReplace()})
+	}
 	return a
 }
 
-func podList(required bool, element attr.Type, validators ...validator.List) schema.ListAttribute {
-	return schema.ListAttribute{Required: required, Optional: !required, ElementType: element, Validators: validators}
+func (b builder) list(required bool, f forceNew, element attr.Type, validators ...validator.List) schema.ListAttribute {
+	a := schema.ListAttribute{Required: required, Optional: !required, ElementType: element, Validators: validators}
+	if b.replace(f) {
+		a.PlanModifiers = []planmodifier.List{podListRequiresReplace{listplanmodifier.RequiresReplace()}}
+	}
+	return a
 }
 
-func podEmptyCompatibleList(element attr.Type) schema.ListAttribute {
-	return schema.ListAttribute{
+func (b builder) emptyCompatibleList(f forceNew, element attr.Type) schema.ListAttribute {
+	a := schema.ListAttribute{
 		Optional: true, Computed: true, ElementType: element,
 		Default:       listdefault.StaticValue(types.ListNull(element)),
 		PlanModifiers: []planmodifier.List{common.EmptyListCompatibility{}},
 	}
-}
-
-func podEmptyCompatibleMap() schema.MapAttribute {
-	return schema.MapAttribute{
-		Optional: true, Computed: true, ElementType: types.StringType,
-		Default:       mapdefault.StaticValue(types.MapNull(types.StringType)),
-		PlanModifiers: []planmodifier.Map{common.EmptyMapCompatibility{}},
-	}
-}
-
-func podSet(replace bool, element attr.Type) schema.SetAttribute {
-	a := schema.SetAttribute{Optional: true, ElementType: element}
-	if replace {
-		a.PlanModifiers = []planmodifier.Set{podSetRequiresReplace{setplanmodifier.RequiresReplace()}}
+	if b.replace(f) {
+		a.PlanModifiers = append(a.PlanModifiers, podListRequiresReplace{listplanmodifier.RequiresReplace()})
 	}
 	return a
 }
 
-func podMap(computed, replace bool) schema.MapAttribute {
-	a := schema.MapAttribute{Optional: true, Computed: computed, ElementType: types.StringType}
-	if computed {
-		a.PlanModifiers = append(a.PlanModifiers, mapplanmodifier.UseStateForUnknown())
+func (b builder) emptyCompatibleMap(f forceNew) schema.MapAttribute {
+	a := schema.MapAttribute{
+		Optional: true, Computed: true, ElementType: types.StringType,
+		Default:       mapdefault.StaticValue(types.MapNull(types.StringType)),
+		PlanModifiers: []planmodifier.Map{common.EmptyMapCompatibility{}},
 	}
-	if replace {
+	if b.replace(f) {
 		a.PlanModifiers = append(a.PlanModifiers, podMapRequiresReplace{mapplanmodifier.RequiresReplace()})
 	}
 	return a
 }
 
-func podBlock(object schema.NestedBlockObject, minimum, maximum int, replaceStructure bool) schema.ListNestedBlock {
-	b := schema.ListNestedBlock{NestedObject: object}
-	if minimum > 0 {
-		b.Validators = append(b.Validators, listvalidator.SizeAtLeast(minimum))
+func (b builder) set(f forceNew, element attr.Type) schema.SetAttribute {
+	a := schema.SetAttribute{Optional: true, ElementType: element}
+	if b.replace(f) {
+		a.PlanModifiers = []planmodifier.Set{podSetRequiresReplace{setplanmodifier.RequiresReplace()}}
 	}
-	if maximum > 0 {
-		b.Validators = append(b.Validators, listvalidator.SizeAtMost(maximum))
-	}
-	if replaceStructure {
-		b.PlanModifiers = []planmodifier.List{podListStructureRequiresReplace{}}
-	} else if podObjectRequiresStructuralReplacement(object) {
-		b.PlanModifiers = []planmodifier.List{podListInheritedRequiresReplace{object: object}}
-	}
-	return b
+	return a
 }
 
-func podSpecObject() schema.NestedBlockObject {
+func (b builder) mapping(computed bool, f forceNew) schema.MapAttribute {
+	a := schema.MapAttribute{Optional: true, Computed: computed, ElementType: types.StringType}
+	if computed {
+		a.PlanModifiers = append(a.PlanModifiers, mapplanmodifier.UseStateForUnknown())
+	}
+	if b.replace(f) {
+		a.PlanModifiers = append(a.PlanModifiers, podMapRequiresReplace{mapplanmodifier.RequiresReplace()})
+	}
+	return a
+}
+
+// block mirrors an SDKv2 TypeList block. Its own ForceNew only governs the
+// number of elements; descendants that force replacement are inherited so
+// that adding or removing an element still replaces.
+func (b builder) block(object schema.NestedBlockObject, minimum, maximum int, f forceNew) schema.ListNestedBlock {
+	l := schema.ListNestedBlock{NestedObject: object}
+	if minimum > 0 {
+		l.Validators = append(l.Validators, listvalidator.SizeAtLeast(minimum))
+	}
+	if maximum > 0 {
+		l.Validators = append(l.Validators, listvalidator.SizeAtMost(maximum))
+	}
+	if b.replace(f) {
+		l.PlanModifiers = []planmodifier.List{podListStructureRequiresReplace{}}
+	} else if podObjectRequiresStructuralReplacement(object) {
+		l.PlanModifiers = []planmodifier.List{podListInheritedRequiresReplace{object: object}}
+	}
+	return l
+}
+
+func (b builder) podSpecObject() schema.NestedBlockObject {
+	restartPolicy := []string{"Always", "OnFailure", "Never"}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"active_deadline_seconds":          podInt(false, false, 0, int64validator.AtLeast(1)),
-			"automount_service_account_token":  podBool(false, true),
-			"dns_policy":                       podString(false, false, false, "ClusterFirst", stringvalidator.OneOf("ClusterFirst", "ClusterFirstWithHostNet", "Default", "None")),
-			"enable_service_links":             podBool(false, true),
-			"host_ipc":                         podBool(false, false),
-			"host_network":                     podBool(false, false),
-			"host_pid":                         podBool(false, false),
-			"hostname":                         podString(false, true, false, ""),
-			"image_pull_secrets":               podComputedReferences("name"),
-			"node_name":                        podString(false, true, false, ""),
-			"node_selector":                    podEmptyCompatibleMap(),
-			"priority_class_name":              podString(false, false, false, ""),
-			"readiness_gate":                   podComputedReferences("condition_type"),
-			"restart_policy":                   podString(false, false, false, "Always", stringvalidator.OneOf("Always", "OnFailure", "Never")),
-			"runtime_class_name":               podString(false, false, false, ""),
-			"scheduler_name":                   podString(false, true, false, ""),
-			"service_account_name":             podString(false, true, false, ""),
-			"share_process_namespace":          podBool(false, false),
-			"subdomain":                        podString(false, false, false, ""),
-			"termination_grace_period_seconds": podInt(false, false, 30, int64validator.AtLeast(0)),
+			"active_deadline_seconds":          b.integer(false, false, updatable, 0, int64validator.AtLeast(1)),
+			"automount_service_account_token":  b.boolean(false, immutable, true),
+			"dns_policy":                       b.str(false, false, immutable, "ClusterFirst", stringvalidator.OneOf("ClusterFirst", "ClusterFirstWithHostNet", "Default", "None")),
+			"enable_service_links":             b.boolean(false, immutable, true),
+			"host_ipc":                         b.boolean(false, immutable, false),
+			"host_network":                     b.boolean(false, immutable, false),
+			"host_pid":                         b.boolean(false, immutable, false),
+			"hostname":                         b.str(false, true, immutable, ""),
+			"image_pull_secrets":               b.references("name", immutable),
+			"node_name":                        b.str(false, true, immutable, ""),
+			"node_selector":                    b.emptyCompatibleMap(immutable),
+			"priority_class_name":              b.str(false, false, immutable, ""),
+			"readiness_gate":                   b.references("condition_type", immutable),
+			"restart_policy":                   b.str(false, false, immutable, b.o.RestartPolicy, stringvalidator.OneOf(restartPolicy...)),
+			"runtime_class_name":               b.str(false, false, immutable, ""),
+			"scheduler_name":                   b.str(false, true, immutable, ""),
+			"service_account_name":             b.str(false, true, immutable, ""),
+			"share_process_namespace":          b.boolean(false, immutable, false),
+			"subdomain":                        b.str(false, false, immutable, ""),
+			"termination_grace_period_seconds": b.integer(false, false, immutable, 30, int64validator.AtLeast(0)),
 		},
 		Blocks: map[string]schema.Block{
-			"affinity":       podBlock(podAffinityObject(), 0, 1, false),
-			"container":      podBlock(podContainerObject(), 0, 0, false),
-			"init_container": podBlock(podContainerObject(), 0, 0, false),
-			"dns_config":     podBlock(podDNSConfigObject(), 0, 1, false),
-			"host_aliases": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"hostnames": podList(true, types.StringType),
-				"ip":        podString(true, false, false, "", podStringRule("ip")),
-			}}, 0, 0, false),
-			"os": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"name": podString(true, false, false, "", stringvalidator.OneOf("linux", "windows")),
-			}}, 0, 1, false),
-			"security_context": podBlock(podSecurityContextObject(), 0, 1, false),
-			"toleration": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"effect":             podString(false, false, false, "", stringvalidator.OneOf("NoSchedule", "PreferNoSchedule", "NoExecute")),
-				"key":                podString(false, false, false, ""),
-				"operator":           podString(false, false, false, "Equal", stringvalidator.OneOf("Exists", "Equal")),
-				"toleration_seconds": podString(false, false, false, "", podStringRule("nullable-int")),
-				"value":              podString(false, false, false, ""),
-			}}, 0, 0, false),
-			"topology_spread_constraint": podBlock(podTopologySpreadObject(), 0, 0, false),
-			"volume":                     podBlock(podVolumeObject(), 0, 0, false),
+			"affinity":       b.block(b.podAffinityObject(), 0, 1, immutable),
+			"container":      b.block(b.podContainerObject(), 0, 0, updatable),
+			"init_container": b.block(b.podContainerObject(), 0, 0, immutable),
+			"dns_config":     b.block(b.podDNSConfigObject(), 0, 1, updatable),
+			"host_aliases": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"hostnames": b.list(true, immutable, types.StringType),
+				"ip":        b.str(true, false, immutable, "", podStringRule("ip")),
+			}}, 0, 0, immutable),
+			"os": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"name": b.str(true, false, updatable, "", stringvalidator.OneOf("linux", "windows")),
+			}}, 0, 1, updatable),
+			"security_context": b.block(b.podSecurityContextObject(), 0, 1, updatable),
+			"toleration": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"effect":             b.str(false, false, immutable, "", stringvalidator.OneOf("NoSchedule", "PreferNoSchedule", "NoExecute")),
+				"key":                b.str(false, false, immutable, ""),
+				"operator":           b.str(false, false, immutable, "Equal", stringvalidator.OneOf("Exists", "Equal")),
+				"toleration_seconds": b.str(false, false, immutable, "", podStringRule("nullable-int")),
+				"value":              b.str(false, false, immutable, ""),
+			}}, 0, 0, updatable),
+			"topology_spread_constraint": b.block(b.podTopologySpreadObject(), 0, 0, updatable),
+			"volume":                     b.block(b.podVolumeObject(), 0, 0, updatable),
 		},
 	}
 }
 
 // References are atomic objects with explicitly validated children. Assignment
 // syntax is required because resources disables legacy block decoding.
-func podComputedReferences(child string) schema.ListAttribute {
-	return schema.ListAttribute{
+func (b builder) references(child string, f forceNew) schema.ListAttribute {
+	a := schema.ListAttribute{
 		Optional: true, Computed: true,
 		Description:   "List of reference objects. Omit or use null to retain API-populated references. When configured, supply at least one reference; an empty list is not omission.",
 		ElementType:   types.ObjectType{AttrTypes: map[string]attr.Type{child: types.StringType}},
 		Validators:    []validator.List{listvalidator.SizeAtLeast(1), podRequiredReference{child: child}},
 		PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 	}
+	if b.replace(f) {
+		a.PlanModifiers = append(a.PlanModifiers, podListRequiresReplace{listplanmodifier.RequiresReplace()})
+	}
+	return a
 }
 
-func podDNSConfigObject() schema.NestedBlockObject {
+func (b builder) podDNSConfigObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"nameservers": podList(false, types.StringType, listvalidator.ValueStringsAre(podStringRule("ip"))),
-			"searches":    podList(false, types.StringType, listvalidator.ValueStringsAre(podStringRule("name"))),
+			"nameservers": b.list(false, immutable, types.StringType, listvalidator.ValueStringsAre(podStringRule("ip"))),
+			// SDKv2 omitted ForceNew here, but the API rejects the change on an immutable spec.
+			"searches": b.list(false, immutable, types.StringType, listvalidator.ValueStringsAre(podStringRule("name"))),
 		},
 		Blocks: map[string]schema.Block{
-			"option": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"name":  podString(true, false, false, ""),
-				"value": podString(false, false, false, ""),
-			}}, 0, 0, false),
+			"option": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"name":  b.str(true, false, immutable, ""),
+				"value": b.str(false, false, immutable, ""),
+			}}, 0, 0, updatable),
 		},
 	}
 }
 
-func podTopologySpreadObject() schema.NestedBlockObject {
+func (b builder) podTopologySpreadObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"match_label_keys":     podSet(false, types.StringType),
-			"max_skew":             podInt(false, false, 1, int64validator.AtLeast(1)),
-			"min_domains":          podInt(false, false, 0, int64validator.AtLeast(1)),
-			"node_affinity_policy": podString(false, false, false, "", stringvalidator.OneOf("Honor", "Ignore")),
-			"node_taints_policy":   podString(false, false, false, "", stringvalidator.OneOf("Honor", "Ignore")),
-			"topology_key":         podString(false, false, false, ""),
-			"when_unsatisfiable":   podString(false, false, false, "DoNotSchedule", stringvalidator.OneOf("DoNotSchedule", "ScheduleAnyway")),
+			"match_label_keys":     b.set(immutable, types.StringType),
+			"max_skew":             b.integer(false, false, updatable, 1, int64validator.AtLeast(1)),
+			"min_domains":          b.integer(false, false, immutable, 0, int64validator.AtLeast(1)),
+			"node_affinity_policy": b.str(false, false, immutable, "", stringvalidator.OneOf("Honor", "Ignore")),
+			"node_taints_policy":   b.str(false, false, immutable, "", stringvalidator.OneOf("Honor", "Ignore")),
+			"topology_key":         b.str(false, false, updatable, ""),
+			"when_unsatisfiable":   b.str(false, false, updatable, "DoNotSchedule", stringvalidator.OneOf("DoNotSchedule", "ScheduleAnyway")),
 		},
 		Blocks: map[string]schema.Block{
-			"label_selector": podBlock(podLabelSelectorObject(), 0, 0, false),
+			"label_selector": b.block(b.podLabelSelectorObject(), 0, 0, updatable),
 		},
 	}
 }
 
-func podAffinityObject() schema.NestedBlockObject {
+func (b builder) podAffinityObject() schema.NestedBlockObject {
 	nodeTerm := schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"match_expressions": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-			"key":      podString(false, false, false, ""),
-			"operator": podString(false, false, false, "", stringvalidator.OneOf("In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt")),
-			"values":   podSet(false, types.StringType),
-		}}, 0, 0, false),
-		// SDKv2 kept match_fields ForceNew even for updatable pod templates.
-		"match_fields": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-			"key":      podString(true, false, true, ""),
-			"operator": podString(true, false, true, ""),
-			"values":   podSet(true, types.StringType),
-		}}, 0, 0, true),
+		"match_expressions": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+			"key":      b.str(false, false, updatable, ""),
+			"operator": b.str(false, false, updatable, "", stringvalidator.OneOf("In", "NotIn", "Exists", "DoesNotExist", "Gt", "Lt")),
+			"values":   b.set(updatable, types.StringType),
+		}}, 0, 0, updatable),
+		"match_fields": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+			"key":      b.str(true, false, alwaysNew, ""),
+			"operator": b.str(true, false, alwaysNew, ""),
+			"values":   b.set(alwaysNew, types.StringType),
+		}}, 0, 0, alwaysNew),
 	}}
 	node := schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"required_during_scheduling_ignored_during_execution": podBlock(schema.NestedBlockObject{Blocks: map[string]schema.Block{
-			"node_selector_term": podBlock(nodeTerm, 0, 0, false),
-		}}, 0, 1, false),
-		"preferred_during_scheduling_ignored_during_execution": podBlock(schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{"weight": podInt(true, false, 0)},
-			Blocks:     map[string]schema.Block{"preference": podBlock(nodeTerm, 1, 1, false)},
-		}, 0, 0, false),
+		"required_during_scheduling_ignored_during_execution": b.block(schema.NestedBlockObject{Blocks: map[string]schema.Block{
+			"node_selector_term": b.block(nodeTerm, 0, 0, updatable),
+		}}, 0, 1, updatable),
+		"preferred_during_scheduling_ignored_during_execution": b.block(schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{"weight": b.integer(true, false, updatable, 0)},
+			Blocks:     map[string]schema.Block{"preference": b.block(nodeTerm, 1, 1, updatable)},
+		}, 0, 0, updatable),
 	}}
 	pod := schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"required_during_scheduling_ignored_during_execution": podBlock(podAffinityTermObject(), 0, 0, false),
-		"preferred_during_scheduling_ignored_during_execution": podBlock(schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{"weight": podInt(true, false, 0)},
-			Blocks:     map[string]schema.Block{"pod_affinity_term": podBlock(podAffinityTermObject(), 1, 1, false)},
-		}, 0, 0, false),
+		"required_during_scheduling_ignored_during_execution": b.block(b.podAffinityTermObject(), 0, 0, updatable),
+		"preferred_during_scheduling_ignored_during_execution": b.block(schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{"weight": b.integer(true, false, updatable, 0)},
+			Blocks:     map[string]schema.Block{"pod_affinity_term": b.block(b.podAffinityTermObject(), 1, 1, updatable)},
+		}, 0, 0, updatable),
 	}}
 	return schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"node_affinity":     podBlock(node, 0, 1, false),
-		"pod_affinity":      podBlock(pod, 0, 1, false),
-		"pod_anti_affinity": podBlock(pod, 0, 1, false),
+		"node_affinity":     b.block(node, 0, 1, updatable),
+		"pod_affinity":      b.block(pod, 0, 1, updatable),
+		"pod_anti_affinity": b.block(pod, 0, 1, updatable),
 	}}
 }
 
-func podAffinityTermObject() schema.NestedBlockObject {
+func (b builder) podAffinityTermObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"namespaces":   podSet(false, types.StringType),
-			"topology_key": podString(true, false, false, ""),
+			"namespaces":   b.set(updatable, types.StringType),
+			"topology_key": b.str(true, false, updatable, ""),
 		},
 		Blocks: map[string]schema.Block{
-			"label_selector":     podBlock(podLabelSelectorObject(), 0, 0, false),
-			"namespace_selector": podBlock(podLabelSelectorObject(), 0, 0, false),
+			"label_selector":     b.block(b.podLabelSelectorObject(), 0, 0, updatable),
+			"namespace_selector": b.block(b.podLabelSelectorObject(), 0, 0, updatable),
 		},
 	}
 }
 
-func podLabelSelectorObject() schema.NestedBlockObject {
+func (b builder) podLabelSelectorObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
-		Attributes: map[string]schema.Attribute{"match_labels": podMap(false, false)},
+		Attributes: map[string]schema.Attribute{"match_labels": b.mapping(false, updatable)},
 		Blocks: map[string]schema.Block{
-			"match_expressions": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"key":      podString(false, false, false, ""),
-				"operator": podString(false, false, false, ""),
-				"values":   podSet(false, types.StringType),
-			}}, 0, 0, false),
+			"match_expressions": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"key":      b.str(false, false, updatable, ""),
+				"operator": b.str(false, false, updatable, ""),
+				"values":   b.set(updatable, types.StringType),
+			}}, 0, 0, updatable),
 		},
 	}
 }

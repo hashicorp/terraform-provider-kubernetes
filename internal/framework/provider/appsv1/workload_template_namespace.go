@@ -6,10 +6,27 @@ package appsv1
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
+
+// workloadTemplateMetadataBlock is the pod template metadata of Deployment and DaemonSet.
+func workloadTemplateMetadataBlock() schema.ListNestedBlock {
+	block := common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true))
+	namespace := block.NestedObject.Attributes["namespace"].(schema.StringAttribute)
+	namespace.Computed = true
+	namespace.Default = workloadTemplateNamespace{}
+	namespace.PlanModifiers = []planmodifier.String{
+		workloadTemplateNamespace{},
+		stringplanmodifier.RequiresReplace(),
+	}
+	block.NestedObject.Attributes["namespace"] = namespace
+	return block
+}
 
 // Template namespace accepts an explicit empty string. Retain that representation
 // from SDKv2 so an unchanged configuration never replaces the workload.

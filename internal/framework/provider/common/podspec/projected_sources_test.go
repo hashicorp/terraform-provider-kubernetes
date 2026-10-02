@@ -101,12 +101,12 @@ func TestFlattenSpecProjectedSourceGrouping(t *testing.T) {
 var templatePath = path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec")
 
 func specType() types.ObjectType {
-	return SpecObjectType().(types.ObjectType)
+	return For(Deployment()).ObjectType().(types.ObjectType)
 }
 
 func mustFlatten(t *testing.T, spec corev1.PodSpec, baseline types.List) types.List {
 	t.Helper()
-	value, diagnostics := FlattenSpec(context.Background(), spec, baseline, templatePath)
+	value, diagnostics := For(Deployment()).FlattenSpec(context.Background(), spec, baseline, templatePath)
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}
@@ -115,7 +115,7 @@ func mustFlatten(t *testing.T, spec corev1.PodSpec, baseline types.List) types.L
 
 func mustExpand(t *testing.T, value types.List) corev1.PodSpec {
 	t.Helper()
-	spec, diagnostics := ExpandSpec(context.Background(), value, templatePath)
+	spec, diagnostics := For(Deployment()).ExpandSpec(context.Background(), value, templatePath)
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}

@@ -143,28 +143,11 @@ func daemonSetTemplateSchema() schema.ListNestedBlock {
 		},
 		NestedObject: schema.NestedBlockObject{
 			Blocks: map[string]schema.Block{
-				"metadata": daemonSetTemplateMetadataSchema(),
-				"spec": podspec.SpecBlock(podspec.Options{
-					RestartPolicyAlways: false,
-				}),
+				"metadata": workloadTemplateMetadataBlock(),
+				"spec":     podspec.For(podspec.DaemonSet()).Spec,
 			},
 		},
 	}
-}
-
-func daemonSetTemplateMetadataSchema() schema.ListNestedBlock {
-	block := common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true))
-	namespace, ok := block.NestedObject.Attributes["namespace"].(schema.StringAttribute)
-	if ok {
-		namespace.Computed = true
-		namespace.Default = workloadTemplateNamespace{}
-		namespace.PlanModifiers = []planmodifier.String{
-			workloadTemplateNamespace{},
-			stringplanmodifier.RequiresReplace(),
-		}
-		block.NestedObject.Attributes["namespace"] = namespace
-	}
-	return block
 }
 
 func daemonSetStrategyAttribute() schema.ListNestedAttribute {

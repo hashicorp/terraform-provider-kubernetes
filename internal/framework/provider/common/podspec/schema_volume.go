@@ -13,203 +13,203 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
-func podVolumeObject() schema.NestedBlockObject {
+func (b builder) podVolumeObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
-		Attributes: map[string]schema.Attribute{"name": podString(false, false, false, "")},
+		Attributes: map[string]schema.Attribute{"name": b.str(false, false, updatable, "")},
 		Blocks: map[string]schema.Block{
-			"aws_elastic_block_store": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"fs_type":   podString(false, false, false, ""),
-				"partition": podInt(false, false, 0),
-				"read_only": podBool(false, false),
-				"volume_id": podString(true, false, false, ""),
-			}}, 0, 1, false),
-			"azure_disk": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"caching_mode":  podString(true, false, false, ""),
-				"data_disk_uri": podString(true, false, false, ""),
-				"disk_name":     podString(true, false, false, ""),
-				"fs_type":       podString(false, false, false, ""),
-				"kind":          podString(false, true, false, ""),
-				"read_only":     podBool(false, false),
-			}}, 0, 1, false),
-			"azure_file": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"read_only":        podBool(false, false),
-				"secret_name":      podString(true, false, false, ""),
-				"secret_namespace": podString(false, false, true, ""), // SDKv2 ForceNew even in templates.
-				"share_name":       podString(true, false, false, ""),
-			}}, 0, 1, false),
-			"ceph_fs": podBlock(schema.NestedBlockObject{
+			"aws_elastic_block_store": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"fs_type":   b.str(false, false, updatable, ""),
+				"partition": b.integer(false, false, updatable, 0),
+				"read_only": b.boolean(false, updatable, false),
+				"volume_id": b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"azure_disk": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"caching_mode":  b.str(true, false, updatable, ""),
+				"data_disk_uri": b.str(true, false, updatable, ""),
+				"disk_name":     b.str(true, false, updatable, ""),
+				"fs_type":       b.str(false, false, updatable, ""),
+				"kind":          b.str(false, true, updatable, ""),
+				"read_only":     b.boolean(false, updatable, false),
+			}}, 0, 1, updatable),
+			"azure_file": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"read_only":        b.boolean(false, updatable, false),
+				"secret_name":      b.str(true, false, updatable, ""),
+				"secret_namespace": b.str(false, false, alwaysNew, ""),
+				"share_name":       b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"ceph_fs": b.block(schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
-					"monitors":    podRequiredSet(false),
-					"path":        podString(false, false, false, ""),
-					"read_only":   podBool(false, false),
-					"secret_file": podString(false, false, false, ""),
-					"user":        podString(false, false, false, ""),
+					"monitors":    b.requiredSet(updatable),
+					"path":        b.str(false, false, updatable, ""),
+					"read_only":   b.boolean(false, updatable, false),
+					"secret_file": b.str(false, false, updatable, ""),
+					"user":        b.str(false, false, updatable, ""),
 				},
-				Blocks: map[string]schema.Block{"secret_ref": podBlock(podVolumeSecretReferenceObject(), 0, 1, false)},
-			}, 0, 1, false),
-			"cinder": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"fs_type":   podString(false, false, false, ""),
-				"read_only": podBool(false, false),
-				"volume_id": podString(true, false, false, ""),
-			}}, 0, 1, false),
-			"config_map": podBlock(podKeyVolumeObject("name", true), 0, 1, false),
-			"csi": podBlock(schema.NestedBlockObject{
+				Blocks: map[string]schema.Block{"secret_ref": b.block(b.podVolumeSecretReferenceObject(), 0, 1, updatable)},
+			}, 0, 1, updatable),
+			"cinder": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"fs_type":   b.str(false, false, updatable, ""),
+				"read_only": b.boolean(false, updatable, false),
+				"volume_id": b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"config_map": b.block(b.podKeyVolumeObject("name", true), 0, 1, updatable),
+			"csi": b.block(schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
-					"driver":            podString(true, false, false, ""),
-					"fs_type":           podString(false, false, false, ""),
-					"read_only":         podBool(false, false),
-					"volume_attributes": podMap(false, false),
+					"driver":            b.str(true, false, updatable, ""),
+					"fs_type":           b.str(false, false, updatable, ""),
+					"read_only":         b.boolean(false, updatable, false),
+					"volume_attributes": b.mapping(false, updatable),
 				},
-				Blocks: map[string]schema.Block{"node_publish_secret_ref": podBlock(schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{"name": podString(false, false, false, "")},
-				}, 0, 1, false)},
-			}, 0, 1, false),
-			"downward_api": podBlock(podDownwardAPIVolumeObject(false), 0, 1, false),
-			"empty_dir": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"medium":     podString(false, false, false, "", stringvalidator.OneOf("", "Memory", "HugePages", "HugePages-2Mi", "HugePages-1Gi")),
-				"size_limit": podQuantityString(""),
-			}}, 0, 1, false),
-			"ephemeral": podBlock(schema.NestedBlockObject{Blocks: map[string]schema.Block{
-				"volume_claim_template": podBlock(podVolumeClaimTemplateObject(), 1, 1, false),
-			}}, 0, 1, false),
-			"fc": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"fs_type":      podString(false, false, false, ""),
-				"lun":          podInt(true, false, 0),
-				"read_only":    podBool(false, false),
-				"target_ww_ns": podRequiredSet(false),
-			}}, 0, 1, false),
-			"flex_volume": podBlock(schema.NestedBlockObject{
+				Blocks: map[string]schema.Block{"node_publish_secret_ref": b.block(schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{"name": b.str(false, false, updatable, "")},
+				}, 0, 1, updatable)},
+			}, 0, 1, updatable),
+			"downward_api": b.block(b.podDownwardAPIVolumeObject(false), 0, 1, updatable),
+			"empty_dir": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"medium":     b.str(false, false, immutable, "", stringvalidator.OneOf("", "Memory", "HugePages", "HugePages-2Mi", "HugePages-1Gi")),
+				"size_limit": b.quantityString(immutable, ""),
+			}}, 0, 1, updatable),
+			"ephemeral": b.block(schema.NestedBlockObject{Blocks: map[string]schema.Block{
+				"volume_claim_template": b.block(b.podVolumeClaimTemplateObject(), 1, 1, updatable),
+			}}, 0, 1, updatable),
+			"fc": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"fs_type":      b.str(false, false, updatable, ""),
+				"lun":          b.integer(true, false, updatable, 0),
+				"read_only":    b.boolean(false, updatable, false),
+				"target_ww_ns": b.requiredSet(updatable),
+			}}, 0, 1, updatable),
+			"flex_volume": b.block(schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
-					"driver":    podString(true, false, false, ""),
-					"fs_type":   podString(false, false, false, ""),
-					"options":   podMap(false, false),
-					"read_only": podBool(false, false),
+					"driver":    b.str(true, false, updatable, ""),
+					"fs_type":   b.str(false, false, updatable, ""),
+					"options":   b.mapping(false, updatable),
+					"read_only": b.boolean(false, updatable, false),
 				},
-				Blocks: map[string]schema.Block{"secret_ref": podBlock(podVolumeSecretReferenceObject(), 0, 1, false)},
-			}, 0, 1, false),
-			"flocker": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"dataset_name": podString(false, false, false, ""),
-				"dataset_uuid": podString(false, false, false, ""),
-			}}, 0, 1, false),
-			"gce_persistent_disk": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"fs_type":   podString(false, false, false, ""),
-				"partition": podInt(false, false, 0),
-				"pd_name":   podString(true, false, false, ""),
-				"read_only": podBool(false, false),
-			}}, 0, 1, false),
-			"git_repo": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"directory":  podString(false, false, false, "", podStringRule("path")),
-				"repository": podString(false, false, false, ""),
-				"revision":   podString(false, false, false, ""),
-			}}, 0, 1, false),
-			"glusterfs": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"endpoints_name": podString(true, false, false, ""),
-				"path":           podString(true, false, false, ""),
-				"read_only":      podBool(false, false),
-			}}, 0, 1, false),
-			"host_path": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"path": podString(false, false, false, ""),
-				"type": podString(false, false, false, "", stringvalidator.OneOf("", "DirectoryOrCreate", "Directory", "FileOrCreate", "File", "Socket", "CharDevice", "BlockDevice")),
-			}}, 0, 1, false),
-			"iscsi": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"fs_type":         podString(false, false, false, ""),
-				"iqn":             podString(true, false, false, ""),
-				"iscsi_interface": podString(false, false, false, "default"),
-				"lun":             podInt(false, false, 0),
-				"read_only":       podBool(false, false),
-				"target_portal":   podString(true, false, false, ""),
-			}}, 0, 1, false),
-			"local": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"path": podString(false, false, false, ""),
-			}}, 0, 1, false),
-			"nfs": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"path":      podString(true, false, false, ""),
-				"read_only": podBool(false, false),
-				"server":    podString(true, false, false, ""),
-			}}, 0, 1, false),
-			"persistent_volume_claim": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"claim_name": podString(false, false, false, ""),
-				"read_only":  podBool(false, false),
-			}}, 0, 1, false),
-			"photon_persistent_disk": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"fs_type": podString(false, false, false, ""),
-				"pd_id":   podString(true, false, false, ""),
-			}}, 0, 1, false),
-			"projected": podBlock(podProjectedVolumeObject(), 0, 0, false),
-			"quobyte": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"group":     podString(false, false, false, ""),
-				"read_only": podBool(false, false),
-				"registry":  podString(true, false, false, ""),
-				"user":      podString(false, false, false, ""),
-				"volume":    podString(true, false, false, ""),
-			}}, 0, 1, false),
-			"rbd": podBlock(schema.NestedBlockObject{
+				Blocks: map[string]schema.Block{"secret_ref": b.block(b.podVolumeSecretReferenceObject(), 0, 1, updatable)},
+			}, 0, 1, updatable),
+			"flocker": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"dataset_name": b.str(false, false, updatable, ""),
+				"dataset_uuid": b.str(false, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"gce_persistent_disk": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"fs_type":   b.str(false, false, updatable, ""),
+				"partition": b.integer(false, false, updatable, 0),
+				"pd_name":   b.str(true, false, updatable, ""),
+				"read_only": b.boolean(false, updatable, false),
+			}}, 0, 1, updatable),
+			"git_repo": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"directory":  b.str(false, false, updatable, "", podStringRule("path")),
+				"repository": b.str(false, false, updatable, ""),
+				"revision":   b.str(false, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"glusterfs": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"endpoints_name": b.str(true, false, updatable, ""),
+				"path":           b.str(true, false, updatable, ""),
+				"read_only":      b.boolean(false, updatable, false),
+			}}, 0, 1, updatable),
+			"host_path": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"path": b.str(false, false, updatable, ""),
+				"type": b.str(false, false, updatable, "", stringvalidator.OneOf("", "DirectoryOrCreate", "Directory", "FileOrCreate", "File", "Socket", "CharDevice", "BlockDevice")),
+			}}, 0, 1, updatable),
+			"iscsi": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"fs_type":         b.str(false, false, updatable, ""),
+				"iqn":             b.str(true, false, updatable, ""),
+				"iscsi_interface": b.str(false, false, updatable, "default"),
+				"lun":             b.integer(false, false, updatable, 0),
+				"read_only":       b.boolean(false, updatable, false),
+				"target_portal":   b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"local": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"path": b.str(false, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"nfs": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"path":      b.str(true, false, updatable, ""),
+				"read_only": b.boolean(false, updatable, false),
+				"server":    b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"persistent_volume_claim": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"claim_name": b.str(false, false, updatable, ""),
+				"read_only":  b.boolean(false, updatable, false),
+			}}, 0, 1, updatable),
+			"photon_persistent_disk": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"fs_type": b.str(false, false, updatable, ""),
+				"pd_id":   b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"projected": b.block(b.podProjectedVolumeObject(), 0, 0, updatable),
+			"quobyte": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"group":     b.str(false, false, updatable, ""),
+				"read_only": b.boolean(false, updatable, false),
+				"registry":  b.str(true, false, updatable, ""),
+				"user":      b.str(false, false, updatable, ""),
+				"volume":    b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"rbd": b.block(schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
-					"ceph_monitors": podRequiredSet(false),
-					"fs_type":       podString(false, false, false, ""),
-					"keyring":       podString(false, true, false, ""),
-					"rados_user":    podString(false, false, false, "admin"),
-					"rbd_image":     podString(true, false, false, ""),
-					"rbd_pool":      podString(false, false, false, "rbd"),
-					"read_only":     podBool(false, false),
+					"ceph_monitors": b.requiredSet(updatable),
+					"fs_type":       b.str(false, false, updatable, ""),
+					"keyring":       b.str(false, true, updatable, ""),
+					"rados_user":    b.str(false, false, updatable, "admin"),
+					"rbd_image":     b.str(true, false, updatable, ""),
+					"rbd_pool":      b.str(false, false, updatable, "rbd"),
+					"read_only":     b.boolean(false, updatable, false),
 				},
-				Blocks: map[string]schema.Block{"secret_ref": podBlock(podVolumeSecretReferenceObject(), 0, 1, false)},
-			}, 0, 1, false),
-			"secret": podBlock(podKeyVolumeObject("secret_name", true), 0, 1, false),
-			"vsphere_volume": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"fs_type":     podString(false, false, false, ""),
-				"volume_path": podString(true, false, false, ""),
-			}}, 0, 1, false),
+				Blocks: map[string]schema.Block{"secret_ref": b.block(b.podVolumeSecretReferenceObject(), 0, 1, updatable)},
+			}, 0, 1, updatable),
+			"secret": b.block(b.podKeyVolumeObject("secret_name", true), 0, 1, updatable),
+			"vsphere_volume": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"fs_type":     b.str(false, false, updatable, ""),
+				"volume_path": b.str(true, false, updatable, ""),
+			}}, 0, 1, updatable),
 		},
 	}
 }
 
-func podRequiredSet(replace bool, validators ...validator.Set) schema.SetAttribute {
-	a := podSet(replace, types.StringType)
+func (b builder) requiredSet(f forceNew, validators ...validator.Set) schema.SetAttribute {
+	a := b.set(f, types.StringType)
 	a.Required, a.Optional, a.Validators = true, false, validators
 	return a
 }
 
-func podVolumeSecretReferenceObject() schema.NestedBlockObject {
+func (b builder) podVolumeSecretReferenceObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"name":      podString(false, false, false, ""),
-		"namespace": podString(false, true, false, ""),
+		"name":      b.str(false, false, updatable, ""),
+		"namespace": b.str(false, true, updatable, ""),
 	}}
 }
 
-func podKeyVolumeObject(name string, defaultMode bool) schema.NestedBlockObject {
+func (b builder) podKeyVolumeObject(name string, defaultMode bool) schema.NestedBlockObject {
 	a := map[string]schema.Attribute{
-		name:       podString(false, false, false, ""),
-		"optional": podBool(false, false),
+		name:       b.str(false, false, updatable, ""),
+		"optional": b.boolean(false, updatable, false),
 	}
 	if defaultMode {
-		a["default_mode"] = podString(false, false, false, "0644", podStringRule("mode"))
+		a["default_mode"] = b.str(false, false, updatable, "0644", podStringRule("mode"))
 	}
 	return schema.NestedBlockObject{
 		Attributes: a,
-		Blocks: map[string]schema.Block{"items": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-			"key":  podString(false, false, false, ""),
-			"mode": podString(false, false, false, "", podStringRule("mode")),
-			"path": podString(false, false, false, "", podStringRule("path")),
-		}}, 0, 0, false)},
+		Blocks: map[string]schema.Block{"items": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+			"key":  b.str(false, false, updatable, ""),
+			"mode": b.str(false, false, updatable, "", podStringRule("mode")),
+			"path": b.str(false, false, updatable, "", podStringRule("path")),
+		}}, 0, 0, updatable)},
 	}
 }
 
-func podDownwardAPIVolumeObject(projected bool) schema.NestedBlockObject {
+func (b builder) podDownwardAPIVolumeObject(projected bool) schema.NestedBlockObject {
 	o := schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"items": podBlock(schema.NestedBlockObject{
+		"items": b.block(schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
-				"mode": podString(false, false, false, "", podStringRule("mode")),
-				"path": podString(true, false, false, "", podStringRule("path")),
+				"mode": b.str(false, false, updatable, "", podStringRule("mode")),
+				"path": b.str(true, false, updatable, "", podStringRule("path")),
 			},
 			Blocks: map[string]schema.Block{
-				"field_ref":          podBlock(podFieldReferenceObject(false), podRequiredUnlessProjected(projected), 1, false),
-				"resource_field_ref": podBlock(podResourceFieldReferenceObject(true, false), 0, 1, false),
+				"field_ref":          b.block(b.podFieldReferenceObject(updatable), podRequiredUnlessProjected(projected), 1, updatable),
+				"resource_field_ref": b.block(b.podResourceFieldReferenceObject(true, updatable), 0, 1, updatable),
 			},
-		}, 0, 0, false),
+		}, 0, 0, updatable),
 	}}
 	if !projected {
-		o.Attributes = map[string]schema.Attribute{"default_mode": podString(false, false, false, "0644", podStringRule("mode"))}
+		o.Attributes = map[string]schema.Attribute{"default_mode": b.str(false, false, updatable, "0644", podStringRule("mode"))}
 	}
 	return o
 }
@@ -221,54 +221,54 @@ func podRequiredUnlessProjected(projected bool) int {
 	return 1
 }
 
-func podProjectedVolumeObject() schema.NestedBlockObject {
+func (b builder) podProjectedVolumeObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
-		Attributes: map[string]schema.Attribute{"default_mode": podString(false, false, false, "0644", podStringRule("mode"))},
+		Attributes: map[string]schema.Attribute{"default_mode": b.str(false, false, updatable, "0644", podStringRule("mode"))},
 		Blocks: map[string]schema.Block{
-			"sources": podBlock(schema.NestedBlockObject{Blocks: map[string]schema.Block{
-				"secret":       podBlock(podKeyVolumeObject("name", false), 0, 0, false),
-				"config_map":   podBlock(podKeyVolumeObject("name", false), 0, 0, false),
-				"downward_api": podBlock(podDownwardAPIVolumeObject(true), 0, 1, false),
-				"service_account_token": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-					"audience":           podString(false, false, false, ""),
-					"expiration_seconds": podInt(false, false, 3600, int64validator.AtLeast(600)),
-					"path":               podString(true, false, false, ""),
-				}}, 0, 1, false),
-			}}, 1, 0, false),
+			"sources": b.block(schema.NestedBlockObject{Blocks: map[string]schema.Block{
+				"secret":       b.block(b.podKeyVolumeObject("name", false), 0, 0, updatable),
+				"config_map":   b.block(b.podKeyVolumeObject("name", false), 0, 0, updatable),
+				"downward_api": b.block(b.podDownwardAPIVolumeObject(true), 0, 1, updatable),
+				"service_account_token": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+					"audience":           b.str(false, false, updatable, ""),
+					"expiration_seconds": b.integer(false, false, updatable, 3600, int64validator.AtLeast(600)),
+					"path":               b.str(true, false, updatable, ""),
+				}}, 0, 1, updatable),
+			}}, 1, 0, updatable),
 		},
 	}
 }
 
-func podVolumeClaimTemplateObject() schema.NestedBlockObject {
-	annotations := podMap(false, false)
+func (b builder) podVolumeClaimTemplateObject() schema.NestedBlockObject {
+	annotations := b.mapping(false, updatable)
 	annotations.Validators = []validator.Map{common.AnnotationsValidator()}
-	labels := podMap(false, false)
+	labels := b.mapping(false, updatable)
 	labels.Validators = []validator.Map{common.LabelsValidator()}
-	selector := podLabelSelectorObject()
-	selector.Attributes["match_labels"] = podMap(false, true)
-	selector.Blocks["match_expressions"] = podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"key":      podString(false, false, true, ""),
-		"operator": podString(false, false, true, ""),
-		"values":   podSet(true, types.StringType),
-	}}, 0, 0, true)
+	selector := b.podLabelSelectorObject()
+	selector.Attributes["match_labels"] = b.mapping(false, alwaysNew)
+	selector.Blocks["match_expressions"] = b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+		"key":      b.str(false, false, alwaysNew, ""),
+		"operator": b.str(false, false, alwaysNew, ""),
+		"values":   b.set(alwaysNew, types.StringType),
+	}}, 0, 0, alwaysNew)
 	return schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"metadata": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+		"metadata": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
 			"annotations": annotations, "labels": labels,
-		}}, 0, 1, false),
-		"spec": podBlock(schema.NestedBlockObject{
+		}}, 0, 1, updatable),
+		"spec": b.block(schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
-				"access_modes":       podRequiredSet(true, setvalidator.ValueStringsAre(stringvalidator.OneOf("ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany", "ReadWriteOncePod"))),
-				"volume_name":        podString(false, true, true, ""),
-				"storage_class_name": podString(false, true, true, ""),
-				"volume_mode":        podString(false, true, true, "", stringvalidator.OneOf("Block", "Filesystem")),
+				"access_modes":       b.requiredSet(alwaysNew, setvalidator.ValueStringsAre(stringvalidator.OneOf("ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany", "ReadWriteOncePod"))),
+				"volume_name":        b.str(false, true, alwaysNew, ""),
+				"storage_class_name": b.str(false, true, alwaysNew, ""),
+				"volume_mode":        b.str(false, true, alwaysNew, "", stringvalidator.OneOf("Block", "Filesystem")),
 			},
 			Blocks: map[string]schema.Block{
-				"resources": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-					"limits":   podQuantityMap(false, true),
-					"requests": podQuantityMap(false, false),
-				}}, 1, 1, false),
-				"selector": podBlock(selector, 0, 1, true),
+				"resources": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+					"limits":   b.quantityMap(false, alwaysNew),
+					"requests": b.quantityMap(false, updatable),
+				}}, 1, 1, updatable),
+				"selector": b.block(selector, 0, 1, alwaysNew),
 			},
-		}, 1, 1, false),
+		}, 1, 1, updatable),
 	}}
 }

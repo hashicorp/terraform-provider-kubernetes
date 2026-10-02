@@ -390,7 +390,7 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 	template := in.Template[0]
 	templateMetadata, templateMetadataDiags := common.ExpandNamespacedMetadata(ctx, template.Metadata)
 	diagnostics.Append(templateMetadataDiags...)
-	templateSpec, templateSpecDiags := podspec.ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	templateSpec, templateSpecDiags := podspec.For(podspec.DaemonSet()).ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diagnostics.Append(templateSpecDiags...)
 	if diagnostics.HasError() {
 		return out, diagnostics
@@ -406,7 +406,8 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, baseline []DaemonSetV1SpecModel) ([]DaemonSetV1SpecModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 
-	specType := podspec.SpecObjectType()
+	podSpec := podspec.For(podspec.DaemonSet())
+	specType := podSpec.ObjectType()
 	templateBaseline := types.ListNull(specType)
 	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
 	var selectorBaseline []LabelSelectorModel
@@ -417,7 +418,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 		templateBaseline = baseline[0].Template[0].Spec
 		templateMetadataBaseline = baseline[0].Template[0].Metadata
 	}
-	templateSpec, templateSpecDiags := podspec.FlattenSpec(
+	templateSpec, templateSpecDiags := podSpec.FlattenSpec(
 		ctx,
 		spec.Template.Spec,
 		templateBaseline,

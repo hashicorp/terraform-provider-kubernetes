@@ -14,219 +14,223 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func podContainerObject() schema.NestedBlockObject {
+func (b builder) podContainerObject() schema.NestedBlockObject {
+	resources := schema.ListNestedAttribute{
+		Description: "Compute resources required by this container. Omit or use null to retain API-populated values; a configured list must contain exactly one object. Use [{}] to leave limits and requests unset. An empty list is not omission.",
+		Optional:    true, Computed: true,
+		Validators:    []validator.List{listvalidator.SizeBetween(1, 1)},
+		PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
+		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+			"limits":   b.quantityMap(true, immutable),
+			"requests": b.quantityMap(true, immutable),
+		}},
+	}
+	if b.replace(immutable) {
+		resources.PlanModifiers = append(resources.PlanModifiers, podListStructureRequiresReplace{})
+	}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"args":                       podEmptyCompatibleList(types.StringType),
-			"command":                    podEmptyCompatibleList(types.StringType),
-			"image":                      podString(false, false, false, ""),
-			"image_pull_policy":          podString(false, true, false, ""),
-			"name":                       podString(true, false, false, ""),
-			"restart_policy":             podString(false, true, false, "", stringvalidator.OneOf("Always")),
-			"stdin":                      podBool(false, false),
-			"stdin_once":                 podBool(false, false),
-			"termination_message_path":   podString(false, false, false, "/dev/termination-log"),
-			"termination_message_policy": podString(false, true, false, "", stringvalidator.OneOf("File", "FallbackToLogsOnError")),
-			"tty":                        podBool(false, false),
-			"working_dir":                podString(false, false, false, ""),
-			"resources": schema.ListNestedAttribute{
-				Description: "Compute resources required by this container. Omit or use null to retain API-populated values; a configured list must contain exactly one object. Use [{}] to leave limits and requests unset. An empty list is not omission.",
-				Optional:    true, Computed: true,
-				Validators:    []validator.List{listvalidator.SizeBetween(1, 1)},
-				PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
-				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-					"limits":   podResourceQuantityMap(),
-					"requests": podResourceQuantityMap(),
-				}},
-			},
+			"args":                       b.emptyCompatibleList(immutable, types.StringType),
+			"command":                    b.emptyCompatibleList(immutable, types.StringType),
+			"image":                      b.str(false, false, immutable, ""),
+			"image_pull_policy":          b.str(false, true, immutable, ""),
+			"name":                       b.str(true, false, immutable, ""),
+			"restart_policy":             b.str(false, true, immutable, "", stringvalidator.OneOf("Always")),
+			"stdin":                      b.boolean(false, immutable, false),
+			"stdin_once":                 b.boolean(false, immutable, false),
+			"termination_message_path":   b.str(false, false, immutable, "/dev/termination-log"),
+			"termination_message_policy": b.str(false, true, immutable, "", stringvalidator.OneOf("File", "FallbackToLogsOnError")),
+			"tty":                        b.boolean(false, immutable, false),
+			"working_dir":                b.str(false, false, immutable, ""),
+			"resources":                  resources,
 		},
 		Blocks: map[string]schema.Block{
-			"env": podBlock(schema.NestedBlockObject{
+			"env": b.block(schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
-					"name":  podString(true, false, false, ""),
-					"value": podString(false, false, false, ""),
+					"name":  b.str(true, false, immutable, ""),
+					"value": b.str(false, false, immutable, ""),
 				},
 				Blocks: map[string]schema.Block{
-					"value_from": podBlock(podEnvValueFromObject(), 0, 1, false),
+					"value_from": b.block(b.podEnvValueFromObject(), 0, 1, updatable),
 				},
-			}, 0, 0, false),
-			"env_from": podBlock(schema.NestedBlockObject{
+			}, 0, 0, updatable),
+			"env_from": b.block(schema.NestedBlockObject{
 				Attributes: map[string]schema.Attribute{
-					"prefix": podString(false, false, false, ""),
+					"prefix": b.str(false, false, immutable, ""),
 				},
 				Blocks: map[string]schema.Block{
-					"config_map_ref": podBlock(podEnvSourceObject(), 0, 1, false),
-					"secret_ref":     podBlock(podEnvSourceObject(), 0, 1, false),
+					"config_map_ref": b.block(b.podEnvSourceObject(), 0, 1, updatable),
+					"secret_ref":     b.block(b.podEnvSourceObject(), 0, 1, updatable),
 				},
-			}, 0, 0, false),
-			"lifecycle": podBlock(schema.NestedBlockObject{Blocks: map[string]schema.Block{
-				"post_start": podBlock(podHandlerObject(), 0, 0, false),
-				"pre_stop":   podBlock(podHandlerObject(), 0, 0, false),
-			}}, 0, 1, false),
-			"liveness_probe":  podBlock(podProbeObject(), 0, 1, false),
-			"readiness_probe": podBlock(podProbeObject(), 0, 1, false),
-			"startup_probe":   podBlock(podProbeObject(), 0, 1, false),
-			"port": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"container_port": podInt(true, false, 0, int64validator.Between(1, 65535)),
-				"host_ip":        podString(false, false, false, ""),
-				"host_port":      podInt(false, false, 0, int64validator.Between(1, 65535)),
-				"name":           podString(false, false, false, "", podStringRule("port")),
-				"protocol":       podString(false, false, false, "TCP", stringvalidator.OneOf("TCP", "UDP")),
-			}}, 0, 0, false),
-			"security_context": podBlock(podContainerSecurityContextObject(), 0, 1, false),
-			"volume_mount": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"mount_path":        podString(true, false, false, ""),
-				"name":              podString(true, false, false, ""),
-				"read_only":         podBool(false, false),
-				"sub_path":          podString(false, false, false, ""),
-				"sub_path_expr":     podString(false, false, false, ""),
-				"mount_propagation": podString(false, false, false, "None", stringvalidator.OneOf("None", "HostToContainer", "Bidirectional")),
-			}}, 0, 0, false),
-			"volume_device": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"device_path": podString(true, false, false, ""),
-				"name":        podString(true, false, false, ""),
-			}}, 0, 0, false),
+			}, 0, 0, updatable),
+			"lifecycle": b.block(schema.NestedBlockObject{Blocks: map[string]schema.Block{
+				"post_start": b.block(b.podHandlerObject(), 0, 0, immutable),
+				"pre_stop":   b.block(b.podHandlerObject(), 0, 0, immutable),
+			}}, 0, 1, updatable),
+			"liveness_probe":  b.block(b.podProbeObject(), 0, 1, immutable),
+			"readiness_probe": b.block(b.podProbeObject(), 0, 1, immutable),
+			"startup_probe":   b.block(b.podProbeObject(), 0, 1, immutable),
+			"port": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"container_port": b.integer(true, false, immutable, 0, int64validator.Between(1, 65535)),
+				"host_ip":        b.str(false, false, immutable, ""),
+				"host_port":      b.integer(false, false, immutable, 0, int64validator.Between(1, 65535)),
+				"name":           b.str(false, false, immutable, "", podStringRule("port")),
+				"protocol":       b.str(false, false, immutable, "TCP", stringvalidator.OneOf("TCP", "UDP")),
+			}}, 0, 0, updatable),
+			"security_context": b.block(b.podContainerSecurityContextObject(), 0, 1, immutable),
+			"volume_mount": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"mount_path":        b.str(true, false, updatable, ""),
+				"name":              b.str(true, false, updatable, ""),
+				"read_only":         b.boolean(false, updatable, false),
+				"sub_path":          b.str(false, false, updatable, ""),
+				"sub_path_expr":     b.str(false, false, updatable, ""),
+				"mount_propagation": b.str(false, false, updatable, "None", stringvalidator.OneOf("None", "HostToContainer", "Bidirectional")),
+			}}, 0, 0, immutable),
+			"volume_device": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"device_path": b.str(true, false, updatable, ""),
+				"name":        b.str(true, false, updatable, ""),
+			}}, 0, 0, immutable),
 		},
 	}
 }
 
-func podEnvSourceObject() schema.NestedBlockObject {
+func (b builder) podEnvSourceObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"name":     podString(true, false, false, ""),
-		"optional": podBool(false, false),
+		"name":     b.str(true, false, immutable, ""),
+		"optional": b.boolean(false, immutable, false),
 	}}
 }
 
-func podEnvValueFromObject() schema.NestedBlockObject {
+func (b builder) podEnvValueFromObject() schema.NestedBlockObject {
 	keyReference := schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"key":      podString(false, false, false, ""),
-		"name":     podString(false, false, false, ""),
-		"optional": podBool(false, false),
+		"key":      b.str(false, false, immutable, ""),
+		"name":     b.str(false, false, immutable, ""),
+		"optional": b.boolean(false, immutable, false),
 	}}
 	return schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"config_map_key_ref": podBlock(keyReference, 0, 1, false),
-		"secret_key_ref":     podBlock(keyReference, 0, 1, false),
-		"field_ref":          podBlock(podFieldReferenceObject(false), 0, 1, false),
-		"resource_field_ref": podBlock(podResourceFieldReferenceObject(false, false), 0, 1, false),
+		"config_map_key_ref": b.block(keyReference, 0, 1, updatable),
+		"secret_key_ref":     b.block(keyReference, 0, 1, updatable),
+		"field_ref":          b.block(b.podFieldReferenceObject(immutable), 0, 1, updatable),
+		"resource_field_ref": b.block(b.podResourceFieldReferenceObject(false, immutable), 0, 1, updatable),
 	}}
 }
 
-func podFieldReferenceObject(replace bool) schema.NestedBlockObject {
+func (b builder) podFieldReferenceObject(f forceNew) schema.NestedBlockObject {
 	return schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"api_version": podString(false, false, replace, "v1"),
-		"field_path":  podString(false, false, replace, ""),
+		"api_version": b.str(false, false, f, "v1"),
+		"field_path":  b.str(false, false, f, ""),
 	}}
 }
 
-func podResourceFieldReferenceObject(requiredContainer, replace bool) schema.NestedBlockObject {
+func (b builder) podResourceFieldReferenceObject(requiredContainer bool, f forceNew) schema.NestedBlockObject {
 	return schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"container_name": podString(requiredContainer, false, replace, ""),
-		"divisor":        podQuantityString("1"),
-		"resource":       podString(true, false, replace, ""),
+		"container_name": b.str(requiredContainer, false, f, ""),
+		"divisor":        b.quantityString(updatable, "1"),
+		"resource":       b.str(true, false, f, ""),
 	}}
 }
 
-func podHandlerObject() schema.NestedBlockObject {
+func (b builder) podHandlerObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"exec": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-			"command": podList(false, types.StringType),
-		}}, 0, 1, false),
-		"http_get": podBlock(schema.NestedBlockObject{
+		"exec": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+			"command": b.list(false, updatable, types.StringType),
+		}}, 0, 1, updatable),
+		"http_get": b.block(schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
-				"host":   podString(false, false, false, ""),
-				"path":   podString(false, false, false, ""),
-				"scheme": podString(false, false, false, "HTTP", stringvalidator.OneOf("HTTP", "HTTPS")),
-				"port":   podString(false, false, false, "", podStringRule("port")),
+				"host":   b.str(false, false, updatable, ""),
+				"path":   b.str(false, false, updatable, ""),
+				"scheme": b.str(false, false, updatable, "HTTP", stringvalidator.OneOf("HTTP", "HTTPS")),
+				"port":   b.str(false, false, updatable, "", podStringRule("port")),
 			},
 			Blocks: map[string]schema.Block{
-				"http_header": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-					"name":  podString(false, false, false, ""),
-					"value": podString(false, false, false, ""),
-				}}, 0, 0, false),
+				"http_header": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+					"name":  b.str(false, false, updatable, ""),
+					"value": b.str(false, false, updatable, ""),
+				}}, 0, 0, updatable),
 			},
-		}, 0, 1, false),
-		"tcp_socket": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-			"port": podString(true, false, false, "", podStringRule("port")),
-		}}, 0, 0, false),
+		}, 0, 1, updatable),
+		"tcp_socket": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+			"port": b.str(true, false, updatable, "", podStringRule("port")),
+		}}, 0, 0, updatable),
 	}}
 }
 
-func podProbeObject() schema.NestedBlockObject {
-	o := podHandlerObject()
+func (b builder) podProbeObject() schema.NestedBlockObject {
+	o := b.podHandlerObject()
 	o.Attributes = map[string]schema.Attribute{
-		"failure_threshold":     podInt(false, false, 3, int64validator.AtLeast(1)),
-		"initial_delay_seconds": podInt(false, false, 0),
-		"period_seconds":        podInt(false, false, 10, int64validator.AtLeast(1)),
-		"success_threshold":     podInt(false, false, 1, int64validator.AtLeast(1)),
-		"timeout_seconds":       podInt(false, false, 1, int64validator.AtLeast(1)),
+		"failure_threshold":     b.integer(false, false, updatable, 3, int64validator.AtLeast(1)),
+		"initial_delay_seconds": b.integer(false, false, updatable, 0),
+		"period_seconds":        b.integer(false, false, updatable, 10, int64validator.AtLeast(1)),
+		"success_threshold":     b.integer(false, false, updatable, 1, int64validator.AtLeast(1)),
+		"timeout_seconds":       b.integer(false, false, updatable, 1, int64validator.AtLeast(1)),
 	}
-	o.Blocks["grpc"] = podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"port":    podInt(true, false, 0, int64validator.Between(1, 65535)),
-		"service": podString(false, false, false, ""),
-	}}, 0, 0, false)
+	o.Blocks["grpc"] = b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+		"port":    b.integer(true, false, updatable, 0, int64validator.Between(1, 65535)),
+		"service": b.str(false, false, updatable, ""),
+	}}, 0, 0, updatable)
 	return o
 }
 
-func podContainerSecurityContextObject() schema.NestedBlockObject {
+func (b builder) podContainerSecurityContextObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"allow_privilege_escalation": podBool(false, true),
-			"privileged":                 podBool(false, false),
-			"read_only_root_filesystem":  podBool(false, false),
-			"run_as_group":               podString(false, false, false, "", podStringRule("nullable-int")),
-			"run_as_user":                podString(false, false, false, "", podStringRule("nullable-int")),
-			"run_as_non_root":            podBool(false, false),
+			"allow_privilege_escalation": b.boolean(false, immutable, true),
+			"privileged":                 b.boolean(false, immutable, false),
+			"read_only_root_filesystem":  b.boolean(false, immutable, false),
+			"run_as_group":               b.str(false, false, immutable, "", podStringRule("nullable-int")),
+			"run_as_user":                b.str(false, false, immutable, "", podStringRule("nullable-int")),
+			"run_as_non_root":            b.boolean(false, immutable, false),
 		},
 		Blocks: map[string]schema.Block{
-			"capabilities": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"add":  podList(false, types.StringType),
-				"drop": podList(false, types.StringType),
-			}}, 0, 1, false),
-			"seccomp_profile":  podBlock(podSeccompObject(), 0, 1, false),
-			"se_linux_options": podBlock(podSELinuxObject(), 0, 1, false),
+			"capabilities": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"add":  b.list(false, immutable, types.StringType),
+				"drop": b.list(false, immutable, types.StringType),
+			}}, 0, 1, updatable),
+			"seccomp_profile":  b.block(b.podSeccompObject(), 0, 1, updatable),
+			"se_linux_options": b.block(b.podSELinuxObject(), 0, 1, updatable),
 		},
 	}
 }
 
-func podSeccompObject() schema.NestedBlockObject {
+func (b builder) podSeccompObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"localhost_profile": podString(false, false, false, ""),
-		"type":              podString(false, false, false, "Unconfined", stringvalidator.OneOf("Localhost", "RuntimeDefault", "Unconfined")),
+		"localhost_profile": b.str(false, false, immutable, ""),
+		"type":              b.str(false, false, immutable, "Unconfined", stringvalidator.OneOf("Localhost", "RuntimeDefault", "Unconfined")),
 	}}
 }
 
-func podSELinuxObject() schema.NestedBlockObject {
+func (b builder) podSELinuxObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-		"level": podString(false, false, false, ""),
-		"role":  podString(false, false, false, ""),
-		"type":  podString(false, false, false, ""),
-		"user":  podString(false, false, false, ""),
+		"level": b.str(false, false, immutable, ""),
+		"role":  b.str(false, false, immutable, ""),
+		"type":  b.str(false, false, immutable, ""),
+		"user":  b.str(false, false, immutable, ""),
 	}}
 }
 
-func podSecurityContextObject() schema.NestedBlockObject {
+func (b builder) podSecurityContextObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"fs_group":               podString(false, false, false, "", podStringRule("nullable-int")),
-			"run_as_group":           podString(false, false, false, "", podStringRule("nullable-int")),
-			"run_as_non_root":        podBool(false, false),
-			"run_as_user":            podString(false, false, false, "", podStringRule("nullable-int")),
-			"fs_group_change_policy": podString(false, false, false, "", stringvalidator.OneOf("Always", "OnRootMismatch")),
-			"supplemental_groups":    podSet(false, types.Int64Type),
+			"fs_group":               b.str(false, false, immutable, "", podStringRule("nullable-int")),
+			"run_as_group":           b.str(false, false, immutable, "", podStringRule("nullable-int")),
+			"run_as_non_root":        b.boolean(false, immutable, false),
+			"run_as_user":            b.str(false, false, immutable, "", podStringRule("nullable-int")),
+			"fs_group_change_policy": b.str(false, false, immutable, "", stringvalidator.OneOf("Always", "OnRootMismatch")),
+			"supplemental_groups":    b.set(immutable, types.Int64Type),
 		},
 		Blocks: map[string]schema.Block{
-			"seccomp_profile":  podBlock(podSeccompObject(), 0, 1, false),
-			"se_linux_options": podBlock(podSELinuxObject(), 0, 1, false),
-			"windows_options": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"gmsa_credential_spec":      podString(false, false, false, ""),
-				"gmsa_credential_spec_name": podString(false, false, false, ""),
-				"host_process":              podBool(false, false),
-				"run_as_username":           podString(false, false, false, ""),
-			}}, 0, 1, false),
-			"sysctl": podBlock(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"name":  podString(true, false, false, ""),
-				"value": podString(true, false, false, ""),
-			}}, 0, 0, false),
+			"seccomp_profile":  b.block(b.podSeccompObject(), 0, 1, updatable),
+			"se_linux_options": b.block(b.podSELinuxObject(), 0, 1, updatable),
+			"windows_options": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"gmsa_credential_spec":      b.str(false, false, updatable, ""),
+				"gmsa_credential_spec_name": b.str(false, false, updatable, ""),
+				"host_process":              b.boolean(false, updatable, false),
+				"run_as_username":           b.str(false, false, updatable, ""),
+			}}, 0, 1, updatable),
+			"sysctl": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+				"name":  b.str(true, false, immutable, ""),
+				"value": b.str(true, false, immutable, ""),
+			}}, 0, 0, updatable),
 		},
 	}
 }

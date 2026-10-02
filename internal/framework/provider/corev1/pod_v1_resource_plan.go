@@ -146,15 +146,6 @@ func (p *PodV1) livePod(ctx context.Context, id string) (*corev1.Pod, bool) {
 // podV1ApplySpecPatch sets the spec fields podV1UpdatePatch can change.
 func podV1ApplySpecPatch(spec, planned *corev1.PodSpec) {
 	spec.ActiveDeadlineSeconds = planned.ActiveDeadlineSeconds
-	images := make(map[string]string, len(planned.Containers))
-	for _, c := range planned.Containers {
-		images[c.Name] = c.Image
-	}
-	for i, c := range spec.Containers {
-		if image, ok := images[c.Name]; ok {
-			spec.Containers[i].Image = image
-		}
-	}
 }
 
 // podV1SpecRequiresReplacement compares two specs as the API sees them.

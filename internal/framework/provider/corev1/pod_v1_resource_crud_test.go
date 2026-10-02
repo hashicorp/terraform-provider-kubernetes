@@ -62,20 +62,6 @@ func TestPodV1UpdatePatch(t *testing.T) {
 			}
 		})
 	}
-	t.Run("image edit targets container name and no metadata", func(t *testing.T) {
-		planned := spec.DeepCopy()
-		planned.Containers[0].Image = "image:2"
-		live := corev1.Pod{Spec: corev1.PodSpec{Containers: []corev1.Container{
-			{Name: "injected", Image: "sidecar:1"}, spec.Containers[0],
-		}}}
-		actual := podV1UpdatePatch(metav1.ObjectMeta{}, metav1.ObjectMeta{}, &spec, planned, &live)
-		expect := map[string]interface{}{"spec": map[string]interface{}{
-			"containers": []map[string]string{{"name": "app", "image": "image:2"}},
-		}}
-		if !reflect.DeepEqual(actual, expect) {
-			t.Fatalf("patch = %#v, want %#v", actual, expect)
-		}
-	})
 	t.Run("active deadline edit", func(t *testing.T) {
 		seconds := int64(120)
 		planned := spec.DeepCopy()

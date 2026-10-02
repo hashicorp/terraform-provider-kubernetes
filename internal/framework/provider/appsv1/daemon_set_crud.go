@@ -23,7 +23,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8Types "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
 )
@@ -608,7 +607,7 @@ func daemonSetStrategicSpecPatch(ctx context.Context, state, plan []DaemonSetV1S
 		diagnostics.AddError("Error encoding planned daemonset spec", err.Error())
 		return nil, diagnostics
 	}
-	patch, err := strategicpatch.CreateTwoWayMergePatch(oldJSON, newJSON, appsv1.DaemonSet{})
+	patch, err := common.TwoWayStrategicMergePatch(oldJSON, newJSON, appsv1.DaemonSet{})
 	if err != nil {
 		diagnostics.AddError("Error creating daemonset spec patch", err.Error())
 		return nil, diagnostics

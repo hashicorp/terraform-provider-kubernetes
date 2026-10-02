@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8types "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/utils/ptr"
 )
 
@@ -765,7 +764,7 @@ func deploymentSpecPatch(original, modified, current appsv1.DeploymentSpec) ([]b
 	if err != nil {
 		return nil, err
 	}
-	return strategicpatch.CreateTwoWayMergePatch(originalJSON, modifiedJSON, appsv1.Deployment{})
+	return common.TwoWayStrategicMergePatch(originalJSON, modifiedJSON, appsv1.Deployment{})
 }
 
 func strconvParseInt32(value string) (int32, error) {

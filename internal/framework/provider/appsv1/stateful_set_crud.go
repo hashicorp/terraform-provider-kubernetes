@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8types "k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/wait"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/polymorphichelpers"
@@ -498,15 +497,7 @@ func mergeStatefulSetPodSpec(previous, planned, live corev1.PodSpec) (corev1.Pod
 	if err != nil {
 		return corev1.PodSpec{}, err
 	}
-	patchMeta, err := strategicpatch.NewPatchMetaFromStruct(corev1.PodSpec{})
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	patchJSON, err := strategicpatch.CreateThreeWayMergePatch(previousJSON, plannedJSON, liveJSON, patchMeta, true)
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	mergedJSON, err := strategicpatch.StrategicMergePatch(liveJSON, patchJSON, corev1.PodSpec{})
+	mergedJSON, err := common.ThreeWayStrategicMerge(previousJSON, plannedJSON, liveJSON, corev1.PodSpec{})
 	if err != nil {
 		return corev1.PodSpec{}, err
 	}

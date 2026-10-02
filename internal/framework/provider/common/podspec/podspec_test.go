@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -17,6 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Each owner forces replacement exactly where its SDKv2 resource declared ForceNew.
@@ -203,6 +207,53 @@ func TestKeepUnsetString(t *testing.T) {
 	} {
 		if got := podKeepUnsetString(tc.baseline, tc.api, tc.refresh); got != tc.keep {
 			t.Errorf("baseline %s, API %q, refresh %t: keep = %t, want %t", tc.baseline, tc.api, tc.refresh, got, tc.keep)
+		}
+	}
+}
+
+// A configured block holding only zero values is kept when Kubernetes returns
+// none: always after a write, and on a read only where Kubernetes cannot hold
+// such a block, so removing one out of band shows as drift.
+func TestZeroValueBlockReadBack(t *testing.T) {
+	ctx := context.Background()
+	b := For(Deployment())
+	at := path.Root("spec")
+	live := corev1.PodSpec{Containers: []corev1.Container{{
+		Name:            "app",
+		Image:           "nginx",
+		SecurityContext: &corev1.SecurityContext{AllowPrivilegeEscalation: ptr.To(false)},
+	}}}
+	baseline, diags := b.FlattenSpec(ctx, live, types.ListNull(b.ObjectType()), at)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	live.Containers[0].SecurityContext = nil
+	for _, tc := range []struct {
+		name    string
+		flatten func(context.Context, corev1.PodSpec, types.List, path.Path) (types.List, diag.Diagnostics)
+		kept    bool
+	}{
+		{"write", b.FlattenSpec, true},
+		{"read", b.RefreshSpec, false},
+	} {
+		got, diags := tc.flatten(ctx, live, baseline, at)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		container := got.Elements()[0].(types.Object).Attributes()["container"].(types.List).Elements()[0]
+		kept := len(container.(types.Object).Attributes()["security_context"].(types.List).Elements()) == 1
+		if kept != tc.kept {
+			t.Errorf("%s: container security_context kept = %t, want %t", tc.name, kept, tc.kept)
+		}
+	}
+	for key, want := range map[string]bool{
+		"spec.security_context":           true,
+		"spec.dns_config":                 true,
+		"spec.container.security_context": false,
+		"spec.container.resources":        false,
+	} {
+		if b.zeroAbsent[key] != want {
+			t.Errorf("%s: zero block equivalent to absent = %t, want %t", key, b.zeroAbsent[key], want)
 		}
 	}
 }

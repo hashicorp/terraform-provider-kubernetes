@@ -5,8 +5,10 @@ package podspec
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -34,6 +36,9 @@ type Built struct {
 	objectType basetypes.ObjectTypable
 	computed   map[string]bool
 	blocks     map[string]bool
+	// zeroAbsent marks blocks that Kubernetes returns as absent when sent with
+	// only zero values, so a read keeps such a configured block.
+	zeroAbsent map[string]bool
 }
 
 var built sync.Map // Options -> *Built
@@ -58,6 +63,7 @@ func build(o Options) *Built {
 	}
 	podSpecComputedPaths(spec.NestedObject.Attributes, spec.NestedObject.Blocks, "spec", b.computed)
 	podSpecBlockPaths(spec.NestedObject, "spec", b.blocks)
+	b.zeroAbsent = podZeroAbsentBlocks(b)
 	return b
 }
 
@@ -299,8 +305,10 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		if count == 0 && !rv.IsValid() && !b.blocks[key] && prior == nil {
 			return types.ListNull(t.ElemType)
 		}
-		// As in SDKv2, a block holding only zero values is the same as no block.
-		if count == 0 && b.blocks[key] && len(previous) == 1 && podZeroValue(previous[0]) {
+		// As in SDKv2, a block holding only zero values is the same as no block
+		// after a write. A read keeps it only if Kubernetes cannot hold it, so
+		// removing a block out of band shows as drift.
+		if count == 0 && b.blocks[key] && len(previous) == 1 && podZeroValue(previous[0]) && (!b.refresh || b.zeroAbsent[key]) {
 			return prior
 		}
 		entries := make([]attr.Value, count)
@@ -410,4 +418,85 @@ func podZeroValue(value attr.Value) bool {
 		return !v.IsUnknown()
 	}
 	return !podNonzeroValue(value)
+}
+
+// podZeroAbsentBlocks sends each block with only zero values through the
+// expander, a JSON round trip and the flattener, and records those that come
+// back absent.
+func podZeroAbsentBlocks(b *Built) map[string]bool {
+	result := map[string]bool{}
+	for key := range b.blocks {
+		raw := []interface{}{podZeroRaw(b.objectType, "spec", key)}
+		spec, err := kubernetes.ExpandPodSpecForFramework(raw)
+		if err != nil {
+			continue
+		}
+		var echo corev1.PodSpec
+		if data, err := json.Marshal(spec); err != nil || json.Unmarshal(data, &echo) != nil {
+			continue
+		}
+		flat, err := kubernetes.FlattenPodSpecForFramework(echo, b.template)
+		if err == nil && podRawAbsent(flat, strings.Split(key, ".")[1:]) {
+			result[key] = true
+		}
+	}
+	return result
+}
+
+// podZeroRaw is the expander input for a spec holding one zero-valued block at
+// target, with one zero-valued element in each enclosing block.
+func podZeroRaw(typ attr.Type, key, target string) interface{} {
+	switch t := typ.(type) {
+	case basetypes.ObjectTypable:
+		object, _ := t.ValueType(context.Background()).(basetypes.ObjectValuable).ToObjectValue(context.Background())
+		result := map[string]interface{}{}
+		for name, child := range object.AttributeTypes(context.Background()) {
+			result[name] = podZeroRaw(child, key+"."+name, target)
+		}
+		return result
+	case types.ListType:
+		if key == target && podZeroBlockUnset[key] {
+			return []interface{}{nil}
+		}
+		if key == target || strings.HasPrefix(target, key+".") {
+			return []interface{}{podZeroRaw(t.ElemType, key, target)}
+		}
+		return []interface{}{}
+	case types.SetType:
+		if t.ElemType.Equal(types.Int64Type) {
+			return sdkschema.NewSet(sdkschema.HashInt, nil)
+		}
+		return sdkschema.NewSet(sdkschema.HashString, nil)
+	case types.MapType:
+		return map[string]interface{}{}
+	}
+	switch {
+	case typ.Equal(types.BoolType):
+		return false
+	case typ.Equal(types.Int64Type):
+		return 0
+	}
+	return ""
+}
+
+// podRawAbsent reports whether the flattened spec has no element at the path
+// of block names, following the first element of each enclosing block.
+func podRawAbsent(raw interface{}, names []string) bool {
+	rv := reflect.ValueOf(raw)
+	for i := 0; ; i++ {
+		for rv.IsValid() && (rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface) {
+			rv = rv.Elem()
+		}
+		if !rv.IsValid() || rv.Kind() != reflect.Slice || rv.Len() == 0 {
+			return true
+		}
+		if i == len(names) {
+			return false
+		}
+		rv = rv.Index(0).Elem()
+		if !rv.IsValid() || rv.Kind() != reflect.Map {
+			return true
+		}
+		rv = rv.MapIndex(reflect.ValueOf(names[i]))
+	}
 }

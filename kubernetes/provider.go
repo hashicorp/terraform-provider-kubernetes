@@ -331,9 +331,8 @@ func Provider() *schema.Provider {
 			"kubernetes_pod_disruption_budget":    resourceKubernetesPodDisruptionBudget(),
 			"kubernetes_pod_disruption_budget_v1": resourceKubernetesPodDisruptionBudgetV1(),
 
-			// scheduling
-			"kubernetes_priority_class":    resourceKubernetesPriorityClassV1("Deprecated; use kubernetes_priority_class_v1."),
-			"kubernetes_priority_class_v1": resourceKubernetesPriorityClassV1(""),
+			// scheduling (priority_class_v1 is now handled by the Plugin Framework resource)
+			"kubernetes_priority_class": resourceKubernetesPriorityClassV1("Deprecated; use kubernetes_priority_class_v1."),
 
 			// admission control
 			"kubernetes_validating_webhook_configuration":    resourceKubernetesValidatingWebhookConfigurationV1Beta1("Deprecated; use kubernetes_validating_webhook_configuration_v1."),

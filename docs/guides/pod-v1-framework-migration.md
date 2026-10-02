@@ -123,10 +123,11 @@ import uses the API's spelling. This can change string outputs, not allocations.
 5. Apply the reviewed plan and run `terraform plan` again to check convergence.
 
 State written by earlier provider versions can contain empty values where the
-Plugin Framework stores `null`, such as an empty `metadata.generate_name`, empty
-metadata maps, container `args`/`command`, or `spec.node_selector`. These can show
-a one-time in-place update that changes only Terraform state, not the Pod; the
-following plan should be empty.
+Plugin Framework stores `null`, such as an empty `metadata.generate_name` or empty
+metadata maps. A `projected` volume that groups several projections in one
+`sources` block, which earlier versions reported as a change on every plan, is
+also brought in line once. These show a one-time in-place update that changes
+only Terraform state, not the Pod; the following plan should be empty.
 
 ## Move from the deprecated resource
 

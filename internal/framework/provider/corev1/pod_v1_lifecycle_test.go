@@ -72,3 +72,68 @@ func testAccKubernetesPodV1ConfigGeneratedName(prefix, imageName, label string) 
 }
 `, prefix, label, imageName)
 }
+
+// One sources block may hold several projections; Kubernetes stores them as
+// separate entries, and the configured grouping is kept in state.
+func TestAccKubernetesPodV1_projectedVolumeGroupedSources(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPodV1PreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigGroupedProjection(name, busyboxImage),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.projected.0.sources.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.projected.0.sources.0.config_map.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.projected.0.sources.0.secret.0.name", name),
+				),
+			},
+		},
+	})
+}
+
+func testAccKubernetesPodV1ConfigGroupedProjection(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+  spec {
+    termination_grace_period_seconds = 1
+    container {
+      image   = %[2]q
+      name    = "containername"
+      command = ["sleep", "3600"]
+      volume_mount {
+        name       = "projected"
+        mount_path = "/projected"
+        read_only  = true
+      }
+    }
+    volume {
+      name = "projected"
+      projected {
+        sources {
+          config_map {
+            name     = %[1]q
+            optional = true
+          }
+          secret {
+            name     = %[1]q
+            optional = true
+          }
+        }
+        sources {
+          service_account_token {
+            path = "token"
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
+}

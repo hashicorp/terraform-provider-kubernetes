@@ -10,8 +10,10 @@
 //
 //   - TestPodTemplateRPCAllocCeilings fails when one of the six resources
 //     serves a schema that is not frozen, or when its no-op plan or read
-//     allocates more than its ceiling. It runs in the "Framework Pod Template
-//     Unit Tests" workflow and in make test.
+//     allocates more than its ceiling. It is part of make test, which runs
+//     ./internal/framework/provider/...; the Unit Tests workflow runs it on
+//     pushes to main and, once its pull_request path filter includes
+//     internal/framework, on pull requests.
 //
 // Tests and benchmarks that start from an existing resource create and refresh
 // it first, and fail unless planning the unchanged configuration then is a

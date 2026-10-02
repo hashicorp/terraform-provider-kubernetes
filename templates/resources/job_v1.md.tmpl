@@ -9,16 +9,9 @@ description: |-
 
 {{ .Description }}
 
-~> The Framework migration changes selected nested blocks to list-of-object attributes. Review the [Job and CronJob migration guide](../guides/batch-v1-framework-migration.md) before upgrading existing configurations.
+~> Some nested blocks use list-of-object assignment syntax since the Plugin Framework migration. Review the [Job and CronJob migration guide](../guides/batch-v1-framework-migration.md) before upgrading existing configurations.
 
-## Indexed Job retry defaults
-
-`spec.backoff_limit_per_index` and `spec.max_failed_indexes` have **provider defaults of `0`**, preserving provider `3.2.1` behavior for Indexed Jobs. These are not Kubernetes API defaults. These two fields are exceptions to the optional-field null normalization described in the migration guide.
-
-Omitting or removing either argument selects `0`; it does not unset the corresponding Indexed Job API field or select unlimited failures. Leaving an implicit `0` omitted, or removing an explicit `0`, does not change these retry settings.
-
-- Changing a nonzero `backoff_limit_per_index` to its default `0`, including by removing the argument, requires replacement of the Job.
-- Changing a nonzero `max_failed_indexes` to its default `0`, including by removing the argument, updates the Job in place.
+~> `spec.backoff_limit_per_index` and `spec.max_failed_indexes` default to `0` when omitted; this is a provider default, not a Kubernetes one. Changing `backoff_limit_per_index` requires replacement of the Job.
 
 {{ .SchemaMarkdown }}
 
@@ -44,6 +37,6 @@ Jobs can be imported using the namespace and name, separated by `/`:
 terraform import kubernetes_job_v1.demo default/demo
 ```
 
-`wait_for_completion` defaults to `true` on import, including identity-based imports, because Kubernetes does not store this provider-only setting. If the configuration sets it to `false`, the next plan can show an in-place state-only update to reconcile that setting. Changing only this setting does not change the Job's API specification or require replacement.
+`wait_for_completion` is not stored in Kubernetes and is set to `true` on import. If the configuration sets it to `false`, the next plan shows an in-place update that changes only state.
 
-For an existing `kubernetes_job_v1` state entry, a provider upgrade does not require import or a `moved` block. To change from the deprecated `kubernetes_job` resource type, follow the [migration guide](../guides/batch-v1-framework-migration.md#moving-from-deprecated-resource-types).
+To move from the deprecated `kubernetes_job` resource type, see the [migration guide](../guides/batch-v1-framework-migration.md#move-from-a-deprecated-resource-type).

@@ -1,0 +1,35 @@
+```release-note:breaking-change
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, pod template `image_pull_secrets` and `readiness_gate`, Deployment and DaemonSet `strategy` (including `rolling_update`), and StatefulSet `persistent_volume_claim_retention_policy` now use list-of-object assignment syntax, for example `resources = [{ ... }]`. See the apps/v1 Plugin Framework migration guide.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_pod_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, `image_pull_secrets` and `readiness_gate` now use list-of-object assignment syntax, for example `resources = [{ ... }]`. See the Pod Plugin Framework migration guide.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. The Job `selector` (including `match_expressions`), pod template `image_pull_secrets` and `readiness_gate`, and container and init container `resources` now use list-of-object assignment syntax, for example `selector = [{ ... }]`. See the Job and CronJob Plugin Framework migration guide.
+```
+
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Resource type names, `namespace/name` import IDs and existing state are kept, so no re-import or `moved` block is needed. With Terraform 1.8 or later, `moved` blocks can move resources from the deprecated `kubernetes_deployment`, `kubernetes_daemonset`, `kubernetes_stateful_set`, `kubernetes_pod`, `kubernetes_job` and `kubernetes_cron_job` types.
+```
+
+```release-note:note
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: The first plan after upgrading can show a one-time in-place update that sets omitted optional values to `null` in state; it does not change the Kubernetes object.
+```
+
+```release-note:note
+`resource/kubernetes_pod_v1`: New Pods keep resource quantities as configured in state (for example `0.5` rather than `500m`), which can change outputs but not allocations.
+```
+
+```release-note:bug
+`resource/kubernetes_job_v1`: Apply changes to `ttl_seconds_after_finished` and `max_failed_indexes` to the Job.
+```
+
+```release-note:bug
+`resource/kubernetes_job_v1`: Replace the Job when `pod_failure_policy` rules change, since Kubernetes does not allow updating them.
+```
+
+```release-note:bug
+`resource/kubernetes_cron_job_v1`: Keep labels and annotations that are not recorded in state, such as internal `kubernetes.io/` keys and keys matched by the provider `ignore_labels` and `ignore_annotations` settings, when updating a CronJob.
+```

@@ -86,15 +86,7 @@ For an empty collection, omit this optional argument or use `null`.
 3. Run `terraform plan`. Keeping the same resource address requires no `moved` block.
 4. Investigate any replacement or workload-spec change before applying. Apply the reviewed plan, then confirm that another plan is empty.
 
-Computed metadata such as `resource_version` and `generation` can become `(known after apply)` when updating a workload. This alone does not mean replacement.
-
-Previously stored empty metadata maps, container arguments or commands, and node selectors may remain empty rather than null when their arguments are omitted. This preserves compatibility with SDKv2 state after refresh without scheduling a workload update. Removing previously configured non-empty values still removes those managed values; this compatibility behavior does not suppress actual drift.
-
-Refresh can normalize unconfigured metadata `generate_name` values from empty strings to null. Previously stored empty pod-template namespaces remain empty, so an explicit `namespace = ""` does not force replacement. An unused `rolling_update` value for Deployment `Recreate` or DaemonSet `OnDelete` can normalize from an empty list to null. These state-only differences do not change the Kubernetes workload.
-
-With `terraform plan -refresh=false`, SDKv2-written empty `generate_name` values and omitted PVC resource `limits` stored as empty maps can instead appear as in-place state normalizations. These differences alone do not replace the StatefulSet or send a Kubernetes update. Changes to a non-empty `generate_name` or non-empty PVC limits still require replacement.
-
-For all three workloads, empty and null selector `match_labels`, `match_expressions`, and expression `values` are equivalent for replacement checks. This also applies to StatefulSet claim-template selectors. Read preserves explicitly configured empty collections. Legacy empty collections can produce a one-time in-place state normalization, with or without refresh, but do not replace or update the Kubernetes workload. Actual selector changes still require replacement; this exception does not equate an absent selector with a present selector or discard non-empty entries.
+The first plan is normally empty. State written by earlier provider versions can contain empty values where the Plugin Framework stores `null`, such as empty metadata maps, empty selector collections, an empty `generate_name`, or an unused `rolling_update`. These can show a one-time in-place update that changes only Terraform state; it does not update or replace the workload. Computed metadata such as `resource_version` and `generation` can show as `(known after apply)` in an update plan.
 
 ## Move from a deprecated resource type
 
@@ -129,4 +121,4 @@ terraform import kubernetes_daemon_set_v1.example default/example
 terraform import kubernetes_stateful_set_v1.example default/example
 ```
 
-Identity-based import requires Terraform 1.12 or later and uses `namespace` and `name`. Framework migration itself does not require upgrading Terraform to use ordinary managed resources or string-ID imports.
+Identity-based import requires Terraform 1.12 or later and uses `namespace` and `name`.

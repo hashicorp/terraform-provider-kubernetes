@@ -7,16 +7,16 @@ description: |-
 
 # Migrating kubernetes_pod_v1 to Plugin Framework
 
-The managed `kubernetes_pod_v1` resource retains its name, schema version, identity
-version, and `namespace/name` import ID. An existing `kubernetes_pod_v1` does not
-need a resource rename, `moved` block, or re-import. Pod data sources and the
-deprecated managed `kubernetes_pod` resource remain on SDKv2.
+`kubernetes_pod_v1` uses Terraform Plugin Framework. The resource keeps its name,
+existing state, and `namespace/name` import ID, so an existing `kubernetes_pod_v1`
+does not need a rename, `moved` block, or re-import. Only the configuration syntax
+of a few nested arguments changes.
 
 ## Change container resources from blocks to list assignments
 
-The `resources` argument in both regular and init containers now uses a list of
-objects. This lets Kubernetes populate resource defaults when the whole argument
-or either of its `limits` and `requests` maps is omitted.
+The `resources` argument in both regular and init containers uses a list of
+objects, so Kubernetes can populate resource defaults when the argument or either
+of its `limits` and `requests` maps is omitted.
 
 Before:
 
@@ -88,12 +88,12 @@ indexing.
 
 ## Change image-pull secret and readiness-gate references
 
-Two other Optional+Computed Pod fields use list assignment:
+`spec.image_pull_secrets` and `spec.readiness_gate` also use list assignment:
 
 ```hcl
 spec {
   image_pull_secrets = [{ name = "registry-credentials" }]
-  readiness_gate    = [{ condition_type = "example.com/ready" }]
+  readiness_gate     = [{ condition_type = "example.com/ready" }]
 }
 ```
 
@@ -104,23 +104,12 @@ convert a conditional dynamic block to `null` when no references are configured.
 An explicitly configured empty list is rejected; use omission or `null` instead.
 The stored collection types and existing indexed expressions are unchanged.
 
-Terraform's legacy block-to-attribute decoding does not apply when the surrounding
-schema contains nested attributes. Consequently, retaining plain object-list
-attributes for these two fields does not retain their former block syntax in the
-complete Pod schema.
-
 ## Resource quantity representation
 
-Newly created Pods retain configured quantity strings. For example, a configured
-CPU limit of `"0.5"` remains `"0.5"` in Terraform state even though Kubernetes
-returns the equivalent `"500m"`. SDKv2 could normalize the configured spelling to
-the API's spelling. This changes string-valued outputs, not the CPU allocation.
-
-Existing SDKv2-written quantity strings are retained when they are equivalent to
-the API value. Equivalent quantity edits do not require replacement. An import
-has no prior configured representation and uses the API's spelling instead;
-outputs can therefore change from `"0.5"` to `"500m"` after an import. Neither
-representation is a reason to delete or recreate a Pod.
+Newly created Pods keep configured quantity strings in state. For example, a CPU
+limit configured as `"0.5"` stays `"0.5"` even though Kubernetes returns `"500m"`.
+Existing state values and equivalent quantity edits do not cause a diff, and an
+import uses the API's spelling. This can change string outputs, not allocations.
 
 ## Review the upgrade
 
@@ -133,21 +122,11 @@ representation is a reason to delete or recreate a Pod.
    investigate any unexpected operation before applying.
 5. Apply the reviewed plan and run `terraform plan` again to check convergence.
 
-An unset `metadata.generate_name` can normalize from the SDKv2 empty string to
-`null` during refresh. Explicit empty metadata maps can need a one-time state
-normalization from legacy `null` to the configured empty map. Outputs exposing
-these values can reflect that distinction; do not use an output change as a
-reason to recreate the Pod.
-
-Older state, including state moved from `kubernetes_pod`, can instead contain
-empty collections for omitted `metadata.annotations`, container `args`/`command`,
-or `spec.node_selector`. These can normalize to `null` in a one-time in-place
-plan. This is a state representation change, not a request to change the Pod's
-settings; the following plan should be empty.
-
-Do not remove the Pod from state or delete it to resolve a configuration error.
-Updating HCL syntax is separate from upgrading stored state; the provider retains
-the historical version-0 container resource-map conversion.
+State written by earlier provider versions can contain empty values where the
+Plugin Framework stores `null`, such as an empty `metadata.generate_name`, empty
+metadata maps, container `args`/`command`, or `spec.node_selector`. These can show
+a one-time in-place update that changes only Terraform state, not the Pod; the
+following plan should be empty.
 
 ## Move from the deprecated resource
 

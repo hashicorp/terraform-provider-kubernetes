@@ -117,7 +117,7 @@ func TestAPIDefaultedStrings(t *testing.T) {
 	}
 }
 
-func TestPodSpecsEqual(t *testing.T) {
+func TestPodTemplatesEqual(t *testing.T) {
 	container := func(sc *corev1.SecurityContext) corev1.PodSpec {
 		return corev1.PodSpec{Containers: []corev1.Container{{Name: "c", SecurityContext: sc}}}
 	}
@@ -136,6 +136,9 @@ func TestPodSpecsEqual(t *testing.T) {
 			corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{RunAsNonRoot: ptr.To(false), SupplementalGroups: []int64{}}},
 			corev1.PodSpec{}, false,
 		},
+		"job controller label": {
+			corev1.PodSpec{}, corev1.PodSpec{}, true,
+		},
 		"automount_service_account_token false": {corev1.PodSpec{AutomountServiceAccountToken: ptr.To(false)}, corev1.PodSpec{}, false},
 		"enable_service_links false":            {corev1.PodSpec{EnableServiceLinks: ptr.To(false)}, corev1.PodSpec{}, false},
 		"share_process_namespace false":         {corev1.PodSpec{ShareProcessNamespace: ptr.To(false)}, corev1.PodSpec{}, true},
@@ -151,8 +154,10 @@ func TestPodSpecsEqual(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if got := podSpecsEqual(tc.have, tc.want); got != tc.equal {
-				t.Errorf("podSpecsEqual = %t, want %t", got, tc.equal)
+			have := corev1.PodTemplateSpec{Spec: tc.have}
+			have.Labels = map[string]string{"job-name": "j"}
+			if got := podTemplatesEqual(have, corev1.PodTemplateSpec{Spec: tc.want}); got != tc.equal {
+				t.Errorf("podTemplatesEqual = %t, want %t", got, tc.equal)
 			}
 		})
 	}

@@ -69,7 +69,7 @@ func (r *JobV1) liveState(ctx context.Context, state tfsdk.State) (tftypes.Value
 		return tftypes.Value{}, false
 	}
 	job, err := conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil || flattenJob(ctx, job, &model, filters).HasError() {
+	if err != nil || flattenJob(ctx, job, &model, filters, true).HasError() {
 		return tftypes.Value{}, false
 	}
 	live := tfsdk.State{Schema: state.Schema}
@@ -147,14 +147,6 @@ func podTemplatesEqual(have, want corev1.PodTemplateSpec) bool {
 		}
 		clearUnsetFalse(&template.Spec)
 	}
-	return payloadsEqual(have, want)
-}
-
-// podSpecsEqual reports whether Kubernetes holding have already gives want.
-func podSpecsEqual(have, want corev1.PodSpec) bool {
-	have, want = *have.DeepCopy(), *want.DeepCopy()
-	clearUnsetFalse(&have)
-	clearUnsetFalse(&want)
 	return payloadsEqual(have, want)
 }
 

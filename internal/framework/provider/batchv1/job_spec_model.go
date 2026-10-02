@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	batchapi "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -177,8 +176,8 @@ func expandPodFailurePolicy(value attr.Value) *batchapi.PodFailurePolicy {
 }
 
 // flattenJobSpec converts a JobSpec into the "spec" list. The prior value, the
-// plan on writes and the state on reads, decides null versus empty values.
-func flattenJobSpec(ctx context.Context, in batchapi.JobSpec, prior types.List, job bool, at path.Path) (types.List, diag.Diagnostics) {
+// plan on writes and the state on reads (refresh), decides null versus empty values.
+func flattenJobSpec(ctx context.Context, in batchapi.JobSpec, prior types.List, job, refresh bool, at path.Path) (types.List, diag.Diagnostics) {
 	typ := jobSpecTypeFor(job)
 	previous := priorAttributes(prior)
 	selectorLabels := jobGeneratedLabels
@@ -197,7 +196,7 @@ func flattenJobSpec(ctx context.Context, in batchapi.JobSpec, prior types.List, 
 	if job {
 		templateLabels = jobGeneratedLabels
 	}
-	template, diags := flattenPodTemplate(ctx, in.Template, previous["template"], typ.AttrTypes["template"].(types.ListType), job, templateLabels, at.AtListIndex(0).AtName("template"))
+	template, diags := flattenPodTemplate(ctx, in.Template, previous["template"], typ.AttrTypes["template"].(types.ListType), job, refresh, templateLabels, at.AtListIndex(0).AtName("template"))
 	attributes := map[string]attr.Value{
 		"active_deadline_seconds":    types.Int64Value(ptr.Deref(in.ActiveDeadlineSeconds, 0)),
 		"backoff_limit":              types.Int64Value(int64(ptr.Deref(in.BackoffLimit, 0))),
@@ -218,14 +217,14 @@ func flattenJobSpec(ctx context.Context, in batchapi.JobSpec, prior types.List, 
 	return singletonList(typ, attributes, &diags), diags
 }
 
-func flattenPodTemplate(ctx context.Context, in corev1.PodTemplateSpec, prior attr.Value, typ types.ListType, job bool, generatedLabels []string, at path.Path) (types.List, diag.Diagnostics) {
+func flattenPodTemplate(ctx context.Context, in corev1.PodTemplateSpec, prior attr.Value, typ types.ListType, job, refresh bool, generatedLabels []string, at path.Path) (types.List, diag.Diagnostics) {
 	objectType := typ.ElemType.(types.ObjectType)
 	previous := priorAttributes(prior)
 	priorSpec, ok := previous["spec"].(types.List)
 	if !ok {
 		priorSpec = types.ListNull(jobPodSpec(job).ObjectType())
 	}
-	spec, diags := flattenPodSpec(ctx, in.Spec, priorSpec, job, at.AtListIndex(0).AtName("spec"))
+	spec, diags := flattenPodSpec(ctx, in.Spec, priorSpec, job, refresh, at.AtListIndex(0).AtName("spec"))
 	metadata := flattenTemplateMetadata(in.ObjectMeta, previous["metadata"], objectType.AttrTypes["metadata"].(types.ListType), generatedLabels, &diags)
 	if diags.HasError() {
 		return types.ListNull(objectType), diags
@@ -233,50 +232,13 @@ func flattenPodTemplate(ctx context.Context, in corev1.PodTemplateSpec, prior at
 	return singletonList(objectType, map[string]attr.Value{"metadata": metadata, "spec": spec}, &diags), diags
 }
 
-// Reading keeps the prior pod spec when Kubernetes holds what it describes, so
-// equivalent spellings never show as drift. Its empty strings stand for the
-// values the API defaulted: those reading keeps empty and, as a Job's template
-// cannot change after creation, all of a Job's.
-func flattenPodSpec(ctx context.Context, in corev1.PodSpec, prior types.List, job bool, at path.Path) (types.List, diag.Diagnostics) {
-	pod := jobPodSpec(job)
-	actual, diags := pod.FlattenSpec(ctx, in, prior, at)
-	if diags.HasError() || !fullyKnown(ctx, prior) {
-		return actual, diags
+// flattenPodSpec records the pod spec a write returned against the plan, or
+// on a read the live values against the prior state.
+func flattenPodSpec(ctx context.Context, in corev1.PodSpec, prior types.List, job, refresh bool, at path.Path) (types.List, diag.Diagnostics) {
+	if refresh {
+		return jobPodSpec(job).RefreshSpec(ctx, in, prior, at)
 	}
-	if _, ok := singleObject(prior); !ok {
-		return actual, diags
-	}
-	api, d := pod.FlattenSpec(ctx, in, types.ListNull(pod.ObjectType()), at)
-	priorRaw, errPrior := prior.ToTerraformValue(ctx)
-	actualRaw, errActual := actual.ToTerraformValue(ctx)
-	apiRaw, errAPI := api.ToTerraformValue(ctx)
-	if d.HasError() || errPrior != nil || errActual != nil || errAPI != nil {
-		return actual, diags
-	}
-	empty := tftypes.NewValue(tftypes.String, "")
-	filled, err := tftypes.Transform(priorRaw, func(p *tftypes.AttributePath, value tftypes.Value) (tftypes.Value, error) {
-		if !value.Equal(empty) {
-			return value, nil
-		}
-		if kept, ok := valueAt(actualRaw, p); !job && (!ok || !kept.Equal(empty)) {
-			return value, nil
-		}
-		if chosen, ok := valueAt(apiRaw, p); ok && chosen.IsKnown() && !chosen.IsNull() {
-			return chosen, nil
-		}
-		return value, nil
-	})
-	if err != nil {
-		return actual, diags
-	}
-	described, err := prior.Type(ctx).ValueFromTerraform(ctx, filled)
-	if err != nil {
-		return actual, diags
-	}
-	if expanded, d := pod.ExpandSpec(ctx, described.(types.List), at); !d.HasError() && podSpecsEqual(in, expanded) {
-		return prior, diags
-	}
-	return actual, diags
+	return jobPodSpec(job).FlattenSpec(ctx, in, prior, at)
 }
 
 // Template metadata keeps the keys configuration manages once it holds any,

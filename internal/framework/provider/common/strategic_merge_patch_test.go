@@ -132,18 +132,31 @@ func podSpecWithPorts(ports ...corev1.ContainerPort) corev1.PodSpec {
 func TestTwoWayStrategicMergePatchReplacesAmbiguousLists(t *testing.T) {
 	tcp := corev1.ContainerPort{ContainerPort: 53, Protocol: corev1.ProtocolTCP, Name: "dns-tcp"}
 	udp := corev1.ContainerPort{ContainerPort: 53, Protocol: corev1.ProtocolUDP, Name: "dns-udp"}
+	withConstraints := func(s corev1.PodSpec, constraints ...corev1.TopologySpreadConstraint) corev1.PodSpec {
+		s.TopologySpreadConstraints = constraints
+		return s
+	}
+	zone := func(when corev1.UnsatisfiableConstraintAction, skew int32) corev1.TopologySpreadConstraint {
+		return corev1.TopologySpreadConstraint{TopologyKey: "zone", WhenUnsatisfiable: when, MaxSkew: skew}
+	}
 	for name, tc := range map[string]struct{ before, after corev1.PodSpec }{
-		"add":    {podSpecWithPorts(tcp), podSpecWithPorts(tcp, udp)},
-		"remove": {podSpecWithPorts(tcp, udp), podSpecWithPorts(udp)},
-		"clear":  {podSpecWithPorts(tcp, udp), podSpecWithPorts()},
+		"add":           {podSpecWithPorts(tcp), podSpecWithPorts(tcp, udp)},
+		"add from none": {podSpecWithPorts(), podSpecWithPorts(tcp, udp)},
+		"remove":        {podSpecWithPorts(tcp, udp), podSpecWithPorts(udp)},
+		"clear":         {podSpecWithPorts(tcp, udp), podSpecWithPorts()},
+		"constraints from none": {
+			podSpecWithPorts(),
+			withConstraints(podSpecWithPorts(), zone(corev1.DoNotSchedule, 1), zone(corev1.ScheduleAnyway, 2)),
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			patch, err := TwoWayStrategicMergePatch(mustJSON(t, tc.before), mustJSON(t, tc.after), nil, corev1.PodSpec{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if strings.Contains(string(patch), "$setElementOrder/ports") {
-				t.Errorf("patch orders ports by the ambiguous merge key: %s", patch)
+			if strings.Contains(string(patch), "$setElementOrder/ports") ||
+				strings.Contains(string(patch), "$setElementOrder/topologySpreadConstraints") {
+				t.Errorf("patch orders a list by its ambiguous merge key: %s", patch)
 			}
 			// The server merges into its own copy, which may hold fields the
 			// provider does not manage.
@@ -152,6 +165,9 @@ func TestTwoWayStrategicMergePatchReplacesAmbiguousLists(t *testing.T) {
 			got := applyStrategicPatch(t, live, patch)
 			if !reflect.DeepEqual(got.Containers[0].Ports, tc.after.Containers[0].Ports) {
 				t.Errorf("ports = %#v, want %#v (patch %s)", got.Containers[0].Ports, tc.after.Containers[0].Ports, patch)
+			}
+			if !reflect.DeepEqual(got.TopologySpreadConstraints, tc.after.TopologySpreadConstraints) {
+				t.Errorf("topology spread constraints = %#v, want %#v (patch %s)", got.TopologySpreadConstraints, tc.after.TopologySpreadConstraints, patch)
 			}
 			if got.HostUsers == nil {
 				t.Errorf("unmanaged hostUsers was dropped by patch %s", patch)
@@ -310,6 +326,11 @@ func TestThreeWayStrategicMergeFollowsLiveDrift(t *testing.T) {
 		"live lost a planned port": {
 			previous: spec(container("main", "busybox", tcp, udp)),
 			planned:  spec(container("main", "busybox:new", tcp, udp)),
+			live:     spec(container("main", "busybox", tcp)),
+		},
+		"removal already applied out of band": {
+			previous: spec(container("main", "busybox", tcp, udp)),
+			planned:  spec(container("main", "busybox", tcp)),
 			live:     spec(container("main", "busybox", tcp)),
 		},
 		"live gained a port, image changes": {

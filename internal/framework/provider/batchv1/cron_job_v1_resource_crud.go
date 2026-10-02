@@ -21,6 +21,9 @@ import (
 	batch "k8s.io/api/batch/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 )
 
@@ -126,10 +129,10 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
 		return
 	}
-	plannedMeta, diagnostics := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
-	resp.Diagnostics.Append(diagnostics...)
-	previousMeta, diagnostics := common.ExpandNamespacedMetadata(ctx, state.Metadata)
-	resp.Diagnostics.Append(diagnostics...)
+	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
+		resp.Diagnostics.AddError("Invalid CronJob metadata", "Expected exactly one metadata block in the state and plan.")
+		return
+	}
 	plannedSpec, diagnostics := expandCronJobSpec(ctx, plan.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diagnostics...)
 	previousSpec, diagnostics := expandCronJobSpec(ctx, state.Spec, path.Root("spec"))
@@ -139,34 +142,47 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
-	defer cancel()
-	current, err := conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
+	dynamicClient, err := clients.DynamicClient()
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading CronJob before update", err.Error())
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
 		return
 	}
-	out := current
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
+	defer cancel()
+	var out *batch.CronJob
 	// State-only changes, such as timeouts or SDKv2's stored empty values, are
-	// never written.
-	metadataChanged := !payloadsEqual(previousMeta.Labels, plannedMeta.Labels) ||
-		!payloadsEqual(previousMeta.Annotations, plannedMeta.Annotations)
-	if specChanged || metadataChanged {
-		// The live object keeps its resourceVersion, generated name, owners and
-		// unmanaged keys; only previously managed keys may be removed.
-		cronJobMergeMetadata(&current.ObjectMeta, previousMeta, plannedMeta)
-		jobMetadata := current.Spec.JobTemplate.ObjectMeta
-		cronJobMergeMetadata(&jobMetadata, previousSpec.JobTemplate.ObjectMeta, plannedSpec.JobTemplate.ObjectMeta)
-		podMetadata := current.Spec.JobTemplate.Spec.Template.ObjectMeta
-		cronJobMergeMetadata(&podMetadata, previousSpec.JobTemplate.Spec.Template.ObjectMeta, plannedSpec.JobTemplate.Spec.Template.ObjectMeta)
-		plannedSpec.JobTemplate.ObjectMeta = jobMetadata
-		plannedSpec.JobTemplate.Spec.Template.ObjectMeta = podMetadata
-		current.Spec = plannedSpec
-		out, err = conn.BatchV1().CronJobs(namespace).Update(ctx, current, metav1.UpdateOptions{})
+	// never written. Fields the provider does not manage keep their live values.
+	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
+		raw, err := dynamicClient.Resource(batch.SchemeGroupVersion.WithResource("cronjobs")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			resp.Diagnostics.AddError("Error updating CronJob", err.Error())
-			return
+			return err
 		}
+		out = &batch.CronJob{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, out); err != nil {
+			return err
+		}
+		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, out.ObjectMeta)
+		if specChanged {
+			specOps, err := common.StrategicMergeSpecOps(raw, previousSpec, plannedSpec, batch.CronJob{})
+			if err != nil {
+				return err
+			}
+			ops = append(ops, specOps...)
+		}
+		if len(ops) == 0 {
+			return nil
+		}
+		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(raw.GetResourceVersion())}, ops...)
+		data, err := ops.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		out, err = conn.BatchV1().CronJobs(namespace).Patch(ctx, name, k8stypes.JSONPatchType, data, metav1.PatchOptions{})
+		return err
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating CronJob", err.Error())
+		return
 	}
 	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, plan, out, filters)...)
 	if resp.Identity != nil {
@@ -363,25 +379,4 @@ func cronJobSpecChanged(ctx context.Context, req resource.UpdateRequest, previou
 		return true, diags
 	}
 	return !payloadsEqual(previous, desired), diags
-}
-
-func cronJobMergeMetadata(current *metav1.ObjectMeta, previous, planned metav1.ObjectMeta) {
-	current.Annotations = cronJobMergeMap(current.Annotations, previous.Annotations, planned.Annotations)
-	current.Labels = cronJobMergeMap(current.Labels, previous.Labels, planned.Labels)
-}
-
-func cronJobMergeMap(current, previous, planned map[string]string) map[string]string {
-	merged := make(map[string]string, len(current)+len(planned))
-	for key, value := range current {
-		merged[key] = value
-	}
-	for key := range previous {
-		if _, managed := planned[key]; !managed {
-			delete(merged, key)
-		}
-	}
-	for key, value := range planned {
-		merged[key] = value
-	}
-	return merged
 }

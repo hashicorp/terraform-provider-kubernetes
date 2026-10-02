@@ -6,6 +6,7 @@ package batchv1
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -149,6 +150,49 @@ func TestBatchValueRejectsInvalidAPIShape(t *testing.T) {
 		_, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{raw}, types.ListNull(block.NestedObject.Type()))
 		if !diagnostics.HasError() {
 			t.Fatalf("invalid API shape accepted: %#v", raw)
+		}
+	}
+}
+
+// A number the API returns for an Int64 field passes the JSON shape checks and
+// is rejected only by the schema type. The diagnostic must still say which
+// field it was.
+func TestBatchValueReportsPathOfInvalidScalar(t *testing.T) {
+	ctx := context.Background()
+	block := schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{
+		Attributes: map[string]schema.Attribute{
+			"count":  schema.Int64Attribute{Optional: true},
+			"groups": schema.SetAttribute{Optional: true, ElementType: types.Int64Type},
+		},
+		Blocks: map[string]schema.Block{
+			"port": schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{
+				Attributes: map[string]schema.Attribute{"number": schema.Int64Attribute{Optional: true}},
+			}},
+		},
+	}}
+	for _, tc := range []struct {
+		raw    map[string]interface{}
+		path   string
+		reason string
+	}{
+		{map[string]interface{}{"count": 1.5}, "[0]: count: ", "is not an integer"},
+		{map[string]interface{}{"count": 1e30}, "[0]: count: ", "cannot be represented as a 64-bit integer"},
+		{map[string]interface{}{"groups": []interface{}{1000, 2.5}}, "[0]: groups: [1]: ", "is not an integer"},
+		{map[string]interface{}{"port": []interface{}{
+			map[string]interface{}{"number": 80},
+			map[string]interface{}{"number": 8080.5},
+		}}, "[0]: port: [1]: number: ", "is not an integer"},
+	} {
+		_, diagnostics := valueFromAPIField(ctx, blockValueField(block), []interface{}{tc.raw}, types.ListNull(block.NestedObject.Type()))
+		if diagnostics.ErrorsCount() != 1 {
+			t.Fatalf("%#v: want one error, got %v", tc.raw, diagnostics)
+		}
+		got := diagnostics.Errors()[0]
+		if got.Summary() != "Unable to read batch workload" {
+			t.Errorf("%#v: unexpected summary %q", tc.raw, got.Summary())
+		}
+		if !strings.HasPrefix(got.Detail(), tc.path) || !strings.Contains(got.Detail(), tc.reason) {
+			t.Errorf("%#v: detail %q does not start with path %q and mention %q", tc.raw, got.Detail(), tc.path, tc.reason)
 		}
 	}
 }

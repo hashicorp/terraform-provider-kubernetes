@@ -275,7 +275,8 @@ func apiValue(ctx context.Context, field valueField, raw any, prior attr.Value) 
 // every subtree to and from attr.Value at each nesting level, which is
 // quadratic in the depth of the pod spec. The values are identical: for the
 // types used here ValueFromTerraform followed by ToTerraformValue is the
-// identity.
+// identity. Scalar leaves are still checked with ValueFromTerraform as they
+// are built, so a value its schema type rejects is reported with its path.
 func apiTerraformValue(ctx context.Context, field valueField, raw any, prior attr.Value) (tftypes.Value, error) {
 	typ := field.typ.TerraformType(ctx)
 	null := tftypes.NewValue(typ, nil)
@@ -426,7 +427,15 @@ func apiTerraformValue(ctx context.Context, field valueField, raw any, prior att
 		if !field.computed && isZeroScalar(value) && (prior == nil || prior.IsNull()) {
 			return null, nil
 		}
-		return tftypes.NewValue(typ, value), nil
+		result := tftypes.NewValue(typ, value)
+		// Validate the leaf against its schema type (for example 1.5 for an
+		// Int64) here, where the callers still prefix the error with the
+		// attribute path. The conversion at the root in apiValue would
+		// reject it too, but without saying which field was wrong.
+		if _, err := field.typ.ValueFromTerraform(ctx, result); err != nil {
+			return tftypes.Value{}, err
+		}
+		return result, nil
 	}
 }
 

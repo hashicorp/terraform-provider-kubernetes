@@ -118,7 +118,7 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 
-	state, ident, d := r.readStateFromAPI(ctx, conn, filters, plan, true)
+	state, ident, d := r.readStateFromAPI(ctx, conn, filters, plan)
 	resp.Diagnostics.Append(d...)
 	if !resp.Diagnostics.HasError() {
 		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -258,7 +258,7 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 	}
 
-	stateOut, identOut, d := r.readStateFromAPI(ctx, conn, filters, plan, true)
+	stateOut, identOut, d := r.readStateFromAPI(ctx, conn, filters, plan)
 	resp.Diagnostics.Append(d...)
 	if !resp.Diagnostics.HasError() {
 		resp.Diagnostics.Append(resp.State.Set(ctx, &stateOut)...)
@@ -319,7 +319,7 @@ func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 }
 
-func (r *StatefulSetV1) readStateFromAPI(ctx context.Context, conn *k8sclient.Clientset, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model, preservePlannedEmptyReplicas bool) (StatefulSetV1Model, statefulSetIdentityModel, diag.Diagnostics) {
+func (r *StatefulSetV1) readStateFromAPI(ctx context.Context, conn *k8sclient.Clientset, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model) (StatefulSetV1Model, statefulSetIdentityModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	namespace, name, err := kubernetes.IdParts(baseline.ID.ValueString())
 	if err != nil {
@@ -331,11 +331,11 @@ func (r *StatefulSetV1) readStateFromAPI(ctx context.Context, conn *k8sclient.Cl
 		diags.AddError("Error reading StatefulSet", err.Error())
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
 	}
-	return r.flattenStateFromObject(ctx, filters, baseline, obj, preservePlannedEmptyReplicas)
+	return r.flattenStateFromObject(ctx, filters, baseline, obj, false)
 }
 
 func (r *StatefulSetV1) refreshStateFromObject(ctx context.Context, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model, obj *appsv1.StatefulSet, resp *resource.ReadResponse) {
-	state, ident, diags := r.flattenStateFromObject(ctx, filters, baseline, obj, false)
+	state, ident, diags := r.flattenStateFromObject(ctx, filters, baseline, obj, true)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -344,7 +344,7 @@ func (r *StatefulSetV1) refreshStateFromObject(ctx context.Context, filters kube
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, ident)...)
 }
 
-func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model, obj *appsv1.StatefulSet, preservePlannedEmptyReplicas bool) (StatefulSetV1Model, statefulSetIdentityModel, diag.Diagnostics) {
+func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model, obj *appsv1.StatefulSet, refresh bool) (StatefulSetV1Model, statefulSetIdentityModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	metadata, d := common.FlattenNamespacedMetadata(ctx, obj.ObjectMeta, baseline.Metadata, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
 	diags.Append(d...)
@@ -355,12 +355,12 @@ func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kube
 	if len(baseline.Spec) > 0 {
 		baselineSpec = &baseline.Spec[0]
 	}
-	spec, d := flattenStatefulSetSpec(ctx, obj.Spec, baselineSpec, filters)
+	spec, d := flattenStatefulSetSpec(ctx, obj.Spec, baselineSpec, filters, refresh)
 	diags.Append(d...)
 	if diags.HasError() {
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
 	}
-	if preservePlannedEmptyReplicas && baselineSpec != nil &&
+	if !refresh && baselineSpec != nil &&
 		!baselineSpec.Replicas.IsNull() && !baselineSpec.Replicas.IsUnknown() &&
 		baselineSpec.Replicas.ValueString() == "" {
 		spec.Replicas = baselineSpec.Replicas

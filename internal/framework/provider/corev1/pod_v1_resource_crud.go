@@ -153,7 +153,7 @@ func (p *PodV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 	state.Metadata, diags = common.FlattenNamespacedMetadata(ctx, pod.ObjectMeta, state.Metadata,
 		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
 	resp.Diagnostics.Append(diags...)
-	state.Spec, diags = podV1Spec().FlattenSpec(ctx, pod.Spec, state.Spec, path.Root("spec"))
+	state.Spec, diags = podV1Spec().RefreshSpec(ctx, pod.Spec, state.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

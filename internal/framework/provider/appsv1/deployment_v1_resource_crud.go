@@ -134,7 +134,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 		},
 		Namespace: types.StringValue(out.Namespace),
 	})...)
-	createdState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters)
+	createdState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters, false)
 	resp.Diagnostics.Append(stateDiags...)
 	if !resp.Diagnostics.HasError() {
 		resp.Diagnostics.Append(resp.State.Set(ctx, &createdState)...)
@@ -188,7 +188,7 @@ func (d *DeploymentV1) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	refreshed, diags := deploymentModelFromObject(ctx, out, state, filters)
+	refreshed, diags := deploymentModelFromObject(ctx, out, state, filters, true)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -329,7 +329,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	updatedState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters)
+	updatedState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters, false)
 	resp.Diagnostics.Append(stateDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -355,7 +355,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError("Error reading deployment after update", err.Error())
 		return
 	}
-	updatedState, stateDiags = deploymentModelFromObject(ctx, out, plan, filters)
+	updatedState, stateDiags = deploymentModelFromObject(ctx, out, plan, filters, false)
 	resp.Diagnostics.Append(stateDiags...)
 	if !resp.Diagnostics.HasError() {
 		resp.Diagnostics.Append(resp.State.Set(ctx, &updatedState)...)
@@ -479,7 +479,7 @@ func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (
 	return out, diags
 }
 
-func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
+func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, baseline types.List, at path.Path, refresh bool) (types.List, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	model := deploymentSpecModel{
 		MinReadySeconds:         types.Int64Value(int64(spec.MinReadySeconds)),
@@ -534,7 +534,12 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	if priorTemplateSpec.IsNull() || priorTemplateSpec.IsUnknown() {
 		priorTemplateSpec = templateSpecNull()
 	}
-	templateSpec, d := podspec.For(podspec.Deployment()).FlattenSpec(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	podSpec := podspec.For(podspec.Deployment())
+	flatten := podSpec.FlattenSpec
+	if refresh {
+		flatten = podSpec.RefreshSpec
+	}
+	templateSpec, d := flatten(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	templateMetadata, d := flattenTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata)
 	diags.Append(d...)
@@ -812,7 +817,7 @@ func deploymentMetadataPatchOps(state, plan DeploymentV1Model, live metav1.Objec
 	return common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live)
 }
 
-func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, baseline DeploymentV1Model, filters kubernetes.MetadataFilters) (DeploymentV1Model, diag.Diagnostics) {
+func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, baseline DeploymentV1Model, filters kubernetes.MetadataFilters, refresh bool) (DeploymentV1Model, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	metadata, metadataDiags := common.FlattenNamespacedMetadata(
 		ctx,
@@ -822,7 +827,7 @@ func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, b
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
-	spec, specDiags := flattenDeploymentSpec(ctx, object.Spec, baseline.Spec, path.Root("spec"))
+	spec, specDiags := flattenDeploymentSpec(ctx, object.Spec, baseline.Spec, path.Root("spec"), refresh)
 	diags.Append(specDiags...)
 
 	baseline.ID = types.StringValue(kubernetes.BuildId(object.ObjectMeta))

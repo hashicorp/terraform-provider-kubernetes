@@ -30,6 +30,7 @@ type Built struct {
 	Spec schema.ListNestedBlock
 
 	template   bool
+	refresh    bool
 	objectType basetypes.ObjectTypable
 	computed   map[string]bool
 	blocks     map[string]bool
@@ -91,9 +92,10 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) 
 	return *result, diagnostics
 }
 
-// FlattenSpec converts an API PodSpec into the "spec" list. The baseline is
-// the plan on writes and the prior state on reads; it decides null versus
-// empty collection ownership and retains semantically equal quantity spellings.
+// FlattenSpec converts an API PodSpec into the "spec" list after a write. The
+// baseline is the plan; it decides null versus empty collection ownership,
+// retains semantically equal quantity spellings and keeps a planned "" on
+// API-defaulted strings.
 func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	raw, err := kubernetes.FlattenPodSpecForFramework(spec, b.template)
@@ -102,11 +104,19 @@ func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 		return types.ListNull(b.objectType), diagnostics
 	}
 	preserveProjectedSourceGroups(ctx, spec, baseline, raw)
-	value := podSpecStateValue(ctx, types.ListType{ElemType: b.objectType}, raw, baseline, []string{"spec"}, "spec", b.blocks, &diagnostics)
+	value := podSpecStateValue(ctx, types.ListType{ElemType: b.objectType}, raw, baseline, []string{"spec"}, "spec", b, &diagnostics)
 	if diagnostics.HasError() {
 		return types.ListNull(b.objectType), diagnostics
 	}
 	return value.(types.List), diagnostics
+}
+
+// RefreshSpec is FlattenSpec for reads, with the prior state as the baseline.
+// An API-defaulted string configured as "" records the live value, as SDKv2 did.
+func (b *Built) RefreshSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
+	r := *b
+	r.refresh = true
+	return r.FlattenSpec(ctx, spec, baseline, at)
 }
 
 // This boundary translates known Framework values to the input of the shared
@@ -233,7 +243,7 @@ func podSpecBlockPaths(object schema.NestedBlockObject, prefix string, blocks ma
 // The existing pure flatteners return maps, slices, enum aliases, and pointers.
 // Read those values through the native template PodSpec type so every SDKv2 path
 // has its declared Terraform type without erasing null/empty collection ownership.
-func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prior attr.Value, names []string, key string, blocks map[string]bool, diagnostics *diag.Diagnostics) attr.Value {
+func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prior attr.Value, names []string, key string, b *Built, diagnostics *diag.Diagnostics) attr.Value {
 	if set, ok := raw.(*sdkschema.Set); ok {
 		raw = set.List()
 	}
@@ -261,7 +271,7 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 				}
 			}
 			childNames := append(append([]string(nil), names...), name)
-			entries[name] = podSpecStateValue(ctx, childType, child, old[name], childNames, key+"."+name, blocks, diagnostics)
+			entries[name] = podSpecStateValue(ctx, childType, child, old[name], childNames, key+"."+name, b, diagnostics)
 		}
 		v, d := types.ObjectValue(t.AttrTypes, entries)
 		diagnostics.Append(d...)
@@ -275,10 +285,10 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		if rv.IsValid() && (rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array) {
 			count = rv.Len()
 		}
-		if count == 0 && !blocks[key] && prior != nil && prior.IsNull() {
+		if count == 0 && !b.blocks[key] && prior != nil && prior.IsNull() {
 			return types.ListNull(t.ElemType)
 		}
-		if count == 0 && !rv.IsValid() && !blocks[key] && prior == nil {
+		if count == 0 && !rv.IsValid() && !b.blocks[key] && prior == nil {
 			return types.ListNull(t.ElemType)
 		}
 		entries := make([]attr.Value, count)
@@ -287,7 +297,7 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 			if i < len(previous) {
 				old = previous[i]
 			}
-			entries[i] = podSpecStateValue(ctx, t.ElemType, rv.Index(i).Interface(), old, names, key, blocks, diagnostics)
+			entries[i] = podSpecStateValue(ctx, t.ElemType, rv.Index(i).Interface(), old, names, key, b, diagnostics)
 		}
 		v, d := types.ListValue(t.ElemType, entries)
 		diagnostics.Append(d...)
@@ -299,7 +309,7 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		var entries []attr.Value
 		if rv.IsValid() {
 			for i := 0; i < rv.Len(); i++ {
-				entries = append(entries, podSpecStateValue(ctx, t.ElemType, rv.Index(i).Interface(), nil, names, key, blocks, diagnostics))
+				entries = append(entries, podSpecStateValue(ctx, t.ElemType, rv.Index(i).Interface(), nil, names, key, b, diagnostics))
 			}
 		}
 		v, d := types.SetValue(t.ElemType, entries)
@@ -317,7 +327,7 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 			iter := rv.MapRange()
 			for iter.Next() {
 				name := iter.Key().String()
-				entries[name] = podSpecStateValue(ctx, t.ElemType, iter.Value().Interface(), nil, nil, key, blocks, diagnostics)
+				entries[name] = podSpecStateValue(ctx, t.ElemType, iter.Value().Interface(), nil, nil, key, b, diagnostics)
 			}
 		}
 		v, d := types.MapValue(t.ElemType, entries)
@@ -331,6 +341,9 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 				text = fmt.Sprint(rv.Interface())
 			}
 			result = types.StringValue(text)
+			if p, ok := prior.(types.String); ok && b.computed[key] && podKeepUnsetString(p, text, b.refresh) {
+				result = p
+			}
 		case typ.Equal(types.BoolType):
 			result = types.BoolValue(rv.IsValid() && rv.Bool())
 		case typ.Equal(types.Int64Type):
@@ -351,4 +364,18 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		result = podPreserveHTTPGetPath(prior, result)
 	}
 	return result
+}
+
+// An API-defaulted string the configuration leaves unset keeps its baseline:
+// null when older state never stored the field and the API reports it empty,
+// and a planned "" after a write. A read records the live value instead.
+func podKeepUnsetString(baseline types.String, api string, refresh bool) bool {
+	switch {
+	case baseline.IsUnknown():
+		return false
+	case baseline.IsNull():
+		return api == ""
+	default:
+		return !refresh && baseline.ValueString() == ""
+	}
 }

@@ -48,21 +48,25 @@ func NamespacedDataSourceMetadataSchema(objectName string) schema.ListNestedBloc
 
 // dataSourceMetadataAttributes mirrors SDKv2's metadataFields, minus generate_name.
 //
-// Everything except name is Computed only. SDKv2 declares annotations and labels
-// Optional, but that is an artifact of metadataSchema serving both resources and data
-// sources — the read consumes only metadata.name, so a configured annotation or label
-// is ignored and then overwritten by the API response. Declaring them read-only stops
-// the schema advertising inputs that do nothing.
+// annotations and labels stay settable, as in SDKv2, even though the read consumes only
+// metadata.name: making them read-only would reject configurations that validate today,
+// which is a breaking change. They are Optional and Computed rather than SDKv2's Optional
+// alone, because the read returns every key the object carries, and without Computed the
+// framework rejects a result that does not match configuration.
 //
-// name is Required, diverging from SDKv2's Optional + Computed. There is nothing to
-// look up without it, so SDKv2's declaration only deferred the failure from plan to
-// read.
+// name is Required, diverging from SDKv2's Optional + Computed. That is not a breaking
+// change: there is nothing to look up without a name, so a configuration that omitted it
+// could never succeed — SDKv2's declaration only deferred the failure from plan to read.
 func dataSourceMetadataAttributes(objectName string) map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"annotations": schema.MapAttribute{
 			Description: fmt.Sprintf("An unstructured key value map stored with the %s that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/", objectName),
 			ElementType: types.StringType,
+			Optional:    true,
 			Computed:    true,
+			Validators: []validator.Map{
+				dataSourceAnnotationsValidator(),
+			},
 		},
 		"generation": schema.Int64Attribute{
 			Description: "A sequence number representing a specific generation of the desired state.",
@@ -71,7 +75,11 @@ func dataSourceMetadataAttributes(objectName string) map[string]schema.Attribute
 		"labels": schema.MapAttribute{
 			Description: fmt.Sprintf("Map of string keys and values that can be used to organize and categorize (scope and select) the %s. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/", objectName),
 			ElementType: types.StringType,
+			Optional:    true,
 			Computed:    true,
+			Validators: []validator.Map{
+				dataSourceLabelsValidator(),
+			},
 		},
 		"name": schema.StringAttribute{
 			Description: fmt.Sprintf("Name of the %s, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names", objectName),

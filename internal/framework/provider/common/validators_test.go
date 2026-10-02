@@ -234,3 +234,41 @@ func TestRBACNameValidator(t *testing.T) {
 		})
 	}
 }
+
+// TestDataSourceMetadataValidatorsAcceptNullValues pins the one difference between the
+// data-source and resource map validators: a null value is accepted, because SDKv2's data
+// sources accepted it. Key validation must stay identical.
+func TestDataSourceMetadataValidatorsAcceptNullValues(t *testing.T) {
+	t.Parallel()
+
+	m := func(elems map[string]attr.Value) types.Map {
+		return types.MapValueMust(types.StringType, elems)
+	}
+
+	cases := []struct {
+		name       string
+		validator  validator.Map
+		value      types.Map
+		wantErrors int
+	}{
+		{"annotations: null value accepted", dataSourceAnnotationsValidator(), m(map[string]attr.Value{"owner": types.StringNull()}), 0},
+		{"annotations: invalid key still rejected", dataSourceAnnotationsValidator(), m(map[string]attr.Value{"bad key!": types.StringValue("x")}), 1},
+		{"labels: null value accepted", dataSourceLabelsValidator(), m(map[string]attr.Value{"team": types.StringNull()}), 0},
+		{"labels: invalid key still rejected", dataSourceLabelsValidator(), m(map[string]attr.Value{"bad key!": types.StringValue("x")}), 1},
+		{"labels: invalid value still rejected", dataSourceLabelsValidator(), m(map[string]attr.Value{"team": types.StringValue("not a valid label value!")}), 1},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := validator.MapRequest{Path: path.Root("metadata"), ConfigValue: tc.value}
+			resp := &validator.MapResponse{}
+			tc.validator.ValidateMap(context.Background(), req, resp)
+
+			if got := resp.Diagnostics.ErrorsCount(); got != tc.wantErrors {
+				t.Errorf("got %d errors, want %d: %v", got, tc.wantErrors, resp.Diagnostics)
+			}
+		})
+	}
+}

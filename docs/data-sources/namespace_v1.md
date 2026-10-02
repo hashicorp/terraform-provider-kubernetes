@@ -28,11 +28,14 @@ Required:
 
 - `name` (String) Name of the namespace, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 
-Read-Only:
+Optional:
 
 - `annotations` (Map of String) An unstructured key value map stored with the namespace that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
-- `generation` (Number) A sequence number representing a specific generation of the desired state.
 - `labels` (Map of String) Map of string keys and values that can be used to organize and categorize (scope and select) the namespace. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+
+Read-Only:
+
+- `generation` (Number) A sequence number representing a specific generation of the desired state.
 - `resource_version` (String) An opaque value that represents the internal version of this namespace that can be used by clients to determine when namespace has changed. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 - `uid` (String) The unique in time and space value for this namespace. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
 
@@ -73,13 +76,13 @@ The following arguments are supported:
 
 #### Attributes
 
-* `annotations` - An unstructured key value map stored with the namespace that may be used to store arbitrary metadata. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
+* `annotations` - (Optional) An unstructured key value map stored with the namespace that may be used to store arbitrary metadata. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
 * `generation` - A sequence number representing a specific generation of the desired state.
-* `labels` - Map of string keys and values that can be used to organize and categorize (scope and select) namespaces. May match selectors of replication controllers and services. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
+* `labels` - (Optional) Map of string keys and values that can be used to organize and categorize (scope and select) namespaces. May match selectors of replication controllers and services. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
 * `resource_version` - An opaque value that represents the internal version of this namespace that can be used by clients to determine when namespaces have changed. Read more about [concurrency control and consistency](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency).
 * `uid` - The unique in time and space value for this namespace. For more info see [Kubernetes reference](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids)
 
-~> `annotations` and `labels` are read-only and cannot be set in the configuration. Unlike the `kubernetes_namespace_v1` resource, this data source reports every key the namespace carries, including ones managed by server-side components such as `kubernetes.io/metadata.name`.
+~> Unlike the `kubernetes_namespace_v1` resource, this data source reports every key the namespace carries, including ones managed by server-side components such as `kubernetes.io/metadata.name`. Setting `annotations` or `labels` does not filter the lookup: when the namespace exists, they are replaced by its actual values.
 
 ### `spec`
 
@@ -91,17 +94,8 @@ The following arguments are supported:
 
 `kubernetes_namespace_v1` is implemented using the Terraform Plugin Framework. Existing state written by the SDKv2 implementation is supported without re-importing or manually editing state, and references such as `data.kubernetes_namespace_v1.example.metadata[0].name` remain valid.
 
-Unlike the `kubernetes_namespace_v1` resource, this data source has three behavior changes. Review the notes below and run `terraform plan` with your current provider version before upgrading.
+This data source has one behavior change, described below. Run `terraform plan` with your current provider version before upgrading.
 
 ## Behavior notes
 
 - **`metadata.name` is required.** Earlier versions accepted a configuration that omitted it and then failed during the read, since there is nothing to look up without a name. The error now appears during plan.
-
-- **`metadata.annotations` and `metadata.labels` are read-only.** Setting either is rejected during plan with `Invalid Configuration for Read-Only Attribute`; remove the lines. Earlier versions accepted them because one schema served both resources and data sources.
-
-- **A missing namespace records only `metadata.name`.** As before, reading a namespace that does not exist succeeds without an error. id and metadata.name contain the requested name, while all other fields are null. What changed is the state it leaves behind: every attribute other than `id` and `metadata.name` is now `null`, where earlier versions stored `{}` for `metadata.annotations` and `metadata.labels`, `""` for `metadata.uid` and `metadata.resource_version`, and `0` for `metadata.generation`.
-
-  Two consequences are worth checking for in existing configurations:
-
-  - An existence check written as `data.kubernetes_namespace_v1.example.metadata[0].uid != ""` now evaluates to `true` for a missing namespace rather than `false`, because Terraform treats `null` as equal only to `null`. Compare against `null` instead.
-  - Passing `metadata[0].annotations` or `metadata[0].labels` to `length`, `lookup` or a `for` expression errors for a missing namespace.

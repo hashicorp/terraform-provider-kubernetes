@@ -19,6 +19,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -446,6 +447,58 @@ func TestAccKubernetesCronJobV1_defaultsAfterRemoval(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesCronJobV1_keepsUnmanagedFields(t *testing.T) {
+	var before, after batchv1.CronJob
+	name := "tf-acc-cron-unmanaged-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	const address = "kubernetes_cron_job_v1.test"
+	minimal := testAccKubernetesCronJobV1ConfigMinimal(name, busyboxImage)
+	rescheduled := strings.Replace(minimal, `schedule = "*/1 * * * *"`, `schedule = "*/2 * * * *"`, 1)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.29.0")
+		},
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: minimal,
+				Check:  testAccCheckKubernetesCronJobV1Exists(address, &before),
+			},
+			{
+				// Another tool sets a field the provider does not manage.
+				PreConfig: func() {
+					client, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
+					if err != nil {
+						t.Fatal(err)
+					}
+					patch := []byte(`{"spec":{"jobTemplate":{"spec":{"podReplacementPolicy":"Failed"}}}}`)
+					if _, err := client.BatchV1().CronJobs(before.Namespace).Patch(context.Background(), name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: rescheduled,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesCronJobV1Exists(address, &after),
+					testAccCheckKubernetesCronJobV1ForceNew(&before, &after, false),
+					func(*terraform.State) error {
+						if after.Spec.Schedule != "*/2 * * * *" {
+							return fmt.Errorf("live schedule = %q", after.Spec.Schedule)
+						}
+						if policy := after.Spec.JobTemplate.Spec.PodReplacementPolicy; policy == nil || *policy != batchv1.Failed {
+							return fmt.Errorf("live podReplacementPolicy = %v, want Failed", policy)
+						}
+						return nil
+					},
+				),
 			},
 		},
 	})

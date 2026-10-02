@@ -39,5 +39,5 @@
 ```
 
 ```release-note:bug
-`resource/kubernetes_cron_job_v1`: Keep labels and annotations that are not recorded in state, such as internal `kubernetes.io/` keys and keys matched by the provider `ignore_labels` and `ignore_annotations` settings, when updating a CronJob.
+`resource/kubernetes_cron_job_v1`: Keep labels, annotations, and spec fields that are not recorded in state, such as internal `kubernetes.io/` keys, keys matched by the provider `ignore_labels` and `ignore_annotations` settings, and fields set by admission controllers or other tools, when updating a CronJob.
 ```

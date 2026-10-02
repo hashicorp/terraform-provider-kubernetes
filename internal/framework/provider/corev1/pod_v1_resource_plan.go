@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,9 +56,9 @@ func (p *PodV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 }
 
 // Kubernetes rejects most Pod spec updates, including fields SDKv2 left
-// updatable. Replace the Pod when the planned spec differs in anything
-// podV1UpdatePatch cannot send. A difference from the prior state alone is
-// checked against the live Pod, since state from -refresh=false may be stale.
+// updatable. Replace the Pod when Update, which patches only the fields that
+// podV1ApplySpecPatch sets, cannot make the live Pod match the planned spec.
+// The prior state stands in for the live Pod only when that cannot be read.
 func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	var planned, prior types.List
 	var id types.String
@@ -74,53 +74,20 @@ func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlan
 		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("spec"))
 		return
 	}
-	priorSpec, diags := podV1Spec().ExpandSpec(ctx, prior, path.Root("spec"))
-	if !diags.HasError() && !podV1SpecRequiresReplacement(priorSpec, plannedSpec) {
-		return
-	}
+	var replace bool
 	if live, ok := p.livePod(ctx, id.ValueString()); ok {
 		patched := live.Spec.DeepCopy()
 		podV1ApplySpecPatch(patched, &plannedSpec)
-		// Update stores this flattening; matching the plan means no replacement.
+		// Update stores this flattening, so it must satisfy the plan.
 		flattened, diags := podV1Spec().FlattenSpec(ctx, *patched, planned, path.Root("spec"))
-		if !diags.HasError() && podV1SameBlocks(flattened, planned) {
-			return
-		}
+		replace = diags.HasError() || !podspec.Satisfies(flattened, planned)
+	} else {
+		priorSpec, diags := podV1Spec().ExpandSpec(ctx, prior, path.Root("spec"))
+		replace = diags.HasError() || podV1SpecRequiresReplacement(priorSpec, plannedSpec)
 	}
-	resp.RequiresReplace = append(resp.RequiresReplace, path.Root("spec"))
-}
-
-// podV1SameBlocks is Equal with an empty block list matching a null one, as
-// Terraform compares nested blocks.
-func podV1SameBlocks(a, b attr.Value) bool {
-	switch x := a.(type) {
-	case types.List:
-		y, ok := b.(types.List)
-		if !ok || x.IsUnknown() || y.IsUnknown() {
-			return a.Equal(b)
-		}
-		if len(x.Elements()) != len(y.Elements()) {
-			return false
-		}
-		for i, element := range x.Elements() {
-			if !podV1SameBlocks(element, y.Elements()[i]) {
-				return false
-			}
-		}
-		return true
-	case types.Object:
-		y, ok := b.(types.Object)
-		if !ok || x.IsNull() || x.IsUnknown() || y.IsNull() || y.IsUnknown() {
-			return a.Equal(b)
-		}
-		for name, value := range x.Attributes() {
-			if !podV1SameBlocks(value, y.Attributes()[name]) {
-				return false
-			}
-		}
-		return len(x.Attributes()) == len(y.Attributes())
+	if replace {
+		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("spec"))
 	}
-	return a.Equal(b)
 }
 
 func (p *PodV1) livePod(ctx context.Context, id string) (*corev1.Pod, bool) {

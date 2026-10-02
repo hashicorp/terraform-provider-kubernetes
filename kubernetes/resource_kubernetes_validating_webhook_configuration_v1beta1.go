@@ -126,6 +126,25 @@ func resourceKubernetesValidatingWebhookConfigurationV1Beta1(deprecationMessage 
 							Optional:     true,
 							ValidateFunc: validation.IntBetween(1, 30),
 						},
+						"match_conditions": {
+							Type:        schema.TypeList,
+							Description: webhookDoc["matchConditions"],
+							Optional:    true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:        schema.TypeString,
+										Description: "The name of the match condition.",
+										Required:    true,
+									},
+									"expression": {
+										Type:        schema.TypeString,
+										Description: "Represents the expression which will be evaluated by the API.",
+										Required:    true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},

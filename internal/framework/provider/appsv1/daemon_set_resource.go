@@ -105,7 +105,7 @@ func (d *DaemonSetV1) ModifyPlan(_ context.Context, req resource.ModifyPlanReque
 		return
 	}
 
-	plan, usePriorState, err := workloadNoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
+	plan, usePriorState, err := common.NoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to normalize daemonset plan", err.Error())
 		return

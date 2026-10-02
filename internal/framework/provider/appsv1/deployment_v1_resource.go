@@ -75,7 +75,7 @@ func (d *DeploymentV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRe
 	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() || req.Config.Raw.IsNull() {
 		return
 	}
-	plan, usePriorState, err := workloadNoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
+	plan, usePriorState, err := common.NoOpPlan(req.Config.Raw, req.Plan.Raw, req.State.Raw)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to normalize deployment plan", err.Error())
 		return

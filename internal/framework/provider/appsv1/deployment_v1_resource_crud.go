@@ -25,9 +25,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	k8types "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 )
 
@@ -239,55 +241,75 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	live, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		resp.Diagnostics.AddError("Error reading deployment during update", err.Error())
-		return
-	}
-
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddError("Invalid deployment metadata", "Expected exactly one metadata block in state and plan.")
 		return
 	}
-	metadataOps := deploymentMetadataPatchOps(state, plan, live.ObjectMeta)
-	out := live
-	if len(metadataOps) > 0 {
-		data, err := metadataOps.MarshalJSON()
-		if err != nil {
-			resp.Diagnostics.AddError("Error marshalling deployment metadata patch", err.Error())
-			return
-		}
-		out, err = conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.JSONPatchType, data, metav1.PatchOptions{})
-		if err != nil {
-			resp.Diagnostics.AddError("Error patching deployment metadata", err.Error())
-			return
-		}
-	}
-
+	var original, desired *appsv1.DeploymentSpec
 	if !plan.Spec.Equal(state.Spec) {
-		original, diags := expandDeploymentSpec(ctx, state.Spec, path.Root("spec"))
+		var diags diag.Diagnostics
+		original, diags = expandDeploymentSpec(ctx, state.Spec, path.Root("spec"))
 		resp.Diagnostics.Append(diags...)
-		desired, diags := expandDeploymentSpec(ctx, plan.Spec, path.Root("spec"))
+		desired, diags = expandDeploymentSpec(ctx, plan.Spec, path.Root("spec"))
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		patch, err := deploymentSpecPatch(*original, *desired, out.Spec)
+		// Unset replicas are left to an autoscaler, so the live count is kept.
+		if desired.Replicas == nil {
+			original.Replicas = nil
+		}
+		patch, err := deploymentSpecPatch(*original, *desired)
 		if err != nil {
 			resp.Diagnostics.AddError("Error creating deployment spec patch", err.Error())
 			return
 		}
-		if string(patch) != "{}" {
-			out, err = conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.StrategicMergePatchType, patch, metav1.PatchOptions{})
-			if err != nil {
-				resp.Diagnostics.AddError("Error patching deployment spec", err.Error())
-				return
-			}
+		if string(patch) == "{}" {
+			original, desired = nil, nil
 		}
+	}
+	dynamicClient, err := clients.DynamicClient()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	var out *appsv1.Deployment
+	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
+		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("deployments")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		out = &appsv1.Deployment{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, out); err != nil {
+			return err
+		}
+		ops := deploymentMetadataPatchOps(state, plan, out.ObjectMeta)
+		if desired != nil {
+			specOps, err := common.StrategicMergeSpecOps(raw, *original, *desired, appsv1.Deployment{})
+			if err != nil {
+				return err
+			}
+			ops = append(ops, specOps...)
+		}
+		if len(ops) == 0 {
+			return nil
+		}
+		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(raw.GetResourceVersion())}, ops...)
+		data, err := ops.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		out, err = conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.JSONPatchType, data, metav1.PatchOptions{})
+		return err
+	})
+	if apierrors.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating deployment", err.Error())
+		return
 	}
 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
@@ -753,10 +775,7 @@ func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, b
 	return baseline, diags
 }
 
-func deploymentSpecPatch(original, modified, current appsv1.DeploymentSpec) ([]byte, error) {
-	if modified.Replicas == nil {
-		original.Replicas = nil
-	}
+func deploymentSpecPatch(original, modified appsv1.DeploymentSpec) ([]byte, error) {
 	originalJSON, err := json.Marshal(appsv1.Deployment{Spec: original})
 	if err != nil {
 		return nil, err

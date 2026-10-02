@@ -21,10 +21,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	k8Types "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	k8sclient "k8s.io/client-go/kubernetes"
+	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 )
 
@@ -163,48 +165,70 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		resp.Diagnostics.AddError("Invalid daemonset ID", err.Error())
 		return
 	}
-	live, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			resp.State.RemoveResource(ctx)
-			return
-		}
-		resp.Diagnostics.AddError("Error reading daemonset before update", err.Error())
-		return
-	}
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddError("Invalid daemonset metadata", "Expected exactly one metadata block in state and plan.")
 		return
 	}
-
-	ops := daemonSetMetadataPatchOps(state, plan, live.ObjectMeta)
-	updated := live
-	if len(ops) > 0 {
-		data, err := ops.MarshalJSON()
-		if err != nil {
-			resp.Diagnostics.AddError("Error marshalling daemonset patch", err.Error())
-			return
-		}
-		updated, err = conn.AppsV1().DaemonSets(namespace).Patch(ctx, name, k8Types.JSONPatchType, data, metav1.PatchOptions{})
-		if err != nil {
-			resp.Diagnostics.AddError("Error updating daemonset", err.Error())
-			return
-		}
-	}
-
+	var original, planned *appsv1.DaemonSetSpec
 	if !reflect.DeepEqual(plan.Spec, state.Spec) {
-		specPatch, patchDiags := daemonSetStrategicSpecPatch(ctx, state.Spec, plan.Spec)
-		resp.Diagnostics.Append(patchDiags...)
+		oldSpec, diags := expandDaemonSetSpecModel(ctx, state.Spec, daemonSetSpecPath())
+		resp.Diagnostics.Append(diags...)
+		newSpec, diags := expandDaemonSetSpecModel(ctx, plan.Spec, daemonSetSpecPath())
+		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if len(specPatch) > 0 {
-			updated, err = conn.AppsV1().DaemonSets(namespace).Patch(ctx, name, k8Types.StrategicMergePatchType, specPatch, metav1.PatchOptions{})
-			if err != nil {
-				resp.Diagnostics.AddError("Error updating daemonset spec", err.Error())
-				return
-			}
+		patch, err := daemonSetSpecPatch(oldSpec, newSpec)
+		if err != nil {
+			resp.Diagnostics.AddError("Error creating daemonset spec patch", err.Error())
+			return
 		}
+		if string(patch) != "{}" {
+			original, planned = &oldSpec, &newSpec
+		}
+	}
+	dynamicClient, err := clients.DynamicClient()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	var updated *appsv1.DaemonSet
+	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
+		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("daemonsets")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		updated = &appsv1.DaemonSet{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, updated); err != nil {
+			return err
+		}
+		ops := daemonSetMetadataPatchOps(state, plan, updated.ObjectMeta)
+		if planned != nil {
+			specOps, err := common.StrategicMergeSpecOps(raw, *original, *planned, appsv1.DaemonSet{})
+			if err != nil {
+				return err
+			}
+			ops = append(ops, specOps...)
+		}
+		if len(ops) == 0 {
+			return nil
+		}
+		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(raw.GetResourceVersion())}, ops...)
+		data, err := ops.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		updated, err = conn.AppsV1().DaemonSets(namespace).Patch(ctx, name, k8Types.JSONPatchType, data, metav1.PatchOptions{})
+		return err
+	})
+	if apierrors.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating daemonset", err.Error())
+		return
 	}
 
 	updatedState := d.daemonSetStateFromObject(ctx, plan, updated, filters, &resp.Diagnostics)
@@ -589,32 +613,14 @@ func daemonSetMetadataPatchOps(state, plan DaemonSetV1Model, live metav1.ObjectM
 	return common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live)
 }
 
-func daemonSetStrategicSpecPatch(ctx context.Context, state, plan []DaemonSetV1SpecModel) ([]byte, diag.Diagnostics) {
-	var diagnostics diag.Diagnostics
-	oldSpec, oldDiags := expandDaemonSetSpecModel(ctx, state, daemonSetSpecPath())
-	diagnostics.Append(oldDiags...)
-	newSpec, newDiags := expandDaemonSetSpecModel(ctx, plan, daemonSetSpecPath())
-	diagnostics.Append(newDiags...)
-	if diagnostics.HasError() {
-		return nil, diagnostics
-	}
-	oldJSON, err := json.Marshal(appsv1.DaemonSet{Spec: oldSpec})
+func daemonSetSpecPatch(original, modified appsv1.DaemonSetSpec) ([]byte, error) {
+	originalJSON, err := json.Marshal(appsv1.DaemonSet{Spec: original})
 	if err != nil {
-		diagnostics.AddError("Error encoding prior daemonset spec", err.Error())
-		return nil, diagnostics
+		return nil, err
 	}
-	newJSON, err := json.Marshal(appsv1.DaemonSet{Spec: newSpec})
+	modifiedJSON, err := json.Marshal(appsv1.DaemonSet{Spec: modified})
 	if err != nil {
-		diagnostics.AddError("Error encoding planned daemonset spec", err.Error())
-		return nil, diagnostics
+		return nil, err
 	}
-	patch, err := strategicpatch.CreateTwoWayMergePatch(oldJSON, newJSON, appsv1.DaemonSet{})
-	if err != nil {
-		diagnostics.AddError("Error creating daemonset spec patch", err.Error())
-		return nil, diagnostics
-	}
-	if string(patch) == "{}" {
-		return nil, diagnostics
-	}
-	return patch, diagnostics
+	return strategicpatch.CreateTwoWayMergePatch(originalJSON, modifiedJSON, appsv1.DaemonSet{})
 }

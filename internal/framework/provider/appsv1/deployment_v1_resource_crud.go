@@ -287,7 +287,11 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 		ops := deploymentMetadataPatchOps(state, plan, out.ObjectMeta)
 		if desired != nil {
-			specOps, err := common.StrategicMergeSpecOps(raw, *original, *desired, appsv1.Deployment{})
+			from, to := *original, *desired
+			// The selector is immutable and replaces on any change, so the live one is
+			// kept: state written by SDKv2 may order its set values differently.
+			from.Selector, to.Selector = out.Spec.Selector, out.Spec.Selector
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.Deployment{})
 			if err != nil {
 				return err
 			}

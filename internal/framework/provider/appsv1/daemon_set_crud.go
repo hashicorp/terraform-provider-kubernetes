@@ -205,7 +205,11 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 		ops := daemonSetMetadataPatchOps(state, plan, updated.ObjectMeta)
 		if planned != nil {
-			specOps, err := common.StrategicMergeSpecOps(raw, *original, *planned, appsv1.DaemonSet{})
+			from, to := *original, *planned
+			// The selector is immutable and replaces on any change, so the live one is
+			// kept: state written by SDKv2 may order its set values differently.
+			from.Selector, to.Selector = updated.Spec.Selector, updated.Spec.Selector
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.DaemonSet{})
 			if err != nil {
 				return err
 			}

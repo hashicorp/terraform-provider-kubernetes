@@ -8,9 +8,14 @@
 //
 // The package has no production code; everything lives in its test files:
 //
-//   - TestPodTemplateRPCAllocCeilings fails when a no-op plan or a read of any
-//     of the six resources allocates more than its ceiling. It runs in the
-//     regular unit test suite.
+//   - TestPodTemplateRPCAllocCeilings fails when one of the six resources
+//     serves a schema that is not frozen, or when its no-op plan or read
+//     allocates more than its ceiling. It runs in the "Framework Pod Template
+//     Unit Tests" workflow and in make test.
+//
+// Tests and benchmarks that start from an existing resource create and refresh
+// it first, and fail unless planning the unchanged configuration then is a
+// no-op without replacement.
 //   - BenchmarkRPC{PlanNoop,Read,ApplyCreate,Validate}/<resource> report
 //     ns/op, B/op and allocs/op per RPC.
 //   - TestRPCRefreshPlan50 (RPCPERF_SCALE=1) runs 50 sequential Read + no-op

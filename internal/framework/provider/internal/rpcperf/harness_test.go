@@ -133,14 +133,59 @@ func newEnv(t testing.TB, typeName string) *rpcEnv {
 }
 
 // newCreatedEnv returns an env whose state is the result of a create followed
-// by a refresh, the starting point of every no-op plan.
+// by a refresh, the starting point of every no-op plan. It fails unless that
+// plan is really a no-op.
 func newCreatedEnv(t testing.TB, typeName string) *rpcEnv {
 	t.Helper()
 	e := newEnv(t, typeName)
 	e.state, e.private = e.applyCreate(t, e.planCreate(t))
 	rr := e.read(t)
 	e.state, e.private = rr.NewState, rr.Private
+	e.assertNoopPlan(t)
 	return e
+}
+
+// assertNoopPlan fails when planning the unchanged configuration against the
+// refreshed state proposes a change or a replacement: the benchmarks and
+// allocation ceilings would then measure something else, and users would see
+// a perpetual diff or a silent replacement.
+func (e *rpcEnv) assertNoopPlan(t testing.TB) {
+	t.Helper()
+	r := e.planNoop(t)
+	if len(r.RequiresReplace) != 0 {
+		paths := make([]string, len(r.RequiresReplace))
+		for i, p := range r.RequiresReplace {
+			paths[i] = p.String()
+		}
+		t.Fatalf("%s: no-op plan requires replacement for %v", e.typeName, paths)
+	}
+	prior, err := e.state.Unmarshal(e.typ)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planned, err := r.PlannedState.Unmarshal(e.typ)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if planned.Equal(prior) {
+		return
+	}
+	diffs, err := prior.Diff(planned)
+	if err != nil {
+		t.Fatalf("%s: no-op plan differs from the prior state: %v", e.typeName, err)
+	}
+	var changes []string
+	for _, d := range diffs {
+		// Diff reports every ancestor of a changed value; keep the leaves.
+		if d.Value1 != nil && d.Value2 != nil && !d.Value1.Type().Is(tftypes.Object{}) &&
+			!d.Value1.Type().Is(tftypes.List{}) && !d.Value1.Type().Is(tftypes.Set{}) && !d.Value1.Type().Is(tftypes.Map{}) {
+			changes = append(changes, fmt.Sprintf("%s: %s -> %s", d.Path, d.Value1, d.Value2))
+		}
+		if len(changes) == 10 {
+			break
+		}
+	}
+	t.Fatalf("%s: no-op plan differs from the prior state in %d places, including %v", e.typeName, len(diffs), changes)
 }
 
 func (e *rpcEnv) dv(t testing.TB, v tftypes.Value) *tfprotov6.DynamicValue {

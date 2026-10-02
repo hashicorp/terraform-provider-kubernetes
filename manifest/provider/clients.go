@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
@@ -77,21 +78,48 @@ func (ps *RawProviderServer) getRestClient() (rest.Interface, error) {
 
 // getOAPIv2Foundry returns an interface to request tftype types from an OpenAPIv2 spec
 func (ps *RawProviderServer) getOAPIv2Foundry() (openapi.Foundry, error) {
-	return ps.OAPIFoundry.Get(func() (openapi.Foundry, error) {
+	return ps.oapiV2Foundry.Get(func() (openapi.Foundry, error) {
 		rc, err := ps.getRestClient()
 		if err != nil {
-			return nil, fmt.Errorf("failed get OpenAPI spec: %s", err)
+			return nil, fmt.Errorf("failed get OpenAPIv2 spec: %s", err)
 		}
-
 		rq := rc.Verb("GET").Timeout(30*time.Second).AbsPath("openapi", "v2")
 		rs, err := rq.DoRaw(context.TODO())
 		if err != nil {
-			return nil, fmt.Errorf("failed get OpenAPI spec: %s", err)
+			return nil, fmt.Errorf("failed get OpenAPIv2 spec: %s", err)
 		}
 
 		oapif, err := openapi.NewFoundryFromSpecV2(rs)
 		if err != nil {
-			return nil, fmt.Errorf("failed construct OpenAPI foundry: %s", err)
+			return nil, fmt.Errorf("failed construct OpenAPIv2 foundry: %s", err)
+		}
+
+		return oapif, nil
+	})
+}
+
+// getOAPIv3Foundry returns an interface to request tftype types from an OpenAPIv3 spec
+func (ps *RawProviderServer) getOAPIv3Foundry(gv schema.GroupVersion) (openapi.Foundry, error) {
+	return ps.oapiV3Foundries.Get(gv, func() (openapi.Foundry, error) {
+		rc, err := ps.getRestClient()
+		if err != nil {
+			return nil, fmt.Errorf("failed get OpenAPIv3 spec: %s", err)
+		}
+		gvPrefix := "apis"
+		// The legacy "v1" spec is under openapi/v3/api/v1, the rest under openapi/v3/apis/{group}/{version}
+		gvStr := gv.String()
+		if gvStr == "v1" {
+			gvPrefix = "api"
+		}
+		rq := rc.Verb("GET").Timeout(30*time.Second).AbsPath("openapi", "v3", gvPrefix, gvStr)
+		rs, err := rq.DoRaw(context.TODO())
+		if err != nil {
+			return nil, fmt.Errorf("failed get OpenAPIv3 spec: %s", err)
+		}
+
+		oapif, err := openapi.NewFoundryFromSpecV3(rs)
+		if err != nil {
+			return nil, fmt.Errorf("failed construct OpenAPIv3 foundry: %s", err)
 		}
 
 		return oapif, nil

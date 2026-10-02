@@ -22,7 +22,7 @@ Only the following paths change from block syntax to list-of-object assignment s
 | `spec.template.spec.container.resources` | `spec.job_template.spec.template.spec.container.resources` |
 | `spec.template.spec.init_container.resources` | `spec.job_template.spec.template.spec.init_container.resources` |
 
-`selector` and each container's `resources` accept at most one object. Maps such as `match_labels`, `limits`, and `requests` keep their map syntax. All other blocks, including `metadata`, `spec`, `job_template`, `template`, `container`, `init_container`, `pod_failure_policy`, `volume`, `affinity`, and `timeouts`, remain blocks. Similarly named blocks under affinity, topology spread constraints, or volume claim templates do not change.
+`selector` and each container's `resources` take exactly one object, and `image_pull_secrets` and `readiness_gate` at least one. An empty list is rejected: omit the argument, or set it to `null`, to leave it unset. Maps such as `match_labels`, `limits`, and `requests` keep their map syntax. The pod template uses the same syntax as in `kubernetes_deployment_v1` and the other apps/v1 workloads. All other blocks, including `metadata`, `spec`, `job_template`, `template`, `container`, `init_container`, `pod_failure_policy`, `volume`, `affinity`, and `timeouts`, remain blocks. Similarly named blocks under affinity, topology spread constraints, or volume claim templates do not change.
 
 ### Job selector
 
@@ -151,13 +151,19 @@ image_pull_secrets = [
 ]
 ```
 
+If the collection can be empty, use `null` rather than an empty list:
+
+```terraform
+resources = var.container_resources == null ? null : [var.container_resources]
+```
+
 Dynamic blocks for unchanged blocks, such as `container` and `volume`, remain valid.
 
 ## State compatibility
 
 Stored values remain lists of objects, so indexed references such as `kubernetes_job_v1.demo.spec[0].template[0].spec[0].container[0].resources[0].limits["cpu"]` do not change.
 
-Omitted optional values are stored as `null` rather than zero or empty values such as `0` or `""`. State written by earlier provider versions can therefore show a one-time in-place update on the first plan. This update changes only Terraform state, not the Job or CronJob in Kubernetes, and the following plan is empty. Outputs that read these values can change from an empty value to `null`.
+Omitted optional values keep the zero or empty values, such as `0` or `""`, that earlier provider versions stored, so state written by them plans no change for an unchanged configuration. The first plan can still show a one-time in-place update for values the configuration sets explicitly empty, such as `labels = {}` or `supplemental_groups = []`, or when planning with `-refresh=false`. This update changes only Terraform state, not the Job or CronJob in Kubernetes, and the following plan is empty.
 
 `backoff_limit_per_index` and `max_failed_indexes` keep their provider default of `0` when omitted.
 
@@ -202,6 +208,7 @@ For Jobs, `wait_for_completion` is not stored in Kubernetes and is set to `true`
 
 ## Other behavior changes
 
-- Changing a Job's `pod_failure_policy` rules requires replacement, because Kubernetes does not allow updating them. The same change in a CronJob template is an in-place update.
+- Changing, adding, or removing a value in a Job's pod template or `pod_failure_policy` rules requires replacement, because Kubernetes does not allow updating them. Labels the Job controller adds to the pod template, such as `job-name`, are ignored. The same changes in a CronJob template are in-place updates.
+- An empty string for a value Kubernetes defaults, such as `image_pull_policy = ""` or `scheduler_name = ""`, keeps the Kubernetes default and never requires replacement.
 - Job updates apply changes to `ttl_seconds_after_finished` and `max_failed_indexes`.
 - CronJob updates keep labels and annotations that are not recorded in state, such as internal `kubernetes.io/` keys and keys matched by the provider `ignore_labels` and `ignore_annotations` settings.

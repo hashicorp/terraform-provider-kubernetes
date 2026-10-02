@@ -7,7 +7,7 @@
 ```
 
 ```release-note:breaking-change
-`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. The Job `selector` (including `match_expressions`), pod template `image_pull_secrets` and `readiness_gate`, and container and init container `resources` now use list-of-object assignment syntax, for example `selector = [{ ... }]`. See the Job and CronJob Plugin Framework migration guide.
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. The Job `selector` (including `match_expressions`), pod template `image_pull_secrets` and `readiness_gate`, and container and init container `resources` now use list-of-object assignment syntax, for example `selector = [{ ... }]`; an empty list is rejected, so omit them instead. The pod template is the same as in the apps/v1 workloads. See the Job and CronJob Plugin Framework migration guide.
 ```
 
 ```release-note:note
@@ -15,7 +15,7 @@
 ```
 
 ```release-note:note
-`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: The first plan after upgrading can show a one-time in-place update that sets omitted optional values to `null` in state; it does not change the Kubernetes object.
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Omitted optional values keep the empty or zero values earlier versions stored, so state written by them plans no change for an unchanged configuration. A one-time in-place update can still appear for explicitly empty values such as `labels = {}`, or with `-refresh=false`; it changes only Terraform state.
 ```
 
 ```release-note:note
@@ -35,7 +35,7 @@
 ```
 
 ```release-note:bug
-`resource/kubernetes_job_v1`: Replace the Job when `pod_failure_policy` rules change, since Kubernetes does not allow updating them.
+`resource/kubernetes_job_v1`: Replace the Job when `pod_failure_policy` rules or its pod template change, since Kubernetes does not allow updating them. Labels the Job controller adds to the pod template are ignored.
 ```
 
 ```release-note:bug

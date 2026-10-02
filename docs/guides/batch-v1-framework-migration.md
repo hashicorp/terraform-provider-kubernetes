@@ -209,6 +209,6 @@ For Jobs, `wait_for_completion` is not stored in Kubernetes and is set to `true`
 ## Other behavior changes
 
 - Changing, adding, or removing a value in a Job's pod template or `pod_failure_policy` rules requires replacement, because Kubernetes does not allow updating them. Labels the Job controller adds to the pod template, such as `job-name`, are ignored. The same changes in a CronJob template are in-place updates.
-- An empty string for a value Kubernetes defaults, such as `image_pull_policy = ""` or `scheduler_name = ""`, keeps the Kubernetes default and never requires replacement.
+- An empty string for a value Kubernetes defaults, such as `image_pull_policy = ""` or `scheduler_name = ""`, keeps the Kubernetes default and never requires replacement. An empty string for any other value, such as `timezone = ""` or `sub_path = ""`, clears it.
 - Job updates apply changes to `ttl_seconds_after_finished` and `max_failed_indexes`.
 - CronJob updates change only what the configuration changes, as in the apps/v1 workloads. Labels, annotations, and spec fields that are not recorded in state keep their live values, such as internal `kubernetes.io/` keys, keys matched by the provider `ignore_labels` and `ignore_annotations` settings, and fields set by admission controllers or other tools.

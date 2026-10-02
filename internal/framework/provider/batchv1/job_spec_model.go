@@ -273,7 +273,7 @@ func flattenPodSpec(ctx context.Context, in corev1.PodSpec, prior types.List, jo
 	if err != nil {
 		return actual, diags
 	}
-	if expanded, d := pod.ExpandSpec(ctx, described.(types.List), at); !d.HasError() && payloadsEqual(expanded, in) {
+	if expanded, d := pod.ExpandSpec(ctx, described.(types.List), at); !d.HasError() && podSpecsEqual(expanded, in) {
 		return prior, diags
 	}
 	return actual, diags

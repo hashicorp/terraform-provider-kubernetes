@@ -5,7 +5,9 @@ package batchv1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -21,6 +23,7 @@ import (
 	batch "k8s.io/api/batch/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sretry "k8s.io/client-go/util/retry"
@@ -133,11 +136,9 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Invalid CronJob metadata", "Expected exactly one metadata block in the state and plan.")
 		return
 	}
-	plannedSpec, diagnostics := expandCronJobSpec(ctx, plan.Spec, path.Root("spec"))
-	resp.Diagnostics.Append(diagnostics...)
 	previousSpec, diagnostics := expandCronJobSpec(ctx, state.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diagnostics...)
-	specChanged, diagnostics := cronJobSpecChanged(ctx, req, previousSpec)
+	desiredSpec, diagnostics := cronJobDesiredSpec(ctx, req)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -150,8 +151,9 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 	var out *batch.CronJob
-	// State-only changes, such as timeouts or SDKv2's stored empty values, are
-	// never written. Fields the provider does not manage keep their live values.
+	// Only what the update changes is written: state-only changes, such as
+	// timeouts, send nothing, and fields the provider does not manage keep
+	// their live values.
 	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
 		raw, err := dynamicClient.Resource(batch.SchemeGroupVersion.WithResource("cronjobs")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
@@ -162,13 +164,11 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 			return err
 		}
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, out.ObjectMeta)
-		if specChanged {
-			specOps, err := common.StrategicMergeSpecOps(raw, previousSpec, plannedSpec, batch.CronJob{})
-			if err != nil {
-				return err
-			}
-			ops = append(ops, specOps...)
+		specOps, err := cronJobSpecOps(raw, previousSpec, desiredSpec)
+		if err != nil {
+			return err
 		}
+		ops = append(ops, specOps...)
 		if len(ops) == 0 {
 			return nil
 		}
@@ -351,32 +351,49 @@ func cronJobWriteResult(ctx context.Context, state *tfsdk.State, plan CronJobV1M
 	return diags
 }
 
-// cronJobSpecChanged reports whether the update changes what Kubernetes would
-// store: unknown and API-defaulted ("") values keep their prior values.
-func cronJobSpecChanged(ctx context.Context, req resource.UpdateRequest, previous batch.CronJobSpec) (bool, diag.Diagnostics) {
+// cronJobDesiredSpec is the planned spec, with the values the plan leaves to
+// Kubernetes (unknown, or an API-defaulted string configured as "") kept as
+// they were.
+func cronJobDesiredSpec(ctx context.Context, req resource.UpdateRequest) (batch.CronJobSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	at := tftypes.NewAttributePath().WithAttributeName("spec")
 	config, configOK := valueAt(req.Config.Raw, at)
 	plan, planOK := valueAt(req.Plan.Raw, at)
 	state, stateOK := valueAt(req.State.Raw, at)
 	if !configOK || !planOK || !stateOK {
-		return true, diags
+		diags.AddError("Unable to read CronJob specification", "The spec block is missing from the configuration, plan or state.")
+		return batch.CronJobSpec{}, diags
 	}
-	if plan.Equal(state) {
-		return false, diags
+	if resolved, ok := resolveUnconfigured(at, config, plan, state, apiDefaultedStrings(ctx, req.Plan.Schema)); ok {
+		plan = resolved
 	}
-	resolved, ok := resolveUnconfigured(config, plan, state)
-	if !ok {
-		return true, diags
-	}
-	value, err := types.ListType{ElemType: cronJobSpecBlockType()}.ValueFromTerraform(ctx, resolved)
+	value, err := types.ListType{ElemType: cronJobSpecBlockType()}.ValueFromTerraform(ctx, plan)
 	if err != nil {
-		diags.AddError("Unable to compare CronJob specification", err.Error())
-		return true, diags
+		diags.AddError("Unable to read CronJob specification", err.Error())
+		return batch.CronJobSpec{}, diags
 	}
-	desired, d := expandCronJobSpec(ctx, value.(types.List), path.Root("spec"))
-	if d.HasError() {
-		return true, diags
+	return expandCronJobSpec(ctx, value.(types.List), path.Root("spec"))
+}
+
+// cronJobSpecOps moves the live spec from previous to desired with a three-way
+// strategic merge, and returns nothing when that leaves the live spec as it is.
+func cronJobSpecOps(live *unstructured.Unstructured, previous, desired batch.CronJobSpec) (kubernetes.PatchOperations, error) {
+	ops, err := common.StrategicMergeSpecOps(live, previous, desired, batch.CronJob{})
+	if err != nil {
+		return nil, err
 	}
-	return !payloadsEqual(previous, desired), diags
+	for _, op := range ops {
+		if replace, ok := op.(*kubernetes.ReplaceOperation); !ok || replace.Path != "/spec" || !sameJSON(replace.Value, live.Object["spec"]) {
+			return ops, nil
+		}
+	}
+	return nil, nil
+}
+
+func sameJSON(a, b any) bool {
+	var x, y any
+	dataA, errA := json.Marshal(a)
+	dataB, errB := json.Marshal(b)
+	return errA == nil && errB == nil && json.Unmarshal(dataA, &x) == nil && json.Unmarshal(dataB, &y) == nil &&
+		reflect.DeepEqual(x, y)
 }

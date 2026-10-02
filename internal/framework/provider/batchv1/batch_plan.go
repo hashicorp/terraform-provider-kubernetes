@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -35,12 +36,13 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	if noOpPlan(req, resp) {
 		return
 	}
-	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw)
+	apiDefaulted := apiDefaultedStrings(ctx, req.Plan.Schema)
+	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw, apiDefaulted)
 	if replace {
 		// State written without a refresh can disagree with Kubernetes; decide
 		// against the Job as it is now.
 		if live, ok := r.liveState(ctx, req.State); ok {
-			replace, diags = jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, live)
+			replace, diags = jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, live, apiDefaulted)
 		}
 	}
 	resp.Diagnostics.Append(diags...)
@@ -100,7 +102,7 @@ func noOpPlan(req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse)
 // declared ForceNew replace the Job on their own; any other configured change
 // to the template the API would receive replaces it here, rather than planning
 // an update that cannot take effect.
-func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftypes.Value) (bool, diag.Diagnostics) {
+func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftypes.Value, apiDefaulted func(*tftypes.AttributePath) bool) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	at := tftypes.NewAttributePath().WithAttributeName("spec").WithElementKeyInt(0).WithAttributeName("template")
 	config, configOK := valueAt(configRaw, at)
@@ -109,7 +111,7 @@ func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftype
 	if !configOK || !planOK || !stateOK || plan.Equal(state) {
 		return false, diags
 	}
-	resolved, ok := resolveUnconfigured(config, plan, state)
+	resolved, ok := resolveUnconfigured(at, config, plan, state, apiDefaulted)
 	if !ok {
 		return true, diags
 	}
@@ -137,21 +139,50 @@ func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftype
 
 func podTemplatesEqual(a, b corev1.PodTemplateSpec) bool {
 	for _, template := range []*corev1.PodTemplateSpec{&a, &b} {
-		labels := make(map[string]string, len(template.Labels))
-		for key, value := range template.Labels {
-			labels[key] = value
-		}
+		*template = *template.DeepCopy()
 		for _, key := range jobGeneratedLabels {
-			delete(labels, key)
+			delete(template.Labels, key)
 		}
-		template.Labels = labels
+		clearUnsetFalse(&template.Spec)
 	}
 	return payloadsEqual(a, b)
 }
 
-// payloadsEqual compares objects as the API receives them, where absent, null,
-// false and empty values are the same and quantities have one spelling. The
-// fields whose absence means true are covered by their own replacement rules.
+func podSpecsEqual(a, b corev1.PodSpec) bool {
+	a, b = *a.DeepCopy(), *b.DeepCopy()
+	clearUnsetFalse(&a)
+	clearUnsetFalse(&b)
+	return payloadsEqual(a, b)
+}
+
+// clearUnsetFalse clears the pointer booleans whose false is what Kubernetes
+// does when they are unset. Every other false is a request of its own:
+// allowPrivilegeEscalation, automountServiceAccountToken and
+// enableServiceLinks default to true, and a container's runAsNonRoot overrides
+// the pod's.
+func clearUnsetFalse(spec *corev1.PodSpec) {
+	unset := func(b **bool) {
+		if *b != nil && !**b {
+			*b = nil
+		}
+	}
+	unset(&spec.ShareProcessNamespace)
+	if spec.SecurityContext != nil {
+		unset(&spec.SecurityContext.RunAsNonRoot)
+	}
+	for _, containers := range [][]corev1.Container{spec.InitContainers, spec.Containers} {
+		for i := range containers {
+			if sc := containers[i].SecurityContext; sc != nil {
+				unset(&sc.Privileged)
+				unset(&sc.ReadOnlyRootFilesystem)
+			}
+		}
+	}
+}
+
+// payloadsEqual compares objects as the API receives them, where absent, null
+// and empty values are the same and quantities have one spelling. False is a
+// value: callers clear the booleans for which it is not (see clearUnsetFalse).
 func payloadsEqual(a, b any) bool {
 	x, errA := prunedJSON(a)
 	y, errB := prunedJSON(b)
@@ -172,10 +203,6 @@ func prunedJSON(v any) (any, error) {
 
 func prune(v any) any {
 	switch t := v.(type) {
-	case bool:
-		if !t {
-			return nil
-		}
 	case map[string]any:
 		for key, child := range t {
 			if pruned := prune(child); pruned == nil {
@@ -198,11 +225,23 @@ func prune(v any) any {
 	return v
 }
 
-// resolveUnconfigured replaces unknown values, and scalars configured as ""
-// (which defers to the API), with their prior values, so that comparing API
-// payloads ignores server-populated values. It reports false when a configured
-// value is unknown.
-func resolveUnconfigured(config, plan, state tftypes.Value) (tftypes.Value, bool) {
+// apiDefaultedStrings reports the strings the API fills when they are empty:
+// those Optional and Computed without a default, as SDKv2's Optional+Computed
+// strings were. Configuring "" for one of them keeps the value Kubernetes has.
+func apiDefaultedStrings(ctx context.Context, s any) func(*tftypes.AttributePath) bool {
+	resourceSchema, _ := s.(schema.Schema)
+	return func(at *tftypes.AttributePath) bool {
+		attribute, err := resourceSchema.AttributeAtTerraformPath(ctx, at)
+		str, ok := attribute.(schema.StringAttribute)
+		return err == nil && ok && str.Computed && str.Default == nil
+	}
+}
+
+// resolveUnconfigured replaces unknown values, and API-defaulted strings
+// configured as "", with their prior values, so that comparing API payloads
+// ignores server-populated values. It reports false when a configured value is
+// unknown.
+func resolveUnconfigured(at *tftypes.AttributePath, config, plan, state tftypes.Value, apiDefaulted func(*tftypes.AttributePath) bool) (tftypes.Value, bool) {
 	if !config.IsKnown() {
 		return plan, false
 	}
@@ -219,7 +258,7 @@ func resolveUnconfigured(config, plan, state tftypes.Value) (tftypes.Value, bool
 	case config.IsNull():
 		// A value removed from the configuration is removed, not inherited.
 		return plan, true
-	case isScalar(plan.Type()) && config.Equal(tftypes.NewValue(tftypes.String, "")):
+	case config.Equal(tftypes.NewValue(tftypes.String, "")) && apiDefaulted(at):
 		return prior, prior.IsKnown()
 	case !plan.IsKnown():
 		return plan, false
@@ -241,7 +280,7 @@ func resolveUnconfigured(config, plan, state tftypes.Value) (tftypes.Value, bool
 			if !ok {
 				before = tftypes.NewValue(value.Type(), nil)
 			}
-			resolved, ok := resolveUnconfigured(configured[name], value, before)
+			resolved, ok := resolveUnconfigured(at.WithAttributeName(name), configured[name], value, before, apiDefaulted)
 			if !ok {
 				return plan, false
 			}
@@ -265,7 +304,7 @@ func resolveUnconfigured(config, plan, state tftypes.Value) (tftypes.Value, bool
 			if i < len(configured) {
 				conf = configured[i]
 			}
-			resolved, ok := resolveUnconfigured(conf, value, before)
+			resolved, ok := resolveUnconfigured(at.WithElementKeyInt(i), conf, value, before, apiDefaulted)
 			if !ok {
 				return plan, false
 			}

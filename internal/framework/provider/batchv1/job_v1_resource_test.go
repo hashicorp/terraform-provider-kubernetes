@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -256,6 +257,37 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 	const address = "kubernetes_job_v1.test"
 	withSubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, `sub_path = "data"`)
 	withoutSubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, "")
+	emptySubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, `sub_path = ""`)
+	noEscalation := strings.Replace(emptySubPath, `command = ["sh", "-c", "true"]`, `command = ["sh", "-c", "true"]
+          security_context {
+            allow_privilege_escalation = false
+          }`, 1)
+	// A Job's pod template cannot change, so each of these replaces the Job.
+	step := func(config string, check func(corev1.Container) error) resource.TestStep {
+		return resource.TestStep{
+			Config: config,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionDestroyBeforeCreate)},
+				PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+			},
+			Check: resource.ComposeAggregateTestCheckFunc(
+				testAccCheckKubernetesJobV1Exists(address, &after),
+				testAccCheckKubernetesJobV1ForceNew(&before, &after, true),
+				func(*terraform.State) error {
+					before = after
+					return check(after.Spec.Template.Spec.Containers[0])
+				},
+			),
+		}
+	}
+	subPath := func(want string) func(corev1.Container) error {
+		return func(c corev1.Container) error {
+			if got := c.VolumeMounts[0].SubPath; got != want {
+				return fmt.Errorf("live subPath = %q, want %q", got, want)
+			}
+			return nil
+		}
+	}
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -265,25 +297,15 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 				Config: withSubPath,
 				Check:  testAccCheckKubernetesJobV1Exists(address, &before),
 			},
-			{
-				Config: withoutSubPath,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(address, plancheck.ResourceActionDestroyBeforeCreate),
-					},
-					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesJobV1Exists(address, &after),
-					testAccCheckKubernetesJobV1ForceNew(&before, &after, true),
-					func(*terraform.State) error {
-						if got := after.Spec.Template.Spec.Containers[0].VolumeMounts[0].SubPath; got != "" {
-							return fmt.Errorf("live subPath = %q, want empty", got)
-						}
-						return nil
-					},
-				),
-			},
+			step(withoutSubPath, subPath("")),
+			step(withSubPath, subPath("data")),
+			step(emptySubPath, subPath("")),
+			step(noEscalation, func(c corev1.Container) error {
+				if sc := c.SecurityContext; sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation {
+					return fmt.Errorf("live securityContext = %+v, want allowPrivilegeEscalation false", sc)
+				}
+				return nil
+			}),
 		},
 	})
 }

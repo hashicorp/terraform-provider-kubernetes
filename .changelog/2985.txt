@@ -1,0 +1,3 @@
+```release-note:improvement
+resource/storage_class: mark `reclaim_policy` as `ForceNew` so the resource gets recreated when this argument changes  
+```

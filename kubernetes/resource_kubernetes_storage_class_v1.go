@@ -51,6 +51,7 @@ func resourceKubernetesStorageClassV1(deprecationMessage string) *schema.Resourc
 				Type:        schema.TypeString,
 				Description: "Indicates the type of the reclaim policy",
 				Optional:    true,
+				ForceNew:    true,
 				Default:     string(v1.PersistentVolumeReclaimDelete),
 				ValidateFunc: validation.StringInSlice([]string{
 					string(v1.PersistentVolumeReclaimRecycle),

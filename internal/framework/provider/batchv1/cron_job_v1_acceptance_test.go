@@ -346,12 +346,8 @@ func TestAccKubernetesCronJobV1_upgrade(t *testing.T) {
 					{
 						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 						Config:                   config,
-						// The SDK stored omitted optional scalars as zero/empty.
-						// Framework normalizes them to null in a state-only update.
 						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply: []plancheck.PlanCheck{
-								plancheck.ExpectResourceAction("kubernetes_cron_job_v1.test", plancheck.ResourceActionUpdate),
-							},
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 						},
 						Check: resource.ComposeAggregateTestCheckFunc(

@@ -143,7 +143,7 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckNoResourceAttr(resourceName, "spec.0.active_deadline_seconds"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "0"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.backoff_limit", "6"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.completions", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.parallelism", "1"),
@@ -244,6 +244,44 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 					testAccCheckKubernetesJobV1Exists(resourceName, &conf3),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName1),
 					testAccCheckKubernetesJobV1ForceNew(&conf2, &conf3, true),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
+	var before, after batchv1.Job
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	const address = "kubernetes_job_v1.test"
+	withSubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, `sub_path = "data"`)
+	withoutSubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, "")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: withSubPath,
+				Check:  testAccCheckKubernetesJobV1Exists(address, &before),
+			},
+			{
+				Config: withoutSubPath,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(address, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(address, &after),
+					testAccCheckKubernetesJobV1ForceNew(&before, &after, true),
+					func(*terraform.State) error {
+						if got := after.Spec.Template.Spec.Containers[0].VolumeMounts[0].SubPath; got != "" {
+							return fmt.Errorf("live subPath = %q, want empty", got)
+						}
+						return nil
+					},
 				),
 			},
 		},
@@ -468,6 +506,38 @@ func testAccKubernetesJobV1Config_updateImmutableFields(name, imageName, complet
 }`, name, completions, imageName)
 }
 
+func testAccKubernetesJobV1Config_volumeMount(name, imageName, subPath string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    template {
+      metadata {}
+      spec {
+        container {
+          name    = "hello"
+          image   = "%s"
+          command = ["sh", "-c", "true"]
+          volume_mount {
+            name       = "scratch"
+            mount_path = "/scratch"
+            %s
+          }
+        }
+        volume {
+          name = "scratch"
+          empty_dir {}
+        }
+        restart_policy = "Never"
+      }
+    }
+  }
+
+  wait_for_completion = false
+}`, name, imageName, subPath)
+}
+
 func testAccKubernetesJobV1Config_ttl_seconds_after_finished(name, imageName string) string {
 	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
   metadata {
@@ -573,12 +643,8 @@ func TestAccKubernetesJobV1_upgrade(t *testing.T) {
 			{
 				Config:                   config,
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				// The SDK stored omitted optional scalars as zero/empty.
-				// Framework normalizes them to null in a state-only update.
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction("kubernetes_job_v1.test", plancheck.ResourceActionUpdate),
-					},
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(

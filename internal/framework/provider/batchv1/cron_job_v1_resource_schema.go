@@ -5,6 +5,7 @@ package batchv1
 
 import (
 	"context"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/robfig/cron"
 )
@@ -39,7 +41,7 @@ func buildCronJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *res
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"metadata": common.NamespacedMetadataSchema("cronjob", true),
+			"metadata": common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("cronjob", true)),
 			"spec":     cronJobSpecBlock(),
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Delete: true}),
 		},
@@ -51,14 +53,13 @@ func (r *CronJobV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaR
 }
 
 func cronJobSpecBlock() schema.ListNestedBlock {
-	templateMetadata := common.NamespacedMetadataSchema("jobTemplateSpec", true)
-	// A template has no namespace default in Kubernetes. Preserve SDKv2's stored
-	// empty string, rather than defaulting embedded metadata to "default".
+	templateMetadata := templateMetadataBlock(common.NamespacedMetadataSchema("jobTemplateSpec", true))
+	// A template has no namespace default in Kubernetes; omission plans SDKv2's empty value.
 	templateMetadata.NestedObject.Attributes["namespace"] = schema.StringAttribute{
 		Optional:      true,
 		Computed:      true,
 		Default:       stringdefault.StaticString(""),
-		PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+		PlanModifiers: []planmodifier.String{zeroEquivalentStringRequiresReplace{}},
 	}
 	return schema.ListNestedBlock{
 		Description: "Specification of the cron job. Exactly one spec block is required.",
@@ -115,7 +116,7 @@ func cronJobSpecBlock() schema.ListNestedBlock {
 					NestedObject: schema.NestedBlockObject{
 						Blocks: map[string]schema.Block{
 							"metadata": templateMetadata,
-							"spec":     jobSpecBlock(true),
+							"spec":     jobSpecBlock(false),
 						},
 					},
 				},
@@ -123,6 +124,11 @@ func cronJobSpecBlock() schema.ListNestedBlock {
 		},
 	}
 }
+
+// cronJobSpecBlockType is the CronJob spec type, derived once per process.
+var cronJobSpecBlockType = sync.OnceValue(func() types.ObjectType {
+	return common.FreezeListNestedBlock(cronJobSpecBlock()).NestedObject.Type().(types.ObjectType)
+})
 
 type cronScheduleValidator struct{}
 

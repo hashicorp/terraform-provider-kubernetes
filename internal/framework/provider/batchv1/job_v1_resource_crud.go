@@ -12,8 +12,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -49,7 +52,7 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	}
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	spec, diags := expandJobSpec(ctx, plan.Spec)
+	spec, diags := expandJobSpec(ctx, plan.Spec, true, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -59,29 +62,11 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		resp.Diagnostics.AddError("Failed to create Job", err.Error())
 		return
 	}
-
-	// Persist the server identity before flattening or waiting: either can fail after
-	// creation, and dropping state at that point would orphan the new job.
-	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
-	if len(plan.Metadata) == 1 {
-		plan.Metadata[0].Name = types.StringValue(out.Name)
-		plan.Metadata[0].Namespace = types.StringValue(out.Namespace)
-		plan.Metadata[0].UID = types.StringValue(string(out.UID))
-		plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
-		plan.Metadata[0].Generation = types.Int64Value(out.Generation)
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	// The Job exists now: keep it in state even if waiting for it fails.
+	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(out.Namespace, out.Name))...)
 	}
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(flattenJobPlanned(ctx, out, &plan, filters)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
 		return
 	}
@@ -187,11 +172,7 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		resp.Diagnostics.AddError("Failed to update Job", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(flattenJobPlanned(ctx, out, &plan, filters)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
 	}
@@ -282,14 +263,10 @@ func flattenJob(ctx context.Context, job *batchapi.Job, model *JobV1Model, filte
 	job = job.DeepCopy()
 	if job.Spec.ManualSelector == nil || !*job.Spec.ManualSelector {
 		removeJobGeneratedLabels(job.Labels)
-		if job.Spec.Selector != nil {
-			removeJobGeneratedLabels(job.Spec.Selector.MatchLabels)
-		}
 	}
-	removeJobGeneratedLabels(job.Spec.Template.Labels)
 	metadata, diags := common.FlattenNamespacedMetadata(ctx, job.ObjectMeta, model.Metadata,
 		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
-	spec, specDiags := flattenJobSpec(ctx, job.Spec, model.Spec)
+	spec, specDiags := flattenJobSpec(ctx, job.Spec, model.Spec, true, path.Root("spec"))
 	diags.Append(specDiags...)
 	if diags.HasError() {
 		return diags
@@ -303,27 +280,30 @@ func flattenJob(ctx context.Context, job *batchapi.Job, model *JobV1Model, filte
 	return diags
 }
 
-func flattenJobPlanned(ctx context.Context, job *batchapi.Job, model *JobV1Model, filters kubernetes.MetadataFilters) diag.Diagnostics {
-	plannedSpec := model.Spec
-	plannedMetadata := append([]common.NamespacedMetadataModel(nil), model.Metadata...)
-	diags := flattenJob(ctx, job, model, filters)
-	if diags.HasError() {
+// jobWriteResult records the plan after a write, with the values Kubernetes
+// chose for those it left unknown.
+func jobWriteResult(ctx context.Context, state *tfsdk.State, plan JobV1Model, out *batchapi.Job, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
+	planned := tfsdk.State{Schema: state.Schema}
+	diags := planned.Set(ctx, &plan)
+	actual := tfsdk.State{Schema: state.Schema, Raw: tftypes.NewValue(state.Schema.Type().TerraformType(ctx), nil)}
+	model := plan
+	if flattenDiags := flattenJob(ctx, out, &model, filters); flattenDiags.HasError() {
+		diags.Append(flattenDiags...)
+	} else {
+		diags.Append(actual.Set(ctx, &model)...)
+	}
+	merged, err := knownOrActual(planned.Raw, actual.Raw)
+	if err != nil {
+		diags.AddError("Unable to record Job state", err.Error())
 		return diags
 	}
-	spec, specDiags := preservePlannedValueField(ctx, jobSpecValueField(), plannedSpec, model.Spec)
-	diags.Append(specDiags...)
-	model.Spec = spec
-	if len(plannedMetadata) == 1 && len(model.Metadata) == 1 {
-		model.Metadata[0].Annotations = plannedMetadata[0].Annotations
-		if !plannedMetadata[0].Labels.IsUnknown() {
-			model.Metadata[0].Labels = plannedMetadata[0].Labels
-		}
-	}
+	state.Raw = merged
 	return diags
 }
 
 func removeJobGeneratedLabels(labels map[string]string) {
-	for _, key := range []string{"batch.kubernetes.io/controller-uid", "batch.kubernetes.io/job-name", "controller-uid", "job-name"} {
+	for _, key := range jobGeneratedLabels {
 		delete(labels, key)
 	}
 }
@@ -370,9 +350,9 @@ func patchJobSpec(ctx context.Context, state, plan types.List) (kubernetes.Patch
 			return nil, diags
 		}
 	}
-	spec, expandDiags := expandJobSpec(ctx, payloadPlan)
+	spec, expandDiags := expandJobSpec(ctx, payloadPlan, true, path.Root("spec"))
 	diags.Append(expandDiags...)
-	previousSpec, previousDiags := expandJobSpec(ctx, state)
+	previousSpec, previousDiags := expandJobSpec(ctx, state, true, path.Root("spec"))
 	diags.Append(previousDiags...)
 	if diags.HasError() {
 		return nil, diags
@@ -392,7 +372,8 @@ func patchJobSpec(ctx context.Context, state, plan types.List) (kubernetes.Patch
 	}
 	ops := make(kubernetes.PatchOperations, 0, len(fields))
 	for _, field := range fields {
-		if oldAttrs[field.name].Equal(newAttrs[field.name]) {
+		// State written before a field existed holds null where the plan holds its zero default.
+		if oldAttrs[field.name].Equal(newAttrs[field.name]) || (oldAttrs[field.name].IsNull() && isZeroAttr(newAttrs[field.name])) {
 			continue
 		}
 		// JSON Patch "add" replaces existing members and also works for an omitted
@@ -459,4 +440,16 @@ func jobMetadataPatchOps(ctx context.Context, jobs v1.JobInterface, name string,
 		ops = append(ops, kubernetes.DiffStringMap("/metadata/"+field.name, current, desired)...)
 	}
 	return ops, nil
+}
+
+func isZeroAttr(value attr.Value) bool {
+	switch v := value.(type) {
+	case types.Int64:
+		return v.Equal(types.Int64Value(0))
+	case types.Bool:
+		return v.Equal(types.BoolValue(false))
+	case types.String:
+		return v.Equal(types.StringValue(""))
+	}
+	return false
 }

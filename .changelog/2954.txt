@@ -1,0 +1,7 @@
+```release-note:note
+`resource/kubernetes_runtime_class_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax. Explicitly empty metadata maps may produce a one-time in-place update after upgrading, as may the first `terraform plan -refresh=false` for resources that set `metadata.name`; neither sends a request to Kubernetes.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_runtime_class_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted such entries; they are now rejected during plan. Remove the key or give it a string value.
+```

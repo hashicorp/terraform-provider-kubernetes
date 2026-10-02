@@ -104,11 +104,11 @@ func jobSpecPayloadEquivalent(ctx context.Context, plan tfsdk.Plan, state tfsdk.
 	if err != nil {
 		return false
 	}
-	resolved, ok := jobComparisonValue(blockValueField(jobSpecBlock(false)), planRaw, stateRaw, configRaw)
+	resolved, ok := jobComparisonValue(jobSpecValueField(), planRaw, stateRaw, configRaw)
 	if !ok || !resolved.IsFullyKnown() {
 		return false
 	}
-	resolvedValue, err := jobSpecBlock(false).Type().ValueFromTerraform(ctx, resolved)
+	resolvedValue, err := jobSpecValueField().typ.ValueFromTerraform(ctx, resolved)
 	if err != nil {
 		return false
 	}

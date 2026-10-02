@@ -21,7 +21,14 @@ import (
 	"github.com/robfig/cron"
 )
 
-func (r *CronJobV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+// The schema is built and frozen once per process; see common.FrozenSchema.
+var cronJobFrozenSchema = common.FrozenSchema(buildCronJobSchema)
+
+func (r *CronJobV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	cronJobFrozenSchema(ctx, req, resp)
+}
+
+func buildCronJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Version:     0,
 		Description: "A CronJob creates Jobs on a time-based schedule.",

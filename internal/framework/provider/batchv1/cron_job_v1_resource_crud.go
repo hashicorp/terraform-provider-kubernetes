@@ -330,12 +330,12 @@ func cronJobSpecForUpdate(ctx context.Context, req resource.UpdateRequest, plann
 	}
 	// Unconfigured computed values may become unknown on an unrelated edit.
 	// Retain their prior API values for the update payload, not in the real plan.
-	resolved, ok := jobComparisonValue(blockValueField(cronJobSpecBlock()), plannedRaw, priorRaw, configuredRaw)
+	resolved, ok := jobComparisonValue(cronJobSpecValueField(), plannedRaw, priorRaw, configuredRaw)
 	if !ok {
 		diagnostics.AddError("Unknown CronJob update value", "The desired CronJob specification contains an unresolved configured value.")
 		return batch.CronJobSpec{}, diagnostics
 	}
-	value, err := cronJobSpecBlock().Type().ValueFromTerraform(ctx, resolved)
+	value, err := cronJobSpecValueField().typ.ValueFromTerraform(ctx, resolved)
 	if err != nil {
 		diagnostics.AddError("Invalid CronJob update value", err.Error())
 		return batch.CronJobSpec{}, diagnostics
@@ -350,7 +350,7 @@ func flattenCronJobSpec(ctx context.Context, spec batch.CronJobSpec, prior types
 		diagnostics.AddError("Error reading CronJob specification", err.Error())
 		return prior, diagnostics
 	}
-	return valueFromAPI(ctx, cronJobSpecBlock(), raw, prior)
+	return valueFromAPIField(ctx, cronJobSpecValueField(), raw, prior)
 }
 
 func cronJobAppliedSpec(ctx context.Context, plan types.List, spec batch.CronJobSpec) (types.List, diag.Diagnostics) {
@@ -367,7 +367,7 @@ func cronJobAppliedSpec(ctx context.Context, plan types.List, spec batch.CronJob
 	if diagnostics.HasError() {
 		return plan, diagnostics
 	}
-	return preservePlannedValue(ctx, cronJobSpecBlock(), plan, actual)
+	return preservePlannedValueField(ctx, cronJobSpecValueField(), plan, actual)
 }
 
 func cronJobKeepPlannedMetadata(actual *metav1.ObjectMeta, planned metav1.ObjectMeta) {

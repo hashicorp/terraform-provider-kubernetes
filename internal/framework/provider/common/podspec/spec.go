@@ -119,6 +119,11 @@ func (b *Built) RefreshSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 	return r.FlattenSpec(ctx, spec, baseline, at)
 }
 
+// SDKv2 passed a block with nothing configured as [nil]. For the pod security
+// context that omits runAsNonRoot rather than sending false, so a block such as
+// security_context { supplemental_groups = [] } leaves the API object unchanged.
+var podZeroBlockUnset = map[string]bool{"spec.security_context": true}
+
 // This boundary translates known Framework values to the input of the shared
 // pure PodSpec API helpers, never to ResourceData. Unknowns cannot reach client-go.
 func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key string, computed map[string]bool, diagnostics *diag.Diagnostics) interface{} {
@@ -163,6 +168,9 @@ func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key st
 		}
 		return result
 	case types.List:
+		if podZeroBlockUnset[key] && len(v.Elements()) == 1 && podZeroValue(v.Elements()[0]) {
+			return []interface{}{nil}
+		}
 		result := make([]interface{}, len(v.Elements()))
 		for index, entry := range v.Elements() {
 			if entry.IsUnknown() {

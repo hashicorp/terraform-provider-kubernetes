@@ -149,6 +149,12 @@ versions reported as a change on every plan, is also brought in line once.
 These show a one-time in-place update that changes only Terraform state, not
 the Pod; the following plan should be empty.
 
+A pod-level `security_context` block that sets only empty or `false` values,
+such as `security_context { run_as_non_root = false }`, is sent to Kubernetes
+as an empty security context; earlier versions sent `runAsNonRoot: false` for
+it. Kubernetes treats an unset `runAsNonRoot` as false, so the Pod runs the
+same way.
+
 ## Move from the deprecated resource
 
 Terraform 1.8 or later supports the cross-type move from `kubernetes_pod` to

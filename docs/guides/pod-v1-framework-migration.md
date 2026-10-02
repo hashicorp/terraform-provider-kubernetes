@@ -116,7 +116,10 @@ import uses the API's spelling. This can change string outputs, not allocations.
 An empty string on a field that Kubernetes defaults, such as `image_pull_policy`,
 `service_account_name`, `scheduler_name` or `node_name`, leaves the value to
 Kubernetes. A new Pod records `""` for it until the next refresh, which records
-the value Kubernetes chose. The empty string never forces replacement.
+the value Kubernetes chose. The empty string never forces replacement. Before
+that first refresh, for example with `terraform plan -refresh=false`, changing
+the configuration from `""` to the value Kubernetes chose replaces the Pod. Run a
+normal plan or `terraform apply -refresh-only` first.
 
 ## Review the upgrade
 

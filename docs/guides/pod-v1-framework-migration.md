@@ -121,6 +121,15 @@ that first refresh, for example with `terraform plan -refresh=false`, changing
 the configuration from `""` to the value Kubernetes chose replaces the Pod. Run a
 normal plan or `terraform apply -refresh-only` first.
 
+## Changes that replace the Pod
+
+Kubernetes can update only a few fields of a running Pod. The provider changes
+metadata labels and annotations and `spec.active_deadline_seconds` in place.
+Any other spec change replaces the Pod, including fields that earlier versions
+treated as updatable, such as volumes, volume mounts, probes and affinity.
+Earlier versions reported success for those changes without changing the Pod
+and showed the same change again on the next plan.
+
 ## Review the upgrade
 
 1. Back up state securely and retain the previous provider version and configuration.

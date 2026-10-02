@@ -29,10 +29,12 @@ func TestPodV1SpecRequiresReplacement(t *testing.T) {
 		want bool
 	}{
 		"unchanged": {edit: func(*corev1.PodSpec) {}},
-		"container image and active deadline are patched": {edit: func(s *corev1.PodSpec) {
-			s.Containers[0].Image = "image:2"
+		"active deadline is patched": {edit: func(s *corev1.PodSpec) {
 			s.ActiveDeadlineSeconds = ptr.To(int64(60))
 		}},
+		"container image": {edit: func(s *corev1.PodSpec) {
+			s.Containers[0].Image = "image:2"
+		}, want: true},
 		"empty and unset values are equivalent": {edit: func(s *corev1.PodSpec) {
 			s.SecurityContext = &corev1.PodSecurityContext{SupplementalGroups: []int64{}}
 			s.Containers[0].Args = []string{}

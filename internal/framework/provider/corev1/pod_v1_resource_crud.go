@@ -323,23 +323,6 @@ func podV1UpdatePatch(priorMeta, plannedMeta metav1.ObjectMeta, priorSpec, plann
 		!reflect.DeepEqual(live.Spec.ActiveDeadlineSeconds, plannedSpec.ActiveDeadlineSeconds) {
 		spec["activeDeadlineSeconds"] = plannedSpec.ActiveDeadlineSeconds
 	}
-	priorImages := make(map[string]string, len(priorSpec.Containers))
-	liveImages := make(map[string]string, len(live.Spec.Containers))
-	for _, c := range priorSpec.Containers {
-		priorImages[c.Name] = c.Image
-	}
-	for _, c := range live.Spec.Containers {
-		liveImages[c.Name] = c.Image
-	}
-	var containers []map[string]string
-	for _, c := range plannedSpec.Containers {
-		if priorImages[c.Name] != c.Image && liveImages[c.Name] != c.Image {
-			containers = append(containers, map[string]string{"name": c.Name, "image": c.Image})
-		}
-	}
-	if len(containers) != 0 {
-		spec["containers"] = containers
-	}
 	if len(spec) != 0 {
 		patch["spec"] = spec
 	}

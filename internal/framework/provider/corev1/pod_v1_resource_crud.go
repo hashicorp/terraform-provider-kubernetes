@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -49,7 +50,7 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	}
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	spec, diags := expandPodV1Spec(ctx, plan.Spec)
+	spec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	targets, diags := podV1TargetStates(ctx, plan.TargetState)
 	resp.Diagnostics.Append(diags...)
@@ -59,7 +60,7 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 
 	pod, err := conn.CoreV1().Pods(metadata.Namespace).Create(ctx, &corev1.Pod{
 		ObjectMeta: metadata,
-		Spec:       *spec,
+		Spec:       spec,
 	}, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating Pod", err.Error())
@@ -74,7 +75,9 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	plan.Spec, diags = flattenPodV1Spec(ctx, pod.Spec, plan.Spec)
+	// Both reads are flattened against the plan, not against each other.
+	planned := plan.Spec
+	plan.Spec, diags = podV1Spec().FlattenSpec(ctx, pod.Spec, planned, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -111,7 +114,7 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		return
 	}
 	current := result.(*corev1.Pod)
-	plan.Spec, diags = flattenPodV1Spec(ctx, current.Spec, plan.Spec)
+	plan.Spec, diags = podV1Spec().FlattenSpec(ctx, current.Spec, planned, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	podV1SetMetadata(&plan, current.ObjectMeta)
 	if !resp.Diagnostics.HasError() {
@@ -150,7 +153,7 @@ func (p *PodV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 	state.Metadata, diags = common.FlattenNamespacedMetadata(ctx, pod.ObjectMeta, state.Metadata,
 		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
 	resp.Diagnostics.Append(diags...)
-	state.Spec, diags = flattenPodV1Spec(ctx, pod.Spec, state.Spec)
+	state.Spec, diags = podV1Spec().FlattenSpec(ctx, pod.Spec, state.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -180,9 +183,9 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 	resp.Diagnostics.Append(diags...)
 	plannedMetadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	priorSpec, diags := expandPodV1Spec(ctx, state.Spec)
+	priorSpec, diags := podV1Spec().ExpandSpec(ctx, state.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
-	plannedSpec, diags := expandPodV1Spec(ctx, plan.Spec)
+	plannedSpec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -199,7 +202,7 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		if err != nil {
 			return err
 		}
-		patch := podV1UpdatePatch(priorMetadata, plannedMetadata, priorSpec, plannedSpec, current)
+		patch := podV1UpdatePatch(priorMetadata, plannedMetadata, &priorSpec, &plannedSpec, current)
 		if len(patch) == 0 {
 			pod = current
 			return nil
@@ -226,7 +229,7 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 
 	plan.ID = state.ID
 	podV1SetMetadata(&plan, pod.ObjectMeta)
-	plan.Spec, diags = flattenPodV1Spec(ctx, pod.Spec, plan.Spec)
+	plan.Spec, diags = podV1Spec().FlattenSpec(ctx, pod.Spec, plan.Spec, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -208,7 +208,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		if baseline != nil && i < len(baseline.VolumeClaimTemplate) {
 			prior = &baseline.VolumeClaimTemplate[i]
 		}
-		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior)
+		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior, refresh)
 		diags.Append(fd...)
 		out.VolumeClaimTemplate[i] = model
 	}
@@ -421,7 +421,7 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	return out, diags
 }
 
-func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel) (PersistentVolumeClaimModel, diag.Diagnostics) {
+func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel, refresh bool) (PersistentVolumeClaimModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := PersistentVolumeClaimModel{}
 
@@ -431,6 +431,9 @@ func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolum
 	}
 	meta, d := flattenClaimTemplateMetadata(ctx, in.ObjectMeta, priorMetadata)
 	diags.Append(d...)
+	if !refresh {
+		common.KeepPlannedMetadataMaps(meta, priorMetadata)
+	}
 	preserveEmbeddedMetadataNamespace(meta, priorMetadata, in.Namespace)
 	out.Metadata = meta
 
@@ -519,8 +522,9 @@ func flattenClaimQuantities(ctx context.Context, in corev1.ResourceList, prior t
 	return statefulSetPreserveQuantityMap(current, prior)
 }
 
-// The API stores claim templates verbatim, so their metadata is read back
-// unfiltered, as SDKv2 did.
+// The API stores claim templates verbatim, so a read records their metadata
+// unfiltered, as SDKv2 did. A write records the planned maps instead, as for
+// the StatefulSet's own metadata.
 func flattenClaimTemplateMetadata(ctx context.Context, in metav1.ObjectMeta, prior []common.NamespacedMetadataModel) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
 	meta, diags := common.FlattenNamespacedMetadata(ctx, in, nil, nil, nil)
 	var priorAnnotations, priorLabels types.Map

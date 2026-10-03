@@ -6,6 +6,7 @@ package appsv1_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -278,6 +279,21 @@ func TestAccKubernetesWorkloadsV1_addBlocksWithUnknownContent(t *testing.T) {
 				Check:            resource.ComposeAggregateTestCheckFunc(checks...),
 			},
 		},
+	})
+}
+
+// An empty list does not omit a list-of-object argument such as strategy, so
+// it is rejected rather than planned and then contradicted by the API.
+func TestAccKubernetesWorkloadsV1_emptyStrategyRejected(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		Steps: []resource.TestStep{{
+			Config:      strings.Replace(testAccWorkloadsV1Config(name, "", ""), "replicas = 1", "replicas = 1\n    strategy = []", 1),
+			PlanOnly:    true,
+			ExpectError: regexp.MustCompile(`must\s+be\s+omitted\s+or\s+null`),
+		}},
 	})
 }
 

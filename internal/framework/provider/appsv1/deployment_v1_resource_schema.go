@@ -122,6 +122,7 @@ func deploymentSpecBlock() schema.ListNestedBlock {
 						listplanmodifier.UseStateForUnknown(),
 					},
 					Validators: []validator.List{
+						common.NotEmptyList(),
 						listvalidator.SizeAtMost(1),
 					},
 					NestedObject: schema.NestedAttributeObject{
@@ -137,7 +138,7 @@ func deploymentSpecBlock() schema.ListNestedBlock {
 								Description: "Rolling update parameters, used only with the RollingUpdate strategy.",
 								Optional:    true,
 								Computed:    true,
-								Validators:  []validator.List{listvalidator.SizeAtMost(1)},
+								Validators:  []validator.List{common.NotEmptyList(), listvalidator.SizeAtMost(1)},
 								NestedObject: schema.NestedAttributeObject{
 									Attributes: map[string]schema.Attribute{
 										"max_surge": schema.StringAttribute{

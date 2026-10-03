@@ -40,7 +40,7 @@ resources = [{
 }]
 ```
 
-Omit an optional argument, or use `null`, to leave its value computed. Use `resources = [{}]` for the previous `resources {}` form. Use `resources = [{ limits = {}, requests = {} }]` when explicitly configuring empty resource maps. A configured resources list must contain one object; `[]` is not a substitute for omission.
+Omit an optional argument, or use `null`, to leave its value computed. Use `resources = [{}]` for the previous `resources {}` form. Use `resources = [{ limits = {}, requests = {} }]` when explicitly configuring empty resource maps. A configured `resources`, `strategy`, `rolling_update` or `persistent_volume_claim_retention_policy` list must contain one object, and `image_pull_secrets` or `readiness_gate` at least one; an empty list `[]` is rejected, since it is not a substitute for omission.
 
 A Deployment rolling-update strategy becomes:
 

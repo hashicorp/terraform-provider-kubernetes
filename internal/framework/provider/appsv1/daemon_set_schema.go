@@ -159,6 +159,7 @@ func daemonSetStrategyAttribute() schema.ListNestedAttribute {
 			listplanmodifier.UseStateForUnknown(),
 		},
 		Validators: []validator.List{
+			common.NotEmptyList(),
 			listvalidator.SizeAtMost(1),
 		},
 		NestedObject: schema.NestedAttributeObject{
@@ -176,6 +177,7 @@ func daemonSetStrategyAttribute() schema.ListNestedAttribute {
 					Optional:    true,
 					Computed:    true,
 					Validators: []validator.List{
+						common.NotEmptyList(),
 						listvalidator.SizeAtMost(1),
 					},
 					NestedObject: schema.NestedAttributeObject{

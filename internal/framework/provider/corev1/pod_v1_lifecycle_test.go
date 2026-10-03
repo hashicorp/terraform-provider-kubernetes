@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 	api "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -25,12 +26,12 @@ func TestAccKubernetesPodV1_generatedNameLifecycle(t *testing.T) {
 	prefix := fmt.Sprintf("tf-acc-test-%s-", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigGeneratedName(prefix, busyboxImage, "initial"),
+				Config: testAccKubernetesPodV1ConfigGeneratedName(prefix, kubetest.BusyboxImage, "initial"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &before),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", prefix),
@@ -38,7 +39,7 @@ func TestAccKubernetesPodV1_generatedNameLifecycle(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPodV1ConfigGeneratedName(prefix, busyboxImage, "updated"),
+				Config: testAccKubernetesPodV1ConfigGeneratedName(prefix, kubetest.BusyboxImage, "updated"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
 				},
@@ -95,12 +96,12 @@ func TestAccKubernetesPodV1_emptyAPIDefaultedStrings(t *testing.T) {
     scheduler_name       = "default-scheduler"`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigEmptyAPIDefaultedStrings(name, busyboxImage, "initial", empty, ""),
+				Config: testAccKubernetesPodV1ConfigEmptyAPIDefaultedStrings(name, kubetest.BusyboxImage, "initial", empty, ""),
 				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &before),
 			},
 			{
@@ -113,13 +114,13 @@ func TestAccKubernetesPodV1_emptyAPIDefaultedStrings(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesPodV1ConfigEmptyAPIDefaultedStrings(name, busyboxImage, "initial", live, "IfNotPresent"),
+				Config: testAccKubernetesPodV1ConfigEmptyAPIDefaultedStrings(name, kubetest.BusyboxImage, "initial", live, "IfNotPresent"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
 			{
-				Config: testAccKubernetesPodV1ConfigEmptyAPIDefaultedStrings(name, busyboxImage, "updated", empty, ""),
+				Config: testAccKubernetesPodV1ConfigEmptyAPIDefaultedStrings(name, kubetest.BusyboxImage, "updated", empty, ""),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
 				},
@@ -160,12 +161,12 @@ func TestAccKubernetesPodV1_projectedVolumeGroupedSources(t *testing.T) {
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigGroupedProjection(name, busyboxImage),
+				Config: testAccKubernetesPodV1ConfigGroupedProjection(name, kubetest.BusyboxImage),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.projected.0.sources.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.volume.0.projected.0.sources.0.config_map.0.name", name),
@@ -227,7 +228,7 @@ func TestAccKubernetesPodV1_specUpdateOrReplace(t *testing.T) {
 	resourceName := "kubernetes_pod_v1.test"
 	step := func(deadline int, mountPath string, action plancheck.ResourceActionType) resource.TestStep {
 		return resource.TestStep{
-			Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, deadline, mountPath),
+			Config: testAccKubernetesPodV1ConfigSpecUpdate(name, kubetest.BusyboxImage, deadline, mountPath),
 			ConfigPlanChecks: resource.ConfigPlanChecks{
 				PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, action)},
 			},
@@ -240,12 +241,12 @@ func TestAccKubernetesPodV1_specUpdateOrReplace(t *testing.T) {
 	}
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 0, "/data"),
+				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, kubetest.BusyboxImage, 0, "/data"),
 				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &current),
 			},
 			step(3600, "/data", plancheck.ResourceActionUpdate),
@@ -320,19 +321,17 @@ func TestAccKubernetesPodV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
     }`
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testAccPodV1PreCheck(t) },
+		PreCheck:     func() { kubetest.PreCheck(t) },
 		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, securityContext),
-				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &created),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            testAccKubernetesPodV1ConfigSecurityContext(name, kubetest.BusyboxImage, securityContext),
+				Check:             testAccCheckKubernetesPodV1Exists(resourceName, &created),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
-				Config:                   testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, securityContext),
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
+				Config:                   testAccKubernetesPodV1ConfigSecurityContext(name, kubetest.BusyboxImage, securityContext),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
@@ -342,8 +341,8 @@ func TestAccKubernetesPodV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
-				Config:                   testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, ""),
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
+				Config:                   testAccKubernetesPodV1ConfigSecurityContext(name, kubetest.BusyboxImage, ""),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace)},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -364,26 +363,24 @@ func TestAccKubernetesPodV1_numberSpelling(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
 	runAsUser := func(user string) string {
-		return testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, fmt.Sprintf(`security_context {
+		return testAccKubernetesPodV1ConfigSecurityContext(name, kubetest.BusyboxImage, fmt.Sprintf(`security_context {
       run_as_user = %q
     }`, user))
 	}
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testAccPodV1PreCheck(t) },
+		PreCheck:     func() { kubetest.PreCheck(t) },
 		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: runAsUser("01000"),
-				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &created),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            runAsUser("01000"),
+				Check:             testAccCheckKubernetesPodV1Exists(resourceName, &created),
 				// 3.3.0 replaces the Pod on every plan for this spelling.
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   runAsUser("01000"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionNoop)},
@@ -394,7 +391,7 @@ func TestAccKubernetesPodV1_numberSpelling(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   runAsUser("02000"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace)},
@@ -412,20 +409,18 @@ func TestAccKubernetesPodV1_numberSpelling(t *testing.T) {
 // State written by 3.3.0 plans no change before its first refresh.
 func TestAccKubernetesPodV1_upgradeWithoutRefresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	config := testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, "")
+	config := testAccKubernetesPodV1ConfigSecurityContext(name, kubetest.BusyboxImage, "")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:             func() { testAccPodV1PreCheck(t) },
+		PreCheck:             func() { kubetest.PreCheck(t) },
 		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
 		CheckDestroy:         testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: config,
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            config,
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   config,
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 			},
@@ -437,20 +432,18 @@ func TestAccKubernetesPodV1_upgradeWithoutRefresh(t *testing.T) {
 // without a name; the upgrade takes the name from the id and replaces it.
 func TestAccKubernetesPodV1_upgradeTaintedGeneratedName(t *testing.T) {
 	prefix := fmt.Sprintf("tf-acc-test-%s-", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
-	config := testAccKubernetesPodV1ConfigGeneratedName(prefix, busyboxImage, "initial")
+	config := testAccKubernetesPodV1ConfigGeneratedName(prefix, kubetest.BusyboxImage, "initial")
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testAccPodV1PreCheck(t) },
+		PreCheck:     func() { kubetest.PreCheck(t) },
 		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config:      config,
-				ExpectError: regexp.MustCompile("resource name may not be empty"),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            config,
+				ExpectError:       regexp.MustCompile("resource name may not be empty"),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   config,
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction("kubernetes_pod_v1.test", plancheck.ResourceActionReplace),

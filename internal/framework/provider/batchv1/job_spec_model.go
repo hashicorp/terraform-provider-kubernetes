@@ -241,10 +241,9 @@ func flattenPodSpec(ctx context.Context, in corev1.PodSpec, prior types.List, jo
 	return jobPodSpec(job).FlattenSpec(ctx, in, prior, at)
 }
 
-// Template labels and annotations record the planned maps after a write. A
-// Job's template cannot change, so a refresh keeps them too, and keys or
-// values admission set at create never drift. Otherwise, as on an import, a
-// refresh records every live key, as SDKv2 did.
+// Template labels and annotations record the planned maps after a write, and a
+// Job's immutable template keeps them on refresh. Otherwise, as on an import, a
+// refresh records every live key.
 func flattenTemplateMetadata(in metav1.ObjectMeta, prior attr.Value, typ types.ListType, live bool, generatedLabels []string, diags *diag.Diagnostics) types.List {
 	objectType := typ.ElemType.(types.ObjectType)
 	previous := priorAttributes(prior)

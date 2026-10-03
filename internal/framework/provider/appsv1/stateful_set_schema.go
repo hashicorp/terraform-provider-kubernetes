@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// The schema is built and frozen once per process; see common.FrozenSchema.
 var statefulSetFrozenSchema = common.FrozenSchema(buildStatefulSetSchema)
 
 func (r *StatefulSetV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

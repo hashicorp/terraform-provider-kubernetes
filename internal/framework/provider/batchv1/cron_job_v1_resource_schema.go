@@ -23,7 +23,6 @@ import (
 	"github.com/robfig/cron"
 )
 
-// The schema is built and frozen once per process; see common.FrozenSchema.
 var cronJobFrozenSchema = common.FrozenSchema(buildCronJobSchema)
 
 func (r *CronJobV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

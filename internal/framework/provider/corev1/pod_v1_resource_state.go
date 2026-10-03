@@ -133,15 +133,8 @@ func (p *PodV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrad
 	return map[int64]resource.StateUpgrader{0: upgrader(0), 1: upgrader(1)}
 }
 
-// MoveState implements [resource.ResourceWithMoveState] for
-//
-//	moved {
-//	  from = kubernetes_pod.example
-//	  to   = kubernetes_pod_v1.example
-//	}
-//
-// Do not guard on SourceIdentitySchemaVersion: terraform-plugin-go v0.29.0
-// still leaves it at zero for all sources.
+// MoveState moves kubernetes_pod state to kubernetes_pod_v1. It does not guard
+// on SourceIdentitySchemaVersion, which terraform-plugin-go v0.29.0 leaves at zero.
 func (p *PodV1) MoveState(ctx context.Context) []resource.StateMover {
 	return []resource.StateMover{
 		{

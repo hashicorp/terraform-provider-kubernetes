@@ -21,9 +21,8 @@ type workloadTemplateModel struct {
 	Spec     types.List                       `tfsdk:"spec"`
 }
 
-// workloadStateModel is the state of a workload whose spec is already a
-// Framework value. Framework reflection converts every nested model slice
-// back and forth, so the large pod spec is cheaper to set this way.
+// workloadStateModel is workload state whose spec is already a Framework value,
+// which avoids reflecting over the large pod spec.
 type workloadStateModel struct {
 	ID             types.String                     `tfsdk:"id"`
 	Metadata       []common.NamespacedMetadataModel `tfsdk:"metadata"`

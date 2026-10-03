@@ -218,10 +218,8 @@ func FlattenNamespacedMetadata(ctx context.Context, k8MetaObj metav1.ObjectMeta,
 	return []NamespacedMetadataModel{{MetadataModel: base[0], Namespace: types.StringValue(k8MetaObj.Namespace)}}, diags
 }
 
-// KeepPlannedMetadataMaps records the planned annotations and labels in
-// metadata flattened after a Create or Update. Every planned key was written,
-// and keys the API server or an admission webhook added would contradict the
-// plan, so they are left for the next Read to report as drift.
+// KeepPlannedMetadataMaps records the planned annotations and labels after a
+// write; keys the server or admission added show as drift on the next Read.
 func KeepPlannedMetadataMaps(metadata, planned []NamespacedMetadataModel) {
 	if len(metadata) != 1 || len(planned) != 1 {
 		return

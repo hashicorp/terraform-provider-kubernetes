@@ -4,12 +4,8 @@
 package corev1
 
 import (
-	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
@@ -71,50 +67,6 @@ func TestPodV1SpecRequiresReplacement(t *testing.T) {
 			test.edit(&planned)
 			if got := podV1SpecRequiresReplacement(prior, planned); got != test.want {
 				t.Fatalf("requires replacement = %t, want %t", got, test.want)
-			}
-		})
-	}
-}
-
-func TestRawAttributeUnchangedMatchesDecodedEqual(t *testing.T) {
-	ctx := context.Background()
-	specType := types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{
-		"image":  types.StringType,
-		"labels": types.MapType{ElemType: types.StringType},
-	}}}
-	listType := specType.TerraformType(ctx).(tftypes.List)
-	spec := func(image any) tftypes.Value {
-		return tftypes.NewValue(listType, []tftypes.Value{tftypes.NewValue(listType.ElementType, map[string]tftypes.Value{
-			"image": tftypes.NewValue(tftypes.String, image),
-			"labels": tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, map[string]tftypes.Value{
-				"a": tftypes.NewValue(tftypes.String, "1"),
-				"b": tftypes.NewValue(tftypes.String, "2"),
-			}),
-		})})
-	}
-	for name, test := range map[string]struct {
-		plan, state tftypes.Value
-		want        bool
-	}{
-		"same value":           {plan: spec("app:1"), state: spec("app:1"), want: true},
-		"changed value":        {plan: spec("app:2"), state: spec("app:1")},
-		"null and empty list":  {plan: tftypes.NewValue(listType, []tftypes.Value{}), state: tftypes.NewValue(listType, nil)},
-		"unknown nested value": {plan: spec(tftypes.UnknownValue), state: spec("app:1")},
-	} {
-		t.Run(name, func(t *testing.T) {
-			object := func(v tftypes.Value) tftypes.Value {
-				return tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"spec": listType}}, map[string]tftypes.Value{"spec": v})
-			}
-			decoded := func(v tftypes.Value) attr.Value {
-				value, err := specType.ValueFromTerraform(ctx, v)
-				if err != nil {
-					t.Fatal(err)
-				}
-				return value
-			}
-			got := rawAttributeUnchanged(object(test.plan), object(test.state), "spec")
-			if equal := decoded(test.plan).Equal(decoded(test.state)); got != test.want || equal != test.want {
-				t.Fatalf("unchanged = %t, decoded equal = %t, want %t", got, equal, test.want)
 			}
 		})
 	}

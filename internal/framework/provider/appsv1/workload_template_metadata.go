@@ -40,12 +40,10 @@ func workloadTemplateMetadataBlock() schema.ListNestedBlock {
 	return block
 }
 
-// flattenWorkloadTemplateMetadata reads pod template metadata as SDKv2 did. A
-// refresh or import stores every live annotation and label: the provider's
-// ignore_annotations and ignore_labels do not apply to templates, so an
-// out-of-band change such as kubectl rollout restart shows as drift. After
-// Create and Update the planned maps are recorded, so keys the API or an
-// admission webhook adds cannot contradict the plan; the next refresh reports them.
+// flattenWorkloadTemplateMetadata builds the template metadata state. On
+// refresh or import it records every live template annotation and label, since
+// ignore_annotations and ignore_labels do not apply to templates; after Create
+// and Update it records the planned maps.
 func flattenWorkloadTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta, prior []common.NamespacedMetadataModel, refresh bool) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
 	var previous common.NamespacedMetadataModel
 	if len(prior) > 0 {

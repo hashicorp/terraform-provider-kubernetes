@@ -229,9 +229,8 @@ func (v rbacNameValidator) ValidateString(_ context.Context, req validator.Strin
 	}
 }
 
-// NotEmptyList rejects a configured empty list for an optional list of objects.
-// Such arguments replaced SDKv2 blocks, and [] does not mean "omitted" the way
-// an absent block did, so the message says how to leave the argument unset.
+// NotEmptyList rejects a configured empty list of objects, which, unlike an
+// absent SDKv2 block, does not mean "omitted".
 func NotEmptyList() validator.List {
 	return emptyListValidator{}
 }

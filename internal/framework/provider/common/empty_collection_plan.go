@@ -12,10 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// WithEmptyMetadataCompatibility opts workload metadata into SDKv2's retained-empty
-// representation without changing MetadataSchema's existing contract for other
-// resources. Nonempty values remain configuration-owned and are removed when
-// omitted. Owners must also normalize proven no-op computed-only plans.
+// WithEmptyMetadataCompatibility makes omitted annotations and labels keep a
+// prior empty map, as SDKv2 state did; nonempty values are still removed.
+// Resources using it also run NoOpPlan.
 func WithEmptyMetadataCompatibility(block schema.ListNestedBlock) schema.ListNestedBlock {
 	for _, name := range []string{"annotations", "labels"} {
 		attribute := block.NestedObject.Attributes[name].(schema.MapAttribute)
@@ -27,11 +26,9 @@ func WithEmptyMetadataCompatibility(block schema.ListNestedBlock) schema.ListNes
 	return block
 }
 
-// EmptyMapCompatibility only preserves empty state, not removed nonempty values.
-// It requires Optional+Computed with a null default; null remains the fresh
-// omission value, while Computed makes retaining historical empties Core-valid.
-// The default also makes Framework mark computed outputs unknown before the
-// modifier schedules a removal, so mutable metadata is not left stale.
+// EmptyMapCompatibility keeps a prior empty map when the value is omitted. The
+// attribute must be Optional+Computed, so Core accepts the retained map, with a
+// null default, so computed metadata is still marked unknown on a removal.
 type EmptyMapCompatibility struct{}
 
 func (EmptyMapCompatibility) Description(context.Context) string {

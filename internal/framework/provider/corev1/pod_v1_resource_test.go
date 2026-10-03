@@ -15,7 +15,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	api "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -26,11 +29,11 @@ import (
 func TestAccKubernetesPodV1_minimal(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -59,25 +62,23 @@ func TestAccKubernetesPodV1_minimal(t *testing.T) {
 // moves without a change.
 func TestAccKubernetesPodV1_moveFromLegacyState(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	config := testAccKubernetesPodV1ConfigMinimal(name, busyboxImage)
+	config := testAccKubernetesPodV1ConfigMinimal(name, kubetest.BusyboxImage)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPodV1PreCheck(t) },
+		PreCheck: func() { kubetest.PreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
 		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 2.3.0"},
-				},
-				Config: strings.Replace(config, `"kubernetes_pod_v1"`, `"kubernetes_pod"`, 1),
+				ExternalProviders: kubetest.ReleasedProvider("2.3.0"),
+				Config:            strings.Replace(config, `"kubernetes_pod_v1"`, `"kubernetes_pod"`, 1),
 				// 2.3.0 does not settle on empty values it reads back.
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config: config + `
 moved {
   from = kubernetes_pod.test
@@ -95,11 +96,11 @@ moved {
 func TestAccKubernetesPodV1_identity(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
@@ -134,12 +135,12 @@ func TestAccKubernetesPodV1_basic(t *testing.T) {
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName1 := busyboxImage
+	imageName1 := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -187,17 +188,17 @@ func TestAccKubernetesPodV1_scheduler(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	schedulerName := acctest.RandomWithPrefix("test-scheduler")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.25.0")
-			skipIfRunningInAks(t)
-			setClusterVersionVar(t, "TF_VAR_scheduler_cluster_version") // should be in format 'vX.Y.Z'
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.25.0")
+			kubetest.SkipIfRunningInAks(t)
+			os.Setenv("TF_VAR_scheduler_cluster_version", "v"+kubetest.ClusterVersion(t).Core().Original())
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -221,17 +222,17 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 	var conf1, conf2 api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	image := busyboxImage
-	image1 := agnhostImage
+	image := kubetest.BusyboxImage
+	image1 := kubetest.AgnhostImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesConfig_ignoreAnnotations() +
+				Config: kubetest.IgnoreAnnotationsConfig +
 					testAccKubernetesPodV1ConfigWithInitContainer(podName, image),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf1),
@@ -248,7 +249,7 @@ func TestAccKubernetesPodV1_initContainer_updateForcesNew(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 			},
 			{
-				Config: testAccKubernetesConfig_ignoreAnnotations() +
+				Config: kubetest.IgnoreAnnotationsConfig +
 					testAccKubernetesPodV1ConfigWithInitContainer(podName, image1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf2),
@@ -269,14 +270,14 @@ func TestAccKubernetesPodV1_updateArgsForceNew(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	argsBefore := `["sleep", "60"]`
 	argsAfter := `["sleep", "300"]`
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -328,14 +329,14 @@ func TestAccKubernetesPodV1_updateEnvForceNew(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	envBefore := "bar"
 	envAfter := "baz"
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -385,12 +386,12 @@ func TestAccKubernetesPodV1_with_pod_security_context(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -418,12 +419,12 @@ func TestAccKubernetesPodV1_with_pod_security_context_fs_group_change_policy(t *
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t); kubetest.SkipIfClusterVersionLessThan(t, "1.14.0") },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -476,12 +477,12 @@ func TestAccKubernetesPodV1_with_pod_security_context_run_as_group(t *testing.T)
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t); skipIfUnsupportedSecurityContextRunAsGroup(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t); kubetest.SkipIfClusterVersionLessThan(t, "1.14.0") },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -510,12 +511,12 @@ func TestAccKubernetesPodV1_with_pod_security_context_seccomp_profile(t *testing
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -548,12 +549,16 @@ func TestAccKubernetesPodV1_with_pod_security_context_seccomp_localhost_profile(
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			kubetest.SkipIfNotRunningInKind(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.19.0")
+		},
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -580,12 +585,12 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_exec(t *testing.
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -616,12 +621,12 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_http_get(t *test
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -653,12 +658,12 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_tcp(t *testing.T
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -685,15 +690,15 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_grpc(t *testing.
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.24.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.24.0")
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -721,12 +726,12 @@ func TestAccKubernetesPodV1_with_container_lifecycle(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -759,12 +764,12 @@ func TestAccKubernetesPodV1_with_container_security_context(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -798,12 +803,12 @@ func TestAccKubernetesPodV1_with_volume_mount(t *testing.T) {
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -835,12 +840,12 @@ func TestAccKubernetesPodV1_with_cfg_map_volume_mount(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	cfgMap := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -881,16 +886,16 @@ func TestAccKubernetesPodV1_with_csi_volume_hostpath(t *testing.T) {
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	volumeName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
+			kubetest.PreCheck(t)
 			if err := testAccCheckCSIDriverExists("hostpath.csi.k8s.io"); err != nil {
 				t.Skip(err.Error())
 			}
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -921,12 +926,12 @@ func TestAccKubernetesPodV1_with_projected_volume(t *testing.T) {
 	cfgMap2Name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -971,12 +976,12 @@ func TestAccKubernetesPodV1_with_resource_requirements(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1052,12 +1057,12 @@ func TestAccKubernetesPodV1_with_empty_dir_volume(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1085,12 +1090,12 @@ func TestAccKubernetesPodV1_with_empty_dir_volume_with_sizeLimit(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1120,12 +1125,12 @@ func TestAccKubernetesPodV1_with_secret_vol_items(t *testing.T) {
 
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1152,13 +1157,13 @@ func TestAccKubernetesPodV1_gke_with_nodeSelector(t *testing.T) {
 	var conf api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	region := os.Getenv("GOOGLE_REGION")
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t); skipIfNotRunningInGke(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t); kubetest.SkipIfNotRunningInGke(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1186,12 +1191,12 @@ func TestAccKubernetesPodV1_config_with_automount_service_account_token(t *testi
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	saName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1216,12 +1221,12 @@ func TestAccKubernetesPodV1_config_container_working_dir(t *testing.T) {
 	var confPod api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1252,15 +1257,15 @@ func TestAccKubernetesPodV1_config_container_startup_probe(t *testing.T) {
 	var confPod api.Pod
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.17.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.17.0")
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1287,14 +1292,14 @@ func TestAccKubernetesPodV1_termination_message_policy_default(t *testing.T) {
 	var confPod api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
+			kubetest.PreCheck(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1318,14 +1323,14 @@ func TestAccKubernetesPodV1_termination_message_policy_override_as_file(t *testi
 	var confPod api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
+			kubetest.PreCheck(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1349,14 +1354,14 @@ func TestAccKubernetesPodV1_termination_message_policy_override_as_fallback_to_l
 	var confPod api.Pod
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
+			kubetest.PreCheck(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1380,12 +1385,12 @@ func TestAccKubernetesPodV1_enableServiceLinks(t *testing.T) {
 	var conf1 api.Pod
 
 	rName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1414,11 +1419,11 @@ func TestAccKubernetesPodV1_enableServiceLinks(t *testing.T) {
 
 func TestAccKubernetesPodV1_bug961EmptyBlocks(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1431,13 +1436,13 @@ func TestAccKubernetesPodV1_bug961EmptyBlocks(t *testing.T) {
 
 func TestAccKubernetesPodV1_bug1085(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	var conf api.Pod
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t); skipIfNotRunningInMinikube(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t); kubetest.SkipIfNotRunningInMinikube(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1470,12 +1475,12 @@ func TestAccKubernetesPodV1_readinessGate(t *testing.T) {
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	secretName := acctest.RandomWithPrefix("tf-acc-test")
 	configMapName := acctest.RandomWithPrefix("tf-acc-test")
-	imageName1 := busyboxImage
+	imageName1 := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1486,7 +1491,7 @@ func TestAccKubernetesPodV1_readinessGate(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					conn, err := testAccPodV1MainClientset()
+					conn, err := kubetest.Clientset()
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -1529,14 +1534,14 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1567,14 +1572,14 @@ func TestAccKubernetesPodV1_topologySpreadConstraintMinDomains(t *testing.T) {
 
 	podName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1601,14 +1606,14 @@ func TestAccKubernetesPodV1_runtimeClassName(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
 	runtimeHandler := fmt.Sprintf("runc-%s", name)
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfRunningInEks(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1635,17 +1640,17 @@ func TestAccKubernetesPodV1_with_ephemeral_storage(t *testing.T) {
 	)
 
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 	volumeName := "ephemeral"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfNotRunningInKind(t)
-			skipIfClusterVersionLessThan(t, "1.23.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfNotRunningInKind(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.23.0")
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1673,8 +1678,8 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 	image := "this-fake-image-has-never-exist"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1702,14 +1707,14 @@ func TestAccKubernetesPodV1_phase(t *testing.T) {
 func TestAccKubernetesPodV1_os(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPodV1PreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.24.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.24.0")
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1739,12 +1744,12 @@ func TestAccKubernetesPodV1_with_volume_mount_sub_path_expr(t *testing.T) {
 	var conf api.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	secretName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPodV1PreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -1772,7 +1777,7 @@ func TestAccKubernetesPodV1_with_volume_mount_sub_path_expr(t *testing.T) {
 }
 
 func testAccCheckCSIDriverExists(csiDriverName string) error {
-	conn, err := testAccPodV1MainClientset()
+	conn, err := kubetest.Clientset()
 	if err != nil {
 		return err
 	}
@@ -1785,7 +1790,7 @@ func testAccCheckCSIDriverExists(csiDriverName string) error {
 }
 
 func testAccCheckKubernetesPodV1Destroy(s *terraform.State) error {
-	conn, err := testAccPodV1MainClientset()
+	conn, err := kubetest.Clientset()
 	if err != nil {
 		return err
 	}
@@ -1796,7 +1801,7 @@ func testAccCheckKubernetesPodV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -1819,13 +1824,13 @@ func testAccCheckKubernetesPodV1Exists(n string, obj *api.Pod) resource.TestChec
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccPodV1MainClientset()
+		conn, err := kubetest.Clientset()
 		if err != nil {
 			return err
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -1854,9 +1859,55 @@ func testAccCheckKubernetesPodForceNew(old, new *api.Pod, wantNew bool) resource
 	}
 }
 
+func testAccCheckKubernetesServiceAccountV1Exists(n string, obj *api.ServiceAccount) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("not found: %s", n)
+		}
+
+		conn, err := kubetest.Clientset()
+		if err != nil {
+			return err
+		}
+
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		out, err := conn.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		*obj = *out
+		return nil
+	}
+}
+
+func testAccCheckKubernetesPersistentVolumeClaimV1IsDestroyed(obj *api.PersistentVolumeClaim) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		meta := obj.GetObjectMeta()
+		conn, err := kubetest.Clientset()
+		if err != nil {
+			return err
+		}
+		out, err := conn.CoreV1().PersistentVolumeClaims(meta.GetNamespace()).Get(context.Background(), meta.GetName(), metav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+
+		return fmt.Errorf("expected no PVC but still found %q", out.GetObjectMeta().GetName())
+	}
+}
+
 func testAccCheckKubernetesPersistentVolumeClaimCreated(name string, obj *api.PersistentVolumeClaim) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		conn, err := testAccPodV1MainClientset()
+		conn, err := kubetest.Clientset()
 		if err != nil {
 			return err
 		}

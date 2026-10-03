@@ -151,9 +151,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 	var out *batch.CronJob
-	// Only what the update changes is written: state-only changes, such as
-	// timeouts, send nothing, and fields the provider does not manage keep
-	// their live values.
+	// Only changed fields are written, so unmanaged fields keep their live values.
 	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
 		raw, err := dynamicClient.Resource(batch.SchemeGroupVersion.WithResource("cronjobs")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {

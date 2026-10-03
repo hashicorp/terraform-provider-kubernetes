@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,11 +26,11 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -47,11 +49,11 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 func TestAccKubernetesDaemonSetV1_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -85,12 +87,12 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
-	imageName1 := agnhostImage
+	imageName := kubetest.BusyboxImage
+	imageName1 := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -161,11 +163,11 @@ func TestAccKubernetesDaemonSetV1_with_template_metadata(t *testing.T) {
 
 	depName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -201,11 +203,11 @@ func TestAccKubernetesDaemonSetV1_initContainer(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -223,11 +225,11 @@ func TestAccKubernetesDaemonSetV1_noTopLevelLabels(t *testing.T) {
 	var conf appsv1.DaemonSet
 	resourceName := "kubernetes_daemon_set_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -246,13 +248,13 @@ func TestAccKubernetesDaemonSetV1_with_tolerations(t *testing.T) {
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	tolerationSeconds := 6000
 	operator := "Equal"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -276,13 +278,13 @@ func TestAccKubernetesDaemonSetV1_with_tolerations_unset_toleration_seconds(t *t
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	operator := "Equal"
 	value := "value"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -304,12 +306,12 @@ func TestAccKubernetesDaemonSetV1_with_tolerations_unset_toleration_seconds(t *t
 func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_profile(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_daemon_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -336,12 +338,16 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_localh
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			kubetest.SkipIfNotRunningInKind(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.19.0")
+		},
 
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -363,11 +369,11 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 
 	daemonSetName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -425,11 +431,11 @@ func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
 	var conf1, conf2 appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -463,11 +469,11 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -524,7 +530,7 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 }
 
 func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
-	conn, err := testAccWorkloadClient()
+	conn, err := kubetest.Clientset()
 	if err != nil {
 		return err
 	}
@@ -535,7 +541,7 @@ func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -559,13 +565,13 @@ func testAccCheckKubernetesDaemonSetV1Exists(n string, obj *appsv1.DaemonSet) re
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccWorkloadClient()
+		conn, err := kubetest.Clientset()
 		if err != nil {
 			return err
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

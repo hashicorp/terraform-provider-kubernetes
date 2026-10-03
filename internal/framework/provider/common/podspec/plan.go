@@ -17,11 +17,9 @@ import (
 	kquantity "k8s.io/apimachinery/pkg/api/resource"
 )
 
-// SDKv2's ForceNew on a list of objects governs its structural diff, not all of
-// its descendants. Leaf replacement rules are declared on their own attributes.
-//
-// absentZero marks a list that Kubernetes holds as one element whether or not
-// one is sent, which SDKv2 recorded as empty when it held only zero values.
+// SDKv2's ForceNew on a list of objects governs only its size. absentZero marks
+// a list Kubernetes always holds as one element, which SDKv2 recorded as empty
+// when that element held only zero values.
 type podListStructureRequiresReplace struct{ absentZero bool }
 
 func (podListStructureRequiresReplace) Description(context.Context) string {

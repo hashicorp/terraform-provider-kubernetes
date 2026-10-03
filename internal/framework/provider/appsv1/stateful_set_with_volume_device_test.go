@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -16,15 +17,15 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic(t *testing.T) {
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -103,15 +104,15 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic_idempotency(t *testing
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -136,15 +137,15 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -281,17 +282,17 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 
 func TestAccKubernetesStatefulSetV1WIthVolumeDevice_waitForRollout(t *testing.T) {
 	var conf1, conf2 appsv1.StatefulSet
-	imageName := busyboxImage
-	imageName1 := agnhostImage
+	imageName := kubetest.BusyboxImage
+	imageName1 := kubetest.AgnhostImage
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{

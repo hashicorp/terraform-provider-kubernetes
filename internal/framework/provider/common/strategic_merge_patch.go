@@ -25,12 +25,9 @@ var ambiguousMergeKeyLists = map[string]string{
 
 const setElementOrderPrefix = "$setElementOrder/"
 
-// ThreeWayStrategicMerge moves the JSON document current from original to
-// modified the way a three-way strategic merge patch does: fields modified
-// does not mention keep their current values. Lists the patch changes whose
-// entries cannot be matched by merge key (see ambiguousMergeKeyLists, or lists
-// holding duplicate merge keys) are set to their value in modified, in its
-// exact order.
+// ThreeWayStrategicMerge applies a three-way strategic merge from original to
+// modified onto current. Changed lists whose entries cannot be matched by
+// merge key are replaced with their value in modified, in its exact order.
 func ThreeWayStrategicMerge(original, modified, current []byte, dataStruct any) ([]byte, error) {
 	meta, err := strategicpatch.NewPatchMetaFromStruct(dataStruct)
 	if err != nil {
@@ -74,10 +71,8 @@ func ThreeWayStrategicMerge(original, modified, current []byte, dataStruct any) 
 	return json.Marshal(merged)
 }
 
-// StrategicMergeSpecOps returns a JSON patch operation that replaces the spec
-// of live with its spec moved from original to modified (see
-// ThreeWayStrategicMerge). Callers send it with ResourceVersionGuard, since it
-// overwrites the whole spec read from live.
+// StrategicMergeSpecOps returns a JSON patch replacing the spec of live with
+// ThreeWayStrategicMerge's result. Send it with ResourceVersionGuard.
 func StrategicMergeSpecOps(live *unstructured.Unstructured, original, modified, dataStruct any) (kubernetes.PatchOperations, error) {
 	var docs [3][]byte
 	for i, spec := range []any{original, modified, live.Object["spec"]} {
@@ -120,7 +115,7 @@ func replaceAmbiguousLists(patch, live, modified map[string]any, meta strategicp
 		case map[string]any:
 			nestedMeta, _, err := meta.LookupPatchMetadataForStruct(key)
 			if err != nil {
-				// A field dataStruct does not know; nothing to rewrite.
+				// Not a field of dataStruct; nothing to rewrite.
 				continue
 			}
 			liveNested, _ := live[key].(map[string]any)

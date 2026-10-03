@@ -24,14 +24,18 @@ func TestPodV1SpecRequiresReplacement(t *testing.T) {
 			Volumes: []corev1.Volume{{Name: "data", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}},
 		}
 	}
+	deadline := func(seconds int64) func(*corev1.PodSpec) {
+		return func(s *corev1.PodSpec) { s.ActiveDeadlineSeconds = ptr.To(seconds) }
+	}
 	for name, test := range map[string]struct {
-		edit func(*corev1.PodSpec)
-		want bool
+		prior, edit func(*corev1.PodSpec)
+		want        bool
 	}{
-		"unchanged": {edit: func(*corev1.PodSpec) {}},
-		"active deadline is patched": {edit: func(s *corev1.PodSpec) {
-			s.ActiveDeadlineSeconds = ptr.To(int64(60))
-		}},
+		"unchanged":                  {edit: func(*corev1.PodSpec) {}},
+		"active deadline is set":     {edit: deadline(60)},
+		"active deadline is lowered": {prior: deadline(120), edit: deadline(60)},
+		"active deadline is raised":  {prior: deadline(60), edit: deadline(120), want: true},
+		"active deadline is removed": {prior: deadline(60), edit: func(s *corev1.PodSpec) { s.ActiveDeadlineSeconds = nil }, want: true},
 		"container image": {edit: func(s *corev1.PodSpec) {
 			s.Containers[0].Image = "image:2"
 		}, want: true},
@@ -55,9 +59,13 @@ func TestPodV1SpecRequiresReplacement(t *testing.T) {
 		}, want: true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			planned := base()
+			prior, planned := base(), base()
+			if test.prior != nil {
+				test.prior(&prior)
+				test.prior(&planned)
+			}
 			test.edit(&planned)
-			if got := podV1SpecRequiresReplacement(base(), planned); got != test.want {
+			if got := podV1SpecRequiresReplacement(prior, planned); got != test.want {
 				t.Fatalf("requires replacement = %t, want %t", got, test.want)
 			}
 		})

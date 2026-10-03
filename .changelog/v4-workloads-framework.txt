@@ -31,6 +31,10 @@
 ```
 
 ```release-note:bug
+`resource/kubernetes_pod_v1`: Replace the Pod when `active_deadline_seconds` is raised or removed, which Kubernetes rejects as an update. Setting or lowering it is still updated in place.
+```
+
+```release-note:bug
 `resource/kubernetes_pod_v1`: Keep several projections in one `projected` volume `sources` block without reporting a change on every plan.
 ```
 

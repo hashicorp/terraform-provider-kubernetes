@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -414,8 +413,8 @@ func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (
 		return nil, diags
 	}
 
-	var models []deploymentSpecModel
-	diags.Append(value.ElementsAs(ctx, &models, false)...)
+	models, d := deploymentSpecModels(ctx, value)
+	diags.Append(d...)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -493,8 +492,8 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	var priorSelector []LabelSelectorModel
 	priorStrategy := types.ListNull(deploymentStrategyObjectType())
 	if !baseline.IsNull() && !baseline.IsUnknown() {
-		var priorSpecs []deploymentSpecModel
-		diags.Append(baseline.ElementsAs(ctx, &priorSpecs, false)...)
+		priorSpecs, d := deploymentSpecModels(ctx, baseline)
+		diags.Append(d...)
 		if diags.HasError() {
 			return types.ListNull(deploymentSpecListType().ElemType), diags
 		}
@@ -580,6 +579,26 @@ func deploymentSpecListValue(ctx context.Context, model deploymentSpecModel) (ty
 	value, d := types.ListValue(specType, []attr.Value{spec})
 	diags.Append(d...)
 	return value, diags
+}
+
+// deploymentSpecModels is ElementsAs for the spec block, but takes the pod
+// spec over as a value instead of reflecting over it.
+func deploymentSpecModels(ctx context.Context, value types.List) ([]deploymentSpecModel, diag.Diagnostics) {
+	return workloadModels(value, func(attrs map[string]attr.Value, diags *diag.Diagnostics) deploymentSpecModel {
+		model := deploymentSpecModel{
+			MinReadySeconds:         attributeAs[types.Int64](attrs, "min_ready_seconds", diags),
+			Paused:                  attributeAs[types.Bool](attrs, "paused", diags),
+			ProgressDeadlineSeconds: attributeAs[types.Int64](attrs, "progress_deadline_seconds", diags),
+			Replicas:                attributeAs[types.String](attrs, "replicas", diags),
+			RevisionHistoryLimit:    attributeAs[types.Int64](attrs, "revision_history_limit", diags),
+			Strategy:                attributeAs[types.List](attrs, "strategy", diags),
+		}
+		attributeElementsAs(ctx, attrs, "selector", &model.Selector, diags)
+		template, d := workloadTemplateModels(ctx, attributeAs[types.List](attrs, "template", diags))
+		diags.Append(d...)
+		model.Template = template
+		return model
+	})
 }
 
 func expandSelector(ctx context.Context, in deploymentSelectorModel, at path.Path) (*metav1.LabelSelector, diag.Diagnostics) {
@@ -694,10 +713,7 @@ func templateSpecNull() types.List {
 	return types.ListNull(podspec.For(podspec.Deployment()).ObjectType())
 }
 
-// deploymentSpecListType depends only on the static schema; compute it once.
-var deploymentSpecListType = sync.OnceValue(func() types.ListType {
-	return deploymentSpecBlock().Type().(types.ListType)
-})
+var deploymentSpecListType = workloadSpecListType(deploymentFrozenSchema)
 
 func strategyObjectRollingUpdateListType() types.ListType {
 	return deploymentStrategyObjectType().AttrTypes["rolling_update"].(types.ListType)
@@ -705,17 +721,6 @@ func strategyObjectRollingUpdateListType() types.ListType {
 
 func strategyObjectRollingUpdateElementType() types.ObjectType {
 	return strategyObjectRollingUpdateListType().ElemType.(types.ObjectType)
-}
-
-func strategyTypeFromSpec(ctx context.Context, value types.List) string {
-	if value.IsNull() || value.IsUnknown() {
-		return "RollingUpdate"
-	}
-	var specs []deploymentSpecModel
-	if diags := value.ElementsAs(ctx, &specs, false); diags.HasError() || len(specs) == 0 {
-		return "RollingUpdate"
-	}
-	return strategyTypeFromList(ctx, specs[0].Strategy)
 }
 
 func strategyTypeFromList(ctx context.Context, value types.List) string {

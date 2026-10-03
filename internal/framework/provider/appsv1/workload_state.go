@@ -5,6 +5,7 @@ package appsv1
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -74,4 +75,57 @@ func workloadTemplateListValue(ctx context.Context, listType types.ListType, tem
 		diags.Append(d...)
 		return object, diags
 	})
+}
+
+// workloadModels decodes the objects of a list block like ElementsAs, with
+// model building each element from its attributes.
+func workloadModels[T any](value types.List, model func(map[string]attr.Value, *diag.Diagnostics) T) ([]T, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if value.IsNull() {
+		return nil, diags
+	}
+	if value.IsUnknown() {
+		diags.AddError("Value Conversion Error", "Received an unknown list where a known list block was expected.")
+		return nil, diags
+	}
+	out := make([]T, 0, len(value.Elements()))
+	for _, element := range value.Elements() {
+		object, ok := element.(types.Object)
+		if !ok || object.IsNull() || object.IsUnknown() {
+			diags.AddError("Value Conversion Error", fmt.Sprintf("Received %s where a known block object was expected.", element))
+			return nil, diags
+		}
+		out = append(out, model(object.Attributes(), &diags))
+		if diags.HasError() {
+			return nil, diags
+		}
+	}
+	return out, diags
+}
+
+// workloadTemplateModels decodes a template block without reflecting over its
+// pod spec.
+func workloadTemplateModels(ctx context.Context, value types.List) ([]workloadTemplateModel, diag.Diagnostics) {
+	return workloadModels(value, func(attrs map[string]attr.Value, diags *diag.Diagnostics) workloadTemplateModel {
+		model := workloadTemplateModel{Spec: attributeAs[types.List](attrs, "spec", diags)}
+		attributeElementsAs(ctx, attrs, "metadata", &model.Metadata, diags)
+		return model
+	})
+}
+
+func attributeAs[T attr.Value](attrs map[string]attr.Value, name string, diags *diag.Diagnostics) T {
+	value, ok := attrs[name].(T)
+	if !ok {
+		var want T
+		diags.AddError("Value Conversion Error", fmt.Sprintf("Expected %T for %q, got %T.", want, name, attrs[name]))
+	}
+	return value
+}
+
+func attributeElementsAs(ctx context.Context, attrs map[string]attr.Value, name string, target any, diags *diag.Diagnostics) {
+	if list, ok := attrs[name].(types.List); ok {
+		diags.Append(list.ElementsAs(ctx, target, false)...)
+		return
+	}
+	diags.AddError("Value Conversion Error", fmt.Sprintf("Expected a list for %q, got %T.", name, attrs[name]))
 }

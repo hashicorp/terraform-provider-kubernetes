@@ -5,9 +5,11 @@ package appsv1
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -119,4 +121,57 @@ func listAttrType(typ types.ObjectType, names ...string) types.ListType {
 		typ, _ = list.ElemType.(types.ObjectType)
 	}
 	return list
+}
+
+func TestDeploymentSpecModelsMatchReflection(t *testing.T) {
+	ctx := context.Background()
+	specType := deploymentSpecListType().ElemType.(types.ObjectType)
+	templateType := specType.AttrTypes["template"].(types.ListType).ElemType.(types.ObjectType)
+	podSpec := listAttrType(specType, "template", "spec").ElemType
+	object := func(typ types.ObjectType, edit map[string]attr.Value) attr.Value {
+		attrs := map[string]attr.Value{}
+		for name, t := range typ.AttrTypes {
+			attrs[name], _ = t.ValueFromTerraform(ctx, tftypes.NewValue(t.TerraformType(ctx), nil))
+		}
+		for name, v := range edit {
+			attrs[name] = v
+		}
+		return types.ObjectValueMust(typ.AttrTypes, attrs)
+	}
+	spec := func(edit map[string]attr.Value) types.List {
+		return types.ListValueMust(specType, []attr.Value{object(specType, edit)})
+	}
+	template := func(pod types.List) types.List {
+		return types.ListValueMust(templateType, []attr.Value{object(templateType, map[string]attr.Value{"spec": pod})})
+	}
+	missingPaused := types.ObjectType{AttrTypes: map[string]attr.Type{}}
+	for name, t := range specType.AttrTypes {
+		if name != "paused" {
+			missingPaused.AttrTypes[name] = t
+		}
+	}
+
+	for name, value := range map[string]types.List{
+		"null":              types.ListNull(specType),
+		"unknown":           types.ListUnknown(specType),
+		"empty":             types.ListValueMust(specType, nil),
+		"null blocks":       spec(nil),
+		"empty blocks":      spec(map[string]attr.Value{"selector": types.ListValueMust(specType.AttrTypes["selector"].(types.ListType).ElemType, nil), "template": types.ListValueMust(templateType, nil)}),
+		"unknown template":  spec(map[string]attr.Value{"template": types.ListUnknown(templateType)}),
+		"unknown pod spec":  spec(map[string]attr.Value{"template": template(types.ListUnknown(podSpec)), "replicas": types.StringUnknown()}),
+		"unknown element":   types.ListValueMust(specType, []attr.Value{types.ObjectUnknown(specType.AttrTypes)}),
+		"missing attribute": types.ListValueMust(missingPaused, []attr.Value{object(missingPaused, nil)}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, gotDiags := deploymentSpecModels(ctx, value)
+			var want []deploymentSpecModel
+			wantDiags := value.ElementsAs(ctx, &want, false)
+			if gotDiags.HasError() != wantDiags.HasError() {
+				t.Fatalf("errors = %v, reflection errors = %v", gotDiags, wantDiags)
+			}
+			if !gotDiags.HasError() && !reflect.DeepEqual(got, want) {
+				t.Fatalf("models = %#v\nreflection models = %#v", got, want)
+			}
+		})
+	}
 }

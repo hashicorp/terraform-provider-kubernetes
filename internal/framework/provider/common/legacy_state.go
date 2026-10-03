@@ -20,7 +20,8 @@ import (
 // resource, for UpgradeState and MoveState. Attributes the schema no longer
 // has, such as metadata.self_link, are dropped as SDKv2 dropped them. When
 // rewrite is set it is applied to the decoded JSON object first, to convert
-// an older schema version's shapes.
+// an older schema version's shapes. The result is passed through
+// NormalizeLegacyState.
 func DecodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, s schema.Schema, rewrite func(map[string]any) error) (tftypes.Value, error) {
 	if raw == nil || len(raw.JSON) == 0 {
 		return tftypes.Value{}, errors.New("the source state has no JSON data")
@@ -54,7 +55,21 @@ func DecodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, s schema.Sc
 	if value.IsNull() {
 		return tftypes.Value{}, errors.New("the source state is null")
 	}
-	return value, nil
+	return NormalizeLegacyState(value)
+}
+
+// NormalizeLegacyState replaces SDKv2's stored zero value for an unset
+// metadata generate_name ("") with null, at every metadata level, so that an
+// unchanged configuration plans no update before the first refresh.
+func NormalizeLegacyState(value tftypes.Value) (tftypes.Value, error) {
+	empty := tftypes.NewValue(tftypes.String, "")
+	return tftypes.Transform(value, func(at *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+		steps := at.Steps()
+		if len(steps) == 0 || steps[len(steps)-1] != tftypes.AttributeName("generate_name") || !v.Equal(empty) {
+			return v, nil
+		}
+		return tftypes.NewValue(tftypes.String, nil), nil
+	})
 }
 
 // LegacyStateName returns the namespace and name of decoded SDKv2 state from

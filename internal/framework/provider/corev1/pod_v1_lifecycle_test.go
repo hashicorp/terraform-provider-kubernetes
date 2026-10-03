@@ -332,6 +332,30 @@ func TestAccKubernetesPodV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
 	})
 }
 
+// State written by 3.3.0 plans no change before its first refresh.
+func TestAccKubernetesPodV1_upgradeWithoutRefresh(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	config := testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, "")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:             func() { testAccPodV1PreCheck(t) },
+		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		CheckDestroy:         testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: config,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   config,
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			},
+		},
+	})
+}
+
 func testAccKubernetesPodV1ConfigSecurityContext(name, imageName, securityContext string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {

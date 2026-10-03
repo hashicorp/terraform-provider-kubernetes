@@ -36,7 +36,7 @@ func (d *DeploymentV1) Schema(ctx context.Context, req resource.SchemaRequest, r
 
 func buildDeploymentSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:     1,
+		Version:     2,
 		Description: "A Deployment ensures that a specified number of pod replicas are running at any one time.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

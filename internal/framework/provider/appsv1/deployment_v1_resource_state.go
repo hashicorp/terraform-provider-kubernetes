@@ -17,18 +17,20 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
+// UpgradeState accepts the SDKv2 schema versions 0 and 1.
 func (d *DeploymentV1) UpgradeState(context.Context) map[int64]resource.StateUpgrader {
-	return map[int64]resource.StateUpgrader{
-		0: {
+	upgrader := func(version int64) resource.StateUpgrader {
+		return resource.StateUpgrader{
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				state, diagnostics := d.decodeHistoricalState(ctx, req.RawState, 0)
+				state, diagnostics := d.decodeHistoricalState(ctx, req.RawState, version)
 				resp.Diagnostics.Append(diagnostics...)
 				if !resp.Diagnostics.HasError() {
 					resp.State = state
 				}
 			},
-		},
+		}
 	}
+	return map[int64]resource.StateUpgrader{0: upgrader(0), 1: upgrader(1)}
 }
 
 func (d *DeploymentV1) MoveState(context.Context) []resource.StateMover {

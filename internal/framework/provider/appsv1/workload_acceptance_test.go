@@ -10,7 +10,51 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
+
+var workloadAddresses = []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"}
+
+func expectWorkloadActions(action plancheck.ResourceActionType) []plancheck.PlanCheck {
+	checks := make([]plancheck.PlanCheck, len(workloadAddresses))
+	for i, address := range workloadAddresses {
+		checks[i] = plancheck.ExpectResourceAction(address, action)
+	}
+	return checks
+}
+
+// State written by 3.3.0 plans no change before its first refresh, while a
+// template edit is still an in-place update.
+func TestAccKubernetesWorkloadsV1_upgradeWithoutRefresh(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:             func() { testAccPreCheck(t) },
+		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesDeploymentV1Destroy,
+			testAccCheckKubernetesDaemonSetV1Destroy,
+			testAccCheckKubernetesStatefulSetV1Destroy,
+		),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: testAccWorkloadsV1Config(name, ""),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   testAccWorkloadsV1Config(name, ""),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   testAccWorkloadsV1Config(name, "\n          working_dir = \"/tmp\""),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: expectWorkloadActions(plancheck.ResourceActionUpdate)},
+			},
+		},
+	})
+}
 
 // Container ports sharing a number with different protocols must keep the
 // configured order through updates of each workload kind.

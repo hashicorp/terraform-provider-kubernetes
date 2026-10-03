@@ -40,7 +40,7 @@ func (r *StatefulSetV1) Schema(ctx context.Context, req resource.SchemaRequest, 
 
 func buildStatefulSetSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:     1,
+		Version:     2,
 		Description: "Manages the deployment and scaling of a set of Pods, and provides guarantees about the ordering and uniqueness of these Pods.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

@@ -53,18 +53,20 @@ func jobIDParts(id string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
+// UpgradeState accepts the SDKv2 schema versions 0 and 1.
 func (r *JobV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
-	return map[int64]resource.StateUpgrader{
-		0: {
+	upgrader := func(version int64) resource.StateUpgrader {
+		return resource.StateUpgrader{
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				state, _, _, diags := r.jobLegacyState(ctx, req.RawState, 0, "Unable to upgrade Job state")
+				state, _, _, diags := r.jobLegacyState(ctx, req.RawState, version, "Unable to upgrade Job state")
 				resp.Diagnostics.Append(diags...)
 				if !resp.Diagnostics.HasError() {
 					resp.State = state
 				}
 			},
-		},
+		}
 	}
+	return map[int64]resource.StateUpgrader{0: upgrader(0), 1: upgrader(1)}
 }
 
 func (r *JobV1) MoveState(context.Context) []resource.StateMover {

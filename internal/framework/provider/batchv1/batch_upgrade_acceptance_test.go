@@ -161,6 +161,68 @@ func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {
 	})
 }
 
+// State written by 3.3.0 plans no change before its first refresh, while a
+// CronJob schedule edit is still an in-place update.
+func TestAccKubernetesBatchV1_upgradeWithoutRefresh(t *testing.T) {
+	name := "tf-acc-batch-norefresh-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	config := func(schedule string) string {
+		return testAccBatchSecurityContextJob(name, "") + fmt.Sprintf(`
+resource "kubernetes_cron_job_v1" "test" {
+  metadata {
+    name = %q
+  }
+  spec {
+    schedule = %q
+    job_template {
+      metadata {}
+      spec {
+        template {
+          metadata {}
+          spec {
+            restart_policy = "Never"
+            container {
+              name    = "main"
+              image   = %q
+              command = ["sh", "-c", "true"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, schedule, busyboxImage)
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:             func() { testAccPreCheck(t) },
+		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesJobV1Destroy,
+			testAccCheckKubernetesCronJobV1Destroy,
+		),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: config("0 0 1 1 *"),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config("0 0 1 1 *"),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config("0 0 2 1 *"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("kubernetes_cron_job_v1.test", plancheck.ResourceActionUpdate),
+				}},
+			},
+		},
+	})
+}
+
 type noReplacement struct{ address string }
 
 func expectNoReplacement(address string) plancheck.PlanCheck { return noReplacement{address} }

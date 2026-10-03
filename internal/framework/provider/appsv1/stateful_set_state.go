@@ -668,25 +668,30 @@ func upgradeContainersV0ToV1(rawState map[string]interface{}) map[string]interfa
 	return rawState
 }
 
+// UpgradeState accepts the SDKv2 schema versions 0 and 1.
 func (r *StatefulSetV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	var schemaResp resource.SchemaResponse
 	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
 	targetSchema := schemaResp.Schema
-	return map[int64]resource.StateUpgrader{
-		0: {
+	upgrader := func(rewrite func(map[string]any) error) resource.StateUpgrader {
+		return resource.StateUpgrader{
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
 				resp.Diagnostics.Append(schemaResp.Diagnostics...)
 				if resp.Diagnostics.HasError() {
 					return
 				}
-				value, err := common.DecodeLegacyState(ctx, req.RawState, targetSchema, upgradeStatefulSetV0State)
+				value, err := common.DecodeLegacyState(ctx, req.RawState, targetSchema, rewrite)
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", err.Error())
 					return
 				}
 				resp.State = tfsdk.State{Schema: targetSchema, Raw: value}
 			},
-		},
+		}
+	}
+	return map[int64]resource.StateUpgrader{
+		0: upgrader(upgradeStatefulSetV0State),
+		1: upgrader(nil),
 	}
 }
 
@@ -697,7 +702,7 @@ func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
 		{
 			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
 				if req.SourceTypeName != "kubernetes_stateful_set" ||
-					(req.SourceSchemaVersion != 0 && req.SourceSchemaVersion != schemaResp.Schema.Version) {
+					(req.SourceSchemaVersion != 0 && req.SourceSchemaVersion != 1) {
 					return
 				}
 				if req.SourceProviderAddress == "" || !hasProviderSuffix(req.SourceProviderAddress) {

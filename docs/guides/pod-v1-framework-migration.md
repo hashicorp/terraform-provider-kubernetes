@@ -124,8 +124,9 @@ normal plan or `terraform apply -refresh-only` first.
 ## Changes that replace the Pod
 
 Kubernetes can update only a few fields of a running Pod. The provider changes
-metadata labels and annotations and `spec.active_deadline_seconds` in place.
-Any other spec change replaces the Pod, including fields that earlier versions
+metadata labels and annotations in place, and `spec.active_deadline_seconds`
+when it is set or lowered. Raising or removing the deadline replaces the Pod, as
+does any other spec change, including fields that earlier versions
 treated as updatable, such as volumes, volume mounts, probes and affinity.
 Earlier versions reported success for those changes without changing the Pod
 and showed the same change again on the next plan.

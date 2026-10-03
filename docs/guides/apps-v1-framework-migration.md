@@ -92,6 +92,8 @@ A pod-level `security_context` block that sets only empty or `false` values, suc
 
 Kubernetes does not allow changing the volume claim templates of an existing StatefulSet. As in earlier versions, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned as an in-place update with a warning and is not sent: the StatefulSet and its PersistentVolumeClaims keep their values, and the next plan shows the change again. To apply it, replace the StatefulSet, for example with `terraform apply -replace`. Other claim template changes, such as `access_modes`, replace the StatefulSet.
 
+As in earlier versions, changing node affinity `match_fields` or the `secret_namespace` of an `azure_file` volume in the pod template replaces the workload, also when the new value is unknown until apply. Other values unknown until apply are updated in place, even when they could later hold one of those values, such as a new `node_selector_term` added by a `dynamic` block.
+
 ## Move from a deprecated resource type
 
 The deprecated resource types remain available. To adopt the versioned type, replace the old resource declaration, update references and configuration syntax, and add the matching `moved` block. Cross-type moves require Terraform 1.8 or later.

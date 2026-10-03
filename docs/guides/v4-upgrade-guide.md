@@ -16,7 +16,7 @@ Version 4.0.0 moves six workload resources from the Terraform Plugin SDKv2 to th
 - `kubernetes_job_v1`
 - `kubernetes_cron_job_v1`
 
-All six share one pod spec implementation. Their resource type names, `namespace/name` import IDs, import identities and Kubernetes API versions do not change, and existing state is upgraded without re-importing anything. Selected nested blocks become object arguments or lists of objects, which changes their configuration syntax. The provider also converts the selected singleton lists in existing 3.x state to objects. Existing versioned resources do not need a `moved` block.
+All six share one pod spec implementation. Their resource type names, `namespace/name` import IDs, import identities and Kubernetes API versions do not change, and existing state is upgraded without re-importing anything. Selected nested blocks become object arguments or lists of objects, which changes their configuration syntax.
 
 All other resources, including the deprecated unversioned types such as `kubernetes_deployment`, are unchanged.
 
@@ -44,7 +44,7 @@ When upgrading from 2.x, also follow the [v3 upgrade guide](v3-upgrade-guide.md)
     }
     ```
 
-4. **Install the provider.** Run `terraform init -upgrade`. Recreate saved plans after upgrading the provider and configuration. Installing the provider alone does not migrate resource state; conversion happens when Terraform next reads that state through the provider.
+4. **Install the provider.** Run `terraform init -upgrade`. Recreate saved plans after upgrading the provider and configuration.
 5. **Review the plan.** Run `terraform validate` and `terraform plan`. A syntax-only change must not replace or update a workload in Kubernetes. A one-time in-place update that changes only Terraform state is expected in some cases (see [Behavior changes](#behavior-changes)). Investigate any replacement before applying.
 6. **Apply and confirm.** Apply the reviewed plan, then run `terraform plan` again and confirm that it is empty.
 
@@ -64,6 +64,8 @@ The following arguments change from 3.x nested blocks to attributes assigned wit
 | `selector.match_expressions` | Job, CronJob | List of objects |
 
 For each object argument, change `name { ... }` to `name = { ... }`. Omit the argument or set it to `null` to leave it unset. An empty object `{}` is valid; an empty list `[]` is the wrong type. Maps such as `limits`, `requests` and `match_labels` stay maps, and expression `values` stays a set of strings.
+
+In `.tf.json` configuration, use the object form `"resources": { ... }`; the array form `"resources": [{ ... }]` is rejected.
 
 The repeated `image_pull_secrets` and `readiness_gate` arguments still require a nonempty list when configured. Omit them or use `null` instead of `[]`. `match_expressions = []` is allowed.
 
@@ -115,9 +117,7 @@ container {
 }
 ```
 
-Make the same change in every `init_container`. Replace an empty `resources {}` block with `resources = {}`. Omitted `limits` and `requests` can keep their prior or API-computed values; use an explicit empty map, such as `limits = {}`, when you intend to clear that map. Clearing a resource map follows the resource's normal update or replacement rules.
-
-During state migration, an old empty resources list becomes `{ limits = {}, requests = {} }`, matching a refreshed zero resources object. This conversion does not change the Pod's allocation.
+Make the same change in every `init_container`. Replace an empty `resources {}` block with `resources = {}`. Omitted `limits` and `requests` can keep their prior or API-computed values; use an explicit empty map, such as `limits = {}`, when you intend to clear that map.
 
 Image pull secrets and readiness gates, before:
 
@@ -226,12 +226,14 @@ with:
 ```terraform
 variable "container_resources" {
   type = object({
-    limits   = map(string)
-    requests = map(string)
+    limits   = optional(map(string))
+    requests = optional(map(string))
   })
   default = null
 }
 ```
+
+Optional object attributes require Terraform 1.3 or later. On earlier versions, keep both fields as `map(string)` and pass `null` for an omitted map.
 
 Update callers to pass an object or `null`, and update outputs and downstream consumers that expect a singleton list. Terraform's state upgrade does not rewrite configuration, module interfaces or remote-state consumers.
 
@@ -362,7 +364,7 @@ selector = {
 }
 ```
 
-Leave the selector omitted when Kubernetes should generate it; keep the existing `manual_selector` setting. A generated selector reads as an object with null children after generated labels are filtered, which is the same state shape as `selector = {}`. A nil API selector reads as `null`. `match_expressions` remains a list.
+Leave the selector omitted when Kubernetes should generate it; keep the existing `manual_selector` setting.
 
 ### kubernetes_cron_job_v1
 
@@ -395,13 +397,10 @@ Keep all other values unchanged, and do not keep both resource blocks for the sa
 
 ## Behavior changes
 
-- **Object state shapes.** The selected singleton fields are now objects, so their child references lose one `[0]` index. Existing same-type 3.x state and supported moves are converted automatically.
-- **Empty values.** Use `{}` for an explicit empty object and `null` for omission. Repeated `image_pull_secrets` and `readiness_gate` reject `[]`; `match_expressions` accepts it. Empty strategy and retention objects apply the child defaults described above.
 - **One-time state updates.** Earlier versions stored some empty values differently, such as explicitly configured `labels = {}`. The first plan can show an in-place update for them that changes only Terraform state, not the object in Kubernetes. In an update plan, computed metadata such as `metadata[0].resource_version` can show as `(known after apply)`.
 - **State after apply.** After a create or update, state records the planned values; only values the plan leaves unknown, such as `uid`, come from Kubernetes. Fields that admission webhooks or other clients add, such as an injected sidecar container, are not recorded by the apply; the next refreshed plan shows them as drift, as in 3.x, and `lifecycle { ignore_changes = [...] }` keeps them out of the plan.
-- **Numbers keep their spelling.** A number Kubernetes stores, such as `run_as_user = "01000"`, `replicas = "01"` or a file mode, keeps the configured spelling in state instead of planning a change on every plan.
+- **Numbers and quantities keep their spelling.** A number or quantity Kubernetes stores, such as `run_as_user = "01000"`, `replicas = "01"`, `cpu = "0.5"` or a file mode, keeps the configured spelling in state instead of planning a change on every plan. This can change string outputs without changing resource allocations.
 - **Empty strings on API-defaulted fields.** `""` on a pod spec field that Kubernetes defaults, such as `image_pull_policy`, `service_account_name` or `scheduler_name`, keeps the Kubernetes default and never forces replacement. A new object records `""` until the next refresh, which records the value Kubernetes chose. On other fields, such as the CronJob `timezone` or a volume mount `sub_path`, `""` clears the value.
-- **Pod resource quantities** keep the configured spelling in state for new Pods, such as `"0.5"` rather than `"500m"`. This can change string outputs, not allocations.
 - **Pod replacement.** The provider updates only the labels, annotations and `active_deadline_seconds` of an existing Pod. Changing any other spec field, such as a volume, volume mount, probe or affinity, replaces the Pod; earlier versions reported success without changing it. Setting or lowering `active_deadline_seconds` is an in-place update, but raising or removing it replaces the Pod, since Kubernetes rejects that change.
 - **Pod priority class.** A Pod that leaves out `priority_class_name` records the class Kubernetes assigns, such as a `globalDefault` PriorityClass, instead of planning a replacement on every plan. Removing a configured `priority_class_name` keeps the Pod and its class.
 - **Pod tolerations of built-in taints.** A configured toleration of a taint Kubernetes manages, such as `node.kubernetes.io/not-ready` with its own `toleration_seconds`, is recorded in state instead of planning a replacement on every plan. A Pod whose state 3.x last wrote is replaced once more. Tolerations Kubernetes adds for these taints on its own are still not recorded.

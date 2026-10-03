@@ -1,17 +1,5 @@
 ```release-note:breaking-change
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, Deployment and DaemonSet `strategy` and its `rolling_update`, and StatefulSet `persistent_volume_claim_retention_policy` change from blocks to object arguments, for example `resources = { ... }`. Pod spec `image_pull_secrets` and `readiness_gate` become lists of objects. See the v4 upgrade guide.
-```
-
-```release-note:breaking-change
-`resource/kubernetes_pod_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources` change from blocks to object arguments, for example `resources = { ... }`. `image_pull_secrets` and `readiness_gate` become lists of objects. See the v4 upgrade guide.
-```
-
-```release-note:breaking-change
-`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. JobSpec `selector` and container and init container `resources` change from blocks to object arguments, for example `selector = { ... }`. `selector.match_expressions`, pod spec `image_pull_secrets` and `readiness_gate` become lists of objects. See the v4 upgrade guide.
-```
-
-```release-note:breaking-change
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: State upgrades convert the selected singleton lists to objects. Remove the corresponding `[0]` from references and `ignore_changes` child paths, and update module interfaces that expose these values from `list(object(...))` to `object(...)`. Omit an object or use `null` to leave it unset; use `{}` for an explicit empty object. Existing 3.x versioned resources do not need a `moved` block or re-import.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, Deployment and DaemonSet `strategy` and its `rolling_update`, StatefulSet `persistent_volume_claim_retention_policy` and the Job `selector` change from blocks to object arguments, for example `resources = { ... }`, so references and `ignore_changes` paths drop their `[0]`. Pod spec `image_pull_secrets` and `readiness_gate` and the Job `selector.match_expressions` become lists of objects. See the v4 upgrade guide.
 ```
 
 ```release-note:breaking-change
@@ -22,8 +10,8 @@
 `resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Resource type names, `namespace/name` import IDs, import identities and existing state are kept, and an unchanged configuration normally plans no change. Values that earlier versions stored differently, such as explicitly empty `labels = {}`, can show a one-time in-place update that changes only Terraform state. With Terraform 1.8 or later, `moved` blocks can move resources from the deprecated `kubernetes_deployment`, `kubernetes_daemonset`, `kubernetes_stateful_set`, `kubernetes_pod`, `kubernetes_job` and `kubernetes_cron_job` types.
 ```
 
-```release-note:note
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: A pod `security_context` block that sets only empty values, such as `supplemental_groups = []`, no longer plans a change on every run; as in earlier versions, it is sent as an empty security context, and an explicit `run_as_non_root = false` is sent as `runAsNonRoot: false`.
+```release-note:bug
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: A pod `security_context` block that sets only empty values, such as `supplemental_groups = []`, no longer plans a change on every run; as in earlier versions, it is sent as an empty security context.
 ```
 
 ```release-note:note
@@ -43,15 +31,11 @@
 ```
 
 ```release-note:note
-`resource/kubernetes_pod_v1`: New Pods keep resource quantities as configured in state, for example `0.5` rather than `500m`, which can change outputs but not allocations.
-```
-
-```release-note:note
 `resource/kubernetes_stateful_set_v1`: As in earlier versions, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned in place but not applied, because Kubernetes does not allow it. The plan now warns about it; replace the StatefulSet to apply such a change.
 ```
 
 ```release-note:bug
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Keep the configured spelling of a number Kubernetes stores, such as `run_as_user = "01000"` or `replicas = "01"`, instead of planning a change, or replacing a Pod or Job, on every plan.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Keep the configured spelling of a number or quantity Kubernetes stores, such as `run_as_user = "01000"`, `replicas = "01"` or `cpu = "0.5"`, instead of planning a change, or replacing a Pod or Job, on every plan.
 ```
 
 ```release-note:bug
@@ -75,5 +59,5 @@
 ```
 
 ```release-note:bug
-`resource/kubernetes_job_v1`: Replace the Job when its pod template or `pod_failure_policy` changes, since Kubernetes does not allow updating them. Labels the Job controller adds to the pod template are ignored, and pod template labels and annotations an admission webhook adds are not recorded in state.
+`resource/kubernetes_job_v1`: Replace the Job when its pod template or `pod_failure_policy` changes, since Kubernetes does not allow updating them. Labels the Job controller adds to the pod template are ignored.
 ```

@@ -267,7 +267,7 @@ func TestAccKubernetesWorkloadsV1_addBlocksWithUnknownContent(t *testing.T) {
 	})
 }
 
-// Strategy is an object; legacy list syntax is rejected during configuration validation.
+// Strategy is an object.
 func TestAccKubernetesWorkloadsV1_emptyStrategyRejected(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.ParallelTest(t, resource.TestCase{

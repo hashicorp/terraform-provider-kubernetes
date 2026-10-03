@@ -141,7 +141,7 @@ func TestResourcesUpgradeMatchesRefresh(t *testing.T) {
 					t.Fatalf("resources lost during expansion: %#v", expanded)
 				}
 			}
-			// Resources is no longer a list probe; unrelated presence policies remain.
+			// Resources is an object, not a list probe; block presence rules are unchanged.
 			for _, key := range []string{"spec.container.resources", "spec.init_container.resources"} {
 				if b.absentZero[key] || b.zeroAbsent[key] {
 					t.Fatalf("object retained as list probe: %s", key)

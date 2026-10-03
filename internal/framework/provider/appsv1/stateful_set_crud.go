@@ -5,10 +5,8 @@ package appsv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"strconv"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -19,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -211,25 +208,46 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.AddAttributeError(path.Root("metadata"), "Invalid metadata", "Expected exactly one metadata block in state and plan")
 		return
 	}
-	var specDiags diag.Diagnostics
+	var original, desired *appsv1.StatefulSetSpec
+	if len(plan.Spec) == 1 && len(state.Spec) == 1 {
+		original, d = expandStatefulSetSpec(ctx, state.Spec[0])
+		resp.Diagnostics.Append(d...)
+		desired, d = expandStatefulSetSpec(ctx, plan.Spec[0])
+		resp.Diagnostics.Append(d...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	dynamicClient, err := clients.DynamicClient()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
 	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
-		live, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("statefulsets")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
+		live := &appsv1.StatefulSet{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, live); err != nil {
+			return err
+		}
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live.ObjectMeta)
-		if len(plan.Spec) == 1 && len(state.Spec) == 1 {
-			var specOps kubernetes.PatchOperations
-			specOps, specDiags = r.patchStatefulSetSpec(ctx, plan.Spec[0], state.Spec[0], live.Spec)
-			if specDiags.HasError() {
-				return nil
+		if desired != nil {
+			from, to := statefulSetPatchSpecs(*original, *desired, live.Spec)
+			if !reflect.DeepEqual(from, to) {
+				specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.StatefulSet{})
+				if err != nil {
+					return err
+				}
+				ops = append(ops, specOps...)
 			}
-			ops = append(ops, specOps...)
 		}
 		if len(ops) == 0 {
 			return nil
 		}
-		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(live.ResourceVersion)}, ops...)
+		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(raw.GetResourceVersion())}, ops...)
 		payload, err := ops.MarshalJSON()
 		if err != nil {
 			return err
@@ -245,10 +263,6 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.AddError("Failed to update StatefulSet", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(specDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
 
 	if plan.WaitForRollout.ValueBool() {
 		err = retry.RetryContext(ctx, updateTimeout, retryUntilStatefulSetRolloutComplete(ctx, conn, namespace, name))
@@ -260,10 +274,12 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	stateOut, identOut, d := r.readStateFromAPI(ctx, conn, filters, plan)
 	resp.Diagnostics.Append(d...)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &stateOut)...)
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, identOut)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+	keepPlannedClaimTemplateChanges(stateOut.Spec, plan.Spec)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &stateOut)...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identOut)...)
 }
 
 func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -382,154 +398,59 @@ func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kube
 	return state, ident, diags
 }
 
-func (r *StatefulSetV1) patchStatefulSetSpec(ctx context.Context, plan, state StatefulSetSpecModel, live appsv1.StatefulSetSpec) (kubernetes.PatchOperations, diag.Diagnostics) {
-	ops := make(kubernetes.PatchOperations, 0)
-	var diags diag.Diagnostics
-
-	if !plan.Replicas.Equal(state.Replicas) {
-		if !plan.Replicas.IsNull() && !plan.Replicas.IsUnknown() && plan.Replicas.ValueString() != "" {
-			vv, err := strconv.Atoi(plan.Replicas.ValueString())
-			if err != nil {
-				diags.AddAttributeError(path.Root("spec").AtListIndex(0).AtName("replicas"), "Invalid replicas", err.Error())
-				return ops, diags
+// statefulSetPatchSpecs returns the specs to strategic-merge from and to.
+// Fields an update may not change, and those the configuration leaves to the
+// cluster, are left out or take their live values so the merge keeps them.
+func statefulSetPatchSpecs(original, desired, live appsv1.StatefulSetSpec) (appsv1.StatefulSetSpec, appsv1.StatefulSetSpec) {
+	from, to := original, desired
+	from.Selector, to.Selector = live.Selector, live.Selector
+	from.ServiceName, to.ServiceName = live.ServiceName, live.ServiceName
+	from.PodManagementPolicy, to.PodManagementPolicy = "", ""
+	from.VolumeClaimTemplates, to.VolumeClaimTemplates = nil, nil
+	// Unset replicas are left to an autoscaler.
+	if desired.Replicas == nil {
+		from.Replicas, to.Replicas = nil, nil
+	}
+	from.UpdateStrategy, to.UpdateStrategy = live.UpdateStrategy, *live.UpdateStrategy.DeepCopy()
+	if desired.UpdateStrategy.Type != "" {
+		to.UpdateStrategy.Type = desired.UpdateStrategy.Type
+		switch {
+		case desired.UpdateStrategy.RollingUpdate != nil:
+			if to.UpdateStrategy.RollingUpdate == nil {
+				to.UpdateStrategy.RollingUpdate = &appsv1.RollingUpdateStatefulSetStrategy{}
 			}
-			ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/replicas", Value: vv})
+			to.UpdateStrategy.RollingUpdate.Partition = desired.UpdateStrategy.RollingUpdate.Partition
+		case original.UpdateStrategy.RollingUpdate != nil || desired.UpdateStrategy.Type == appsv1.OnDeleteStatefulSetStrategyType:
+			to.UpdateStrategy.RollingUpdate = nil
 		}
 	}
-
-	if len(plan.Template) == 1 && len(state.Template) == 1 {
-		if len(plan.Template[0].Metadata) == 1 && len(state.Template[0].Metadata) == 1 {
-			ops = append(ops, common.MetadataPatchOpsAgainstLive(
-				"/spec/template/metadata/",
-				state.Template[0].Metadata[0].MetadataModel,
-				plan.Template[0].Metadata[0].MetadataModel,
-				live.Template.ObjectMeta,
-			)...)
-		}
-		if !plan.Template[0].Spec.Equal(state.Template[0].Spec) {
-			at := path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec")
-			planned, d := expandPodTemplateSpec(ctx, plan.Template[0].Spec, at)
-			diags.Append(d...)
-			previous, d := expandPodTemplateSpec(ctx, state.Template[0].Spec, at)
-			diags.Append(d...)
-			if !diags.HasError() {
-				if !reflect.DeepEqual(planned, previous) {
-					merged, err := mergeStatefulSetPodSpec(previous, planned, live.Template.Spec)
-					if err != nil {
-						diags.AddAttributeError(at, "Unable to preserve live Pod specification", err.Error())
-					} else {
-						ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/template/spec", Value: merged})
-					}
-				}
-			}
-		}
+	if desired.PersistentVolumeClaimRetentionPolicy == nil {
+		from.PersistentVolumeClaimRetentionPolicy, to.PersistentVolumeClaimRetentionPolicy = live.PersistentVolumeClaimRetentionPolicy, live.PersistentVolumeClaimRetentionPolicy
+	} else {
+		from.PersistentVolumeClaimRetentionPolicy = live.PersistentVolumeClaimRetentionPolicy
 	}
-
-	if !plan.MinReadySeconds.Equal(state.MinReadySeconds) && !plan.MinReadySeconds.IsNull() && !plan.MinReadySeconds.IsUnknown() {
-		ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/minReadySeconds", Value: int32(plan.MinReadySeconds.ValueInt64())})
-	}
-
-	if !updateStrategyEqual(plan.UpdateStrategy, state.UpdateStrategy) {
-		ops = append(ops, patchUpdateStrategy(plan.UpdateStrategy, state.UpdateStrategy, live.UpdateStrategy)...)
-	}
-
-	if !plan.PersistentVolumeClaimRetentionPolicy.Equal(state.PersistentVolumeClaimRetentionPolicy) {
-		retention, d := statefulSetPVCRetentionPolicyModels(ctx, plan.PersistentVolumeClaimRetentionPolicy, path.Root("spec").AtListIndex(0).AtName("persistent_volume_claim_retention_policy"))
-		diags.Append(d...)
-		if len(retention) == 0 {
-			return ops, diags
-		}
-		desired := appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
-			WhenDeleted: appsv1.PersistentVolumeClaimRetentionPolicyType(retention[0].WhenDeleted.ValueString()),
-			WhenScaled:  appsv1.PersistentVolumeClaimRetentionPolicyType(retention[0].WhenScaled.ValueString()),
-		}
-		if live.PersistentVolumeClaimRetentionPolicy == nil {
-			ops = append(ops, &kubernetes.AddOperation{Path: "/spec/persistentVolumeClaimRetentionPolicy", Value: desired})
-		} else {
-			if live.PersistentVolumeClaimRetentionPolicy.WhenDeleted != desired.WhenDeleted {
-				ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/persistentVolumeClaimRetentionPolicy/whenDeleted", Value: desired.WhenDeleted})
-			}
-			if live.PersistentVolumeClaimRetentionPolicy.WhenScaled != desired.WhenScaled {
-				ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/persistentVolumeClaimRetentionPolicy/whenScaled", Value: desired.WhenScaled})
-			}
-		}
-	}
-
-	return ops, diags
+	return from, to
 }
 
-func patchUpdateStrategy(plan, state []StatefulSetUpdateStrategyModel, live appsv1.StatefulSetUpdateStrategy) kubernetes.PatchOperations {
-	ops := make(kubernetes.PatchOperations, 0)
-	if len(plan) == 0 {
-		return ops
+// keepPlannedClaimTemplateChanges records the planned claim-template fields an
+// update cannot send (see statefulSetVolumeClaimRequiresReplace).
+func keepPlannedClaimTemplateChanges(out, plan []StatefulSetSpecModel) {
+	if len(out) != 1 || len(plan) != 1 {
+		return
 	}
-	planType := plan[0].Type.ValueString()
-	if planType != string(live.Type) {
-		ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/updateStrategy/type", Value: planType})
-	}
-
-	planRU := plan[0].RollingUpdate
-	var stateRU []StatefulSetRollingUpdateModel
-	if len(state) > 0 {
-		stateRU = state[0].RollingUpdate
-	}
-	if len(planRU) == 0 && live.RollingUpdate != nil && (len(stateRU) > 0 || planType == string(appsv1.OnDeleteStatefulSetStrategyType)) {
-		ops = append(ops, &kubernetes.RemoveOperation{Path: "/spec/updateStrategy/rollingUpdate"})
-	}
-	if len(planRU) > 0 {
-		partition := int32(planRU[0].Partition.ValueInt64())
-		if live.RollingUpdate == nil {
-			ops = append(ops, &kubernetes.AddOperation{
-				Path:  "/spec/updateStrategy/rollingUpdate",
-				Value: appsv1.RollingUpdateStatefulSetStrategy{Partition: &partition},
-			})
-		} else if live.RollingUpdate.Partition == nil {
-			ops = append(ops, &kubernetes.AddOperation{Path: "/spec/updateStrategy/rollingUpdate/partition", Value: partition})
-		} else if *live.RollingUpdate.Partition != partition {
-			ops = append(ops, &kubernetes.ReplaceOperation{Path: "/spec/updateStrategy/rollingUpdate/partition", Value: partition})
+	for i := range out[0].VolumeClaimTemplate {
+		if i >= len(plan[0].VolumeClaimTemplate) {
+			return
+		}
+		got, want := &out[0].VolumeClaimTemplate[i], plan[0].VolumeClaimTemplate[i]
+		if len(got.Metadata) == 1 && len(want.Metadata) == 1 {
+			got.Metadata[0].Labels = want.Metadata[0].Labels
+			got.Metadata[0].Annotations = want.Metadata[0].Annotations
+		}
+		if len(got.Spec) == 1 && len(want.Spec) == 1 && len(got.Spec[0].Resources) == 1 && len(want.Spec[0].Resources) == 1 {
+			got.Spec[0].Resources[0].Requests = want.Spec[0].Resources[0].Requests
 		}
 	}
-	return ops
-}
-
-func mergeStatefulSetPodSpec(previous, planned, live corev1.PodSpec) (corev1.PodSpec, error) {
-	previousJSON, err := json.Marshal(previous)
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	plannedJSON, err := json.Marshal(planned)
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	liveJSON, err := json.Marshal(live)
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	mergedJSON, err := common.ThreeWayStrategicMerge(previousJSON, plannedJSON, liveJSON, corev1.PodSpec{})
-	if err != nil {
-		return corev1.PodSpec{}, err
-	}
-	var merged corev1.PodSpec
-	if err := json.Unmarshal(mergedJSON, &merged); err != nil {
-		return corev1.PodSpec{}, err
-	}
-	return merged, nil
-}
-
-func updateStrategyEqual(a, b []StatefulSetUpdateStrategyModel) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	if len(a) == 0 {
-		return true
-	}
-	if !a[0].Type.Equal(b[0].Type) || len(a[0].RollingUpdate) != len(b[0].RollingUpdate) {
-		return false
-	}
-	if len(a[0].RollingUpdate) == 0 {
-		return true
-	}
-	return a[0].RollingUpdate[0].Partition.Equal(b[0].RollingUpdate[0].Partition)
 }
 
 func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *k8sclient.Clientset, ns, name string) retry.RetryFunc {

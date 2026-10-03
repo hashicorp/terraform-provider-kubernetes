@@ -90,6 +90,8 @@ The first plan is normally empty. State written by earlier provider versions can
 
 A pod-level `security_context` block that sets only empty or `false` values, such as `security_context { run_as_non_root = false }`, is sent to Kubernetes as an empty security context; earlier versions sent `runAsNonRoot: false` for it. Kubernetes treats an unset `runAsNonRoot` as false, so the Pods run the same way.
 
+Kubernetes does not allow changing the volume claim templates of an existing StatefulSet. As in earlier versions, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned as an in-place update with a warning and is not sent: the StatefulSet and its PersistentVolumeClaims keep their values, and the next plan shows the change again. To apply it, replace the StatefulSet, for example with `terraform apply -replace`. Other claim template changes, such as `access_modes`, replace the StatefulSet.
+
 ## Move from a deprecated resource type
 
 The deprecated resource types remain available. To adopt the versioned type, replace the old resource declaration, update references and configuration syntax, and add the matching `moved` block. Cross-type moves require Terraform 1.8 or later.

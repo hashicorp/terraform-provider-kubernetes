@@ -487,6 +487,90 @@ func TestAccKubernetesStatefulSetV1_disappears(t *testing.T) {
 	})
 }
 
+// Explicit empty values are kept as configured, so creates are consistent and
+// later plans are empty.
+func TestAccKubernetesStatefulSetV1_emptyValues(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_stateful_set_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigEmptyValues(name, busyboxImage),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.service_name", ""),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.metadata.0.annotations.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.resources.0.limits.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.selector.0.match_labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.selector.0.match_expressions.0.values.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+// Kubernetes does not allow claim templates to change, but editing requests or
+// labels must not replace the StatefulSet (and with it, possibly, its claims).
+// Claim-template metadata is imported as stored, including *.kubernetes.io keys.
+func TestAccKubernetesStatefulSetV1_volumeClaimTemplateUpdate(t *testing.T) {
+	var before, after appsv1.StatefulSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_stateful_set_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigVolumeClaimTemplate(name, busyboxImage, "1Gi", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &before),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"wait_for_rollout"},
+			},
+			{
+				Config: testAccKubernetesStatefulSetV1ConfigVolumeClaimTemplate(name, busyboxImage, "2Gi", `labels = { team = "db" }`),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				// The API keeps the claim templates it has, so the change shows again.
+				ExpectNonEmptyPlan: true,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &after),
+					testAccCheckKubernetesStatefulSetForceNew(&before, &after, false),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.spec.0.resources.0.requests.storage", "2Gi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.volume_claim_template.0.metadata.0.labels.team", "db"),
+				),
+			},
+			{
+				// Reverting the edit leaves nothing to change, so the claim
+				// template edit was the only difference.
+				Config: testAccKubernetesStatefulSetV1ConfigVolumeClaimTemplate(name, busyboxImage, "1Gi", ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesStatefulSetForceNew(old, new *appsv1.StatefulSet, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {
@@ -1645,4 +1729,109 @@ func testAccKubernetesStatefulSetV1ConfigMinimalWithTemplateNamespace(name, imag
   }
 }
 `, name, imageName)
+}
+
+func testAccKubernetesStatefulSetV1ConfigEmptyValues(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    replicas     = 0
+    service_name = ""
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "ss-test"
+        }
+      }
+      spec {
+        container {
+          name    = "ss-test"
+          image   = "%s"
+          command = ["sleep", "300"]
+        }
+      }
+    }
+    volume_claim_template {
+      metadata {
+        name        = "data"
+        labels      = {}
+        annotations = {}
+      }
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+          limits = {}
+        }
+        selector {
+          match_labels = {}
+          match_expressions {
+            key      = "tier"
+            operator = "Exists"
+            values   = []
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName)
+}
+
+func testAccKubernetesStatefulSetV1ConfigVolumeClaimTemplate(name, imageName, storage, labels string) string {
+	return fmt.Sprintf(`resource "kubernetes_stateful_set_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    replicas     = 0
+    service_name = "ss-test-service"
+    selector {
+      match_labels = {
+        app = "ss-test"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "ss-test"
+        }
+      }
+      spec {
+        container {
+          name    = "ss-test"
+          image   = "%s"
+          command = ["sleep", "300"]
+        }
+      }
+    }
+    volume_claim_template {
+      metadata {
+        name = "data"
+        annotations = {
+          "volume.kubernetes.io/example" = "kept"
+        }
+        %s
+      }
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "%s"
+          }
+        }
+      }
+    }
+  }
+}
+`, name, imageName, labels, storage)
 }

@@ -41,3 +41,7 @@
 ```release-note:bug
 `resource/kubernetes_cron_job_v1`: Keep labels, annotations, and spec fields that are not recorded in state, such as internal `kubernetes.io/` keys, keys matched by the provider `ignore_labels` and `ignore_annotations` settings, and fields set by admission controllers or other tools, when updating a CronJob.
 ```
+
+```release-note:note
+`resource/kubernetes_stateful_set_v1`: As in earlier versions, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned in place but not applied, because Kubernetes does not allow it, and the next plan shows it again. The plan now warns about it; replace the StatefulSet to apply such a change.
+```

@@ -5,7 +5,6 @@ package appsv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -14,11 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -181,7 +177,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		PodManagementPolicy:                  types.StringNull(),
 		Replicas:                             types.StringNull(),
 		RevisionHistoryLimit:                 types.Int64Null(),
-		ServiceName:                          types.StringNull(),
+		ServiceName:                          types.StringValue(spec.ServiceName),
 		PersistentVolumeClaimRetentionPolicy: types.ListNull(statefulSetPVCRetentionPolicyObjectType()),
 		MinReadySeconds:                      types.Int64Value(int64(spec.MinReadySeconds)),
 	}
@@ -202,9 +198,6 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 	selectors, selectorDiags := flattenWorkloadSelector(ctx, spec.Selector, selectorBaseline)
 	diags.Append(selectorDiags...)
 	out.Selector = selectors
-	if spec.ServiceName != "" {
-		out.ServiceName = types.StringValue(spec.ServiceName)
-	}
 
 	template, d := flattenTemplate(ctx, spec.Template, baseline, filters, refresh)
 	diags.Append(d...)
@@ -216,7 +209,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		if baseline != nil && i < len(baseline.VolumeClaimTemplate) {
 			prior = &baseline.VolumeClaimTemplate[i]
 		}
-		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior, filters)
+		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior)
 		diags.Append(fd...)
 		out.VolumeClaimTemplate[i] = model
 	}
@@ -430,7 +423,7 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	return out, diags
 }
 
-func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel, filters kubernetes.MetadataFilters) (PersistentVolumeClaimModel, diag.Diagnostics) {
+func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel) (PersistentVolumeClaimModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := PersistentVolumeClaimModel{}
 
@@ -438,7 +431,7 @@ func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolum
 	if baseline != nil {
 		priorMetadata = baseline.Metadata
 	}
-	meta, d := common.FlattenNamespacedMetadata(ctx, in.ObjectMeta, priorMetadata, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	meta, d := flattenClaimTemplateMetadata(ctx, in.ObjectMeta, priorMetadata)
 	diags.Append(d...)
 	preserveEmbeddedMetadataNamespace(meta, priorMetadata, in.Namespace)
 	out.Metadata = meta
@@ -483,15 +476,15 @@ func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentV
 	diags.Append(d...)
 	out.AccessModes = setVal
 
-	resources, d := flattenVolumeResources(ctx, in.Resources)
-	diags.Append(d...)
+	var priorResources VolumeResourcesModel
 	if prior != nil && len(prior.Resources) > 0 {
-		resources.Limits, d = statefulSetPreserveQuantityMap(resources.Limits, prior.Resources[0].Limits)
-		diags.Append(d...)
-		resources.Requests, d = statefulSetPreserveQuantityMap(resources.Requests, prior.Resources[0].Requests)
-		diags.Append(d...)
+		priorResources = prior.Resources[0]
 	}
-	out.Resources = []VolumeResourcesModel{resources}
+	limits, d := flattenClaimQuantities(ctx, in.Resources.Limits, priorResources.Limits)
+	diags.Append(d...)
+	requests, d := flattenClaimQuantities(ctx, in.Resources.Requests, priorResources.Requests)
+	diags.Append(d...)
+	out.Resources = []VolumeResourcesModel{{Limits: limits, Requests: requests}}
 
 	if in.Selector != nil {
 		selectors, sd := flattenWorkloadSelector(ctx, in.Selector, out.Selector)
@@ -511,29 +504,51 @@ func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentV
 	return out, diags
 }
 
-func flattenVolumeResources(ctx context.Context, in corev1.VolumeResourceRequirements) (VolumeResourcesModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	out := VolumeResourcesModel{Limits: types.MapNull(types.StringType), Requests: types.MapNull(types.StringType)}
+// flattenClaimQuantities keeps the prior spelling of equivalent quantities and
+// a prior empty map, which the API does not distinguish from an unset one.
+func flattenClaimQuantities(ctx context.Context, in corev1.ResourceList, prior types.Map) (types.Map, diag.Diagnostics) {
+	if len(in) == 0 {
+		return priorEmptyOrNullMap(prior), nil
+	}
+	values := make(map[string]string, len(in))
+	for k, v := range in {
+		values[string(k)] = v.String()
+	}
+	current, diags := types.MapValueFrom(ctx, types.StringType, values)
+	if diags.HasError() {
+		return current, diags
+	}
+	return statefulSetPreserveQuantityMap(current, prior)
+}
 
-	if len(in.Limits) > 0 {
-		limits := make(map[string]string, len(in.Limits))
-		for k, v := range in.Limits {
-			limits[string(k)] = v.String()
-		}
-		mv, d := types.MapValueFrom(ctx, types.StringType, limits)
-		diags.Append(d...)
-		out.Limits = mv
+// The API stores claim templates verbatim, so their metadata is read back
+// unfiltered, as SDKv2 did.
+func flattenClaimTemplateMetadata(ctx context.Context, in metav1.ObjectMeta, prior []common.NamespacedMetadataModel) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
+	meta, diags := common.FlattenNamespacedMetadata(ctx, in, nil, nil, nil)
+	var priorAnnotations, priorLabels types.Map
+	if len(prior) > 0 {
+		priorAnnotations, priorLabels = prior[0].Annotations, prior[0].Labels
 	}
-	if len(in.Requests) > 0 {
-		requests := make(map[string]string, len(in.Requests))
-		for k, v := range in.Requests {
-			requests[string(k)] = v.String()
-		}
-		mv, d := types.MapValueFrom(ctx, types.StringType, requests)
-		diags.Append(d...)
-		out.Requests = mv
+	var d diag.Diagnostics
+	meta[0].Annotations, d = claimTemplateMetadataMap(ctx, in.Annotations, priorAnnotations)
+	diags.Append(d...)
+	meta[0].Labels, d = claimTemplateMetadataMap(ctx, in.Labels, priorLabels)
+	diags.Append(d...)
+	return meta, diags
+}
+
+func claimTemplateMetadataMap(ctx context.Context, in map[string]string, prior types.Map) (types.Map, diag.Diagnostics) {
+	if len(in) == 0 {
+		return priorEmptyOrNullMap(prior), nil
 	}
-	return out, diags
+	return types.MapValueFrom(ctx, types.StringType, in)
+}
+
+func priorEmptyOrNullMap(prior types.Map) types.Map {
+	if !prior.IsNull() && !prior.IsUnknown() && len(prior.Elements()) == 0 {
+		return prior
+	}
+	return types.MapNull(types.StringType)
 }
 
 func preserveEmbeddedMetadataNamespace(flattened, prior []common.NamespacedMetadataModel, apiNamespace string) {
@@ -565,6 +580,11 @@ func statefulSetPVCRetentionPolicyModels(ctx context.Context, value types.List, 
 		diags.AddAttributeError(at, "Invalid persistent volume claim retention policy", "Unable to decode the configured retention policy.")
 	}
 	return models, diags
+}
+
+func upgradeStatefulSetV0State(rawState map[string]any) error {
+	applyStatefulSetV0ResourceUpgrade(rawState)
+	return nil
 }
 
 func applyStatefulSetV0ResourceUpgrade(rawState map[string]interface{}) map[string]interface{} {
@@ -659,34 +679,15 @@ func (r *StatefulSetV1) UpgradeState(ctx context.Context) map[int64]resource.Sta
 				if resp.Diagnostics.HasError() {
 					return
 				}
-				if req.RawState == nil || len(req.RawState.JSON) == 0 {
-					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", "Source state is empty")
-					return
-				}
-
-				var raw map[string]interface{}
-				if err := json.Unmarshal(req.RawState.JSON, &raw); err != nil {
-					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", err.Error())
-					return
-				}
-				upgraded := applyStatefulSetV0ResourceUpgrade(raw)
-				value, err := decodeStatefulSetStateValue(ctx, upgraded, targetSchema)
+				value, err := common.DecodeLegacyState(ctx, req.RawState, targetSchema, upgradeStatefulSetV0State)
 				if err != nil {
-					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", fmt.Sprintf("Could not decode upgraded state: %s", err))
+					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", err.Error())
 					return
 				}
 				resp.State = tfsdk.State{Schema: targetSchema, Raw: value}
 			},
 		},
 	}
-}
-
-func decodeStatefulSetStateValue(ctx context.Context, raw map[string]interface{}, targetSchema schema.Schema) (tftypes.Value, error) {
-	stateJSON, err := json.Marshal(raw)
-	if err != nil {
-		return tftypes.Value{}, err
-	}
-	return (&tfprotov6.RawState{JSON: stateJSON}).Unmarshal(targetSchema.Type().TerraformType(ctx))
 }
 
 func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
@@ -702,20 +703,11 @@ func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
 				if req.SourceProviderAddress == "" || !hasProviderSuffix(req.SourceProviderAddress) {
 					return
 				}
-				if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {
-					resp.Diagnostics.AddError("Unable to move StatefulSet state", "The source state has no JSON data")
-					return
-				}
-				var value tftypes.Value
-				var err error
+				var rewrite func(map[string]any) error
 				if req.SourceSchemaVersion == 0 {
-					var raw map[string]interface{}
-					if err = json.Unmarshal(req.SourceRawState.JSON, &raw); err == nil {
-						value, err = decodeStatefulSetStateValue(ctx, applyStatefulSetV0ResourceUpgrade(raw), schemaResp.Schema)
-					}
-				} else {
-					value, err = req.SourceRawState.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
+					rewrite = upgradeStatefulSetV0State
 				}
+				value, err := common.DecodeLegacyState(ctx, req.SourceRawState, schemaResp.Schema, rewrite)
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to move StatefulSet state", fmt.Sprintf("The source state could not be decoded: %s", err))
 					return

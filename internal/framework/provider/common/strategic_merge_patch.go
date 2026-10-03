@@ -115,6 +115,7 @@ func replaceAmbiguousLists(patch, live, modified map[string]any, meta strategicp
 		case map[string]any:
 			nestedMeta, _, err := meta.LookupPatchMetadataForStruct(key)
 			if err != nil {
+				// Not a field of dataStruct; nothing to rewrite.
 				continue
 			}
 			liveNested, _ := live[key].(map[string]any)

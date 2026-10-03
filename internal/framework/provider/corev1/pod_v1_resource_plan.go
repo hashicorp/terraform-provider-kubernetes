@@ -41,7 +41,9 @@ func (p *PodV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 		return
 	}
 
-	// Keep API revisions only when the plan is otherwise identical to state.
+	// The quantity modifiers can make the plan equal to state after Framework has
+	// marked computed metadata unknown; keep the API revisions only then, so
+	// genuine updates still get fresh values.
 	candidate := req.Plan
 	plannedMetadata := planned.Elements()[0].(types.Object).Attributes()
 	priorMetadata := prior.Elements()[0].(types.Object).Attributes()

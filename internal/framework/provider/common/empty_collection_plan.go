@@ -14,6 +14,7 @@ import (
 
 // WithEmptyMetadataCompatibility makes omitted annotations and labels keep a
 // prior empty map, as SDKv2 state did; nonempty values are still removed.
+// Resources using it also run NoOpPlan.
 func WithEmptyMetadataCompatibility(block schema.ListNestedBlock) schema.ListNestedBlock {
 	for _, name := range []string{"annotations", "labels"} {
 		attribute := block.NestedObject.Attributes[name].(schema.MapAttribute)

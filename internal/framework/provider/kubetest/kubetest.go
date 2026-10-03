@@ -3,6 +3,8 @@
 
 // Package kubetest holds the acceptance test helpers shared by the Framework
 // resource packages, the counterpart of the SDKv2 package's provider_test.go.
+// Import it only from *_test packages; it depends on the mux, which imports the
+// resource packages.
 package kubetest
 
 import (

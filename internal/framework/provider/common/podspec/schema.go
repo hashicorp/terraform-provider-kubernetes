@@ -180,7 +180,8 @@ func (b builder) mapping(computed bool, f forceNew) schema.MapAttribute {
 }
 
 // block mirrors an SDKv2 TypeList block. Its ForceNew governs only the number
-// of elements; descendants that force replacement still replace on removal.
+// of elements; adding or removing an element that holds a replace-on-change
+// value still replaces.
 func (b builder) block(object schema.NestedBlockObject, minimum, maximum int, f forceNew) schema.ListNestedBlock {
 	l := schema.ListNestedBlock{NestedObject: object}
 	if minimum > 0 {

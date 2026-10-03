@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -106,6 +107,75 @@ func TestAccKubernetesJobV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
 			},
 		},
 	})
+}
+
+// 3.3.0 state cannot tell a configured template label from one admission
+// added, so until an apply records the configured labels, a label removed from
+// the configuration is dropped from state only. Afterwards removing one
+// replaces the Job.
+func TestAccKubernetesJobV1_upgradeRemoveTemplateLabel(t *testing.T) {
+	for _, tc := range []struct {
+		name, created, upgraded     string
+		upgradeAction, removeAction plancheck.ResourceActionType
+	}{
+		{"before an apply", `app = "a", extra = "b"`, `app = "a", extra = "b"`, plancheck.ResourceActionNoop, plancheck.ResourceActionUpdate},
+		{"after an apply", `app = "a", extra = "b", x = "c"`, `app = "a", x = "c"`, plancheck.ResourceActionUpdate, plancheck.ResourceActionDestroyBeforeCreate},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := "tf-acc-job-label-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+			const address = "kubernetes_job_v1.test"
+			labels := func(labels string) string {
+				return strings.Replace(testAccBatchSecurityContextJob(name, ""), "metadata {}", "metadata {\n        labels = {"+labels+"}\n      }", 1)
+			}
+			var created, upgraded, removed batchv1.Job
+			replaced := tc.removeAction == plancheck.ResourceActionDestroyBeforeCreate
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:     func() { testAccPreCheck(t) },
+				CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+				Steps: []resource.TestStep{
+					{
+						ExternalProviders: map[string]resource.ExternalProvider{
+							"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+						},
+						Config: labels(tc.created),
+						Check:  testAccCheckKubernetesJobV1Exists(address, &created),
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   labels(tc.upgraded),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, tc.upgradeAction)},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							testAccCheckKubernetesJobV1Exists(address, &upgraded),
+							testAccCheckKubernetesJobV1ForceNew(&created, &upgraded, false),
+						),
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   labels(`app = "a"`),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, tc.removeAction)},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							testAccCheckKubernetesJobV1Exists(address, &removed),
+							testAccCheckKubernetesJobV1ForceNew(&upgraded, &removed, replaced),
+							func(*terraform.State) error {
+								for _, key := range []string{"extra", "x"} {
+									if _, ok := removed.Spec.Template.Labels[key]; ok && replaced {
+										return fmt.Errorf("live pod template labels = %v, want no %s", removed.Spec.Template.Labels, key)
+									}
+								}
+								return nil
+							},
+						),
+					},
+				},
+			})
+		})
+	}
 }
 
 func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {

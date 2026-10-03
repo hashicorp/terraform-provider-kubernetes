@@ -39,7 +39,7 @@
 ```
 
 ```release-note:bug
-`resource/kubernetes_job_v1`: Replace the Job when `pod_failure_policy` rules or its pod template change, since Kubernetes does not allow updating them. Labels the Job controller adds to the pod template are ignored.
+`resource/kubernetes_job_v1`: Replace the Job when `pod_failure_policy` rules or its pod template change, since Kubernetes does not allow updating them. Labels the Job controller adds to the pod template are ignored, and pod template labels and annotations an admission webhook adds are not recorded in state. Such keys in state from an earlier version or an import are dropped from state with a one-time in-place update instead.
 ```
 
 ```release-note:bug

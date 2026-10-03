@@ -294,7 +294,7 @@ func flattenCronJobSpec(ctx context.Context, in batch.CronJobSpec, prior types.L
 	var diags diag.Diagnostics
 	jobSpec, d := flattenJobSpec(ctx, in.JobTemplate.Spec, jobSpecPrior, false, refresh, at.AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
-	metadata := flattenTemplateMetadata(in.JobTemplate.ObjectMeta, previousTemplate["metadata"], templateType.AttrTypes["metadata"].(types.ListType), nil, &diags)
+	metadata := flattenTemplateMetadata(in.JobTemplate.ObjectMeta, previousTemplate["metadata"], templateType.AttrTypes["metadata"].(types.ListType), refresh, nil, &diags)
 	if diags.HasError() {
 		return types.ListNull(typ), diags
 	}

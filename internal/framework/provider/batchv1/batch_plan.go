@@ -45,14 +45,17 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 		return
 	}
 	apiDefaulted := apiDefaultedStrings(ctx, req.Plan.Schema)
-	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw, apiDefaulted)
+	initialized, keyDiags := req.Private.GetKey(ctx, podTemplateMetadataOwnershipInitialized)
+	resp.Diagnostics.Append(keyDiags...)
+	owned := string(initialized) == "true"
+	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw, apiDefaulted, owned)
 	// Decide against the Job as it is now: state written without a refresh can
 	// be stale, and the API comparison reads a zero value as unset, so it cannot
 	// see a removed block that Kubernetes holds with zero values.
 	if job, filters, ok := r.liveJob(ctx, req.State); ok {
 		if replace {
 			if live, ok := liveState(ctx, job, req.State, filters); ok {
-				replace, diags = jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, live, apiDefaulted)
+				replace, diags = jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, live, apiDefaulted, owned)
 			}
 		}
 		replace = replace || !jobTemplateSpecSatisfied(ctx, job, resp.Plan)
@@ -134,8 +137,10 @@ func noOpPlan(req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse)
 // Kubernetes does not allow a Job's pod template to change. The fields SDKv2
 // declared ForceNew replace the Job on their own; any other configured change
 // to the template the API would receive replaces it here, rather than planning
-// an update that cannot take effect.
-func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftypes.Value, apiDefaulted func(*tftypes.AttributePath) bool) (bool, diag.Diagnostics) {
+// an update that cannot take effect. Unless owned, the state's template labels
+// and annotations may include keys admission added, so dropping one updates
+// only state, as earlier versions did.
+func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftypes.Value, apiDefaulted func(*tftypes.AttributePath) bool, owned bool) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	at := tftypes.NewAttributePath().WithAttributeName("spec").WithElementKeyInt(0).WithAttributeName("template")
 	config, configOK := valueAt(configRaw, at)
@@ -167,8 +172,25 @@ func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftype
 	if d.HasError() {
 		return true, diags
 	}
+	if !owned {
+		keepPlannedKeys(previous.Labels, desired.Labels)
+		keepPlannedKeys(previous.Annotations, desired.Annotations)
+	}
 	return !podTemplatesEqual(previous, desired), diags
 }
+
+func keepPlannedKeys(prior, planned map[string]string) {
+	for key := range prior {
+		if _, ok := planned[key]; !ok {
+			delete(prior, key)
+		}
+	}
+}
+
+// Job Create and Update set this private state key: their state holds only
+// the configured pod template labels and annotations. State from an import or
+// an earlier version also holds any that admission added.
+const podTemplateMetadataOwnershipInitialized = "pod_template_metadata_ownership_initialized"
 
 // podTemplatesEqual reports whether a Job holding the template have already
 // has want, as the API would store them.

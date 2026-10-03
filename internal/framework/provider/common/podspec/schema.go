@@ -70,7 +70,11 @@ func (b builder) specBlock() schema.ListNestedBlock {
 		block.Validators = append(block.Validators, listvalidator.SizeAtLeast(1), listvalidator.IsRequired())
 	}
 	if b.o.Template {
-		block.Description = podSpecApplyDescription("spec", "", true)
+		minimum := 0
+		if b.o.SpecRequired {
+			minimum = 1
+		}
+		block.Description = podSpecAppendSentence(podSpecDescriptionByPath["spec"].description, podSpecCardinalityHint(minimum, 1))
 	} else {
 		block.Description = "Specification of the desired behavior of the pod."
 		if b.o.SpecRequired {

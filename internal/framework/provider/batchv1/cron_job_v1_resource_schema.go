@@ -32,8 +32,11 @@ func (r *CronJobV1) Schema(ctx context.Context, req resource.SchemaRequest, resp
 
 func buildCronJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:     1,
-		Description: "A CronJob creates Jobs on a time-based schedule.",
+		Version: 1,
+		Description: "A Cron Job creates Jobs on a time-based schedule. " +
+			"One CronJob object is like one line of a crontab (cron table) file. It runs a job periodically on a given schedule, written in Cron format. " +
+			"Unless `timezone` is set, `schedule` times are based on the time zone of the kube-controller-manager. " +
+			"For instructions on creating and working with cron jobs, and for an example of a spec file for a cron job, see [Kubernetes reference](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/).",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -56,6 +59,7 @@ func cronJobSpecBlock() schema.ListNestedBlock {
 	templateMetadata := templateMetadataBlock(common.NamespacedMetadataSchema("jobTemplateSpec", true))
 	// A template has no namespace default in Kubernetes; omission plans SDKv2's empty value.
 	templateMetadata.NestedObject.Attributes["namespace"] = schema.StringAttribute{
+		Description:   "Namespace defines the space within which name of the jobTemplateSpec must be unique.",
 		Optional:      true,
 		Computed:      true,
 		Default:       stringdefault.StaticString(""),
@@ -85,7 +89,7 @@ func cronJobSpecBlock() schema.ListNestedBlock {
 					Validators:  []validator.String{cronScheduleValidator{}},
 				},
 				"starting_deadline_seconds": schema.Int64Attribute{
-					Description: "Deadline in seconds for starting a job if it misses its scheduled time.",
+					Description: "Optional deadline in seconds for starting the job if it misses scheduled time for any reason. Missed jobs executions will be counted as failed ones.",
 					Optional:    true,
 					Computed:    true,
 					Default:     int64default.StaticInt64(0),
@@ -97,7 +101,7 @@ func cronJobSpecBlock() schema.ListNestedBlock {
 					Default:     int64default.StaticInt64(3),
 				},
 				"suspend": schema.BoolAttribute{
-					Description: "Suspend subsequent executions without affecting already started executions.",
+					Description: "This flag tells the controller to suspend subsequent executions, it does not apply to already started executions. Defaults to false.",
 					Optional:    true,
 					Computed:    true,
 					Default:     booldefault.StaticBool(false),

@@ -47,7 +47,7 @@ func buildDaemonSetSchema(ctx context.Context, _ resource.SchemaRequest, resp *r
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"wait_for_rollout": schema.BoolAttribute{
-				Description: "Wait for the rollout of the daemonset to complete.",
+				Description: "Wait for the rollout of the daemonset to complete. Defaults to true.",
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
@@ -72,13 +72,13 @@ func daemonSetSpecSchema() schema.ListNestedBlock {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"min_ready_seconds": schema.Int64Attribute{
-					Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available.",
+					Description: "Minimum number of seconds for which a newly created pod should be ready without any of its container crashing, for it to be considered available. Defaults to 0 (pod will be considered available as soon as it is ready)",
 					Optional:    true,
 					Computed:    true,
 					Default:     int64default.StaticInt64(0),
 				},
 				"revision_history_limit": schema.Int64Attribute{
-					Description: "The number of old DaemonSet revisions to retain to allow rollback.",
+					Description: "The number of old DaemonSet revisions to retain to allow rollback. Defaults to 10.",
 					Optional:    true,
 					Computed:    true,
 					Default:     int64default.StaticInt64(10),
@@ -105,23 +105,26 @@ func daemonSetSelectorSchema() schema.ListNestedBlock {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"match_labels": schema.MapAttribute{
-					Description: "A map of {key,value} pairs. The requirements are ANDed.",
+					Description: common.LabelSelectorMatchLabelsDescription,
 					Optional:    true,
 					ElementType: types.StringType,
 				},
 			},
 			Blocks: map[string]schema.Block{
 				"match_expressions": schema.ListNestedBlock{
-					Description: "A list of label selector requirements. The requirements are ANDed.",
+					Description: common.LabelSelectorMatchExpressionsDescription,
 					NestedObject: schema.NestedBlockObject{
 						Attributes: map[string]schema.Attribute{
 							"key": schema.StringAttribute{
-								Optional: true,
+								Description: common.LabelSelectorKeyDescription,
+								Optional:    true,
 							},
 							"operator": schema.StringAttribute{
-								Optional: true,
+								Description: common.LabelSelectorOperatorDescription,
+								Optional:    true,
 							},
 							"values": schema.SetAttribute{
+								Description: common.LabelSelectorValuesDescription,
 								Optional:    true,
 								ElementType: types.StringType,
 							},
@@ -135,7 +138,7 @@ func daemonSetSelectorSchema() schema.ListNestedBlock {
 
 func daemonSetTemplateSchema() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: "An object that describes the pod that will be created.",
+		Description: "An object that describes the pod that will be created. The DaemonSet will create exactly one copy of this pod on every node that matches the template's node selector (or on every node if no node selector is specified). More info: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/#pod-template",
 		Validators: []validator.List{
 			listvalidator.IsRequired(),
 			listvalidator.SizeAtLeast(1),
@@ -165,9 +168,10 @@ func daemonSetStrategyAttribute() schema.ListNestedAttribute {
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"type": schema.StringAttribute{
-					Optional: true,
-					Computed: true,
-					Default:  stringdefault.StaticString("RollingUpdate"),
+					Description: "Type of DaemonSet update. Can be RollingUpdate or OnDelete. Defaults to RollingUpdate.",
+					Optional:    true,
+					Computed:    true,
+					Default:     stringdefault.StaticString("RollingUpdate"),
 					Validators: []validator.String{
 						stringvalidator.OneOf("RollingUpdate", "OnDelete"),
 					},
@@ -183,17 +187,19 @@ func daemonSetStrategyAttribute() schema.ListNestedAttribute {
 					NestedObject: schema.NestedAttributeObject{
 						Attributes: map[string]schema.Attribute{
 							"max_surge": schema.StringAttribute{
-								Optional: true,
-								Computed: true,
-								Default:  stringdefault.StaticString("0"),
+								Description: "The maximum number of nodes with an existing available DaemonSet pod that can have an updated DaemonSet pod during an update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). This can not be 0 if MaxUnavailable is 0. Absolute number is calculated from percentage by rounding up to a minimum of 1. Default value is 0. Example: when this is set to 30%, at most 30% of the total number of nodes that should be running the daemon pod (i.e. status.desiredNumberScheduled) can have a new pod created before the old pod is marked as deleted. The update starts by launching new pods on 30% of nodes. Once an updated pod is available (Ready for at least minReadySeconds) the old DaemonSet pod on that node is marked deleted. If the old pod becomes unavailable for any reason (Ready transitions to false, is evicted, or is drained) an updated pod is immediately created on that node without considering surge limits. Allowing surge implies the possibility that the resources consumed by the daemonset on any given node can double if the readiness check fails, and so resource intensive daemonsets should take into account that they may cause evictions during disruption.",
+								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString("0"),
 								Validators: []validator.String{
 									stringvalidator.RegexMatches(daemonSetRollingValuePattern, "must be an absolute number or percentage"),
 								},
 							},
 							"max_unavailable": schema.StringAttribute{
-								Optional: true,
-								Computed: true,
-								Default:  stringdefault.StaticString("1"),
+								Description: "The maximum number of DaemonSet pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of total number of DaemonSet pods at the start of the update (ex: 10%). Absolute number is calculated from percentage by rounding up. This cannot be 0 if MaxSurge is 0. Default value is 1. Example: when this is set to 30%, at most 30% of the total number of nodes that should be running the daemon pod (i.e. status.desiredNumberScheduled) can have their pods stopped for an update at any given time. The update starts by stopping at most 30% of those DaemonSet pods and then brings up new DaemonSet pods in their place. Once the new pods are available, it then proceeds onto other DaemonSet pods, thus ensuring that at least 70% of original number of DaemonSet pods are available at all times during the update.",
+								Optional:    true,
+								Computed:    true,
+								Default:     stringdefault.StaticString("1"),
 								Validators: []validator.String{
 									stringvalidator.RegexMatches(daemonSetRollingValuePattern, "must be an absolute number or percentage"),
 								},

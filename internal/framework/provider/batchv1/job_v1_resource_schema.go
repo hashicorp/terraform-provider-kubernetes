@@ -29,13 +29,19 @@ func buildJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resourc
 	labels.Default, labels.PlanModifiers = nil, nil
 	metadata.NestedObject.Attributes["labels"] = labels
 	resp.Schema = schema.Schema{
-		Version:     2,
-		Description: "A Job creates one or more Pods and ensures that a specified number successfully terminate.",
+		Version: 2,
+		Description: "A Job creates one or more Pods and ensures that a specified number of them successfully terminate. " +
+			"As pods successfully complete, the Job tracks the successful completions. " +
+			"When a specified number of successful completions is reached, the task (i.e. the Job) is complete. " +
+			"Deleting a Job will clean up the Pods it created. " +
+			"A simple case is to create one Job object in order to reliably run one Pod to completion. " +
+			"The Job object will start a new Pod if the first Pod fails or is deleted (for example due to a node hardware failure or a node reboot). " +
+			"You can also use a Job to run multiple Pods in parallel.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 			"wait_for_completion": schema.BoolAttribute{
 				Optional: true, Computed: true, Default: booldefault.StaticBool(true),
-				Description: "Wait until the job completes successfully. A failed job returns an error.",
+				Description: "Wait for the Job to complete successfully during create and update operations. Defaults to true. A failed Job returns an error.",
 			},
 		},
 		Blocks: map[string]schema.Block{

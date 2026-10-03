@@ -13,8 +13,6 @@ description: |-
 
 ~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = [{ ... }]`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
 
-The provider requires exactly one `metadata` block, one `spec` block, and a `spec.template` containing `metadata` and `spec` blocks. These requirements are validated even where the generated schema below lists blocks as optional.
-
 {{ .SchemaMarkdown }}
 
 ## Example Usage

@@ -308,10 +308,6 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		out, err = conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.JSONPatchType, data, metav1.PatchOptions{})
 		return err
 	})
-	if apierrors.IsNotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating deployment", err.Error())
 		return

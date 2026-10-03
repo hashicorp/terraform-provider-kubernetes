@@ -255,10 +255,6 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		_, err = conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{})
 		return err
 	})
-	if apierrors.IsNotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update StatefulSet", err.Error())
 		return

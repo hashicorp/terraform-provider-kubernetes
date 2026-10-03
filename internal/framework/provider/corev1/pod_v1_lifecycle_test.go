@@ -356,6 +356,33 @@ func TestAccKubernetesPodV1_upgradeWithoutRefresh(t *testing.T) {
 	})
 }
 
+// 3.3.0 fails every generate_name Pod create and leaves a tainted instance
+// without a name; the upgrade takes the name from the id and replaces it.
+func TestAccKubernetesPodV1_upgradeTaintedGeneratedName(t *testing.T) {
+	prefix := fmt.Sprintf("tf-acc-test-%s-", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+	config := testAccKubernetesPodV1ConfigGeneratedName(prefix, busyboxImage, "initial")
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPodV1PreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config:      config,
+				ExpectError: regexp.MustCompile("resource name may not be empty"),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("kubernetes_pod_v1.test", plancheck.ResourceActionReplace),
+				}},
+			},
+		},
+	})
+}
+
 func testAccKubernetesPodV1ConfigSecurityContext(name, imageName, securityContext string) string {
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {

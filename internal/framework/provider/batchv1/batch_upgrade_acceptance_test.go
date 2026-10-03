@@ -6,6 +6,7 @@ package batchv1_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -217,6 +218,55 @@ resource "kubernetes_cron_job_v1" "test" {
 				Config:                   config("0 0 2 1 *"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction("kubernetes_cron_job_v1.test", plancheck.ResourceActionUpdate),
+				}},
+			},
+		},
+	})
+}
+
+// A generate_name Job that 3.3.0 created but saw fail is tainted without a
+// name; the upgrade takes the name from the id and replaces it.
+func TestAccKubernetesJobV1_upgradeTaintedGeneratedName(t *testing.T) {
+	prefix := "tf-acc-test-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum) + "-"
+	config := func(command string) string {
+		return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    generate_name = %q
+  }
+  spec {
+    backoff_limit = 0
+    template {
+      metadata {}
+      spec {
+        restart_policy = "Never"
+        container {
+          name    = "main"
+          image   = %q
+          command = ["sh", "-c", %q]
+        }
+      }
+    }
+  }
+  wait_for_completion = true
+}
+`, prefix, busyboxImage, command)
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config:      config("exit 1"),
+				ExpectError: regexp.MustCompile("is in failed state"),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config("true"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("kubernetes_job_v1.test", plancheck.ResourceActionReplace),
 				}},
 			},
 		},

@@ -73,7 +73,10 @@ func NormalizeLegacyState(value tftypes.Value) (tftypes.Value, error) {
 }
 
 // LegacyStateName returns the namespace and name of decoded SDKv2 state from
-// its namespace/name ID, which must match its single metadata block.
+// its namespace/name ID and checks them against its single metadata block.
+// SDKv2 saved a failed create, such as a tainted generate_name object, before
+// reading the object back, so an empty metadata name or namespace is filled
+// from the ID. Two different non-empty values are an error.
 func LegacyStateName(values map[string]any) (string, string, error) {
 	id, _ := values["id"].(string)
 	namespace, name, ok := strings.Cut(id, "/")
@@ -84,9 +87,19 @@ func LegacyStateName(values map[string]any) (string, string, error) {
 	if len(list) != 1 {
 		return "", "", fmt.Errorf("the source state has %d metadata blocks, expected 1", len(list))
 	}
-	metadata, _ := list[0].(map[string]any)
-	if metadata["namespace"] != namespace || metadata["name"] != name {
-		return "", "", fmt.Errorf("the source state ID %q does not match its metadata namespace and name", id)
+	metadata, ok := list[0].(map[string]any)
+	if !ok {
+		return "", "", errors.New("the source state metadata is not an object")
+	}
+	for _, field := range [][2]string{{"namespace", namespace}, {"name", name}} {
+		key, want := field[0], field[1]
+		switch metadata[key] {
+		case nil, "":
+			metadata[key] = want
+		case want:
+		default:
+			return "", "", fmt.Errorf("the source state ID %q does not match its metadata %s %v", id, key, metadata[key])
+		}
 	}
 	return namespace, name, nil
 }

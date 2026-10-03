@@ -62,7 +62,7 @@ func TestDecodeLegacyState(t *testing.T) {
 }
 
 func TestLegacyStateName(t *testing.T) {
-	metadata := func(namespace, name string) []any {
+	metadata := func(namespace, name any) []any {
 		return []any{map[string]any{"namespace": namespace, "name": name, "self_link": ""}}
 	}
 	for _, tc := range []struct {
@@ -71,7 +71,10 @@ func TestLegacyStateName(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "matching", values: map[string]any{"id": "ns/a", "metadata": metadata("ns", "a")}},
+		{name: "tainted create", values: map[string]any{"id": "ns/a", "metadata": metadata("ns", "")}},
+		{name: "missing metadata names", values: map[string]any{"id": "ns/a", "metadata": metadata(nil, nil)}},
 		{name: "mismatched name", values: map[string]any{"id": "ns/a", "metadata": metadata("ns", "b")}, wantErr: true},
+		{name: "mismatched namespace", values: map[string]any{"id": "ns/a", "metadata": metadata("other", "a")}, wantErr: true},
 		{name: "no namespace", values: map[string]any{"id": "a", "metadata": metadata("", "a")}, wantErr: true},
 		{name: "extra separator", values: map[string]any{"id": "ns/a/b", "metadata": metadata("ns", "a/b")}, wantErr: true},
 		{name: "no metadata", values: map[string]any{"id": "ns/a"}, wantErr: true},
@@ -87,6 +90,10 @@ func TestLegacyStateName(t *testing.T) {
 			}
 			if err != nil || namespace != "ns" || name != "a" {
 				t.Fatalf("got %q/%q (%v), want ns/a", namespace, name, err)
+			}
+			got := tc.values["metadata"].([]any)[0].(map[string]any)
+			if got["namespace"] != "ns" || got["name"] != "a" {
+				t.Fatalf("metadata = %v, want namespace ns and name a", got)
 			}
 		})
 	}

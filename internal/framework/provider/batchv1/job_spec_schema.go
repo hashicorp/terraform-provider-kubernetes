@@ -82,7 +82,7 @@ func jobSpecBlock(job bool) schema.ListNestedBlock {
 					},
 				},
 				"manual_selector": schema.BoolAttribute{
-					Description: "Whether the caller controls pod labels and selectors.",
+					Description: "Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md",
 					Optional:    true, Computed: true, Default: booldefault.StaticBool(false),
 				},
 				"max_failed_indexes": schema.Int64Attribute{
@@ -127,13 +127,14 @@ func jobSelectorAttribute() schema.ListNestedAttribute {
 			jobSelectorRequiresReplace{},
 		},
 		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-			"match_labels": schema.MapAttribute{Optional: true, ElementType: types.StringType},
+			"match_labels": schema.MapAttribute{Description: common.LabelSelectorMatchLabelsDescription, Optional: true, ElementType: types.StringType},
 			"match_expressions": schema.ListNestedAttribute{
-				Optional: true,
+				Description: common.LabelSelectorMatchExpressionsDescription,
+				Optional:    true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-					"key":      schema.StringAttribute{Optional: true},
-					"operator": schema.StringAttribute{Optional: true},
-					"values":   schema.SetAttribute{Optional: true, ElementType: types.StringType},
+					"key":      schema.StringAttribute{Description: common.LabelSelectorKeyDescription, Optional: true},
+					"operator": schema.StringAttribute{Description: common.LabelSelectorOperatorDescription, Optional: true},
+					"values":   schema.SetAttribute{Description: common.LabelSelectorValuesDescription, Optional: true, ElementType: types.StringType},
 				}},
 			},
 		}},
@@ -150,7 +151,8 @@ func podFailurePolicyBlock() schema.ListNestedBlock {
 		PlanModifiers: []planmodifier.List{listSizeRequiresReplace{}},
 		NestedObject: schema.NestedBlockObject{Blocks: map[string]schema.Block{
 			"rule": schema.ListNestedBlock{
-				Validators: []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1)},
+				Description: "A list of pod failure policy rules. The rules are evaluated in order. Once a rule matches a Pod failure, the remaining rules are ignored.",
+				Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{"action": emptyString()},
 					Blocks: map[string]schema.Block{

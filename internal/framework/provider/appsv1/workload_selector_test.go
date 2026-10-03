@@ -86,7 +86,7 @@ func TestWorkloadSelectorUnknownValues(t *testing.T) {
 
 func workloadSelectorTestValue(t *testing.T, raw string) tftypes.Value {
 	t.Helper()
-	typ := tftypes.List{ElementType: labelSelectorBlock(false).NestedObject.Type().TerraformType(context.Background())}
+	typ := tftypes.List{ElementType: labelSelectorBlock(false, "").NestedObject.Type().TerraformType(context.Background())}
 	value, err := (&tfprotov6.RawState{JSON: []byte(raw)}).Unmarshal(typ)
 	if err != nil {
 		t.Fatal(err)

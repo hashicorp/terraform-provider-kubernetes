@@ -5,21 +5,19 @@ description: |-
   A Deployment ensures that a specified number of pod “replicas” are running at any one time. In other words, a Deployment makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Deployment will start more.
 ---
 
+{{- /* Render this page with `make docs-framework`; plain tfplugindocs omits block item counts. */}}
+
 # {{ .Name }}
 
 {{ .Description }}
 
-The provider requires exactly one `metadata` block, one `spec` block, and a `spec.template` containing `metadata` and `spec` blocks. These requirements are validated even where the generated schema below lists blocks as optional.
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = [{ ... }]`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
 
 {{ .SchemaMarkdown }}
 
 ## Example Usage
 
 {{tffile "examples/resources/deployment_v1/example_1.tf"}}
-
-## Migration to Plugin Framework
-
-Existing `kubernetes_deployment_v1` state and import IDs are kept, so no re-import or `moved` block is needed. Some nested arguments use list-of-object assignment syntax; see the [workload migration guide](../guides/apps-v1-framework-migration.md) before upgrading.
 
 ## Import
 
@@ -28,3 +26,5 @@ Deployment can be imported using the namespace and name, e.g.
 ```
 $ terraform import kubernetes_deployment_v1.example default/terraform-example
 ```
+
+To move from the deprecated `kubernetes_deployment` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

@@ -19,7 +19,7 @@
 ```
 
 ```release-note:note
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: A pod `security_context` block that sets only empty or `false` values is sent as an empty security context instead of `runAsNonRoot: false`, which Kubernetes treats the same way.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: A pod `security_context` block that sets only empty values, such as `supplemental_groups = []`, no longer plans a change on every run; as in earlier versions, it is sent as an empty security context, and an explicit `run_as_non_root = false` is sent as `runAsNonRoot: false`.
 ```
 
 ```release-note:note

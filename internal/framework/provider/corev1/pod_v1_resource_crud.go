@@ -51,7 +51,7 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	}
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	spec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, path.Root("spec"))
+	spec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	targets, diags := podV1TargetStates(ctx, plan.TargetState)
 	resp.Diagnostics.Append(diags...)
@@ -165,9 +165,9 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 	resp.Diagnostics.Append(diags...)
 	plannedMetadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	priorSpec, diags := podV1Spec().ExpandSpec(ctx, state.Spec, path.Root("spec"))
+	priorSpec, diags := podV1Spec().ExpandSpec(ctx, state.Spec, nil, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
-	plannedSpec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, path.Root("spec"))
+	plannedSpec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, nil, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

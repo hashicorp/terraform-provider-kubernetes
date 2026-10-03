@@ -51,7 +51,7 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	}
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	spec, diags := expandJobSpec(ctx, plan.Spec, true, path.Root("spec"))
+	spec, diags := expandJobSpec(ctx, plan.Spec, true, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -339,9 +339,9 @@ func patchJobSpec(ctx context.Context, state, plan types.List) (kubernetes.Patch
 			return nil, diags
 		}
 	}
-	spec, expandDiags := expandJobSpec(ctx, payloadPlan, true, path.Root("spec"))
+	spec, expandDiags := expandJobSpec(ctx, payloadPlan, true, nil, path.Root("spec"))
 	diags.Append(expandDiags...)
-	previousSpec, previousDiags := expandJobSpec(ctx, state, true, path.Root("spec"))
+	previousSpec, previousDiags := expandJobSpec(ctx, state, true, nil, path.Root("spec"))
 	diags.Append(previousDiags...)
 	if diags.HasError() {
 		return nil, diags

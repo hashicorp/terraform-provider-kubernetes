@@ -5,6 +5,7 @@ package podspec
 
 import (
 	"context"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -523,5 +525,75 @@ func TestNumberSpellingPaths(t *testing.T) {
 	}
 	if b.spelling["spec.container.image"] != nil {
 		t.Error("spec.container.image: spelling kept")
+	}
+}
+
+// As in SDKv2, a pod security_context holding only zero values is sent with
+// runAsNonRoot = false when its configuration sets a bool or a nested block.
+// Without a configuration it is unset, as plan predictions compare it.
+func TestZeroSecurityContextPayload(t *testing.T) {
+	ctx := context.Background()
+	b := For(Pod())
+	at := path.Root("spec")
+	// block is one element of typ with every attribute null except set; a nil
+	// value in set stands for one such element of a nested block.
+	var block func(typ attr.Type, set map[string]attr.Value) types.List
+	block = func(typ attr.Type, set map[string]attr.Value) types.List {
+		object := typ.(types.ObjectType)
+		values := map[string]attr.Value{}
+		for name, child := range object.AttrTypes {
+			values[name], _ = child.ValueFromTerraform(ctx, tftypes.NewValue(child.TerraformType(ctx), nil))
+			if value, ok := set[name]; ok && value == nil {
+				values[name] = block(child.(types.ListType).ElemType, nil)
+			} else if ok {
+				values[name] = value
+			}
+		}
+		return types.ListValueMust(object, []attr.Value{types.ObjectValueMust(object.AttrTypes, values)})
+	}
+	zero := corev1.PodSecurityContext{RunAsNonRoot: ptr.To(false)}
+	noGroups := types.SetValueMust(types.Int64Type, nil)
+	for _, tc := range []struct {
+		name   string
+		live   corev1.PodSecurityContext
+		config map[string]attr.Value // nil: no configuration
+		want   *bool
+	}{
+		{"empty block", zero, map[string]attr.Value{}, nil},
+		{"empty supplemental groups", zero, map[string]attr.Value{"supplemental_groups": noGroups}, nil},
+		{"empty run_as_user", zero, map[string]attr.Value{"run_as_user": types.StringValue("")}, nil},
+		{"run_as_non_root false", zero, map[string]attr.Value{"run_as_non_root": types.BoolValue(false)}, ptr.To(false)},
+		{"false with empty groups", zero, map[string]attr.Value{"run_as_non_root": types.BoolValue(false), "supplemental_groups": noGroups}, ptr.To(false)},
+		{"empty se_linux_options", zero, map[string]attr.Value{"se_linux_options": nil}, ptr.To(false)},
+		{"run_as_non_root true", corev1.PodSecurityContext{RunAsNonRoot: ptr.To(true)}, map[string]attr.Value{"run_as_non_root": types.BoolValue(true)}, ptr.To(true)},
+		{"run_as_user set", corev1.PodSecurityContext{RunAsUser: ptr.To(int64(1000))}, map[string]attr.Value{"run_as_user": types.StringValue("1000")}, ptr.To(false)},
+		{"no configuration", zero, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			live := corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Image: "pause"}}, SecurityContext: &tc.live}
+			plan, diags := b.FlattenSpec(ctx, live, types.ListNull(b.ObjectType()), at)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			var config *tfsdk.Config
+			if tc.config != nil {
+				spec := plan.Elements()[0].(types.Object)
+				attributes := spec.Attributes()
+				attributes["security_context"] = block(attributes["security_context"].(types.List).ElementType(ctx), tc.config)
+				configured := types.ListValueMust(plan.ElementType(ctx), []attr.Value{types.ObjectValueMust(spec.AttributeTypes(ctx), attributes)})
+				raw, err := types.ObjectValueMust(map[string]attr.Type{"spec": plan.Type(ctx)}, map[string]attr.Value{"spec": configured}).ToTerraformValue(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				config = &tfsdk.Config{Schema: schema.Schema{Blocks: map[string]schema.Block{"spec": b.Spec}}, Raw: raw}
+			}
+			got, diags := b.ExpandSpec(ctx, plan, config, at)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !reflect.DeepEqual(got.SecurityContext.RunAsNonRoot, tc.want) {
+				t.Errorf("runAsNonRoot = %v, want %v", got.SecurityContext.RunAsNonRoot, tc.want)
+			}
+		})
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -80,10 +82,17 @@ func (b *Built) ObjectType() basetypes.ObjectTypable {
 	return b.objectType
 }
 
-// ExpandSpec converts the "spec" list into a PodSpec with the SDKv2 expander.
-// Unknown values are rejected unless the schema marks them API-computed.
-func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
+// ExpandSpec converts the "spec" list at path at into a PodSpec with the SDKv2
+// expander. Unknown values are rejected unless the schema marks them
+// API-computed. A write payload passes the configuration, which decides how
+// zero-valued podZeroBlockUnset blocks are sent; without one they are unset,
+// so expansions of a plan and a state agree.
+func (b *Built) ExpandSpec(ctx context.Context, value types.List, config *tfsdk.Config, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
+	configured := types.ListNull(b.objectType)
+	if config != nil {
+		diagnostics.Append(config.GetAttribute(ctx, at, &configured)...)
+	}
 	if value.IsUnknown() {
 		diagnostics.AddAttributeError(at, "Unknown Pod Template Specification", "The pod template spec must be known before it is sent to Kubernetes.")
 		return corev1.PodSpec{}, diagnostics
@@ -96,6 +105,7 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) 
 	if diagnostics.HasError() {
 		return corev1.PodSpec{}, diagnostics
 	}
+	podUnsetZeroBlocks(raw.([]interface{}), value, configured)
 	result, err := kubernetes.ExpandPodSpecForFramework(raw.([]interface{}))
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Expand Pod Template Specification", err.Error())
@@ -130,8 +140,55 @@ func (b *Built) RefreshSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 }
 
 // A pod security_context holding only zero values is sent as unset, as SDKv2
-// sent it as [nil]; Kubernetes treats run_as_non_root false and unset alike.
+// sent it as [nil], unless its configuration sets a bool or a nested block:
+// SDKv2 then sent runAsNonRoot = false, which Pod Security admission checks.
 var podZeroBlockUnset = map[string]bool{"spec.security_context": true}
+
+// podUnsetZeroBlocks sends the zero-valued podZeroBlockUnset blocks of raw as
+// unset unless configured sets a value in them.
+func podUnsetZeroBlocks(raw []interface{}, value, configured types.List) {
+	if len(raw) != 1 {
+		return
+	}
+	spec, _ := raw[0].(map[string]interface{})
+	for key := range podZeroBlockUnset {
+		name := strings.TrimPrefix(key, "spec.")
+		planned := podSpecBlock(value, name)
+		if len(planned) == 1 && podZeroValue(planned[0]) && !slices.ContainsFunc(podSpecBlock(configured, name), podConfigSets) {
+			spec[name] = []interface{}{nil}
+		}
+	}
+}
+
+// podSpecBlock returns the elements of the named block in a "spec" list.
+func podSpecBlock(spec types.List, name string) []attr.Value {
+	if len(spec.Elements()) != 1 {
+		return nil
+	}
+	object, _ := spec.Elements()[0].(types.Object)
+	block, _ := object.Attributes()[name].(types.List)
+	return block.Elements()
+}
+
+// podConfigSets reports whether a configured value is one SDKv2 sent: any
+// bool, non-empty string or collection, or nested block element.
+func podConfigSets(value attr.Value) bool {
+	if value == nil || value.IsNull() {
+		return false
+	}
+	switch v := value.(type) {
+	case types.Object:
+		for _, child := range v.Attributes() {
+			if podConfigSets(child) {
+				return true
+			}
+		}
+		return false
+	case types.Bool:
+		return true
+	}
+	return podNonzeroValue(value)
+}
 
 // podSpecAPIValue converts a known Framework value into SDKv2 expander input.
 func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key string, computed map[string]bool, diagnostics *diag.Diagnostics) interface{} {
@@ -176,9 +233,6 @@ func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key st
 		}
 		return result
 	case types.List:
-		if podZeroBlockUnset[key] && len(v.Elements()) == 1 && podZeroValue(v.Elements()[0]) {
-			return []interface{}{nil}
-		}
 		result := make([]interface{}, len(v.Elements()))
 		for index, entry := range v.Elements() {
 			if entry.IsUnknown() {

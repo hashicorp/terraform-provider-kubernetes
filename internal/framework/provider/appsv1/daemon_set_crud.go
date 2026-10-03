@@ -63,7 +63,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	spec, specDiags := expandDaemonSetSpecModel(ctx, plan.Spec, daemonSetSpecPath())
+	spec, specDiags := expandDaemonSetSpecModel(ctx, plan.Spec, &req.Config, daemonSetSpecPath())
 	resp.Diagnostics.Append(specDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -167,9 +167,9 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	var original, planned *appsv1.DaemonSetSpec
 	if !reflect.DeepEqual(plan.Spec, state.Spec) {
-		oldSpec, diags := expandDaemonSetSpecModel(ctx, state.Spec, daemonSetSpecPath())
+		oldSpec, diags := expandDaemonSetSpecModel(ctx, state.Spec, nil, daemonSetSpecPath())
 		resp.Diagnostics.Append(diags...)
-		newSpec, diags := expandDaemonSetSpecModel(ctx, plan.Spec, daemonSetSpecPath())
+		newSpec, diags := expandDaemonSetSpecModel(ctx, plan.Spec, &req.Config, daemonSetSpecPath())
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -414,7 +414,9 @@ func (d *DaemonSetV1) daemonSetStateFromObject(
 	return result
 }
 
-func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, at path.Path) (appsv1.DaemonSetSpec, diag.Diagnostics) {
+// expandDaemonSetSpecModel converts the spec element at path at; config is
+// passed for a write payload, see podspec.Built.ExpandSpec.
+func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, config *tfsdk.Config, at path.Path) (appsv1.DaemonSetSpec, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	if len(spec) != 1 {
 		diagnostics.AddAttributeError(at, "Invalid daemonset spec", "Exactly one spec block is required.")
@@ -443,7 +445,7 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 	template := in.Template[0]
 	templateMetadata, templateMetadataDiags := common.ExpandNamespacedMetadata(ctx, template.Metadata)
 	diagnostics.Append(templateMetadataDiags...)
-	templateSpec, templateSpecDiags := podspec.For(podspec.DaemonSet()).ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	templateSpec, templateSpecDiags := podspec.For(podspec.DaemonSet()).ExpandSpec(ctx, template.Spec, config, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diagnostics.Append(templateSpecDiags...)
 	if diagnostics.HasError() {
 		return out, diagnostics

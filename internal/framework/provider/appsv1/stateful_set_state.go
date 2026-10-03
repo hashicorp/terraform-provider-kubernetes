@@ -83,7 +83,9 @@ type statefulSetIdentityModel struct {
 	Namespace types.String `tfsdk:"namespace"`
 }
 
-func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel) (*appsv1.StatefulSetSpec, diag.Diagnostics) {
+// expandStatefulSetSpec converts the spec element; config is passed for a write
+// payload, see podspec.Built.ExpandSpec.
+func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel, config *tfsdk.Config) (*appsv1.StatefulSetSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := &appsv1.StatefulSetSpec{}
 
@@ -137,7 +139,7 @@ func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel) (*app
 		tm := spec.Template[0]
 		meta, d := common.ExpandNamespacedMetadata(ctx, tm.Metadata)
 		diags.Append(d...)
-		podSpec, d := expandPodTemplateSpec(ctx, tm.Spec, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"))
+		podSpec, d := podspec.For(podspec.StatefulSet()).ExpandSpec(ctx, tm.Spec, config, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"))
 		diags.Append(d...)
 		out.Template = corev1.PodTemplateSpec{ObjectMeta: meta, Spec: podSpec}
 	}
@@ -159,10 +161,6 @@ func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel) (*app
 	}
 
 	return out, diags
-}
-
-func expandPodTemplateSpec(ctx context.Context, value types.List, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
-	return podspec.For(podspec.StatefulSet()).ExpandSpec(ctx, value, at)
 }
 
 func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, refresh bool) (StatefulSetSpecModel, diag.Diagnostics) {

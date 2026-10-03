@@ -6,6 +6,7 @@ package appsv1
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -72,7 +73,7 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 		resp.Diagnostics.AddAttributeError(path.Root("spec"), "Invalid spec", "Expected exactly one spec block")
 		return
 	}
-	spec, d := expandStatefulSetSpec(ctx, plan.Spec[0])
+	spec, d := expandStatefulSetSpec(ctx, plan.Spec[0], &req.Config)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -190,9 +191,15 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	var original, desired *appsv1.StatefulSetSpec
 	if len(plan.Spec) == 1 && len(state.Spec) == 1 {
-		original, d = expandStatefulSetSpec(ctx, state.Spec[0])
+		// The configuration is read only for a changed spec, so an unchanged one
+		// expands alike from plan and state and is not patched.
+		var config *tfsdk.Config
+		if !reflect.DeepEqual(plan.Spec, state.Spec) {
+			config = &req.Config
+		}
+		original, d = expandStatefulSetSpec(ctx, state.Spec[0], nil)
 		resp.Diagnostics.Append(d...)
-		desired, d = expandStatefulSetSpec(ctx, plan.Spec[0])
+		desired, d = expandStatefulSetSpec(ctx, plan.Spec[0], config)
 		resp.Diagnostics.Append(d...)
 		if resp.Diagnostics.HasError() {
 			return

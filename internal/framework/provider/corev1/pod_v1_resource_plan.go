@@ -83,7 +83,7 @@ func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlan
 		return
 	}
 	// An unknown value cannot be patched in, so it may change an immutable field.
-	plannedSpec, diags := podV1Spec().ExpandSpec(ctx, planned, path.Root("spec"))
+	plannedSpec, diags := podV1Spec().ExpandSpec(ctx, planned, nil, path.Root("spec"))
 	if diags.HasError() {
 		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("spec"))
 		return
@@ -101,7 +101,7 @@ func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlan
 		flattened, diags := podV1Spec().FlattenSpec(ctx, *patched, planned, path.Root("spec"))
 		replace = diags.HasError() || !podspec.Satisfies(flattened, planned)
 	} else {
-		priorSpec, diags := podV1Spec().ExpandSpec(ctx, prior, path.Root("spec"))
+		priorSpec, diags := podV1Spec().ExpandSpec(ctx, prior, nil, path.Root("spec"))
 		replace = diags.HasError() || podV1SpecRequiresReplacement(priorSpec, plannedSpec)
 	}
 	if replace {

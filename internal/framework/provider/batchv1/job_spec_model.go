@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	batchapi "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,9 +22,10 @@ import (
 // The Job controller labels the pods of every Job it creates.
 var jobGeneratedLabels = []string{"batch.kubernetes.io/controller-uid", "batch.kubernetes.io/job-name", "controller-uid", "job-name"}
 
-// expandJobSpec converts the single "spec" element into a JobSpec, with the
-// same field semantics as SDKv2. Unknown values are left for the API to set.
-func expandJobSpec(ctx context.Context, value types.List, job bool, at path.Path) (batchapi.JobSpec, diag.Diagnostics) {
+// expandJobSpec converts the single "spec" element at path at into a JobSpec,
+// with the same field semantics as SDKv2. Unknown values are left for the API
+// to set. config is passed for a write payload, see podspec.Built.ExpandSpec.
+func expandJobSpec(ctx context.Context, value types.List, job bool, config *tfsdk.Config, at path.Path) (batchapi.JobSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	spec, ok := singleObject(value)
 	if !ok {
@@ -68,13 +70,13 @@ func expandJobSpec(ctx context.Context, value types.List, job bool, at path.Path
 		}
 		out.TTLSecondsAfterFinished = ptr.To(int32(ttl))
 	}
-	template, d := expandPodTemplate(ctx, a["template"], job, at.AtListIndex(0).AtName("template"))
+	template, d := expandPodTemplate(ctx, a["template"], job, config, at.AtListIndex(0).AtName("template"))
 	diags.Append(d...)
 	out.Template = template
 	return out, diags
 }
 
-func expandPodTemplate(ctx context.Context, value attr.Value, job bool, at path.Path) (corev1.PodTemplateSpec, diag.Diagnostics) {
+func expandPodTemplate(ctx context.Context, value attr.Value, job bool, config *tfsdk.Config, at path.Path) (corev1.PodTemplateSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	template, ok := singleObject(value)
 	if !ok {
@@ -82,7 +84,7 @@ func expandPodTemplate(ctx context.Context, value attr.Value, job bool, at path.
 		return corev1.PodTemplateSpec{}, diags
 	}
 	spec, _ := template.Attributes()["spec"].(types.List)
-	podSpec, d := jobPodSpec(job).ExpandSpec(ctx, spec, at.AtListIndex(0).AtName("spec"))
+	podSpec, d := jobPodSpec(job).ExpandSpec(ctx, spec, config, at.AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	return corev1.PodTemplateSpec{ObjectMeta: expandTemplateMetadata(template.Attributes()["metadata"]), Spec: podSpec}, diags
 }

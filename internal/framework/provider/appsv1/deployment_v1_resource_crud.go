@@ -96,7 +96,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	spec, diags := expandDeploymentSpec(ctx, plan.Spec, path.Root("spec"))
+	spec, diags := expandDeploymentSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -240,9 +240,9 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 	var original, desired *appsv1.DeploymentSpec
 	if !plan.Spec.Equal(state.Spec) {
 		var diags diag.Diagnostics
-		original, diags = expandDeploymentSpec(ctx, state.Spec, path.Root("spec"))
+		original, diags = expandDeploymentSpec(ctx, state.Spec, nil, path.Root("spec"))
 		resp.Diagnostics.Append(diags...)
-		desired, diags = expandDeploymentSpec(ctx, plan.Spec, path.Root("spec"))
+		desired, diags = expandDeploymentSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -394,7 +394,9 @@ func (d *DeploymentV1) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 }
 
-func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (*appsv1.DeploymentSpec, diag.Diagnostics) {
+// expandDeploymentSpec converts the "spec" list at path at; config is passed
+// for a write payload, see podspec.Built.ExpandSpec.
+func expandDeploymentSpec(ctx context.Context, value types.List, config *tfsdk.Config, at path.Path) (*appsv1.DeploymentSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if value.IsNull() || value.IsUnknown() || len(value.Elements()) != 1 {
 		diags.AddAttributeError(at, "Invalid deployment specification", "Exactly one spec block is required.")
@@ -411,7 +413,7 @@ func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (
 		return nil, diags
 	}
 
-	input := models[0]
+	input, element := models[0], at.AtListIndex(0)
 	out := &appsv1.DeploymentSpec{
 		MinReadySeconds: int32(input.MinReadySeconds.ValueInt64()),
 		Paused:          input.Paused.ValueBool(),
@@ -422,30 +424,30 @@ func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (
 	if !input.Replicas.IsNull() && !input.Replicas.IsUnknown() && input.Replicas.ValueString() != "" {
 		replicas, err := strconvParseInt32(input.Replicas.ValueString())
 		if err != nil {
-			diags.AddAttributeError(at.AtName("replicas"), "Invalid replicas value", err.Error())
+			diags.AddAttributeError(element.AtName("replicas"), "Invalid replicas value", err.Error())
 			return nil, diags
 		}
 		out.Replicas = ptr.To(replicas)
 	}
 
 	if len(input.Selector) > 0 {
-		selector, d := expandSelector(ctx, input.Selector[0], at.AtName("selector").AtListIndex(0))
+		selector, d := expandSelector(ctx, input.Selector[0], element.AtName("selector").AtListIndex(0))
 		diags.Append(d...)
 		out.Selector = selector
 	}
 
-	strategy, d := expandDeploymentStrategy(ctx, input.Strategy, at.AtName("strategy"))
+	strategy, d := expandDeploymentStrategy(ctx, input.Strategy, element.AtName("strategy"))
 	diags.Append(d...)
 	out.Strategy = strategy
 
 	if len(input.Template) != 1 {
-		diags.AddAttributeError(at.AtName("template"), "Invalid deployment template", "Exactly one template block is required.")
+		diags.AddAttributeError(element.AtName("template"), "Invalid deployment template", "Exactly one template block is required.")
 		return nil, diags
 	}
 	template := input.Template[0]
 	metadata, d := common.ExpandNamespacedMetadata(ctx, template.Metadata)
 	diags.Append(d...)
-	spec, d := podspec.For(podspec.Deployment()).ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	spec, d := podspec.For(podspec.Deployment()).ExpandSpec(ctx, template.Spec, config, element.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	if diags.HasError() {
 		return nil, diags

@@ -312,7 +312,6 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
           }`, 1)
 	podNonRoot := strings.Replace(noEscalation, `restart_policy = "Never"`, `restart_policy = "Never"
         security_context {
-          fs_group        = "2000"
           run_as_non_root = false
         }`, 1)
 	// A Job's pod template cannot change, so each of these replaces the Job.
@@ -363,7 +362,7 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 				return nil
 			}),
 			step(noEscalation, func(spec corev1.PodSpec) error {
-				if sc := spec.SecurityContext; sc != nil && (sc.RunAsNonRoot != nil || sc.FSGroup != nil) {
+				if sc := spec.SecurityContext; sc != nil && sc.RunAsNonRoot != nil {
 					return fmt.Errorf("live pod securityContext = %+v, want no runAsNonRoot", sc)
 				}
 				return nil

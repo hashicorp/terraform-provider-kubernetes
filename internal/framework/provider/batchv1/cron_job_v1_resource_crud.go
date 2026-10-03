@@ -47,7 +47,7 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 	}
 	metadata, diagnostics := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diagnostics...)
-	spec, diagnostics := expandCronJobSpec(ctx, plan.Spec, path.Root("spec"))
+	spec, diagnostics := expandCronJobSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -133,7 +133,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Invalid CronJob metadata", "Expected exactly one metadata block in the state and plan.")
 		return
 	}
-	previousSpec, diagnostics := expandCronJobSpec(ctx, state.Spec, path.Root("spec"))
+	previousSpec, diagnostics := expandCronJobSpec(ctx, state.Spec, nil, path.Root("spec"))
 	resp.Diagnostics.Append(diagnostics...)
 	desiredSpec, diagnostics := cronJobDesiredSpec(ctx, req)
 	resp.Diagnostics.Append(diagnostics...)
@@ -236,9 +236,10 @@ func (r *CronJobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp
 	}
 }
 
-// expandCronJobSpec converts the single "spec" element with SDKv2's field
-// semantics: history limits are sent only when they differ from the defaults.
-func expandCronJobSpec(ctx context.Context, value types.List, at path.Path) (batch.CronJobSpec, diag.Diagnostics) {
+// expandCronJobSpec converts the single "spec" element at path at with SDKv2's
+// field semantics: history limits are sent only when they differ from the
+// defaults. config is passed for a write payload, see podspec.Built.ExpandSpec.
+func expandCronJobSpec(ctx context.Context, value types.List, config *tfsdk.Config, at path.Path) (batch.CronJobSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	spec, ok := singleObject(value)
 	if !ok {
@@ -271,7 +272,7 @@ func expandCronJobSpec(ctx context.Context, value types.List, at path.Path) (bat
 		diags.AddAttributeError(at.AtListIndex(0).AtName("job_template"), "Invalid CronJob specification", "Exactly one known job_template block is required.")
 		return out, diags
 	}
-	jobSpec, d := expandJobSpec(ctx, template.Attributes()["spec"].(types.List), false, at.AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec"))
+	jobSpec, d := expandJobSpec(ctx, template.Attributes()["spec"].(types.List), false, config, at.AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	out.JobTemplate = batch.JobTemplateSpec{ObjectMeta: expandTemplateMetadata(template.Attributes()["metadata"]), Spec: jobSpec}
 	return out, diags
@@ -355,5 +356,5 @@ func cronJobDesiredSpec(ctx context.Context, req resource.UpdateRequest) (batch.
 		diags.AddError("Unable to read CronJob specification", err.Error())
 		return batch.CronJobSpec{}, diags
 	}
-	return expandCronJobSpec(ctx, value.(types.List), path.Root("spec"))
+	return expandCronJobSpec(ctx, value.(types.List), &req.Config, path.Root("spec"))
 }

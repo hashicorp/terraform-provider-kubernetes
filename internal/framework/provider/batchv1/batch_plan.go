@@ -186,11 +186,11 @@ func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftype
 		diags.AddError("Unable to compare Job pod template", err.Error())
 		return false, diags
 	}
-	previous, d := expandPodTemplate(ctx, before, true, jobTemplatePath)
+	previous, d := expandPodTemplate(ctx, before, true, nil, jobTemplatePath)
 	if d.HasError() {
 		return false, diags
 	}
-	desired, d := expandPodTemplate(ctx, after, true, jobTemplatePath)
+	desired, d := expandPodTemplate(ctx, after, true, nil, jobTemplatePath)
 	if d.HasError() {
 		return true, diags
 	}

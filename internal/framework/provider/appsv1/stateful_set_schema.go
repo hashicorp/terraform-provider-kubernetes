@@ -5,7 +5,6 @@ package appsv1
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -13,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -127,73 +125,11 @@ func statefulSetTemplateBlock() schema.ListNestedBlock {
 		Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
 		NestedObject: schema.NestedBlockObject{
 			Blocks: map[string]schema.Block{
-				"metadata": statefulSetTemplateMetadataBlock("stateful set"),
+				"metadata": workloadTemplateMetadataBlock(),
 				"spec":     podspec.For(podspec.StatefulSet()).Spec,
 			},
 		},
 	}
-}
-
-func statefulSetTemplateMetadataBlock(objectName string) schema.ListNestedBlock {
-	block := schema.ListNestedBlock{
-		Description: fmt.Sprintf("Standard %s template metadata.", objectName),
-		Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
-		NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-			"annotations": schema.MapAttribute{Optional: true, ElementType: types.StringType, Validators: []validator.Map{common.AnnotationsValidator()}},
-			"labels":      schema.MapAttribute{Optional: true, ElementType: types.StringType, Validators: []validator.Map{common.LabelsValidator()}},
-			"generation": schema.Int64Attribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(pathMatchParent("generate_name")),
-					common.DNSSubdomainNameValidator(),
-				},
-			},
-			"generate_name": schema.StringAttribute{
-				Optional:      true,
-				PlanModifiers: []planmodifier.String{common.GenerateNameRequiresReplace()},
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(pathMatchParent("name")),
-					common.DNSLabelPrefixValidator(),
-				},
-			},
-			"namespace": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"resource_version": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"uid": schema.StringAttribute{
-				Computed: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-		}},
-	}
-	return common.WithEmptyMetadataCompatibility(block)
-}
-
-func pathMatchParent(name string) path.Expression {
-	return path.MatchRelative().AtParent().AtName(name)
 }
 
 func labelSelectorBlock(required bool) schema.ListNestedBlock {

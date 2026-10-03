@@ -435,7 +435,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 		daemonSetSpecPath().AtName("template").AtListIndex(0).AtName("spec"),
 	)
 	diagnostics.Append(templateSpecDiags...)
-	templateMetadata, templateMetadataDiags := flattenDaemonSetTemplateMetadata(ctx, spec.Template.ObjectMeta, templateMetadataBaseline)
+	templateMetadata, templateMetadataDiags := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, templateMetadataBaseline, refresh)
 	diagnostics.Append(templateMetadataDiags...)
 	selector, selectorDiags := flattenWorkloadSelector(ctx, spec.Selector, selectorBaseline)
 	diagnostics.Append(selectorDiags...)
@@ -573,51 +573,6 @@ func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdat
 	value, diags := types.ListValueFrom(ctx, daemonSetStrategyObjectType(), []DaemonSetStrategyModel{model})
 	diagnostics.Append(diags...)
 	return value
-}
-
-func flattenDaemonSetTemplateMetadata(ctx context.Context, in metav1.ObjectMeta, prior []common.NamespacedMetadataModel) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
-	var diagnostics diag.Diagnostics
-	annotations := types.MapNull(types.StringType)
-	labels := types.MapNull(types.StringType)
-	if in.Annotations != nil {
-		value, diags := types.MapValueFrom(ctx, types.StringType, in.Annotations)
-		diagnostics.Append(diags...)
-		annotations = value
-	} else if len(prior) > 0 && !prior[0].Annotations.IsNull() {
-		annotations = types.MapValueMust(types.StringType, nil)
-	}
-	if in.Labels != nil {
-		value, diags := types.MapValueFrom(ctx, types.StringType, in.Labels)
-		diagnostics.Append(diags...)
-		labels = value
-	} else if len(prior) > 0 && !prior[0].Labels.IsNull() {
-		labels = types.MapValueMust(types.StringType, nil)
-	}
-	generateName := types.StringNull()
-	if in.GenerateName != "" {
-		generateName = types.StringValue(in.GenerateName)
-	}
-	namespace := types.StringNull()
-	if in.Namespace != "" || len(prior) > 0 && prior[0].Namespace.Equal(types.StringValue("")) {
-		namespace = types.StringValue(in.Namespace)
-	}
-
-	return []common.NamespacedMetadataModel{
-		{
-			MetadataModel: common.MetadataModel{
-				MetadataBase: common.MetadataBase{
-					Annotations:     annotations,
-					Generation:      types.Int64Value(in.Generation),
-					Labels:          labels,
-					Name:            types.StringValue(in.Name),
-					ResourceVersion: types.StringValue(in.ResourceVersion),
-					UID:             types.StringValue(string(in.UID)),
-				},
-				GenerateName: generateName,
-			},
-			Namespace: namespace,
-		},
-	}, diagnostics
 }
 
 func daemonSetMetadataPatchOps(state, plan DaemonSetV1Model, live metav1.ObjectMeta) kubernetes.PatchOperations {

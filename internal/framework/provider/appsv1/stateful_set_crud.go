@@ -371,7 +371,7 @@ func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kube
 	if len(baseline.Spec) > 0 {
 		baselineSpec = &baseline.Spec[0]
 	}
-	spec, d := flattenStatefulSetSpec(ctx, obj.Spec, baselineSpec, filters, refresh)
+	spec, d := flattenStatefulSetSpec(ctx, obj.Spec, baselineSpec, refresh)
 	diags.Append(d...)
 	if diags.HasError() {
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags

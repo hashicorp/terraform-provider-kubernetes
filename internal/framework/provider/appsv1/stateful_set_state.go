@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sresource "k8s.io/apimachinery/pkg/api/resource"
@@ -171,7 +170,7 @@ func expandPodTemplateSpec(ctx context.Context, value types.List, at path.Path) 
 	return podspec.For(podspec.StatefulSet()).ExpandSpec(ctx, value, at)
 }
 
-func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters, refresh bool) (StatefulSetSpecModel, diag.Diagnostics) {
+func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, refresh bool) (StatefulSetSpecModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := StatefulSetSpecModel{
 		PodManagementPolicy:                  types.StringNull(),
@@ -199,7 +198,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 	diags.Append(selectorDiags...)
 	out.Selector = selectors
 
-	template, d := flattenTemplate(ctx, spec.Template, baseline, filters, refresh)
+	template, d := flattenTemplate(ctx, spec.Template, baseline, refresh)
 	diags.Append(d...)
 	out.Template = []StatefulSetTemplateModel{template}
 
@@ -395,7 +394,7 @@ func expandMapToResourceListFromMap(ctx context.Context, m types.Map) (corev1.Re
 	return out, diags
 }
 
-func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters, refresh bool) (StatefulSetTemplateModel, diag.Diagnostics) {
+func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, refresh bool) (StatefulSetTemplateModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := StatefulSetTemplateModel{}
 
@@ -403,9 +402,8 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	if baseline != nil && len(baseline.Template) > 0 {
 		priorMetadata = baseline.Template[0].Metadata
 	}
-	meta, d := common.FlattenNamespacedMetadata(ctx, in.ObjectMeta, priorMetadata, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	meta, d := flattenWorkloadTemplateMetadata(ctx, in.ObjectMeta, priorMetadata, refresh)
 	diags.Append(d...)
-	preserveEmbeddedMetadataNamespace(meta, priorMetadata, in.Namespace)
 	out.Metadata = meta
 
 	var baselineSpec types.List

@@ -26,6 +26,7 @@ func TestWorkloadTemplateMetadataMap(t *testing.T) {
 			"app": types.StringValue("x"), "kubectl.kubernetes.io/restartedAt": types.StringValue("now"),
 		})},
 		{"apply keeps planned keys", live, planned, false, planned},
+		{"apply with null plan drops live keys", live, types.MapNull(types.StringType), false, types.MapNull(types.StringType)},
 		{"apply with unknown plan keeps every live key", map[string]string{"app": "x"}, types.MapUnknown(types.StringType), false, planned},
 		{"none stays null", nil, types.MapNull(types.StringType), true, types.MapNull(types.StringType)},
 		{"none keeps an empty map", nil, empty, true, empty},

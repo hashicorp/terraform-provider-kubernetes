@@ -79,8 +79,11 @@ func flattenWorkloadTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta
 }
 
 // workloadTemplateMetadataMap keeps a prior empty map and, unless all is set,
-// only the prior map's keys.
+// only the prior map's keys: a null plan stays null.
 func workloadTemplateMetadataMap(ctx context.Context, live map[string]string, prior types.Map, all bool) (types.Map, diag.Diagnostics) {
+	if !all && prior.IsNull() {
+		return prior, nil
+	}
 	known := !prior.IsNull() && !prior.IsUnknown()
 	if !all && known {
 		planned := make(map[string]string, len(prior.Elements()))

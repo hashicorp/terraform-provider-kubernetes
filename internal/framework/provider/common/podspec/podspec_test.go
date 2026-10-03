@@ -157,6 +157,42 @@ func TestReplacementIgnoresZeroValues(t *testing.T) {
 	}
 }
 
+// SDKv2 state holds container resources with only zero values as [], the same
+// object Kubernetes holds for a configured [{}].
+func TestAbsentZeroListStructure(t *testing.T) {
+	ctx := context.Background()
+	element := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"limits":   types.MapType{ElemType: types.StringType},
+		"requests": types.MapType{ElemType: types.StringType},
+	}}
+	resources := func(limits, requests types.Map) types.List {
+		return types.ListValueMust(element, []attr.Value{types.ObjectValueMust(element.AttrTypes, map[string]attr.Value{"limits": limits, "requests": requests})})
+	}
+	null, unknown := types.MapNull(types.StringType), types.MapUnknown(types.StringType)
+	empty := types.MapValueMust(types.StringType, map[string]attr.Value{})
+	cpu := types.MapValueMust(types.StringType, map[string]attr.Value{"cpu": types.StringValue("100m")})
+	for name, tc := range map[string]struct {
+		modifier     podListStructureRequiresReplace
+		config, plan types.List
+		replace      bool
+		want         types.List
+	}{
+		"zero element":       {podListStructureRequiresReplace{absentZero: true}, resources(null, null), resources(unknown, unknown), false, resources(empty, empty)},
+		"limits set":         {podListStructureRequiresReplace{absentZero: true}, resources(cpu, null), resources(cpu, unknown), true, resources(cpu, unknown)},
+		"other list":         {podListStructureRequiresReplace{}, resources(null, null), resources(unknown, unknown), true, resources(unknown, unknown)},
+		"unknown configured": {podListStructureRequiresReplace{absentZero: true}, resources(unknown, null), resources(unknown, unknown), true, resources(unknown, unknown)},
+	} {
+		req := planmodifier.ListRequest{StateValue: types.ListValueMust(element, nil), ConfigValue: tc.config, PlanValue: tc.plan}
+		req.State.Raw = tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+		req.Plan.Raw = req.State.Raw
+		resp := planmodifier.ListResponse{PlanValue: tc.plan}
+		tc.modifier.PlanModifyList(ctx, req, &resp)
+		if resp.RequiresReplace != tc.replace || !resp.PlanValue.Equal(tc.want) {
+			t.Errorf("%s: replace = %t, plan = %s; want %t, %s", name, resp.RequiresReplace, resp.PlanValue, tc.replace, tc.want)
+		}
+	}
+}
+
 // Core accepts a planned map equal to the configuration or the prior state,
 // never a mixture, so respelled quantities are kept only all at once.
 func TestQuantityMapKeepsPriorSpellingWholesale(t *testing.T) {

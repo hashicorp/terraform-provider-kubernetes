@@ -17,7 +17,10 @@ import (
 
 // SDKv2's ForceNew on a list of objects governs its structural diff, not all of
 // its descendants. Leaf replacement rules are declared on their own attributes.
-type podListStructureRequiresReplace struct{}
+//
+// absentZero marks a list that Kubernetes holds as one element whether or not
+// one is sent, which SDKv2 recorded as empty when it held only zero values.
+type podListStructureRequiresReplace struct{ absentZero bool }
 
 func (podListStructureRequiresReplace) Description(context.Context) string {
 	return "changes to the collection size require replacement"
@@ -25,14 +28,31 @@ func (podListStructureRequiresReplace) Description(context.Context) string {
 func (v podListStructureRequiresReplace) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
-func (podListStructureRequiresReplace) PlanModifyList(_ context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
+func (m podListStructureRequiresReplace) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.PlanValue.IsUnknown() {
 		return
 	}
 	if req.StateValue.IsUnknown() {
 		return
 	}
+	if m.absentZero && len(req.StateValue.Elements()) == 0 && len(req.PlanValue.Elements()) == 1 && podZeroElement(req.ConfigValue) {
+		// The configured zero-valued element is the object Kubernetes already
+		// holds; plan its unset maps as the empty maps it reports.
+		element := req.PlanValue.Elements()[0].(types.Object)
+		attributes := element.Attributes()
+		for name, value := range attributes {
+			if quantities, ok := value.(types.Map); ok && quantities.IsUnknown() {
+				attributes[name] = types.MapValueMust(quantities.ElementType(ctx), map[string]attr.Value{})
+			}
+		}
+		resp.PlanValue = types.ListValueMust(element.Type(ctx), []attr.Value{types.ObjectValueMust(element.AttributeTypes(ctx), attributes)})
+		return
+	}
 	resp.RequiresReplace = len(req.StateValue.Elements()) != len(req.PlanValue.Elements())
+}
+
+func podZeroElement(config types.List) bool {
+	return !config.IsNull() && !config.IsUnknown() && len(config.Elements()) == 1 && podZeroValue(config.Elements()[0])
 }
 
 func (b builder) quantityString(f forceNew, fallback string) schema.StringAttribute {

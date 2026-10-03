@@ -26,7 +26,7 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 		}},
 	}
 	if b.replace(immutable) {
-		resources.PlanModifiers = append(resources.PlanModifiers, podListStructureRequiresReplace{})
+		resources.PlanModifiers = append(resources.PlanModifiers, podListStructureRequiresReplace{absentZero: true})
 	}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{

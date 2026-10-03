@@ -234,7 +234,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		// Unset replicas are left to an autoscaler, so the live count is kept.
+		// A planned replicas of "" leaves the live count alone; an omitted value is planned from state and sent.
 		if desired.Replicas == nil {
 			original.Replicas = nil
 		}

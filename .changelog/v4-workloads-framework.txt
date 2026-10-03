@@ -23,6 +23,22 @@
 ```
 
 ```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: After a create or update, state records the planned values, and only values the plan leaves unknown come from Kubernetes. Fields that admission webhooks or other clients add, such as an injected sidecar container, show as drift on the next refreshed plan instead of being recorded by the apply; `lifecycle.ignore_changes` handles them as before.
+```
+
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_cron_job_v1`: Updates change only what the plan changes instead of replacing the whole spec (Deployment, DaemonSet, CronJob) or the whole pod template (StatefulSet). Spec fields that the configuration does not manage keep their live values. A change made outside Terraform to a managed field after the plan, such as with `-refresh=false` or a saved plan, is kept by that apply when the plan does not change that field, and reverted by the next refreshed apply.
+```
+
+```release-note:note
+`resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`: A plan that changes a Pod spec or a Job pod template reads the object from Kubernetes, even with `-refresh=false`, to decide whether it must be replaced. Planning fails if that read fails or takes longer than 30 seconds.
+```
+
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Setting both `name` and `generate_name` in `metadata` gives a warning, since Kubernetes ignores `generate_name` when `name` is set.
+```
+
+```release-note:note
 `resource/kubernetes_pod_v1`: New Pods keep resource quantities as configured in state, for example `0.5` rather than `500m`, which can change outputs but not allocations.
 ```
 
@@ -56,8 +72,4 @@
 
 ```release-note:bug
 `resource/kubernetes_job_v1`: Replace the Job when its pod template or `pod_failure_policy` changes, since Kubernetes does not allow updating them. Labels the Job controller adds to the pod template are ignored, and pod template labels and annotations an admission webhook adds are not recorded in state.
-```
-
-```release-note:bug
-`resource/kubernetes_cron_job_v1`: Keep labels, annotations and spec fields that are not recorded in state, such as those set by admission controllers or other tools, when updating a CronJob.
 ```

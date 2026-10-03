@@ -48,12 +48,7 @@ type deploymentSpecModel struct {
 	RevisionHistoryLimit    types.Int64               `tfsdk:"revision_history_limit"`
 	Selector                []deploymentSelectorModel `tfsdk:"selector"`
 	Strategy                types.List                `tfsdk:"strategy"`
-	Template                []deploymentTemplateModel `tfsdk:"template"`
-}
-
-type deploymentTemplateModel struct {
-	Metadata []common.NamespacedMetadataModel `tfsdk:"metadata"`
-	Spec     types.List                       `tfsdk:"spec"`
+	Template                []workloadTemplateModel   `tfsdk:"template"`
 }
 
 type deploymentSelectorModel = LabelSelectorModel
@@ -540,7 +535,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	diags.Append(d...)
 	templateMetadata, d := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata, refresh)
 	diags.Append(d...)
-	model.Template = []deploymentTemplateModel{{
+	model.Template = []workloadTemplateModel{{
 		Metadata: templateMetadata,
 		Spec:     templateSpec,
 	}}
@@ -551,7 +546,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 }
 
 // deploymentSpecListValue is types.ListValueFrom for a single spec model,
-// built by hand so the large template PodSpec value is not reflected over.
+// built by hand so the pod spec is not reflected over.
 func deploymentSpecListValue(ctx context.Context, model deploymentSpecModel) (types.List, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	listType := deploymentSpecListType()
@@ -562,26 +557,8 @@ func deploymentSpecListValue(ctx context.Context, model deploymentSpecModel) (ty
 	selector, d := types.ListValueFrom(ctx, selectorType.ElemType, model.Selector)
 	diags.Append(d...)
 
-	templateType := specType.AttrTypes["template"].(types.ListType)
-	templateObjectType := templateType.ElemType.(types.ObjectType)
-	metadataType := templateObjectType.AttrTypes["metadata"].(types.ListType)
-	template := types.ListNull(templateObjectType)
-	if model.Template != nil {
-		elements := make([]attr.Value, 0, len(model.Template))
-		for _, t := range model.Template {
-			metadata, d := types.ListValueFrom(ctx, metadataType.ElemType, t.Metadata)
-			diags.Append(d...)
-			element, d := types.ObjectValue(templateObjectType.AttrTypes, map[string]attr.Value{
-				"metadata": metadata,
-				"spec":     t.Spec,
-			})
-			diags.Append(d...)
-			elements = append(elements, element)
-		}
-		var d diag.Diagnostics
-		template, d = types.ListValue(templateObjectType, elements)
-		diags.Append(d...)
-	}
+	template, d := workloadTemplateListValue(ctx, specType.AttrTypes["template"].(types.ListType), model.Template)
+	diags.Append(d...)
 	if diags.HasError() {
 		return null, diags
 	}

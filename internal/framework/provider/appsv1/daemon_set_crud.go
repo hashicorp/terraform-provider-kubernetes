@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
@@ -77,7 +79,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	createdState := d.daemonSetStateFromObject(ctx, plan, created, filters, false, &resp.Diagnostics)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &createdState)...)
+	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, createdState)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(created.Namespace, created.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -95,7 +97,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 	if !exists || resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &fresh)...)
+	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, fresh)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(fresh.Metadata[0].Namespace.ValueString(), fresh.Metadata[0].Name.ValueString()))...)
 }
 
@@ -125,7 +127,7 @@ func (d *DaemonSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &fresh)...)
+	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, fresh)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(fresh.Metadata[0].Namespace.ValueString(), fresh.Metadata[0].Name.ValueString()))...)
 }
 
@@ -232,7 +234,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	updatedState := d.daemonSetStateFromObject(ctx, plan, updated, filters, false, &resp.Diagnostics)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &updatedState)...)
+	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, updatedState)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(updated.Namespace, updated.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -250,7 +252,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	if !exists || resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &fresh)...)
+	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, fresh)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(fresh.Metadata[0].Namespace.ValueString(), fresh.Metadata[0].Name.ValueString()))...)
 }
 
@@ -302,6 +304,40 @@ func (d *DaemonSetV1) Delete(ctx context.Context, req resource.DeleteRequest, re
 	if err != nil {
 		resp.Diagnostics.AddError("Error waiting for daemonset deletion", err.Error())
 	}
+}
+
+var daemonSetSpecListType = workloadSpecListType(daemonSetFrozenSchema)
+
+// setDaemonSetState sets state to model; see workloadStateModel.
+func setDaemonSetState(ctx context.Context, state *tfsdk.State, model DaemonSetV1Model) diag.Diagnostics {
+	spec, diags := workloadListValue(daemonSetSpecListType(), model.Spec, func(in DaemonSetV1SpecModel, typ types.ObjectType) (attr.Value, diag.Diagnostics) {
+		selector, diags := types.ListValueFrom(ctx, typ.AttrTypes["selector"].(types.ListType).ElemType, in.Selector)
+		template, d := workloadTemplateListValue(ctx, typ.AttrTypes["template"].(types.ListType), in.Template)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		object, d := types.ObjectValue(typ.AttrTypes, map[string]attr.Value{
+			"min_ready_seconds":      in.MinReadySeconds,
+			"revision_history_limit": in.RevisionHistoryLimit,
+			"selector":               selector,
+			"strategy":               in.Strategy,
+			"template":               template,
+		})
+		diags.Append(d...)
+		return object, diags
+	})
+	if diags.HasError() {
+		return diags
+	}
+	diags.Append(state.Set(ctx, &workloadStateModel{
+		ID:             model.ID,
+		Metadata:       model.Metadata,
+		Spec:           spec,
+		WaitForRollout: model.WaitForRollout,
+		Timeouts:       model.Timeouts,
+	})...)
+	return diags
 }
 
 func (d *DaemonSetV1) readDaemonSetState(
@@ -454,7 +490,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 			RevisionHistoryLimit: revisionHistoryLimit,
 			Selector:             selector,
 			Strategy:             flattenDaemonSetStrategyModel(ctx, spec.UpdateStrategy, strategyBaseline, &diagnostics),
-			Template: []DaemonSetTemplateModel{
+			Template: []workloadTemplateModel{
 				{
 					Metadata: templateMetadata,
 					Spec:     templateSpec,

@@ -9,9 +9,11 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
@@ -91,7 +93,7 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.Metadata[0].ResourceVersion = types.StringValue(created.ResourceVersion)
 	plan.Metadata[0].Generation = types.Int64Value(created.Generation)
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(setStatefulSetState(ctx, &resp.State, plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -118,7 +120,7 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 	state, ident, d := r.readStateFromAPI(ctx, conn, filters, plan)
 	resp.Diagnostics.Append(d...)
 	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+		resp.Diagnostics.Append(setStatefulSetState(ctx, &resp.State, state)...)
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, ident)...)
 	}
 }
@@ -274,7 +276,7 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 	keepPlannedClaimTemplateChanges(stateOut.Spec, plan.Spec)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &stateOut)...)
+	resp.Diagnostics.Append(setStatefulSetState(ctx, &resp.State, stateOut)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, identOut)...)
 }
 
@@ -331,6 +333,52 @@ func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 	}
 }
 
+var statefulSetSpecListType = workloadSpecListType(statefulSetFrozenSchema)
+
+// setStatefulSetState sets state to model; see workloadStateModel.
+func setStatefulSetState(ctx context.Context, state *tfsdk.State, model StatefulSetV1Model) diag.Diagnostics {
+	spec, diags := workloadListValue(statefulSetSpecListType(), model.Spec, func(in StatefulSetSpecModel, typ types.ObjectType) (attr.Value, diag.Diagnostics) {
+		elemType := func(name string) attr.Type {
+			return typ.AttrTypes[name].(types.ListType).ElemType
+		}
+		selector, diags := types.ListValueFrom(ctx, elemType("selector"), in.Selector)
+		updateStrategy, d := types.ListValueFrom(ctx, elemType("update_strategy"), in.UpdateStrategy)
+		diags.Append(d...)
+		claims, d := types.ListValueFrom(ctx, elemType("volume_claim_template"), in.VolumeClaimTemplate)
+		diags.Append(d...)
+		template, d := workloadTemplateListValue(ctx, typ.AttrTypes["template"].(types.ListType), in.Template)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		object, d := types.ObjectValue(typ.AttrTypes, map[string]attr.Value{
+			"pod_management_policy":  in.PodManagementPolicy,
+			"replicas":               in.Replicas,
+			"revision_history_limit": in.RevisionHistoryLimit,
+			"selector":               selector,
+			"service_name":           in.ServiceName,
+			"template":               template,
+			"update_strategy":        updateStrategy,
+			"volume_claim_template":  claims,
+			"persistent_volume_claim_retention_policy": in.PersistentVolumeClaimRetentionPolicy,
+			"min_ready_seconds":                        in.MinReadySeconds,
+		})
+		diags.Append(d...)
+		return object, diags
+	})
+	if diags.HasError() {
+		return diags
+	}
+	diags.Append(state.Set(ctx, &workloadStateModel{
+		ID:             model.ID,
+		Metadata:       model.Metadata,
+		Spec:           spec,
+		WaitForRollout: model.WaitForRollout,
+		Timeouts:       model.Timeouts,
+	})...)
+	return diags
+}
+
 func (r *StatefulSetV1) readStateFromAPI(ctx context.Context, conn *k8sclient.Clientset, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model) (StatefulSetV1Model, statefulSetIdentityModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	namespace, name, err := kubernetes.IdParts(baseline.ID.ValueString())
@@ -352,7 +400,7 @@ func (r *StatefulSetV1) refreshStateFromObject(ctx context.Context, filters kube
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(setStatefulSetState(ctx, &resp.State, state)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, ident)...)
 }
 

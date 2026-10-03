@@ -38,16 +38,11 @@ type StatefulSetSpecModel struct {
 	RevisionHistoryLimit                 types.Int64                      `tfsdk:"revision_history_limit"`
 	Selector                             []LabelSelectorModel             `tfsdk:"selector"`
 	ServiceName                          types.String                     `tfsdk:"service_name"`
-	Template                             []StatefulSetTemplateModel       `tfsdk:"template"`
+	Template                             []workloadTemplateModel          `tfsdk:"template"`
 	UpdateStrategy                       []StatefulSetUpdateStrategyModel `tfsdk:"update_strategy"`
 	VolumeClaimTemplate                  []PersistentVolumeClaimModel     `tfsdk:"volume_claim_template"`
 	PersistentVolumeClaimRetentionPolicy types.List                       `tfsdk:"persistent_volume_claim_retention_policy"`
 	MinReadySeconds                      types.Int64                      `tfsdk:"min_ready_seconds"`
-}
-
-type StatefulSetTemplateModel struct {
-	Metadata []common.NamespacedMetadataModel `tfsdk:"metadata"`
-	Spec     types.List                       `tfsdk:"spec"`
 }
 
 type StatefulSetUpdateStrategyModel struct {
@@ -203,7 +198,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 
 	template, d := flattenTemplate(ctx, spec.Template, baseline, refresh)
 	diags.Append(d...)
-	out.Template = []StatefulSetTemplateModel{template}
+	out.Template = []workloadTemplateModel{template}
 
 	out.VolumeClaimTemplate = make([]PersistentVolumeClaimModel, len(spec.VolumeClaimTemplates))
 	for i, pvc := range spec.VolumeClaimTemplates {
@@ -397,9 +392,9 @@ func expandMapToResourceListFromMap(ctx context.Context, m types.Map) (corev1.Re
 	return out, diags
 }
 
-func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, refresh bool) (StatefulSetTemplateModel, diag.Diagnostics) {
+func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, refresh bool) (workloadTemplateModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	out := StatefulSetTemplateModel{}
+	out := workloadTemplateModel{}
 
 	var priorMetadata []common.NamespacedMetadataModel
 	if baseline != nil && len(baseline.Template) > 0 {

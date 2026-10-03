@@ -332,6 +332,7 @@ Keep all other values unchanged, and do not keep both resource blocks for the sa
 - **CronJob updates** change only what the configuration changes. Labels, annotations and spec fields that are not recorded in state, such as fields set by admission controllers, keep their live values.
 - **StatefulSet volume claim templates.** Kubernetes does not allow changing the claim templates of an existing StatefulSet. As in 3.x, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned in place but not applied, and the next plan shows it again; the plan now warns about it. To apply such a change, replace the StatefulSet, for example with `terraform apply -replace=<address>`. Adding or removing a claim template, or changing its `access_modes` or `limits`, replaces the StatefulSet.
 - **Zero-valued pod security context.** A pod-level `security_context` block that sets only empty or `false` values, such as `run_as_non_root = false`, is sent to Kubernetes as an empty security context; earlier versions sent `runAsNonRoot: false`. Kubernetes treats both the same way. Removing such a block from a Job created by an earlier version replaces the Job.
+- **`name` with `generate_name`.** Setting both is accepted as in 3.x but now gives a warning, since Kubernetes ignores `generate_name` when `name` is set.
 
 ## Performance
 

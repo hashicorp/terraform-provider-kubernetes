@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -50,7 +51,7 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	}
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	spec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, path.Root("spec"))
+	spec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	targets, diags := podV1TargetStates(ctx, plan.TargetState)
 	resp.Diagnostics.Append(diags...)
@@ -67,22 +68,9 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		return
 	}
 
-	// Save the returned identity before flattening or waiting can fail.
-	plan.ID = types.StringValue(kubernetes.BuildId(pod.ObjectMeta))
-	podV1SetMetadata(&plan, pod.ObjectMeta)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, podV1Identity(pod.Namespace, pod.Name))...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	// Both reads are flattened against the plan, not against each other.
-	planned := plan.Spec
-	plan.Spec, diags = podV1Spec().FlattenSpec(ctx, pod.Spec, planned, path.Root("spec"))
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	// Save the returned identity before waiting can fail.
+	resp.Diagnostics.Append(podV1WriteResult(ctx, &resp.State, req.Plan, plan, pod)...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(pod.Namespace, pod.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -113,13 +101,7 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		resp.Diagnostics.AddError("Error waiting for Pod", detail)
 		return
 	}
-	current := result.(*corev1.Pod)
-	plan.Spec, diags = podV1Spec().FlattenSpec(ctx, current.Spec, planned, path.Root("spec"))
-	resp.Diagnostics.Append(diags...)
-	podV1SetMetadata(&plan, current.ObjectMeta)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	}
+	resp.Diagnostics.Append(podV1WriteResult(ctx, &resp.State, req.Plan, plan, result.(*corev1.Pod))...)
 }
 
 func (p *PodV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -135,6 +117,7 @@ func (p *PodV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		resp.Diagnostics.AddError("Invalid Pod ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(namespace, name))...)
 	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
@@ -162,7 +145,6 @@ func (p *PodV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		state.TargetState = types.ListValueMust(types.StringType, nil)
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, podV1Identity(namespace, name))...)
 }
 
 func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -179,13 +161,14 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Pod ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(namespace, name))...)
 	priorMetadata, diags := common.ExpandNamespacedMetadata(ctx, state.Metadata)
 	resp.Diagnostics.Append(diags...)
 	plannedMetadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	priorSpec, diags := podV1Spec().ExpandSpec(ctx, state.Spec, path.Root("spec"))
+	priorSpec, diags := podV1Spec().ExpandSpec(ctx, state.Spec, nil, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
-	plannedSpec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, path.Root("spec"))
+	plannedSpec, diags := podV1Spec().ExpandSpec(ctx, plan.Spec, nil, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -227,15 +210,7 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		return
 	}
 
-	plan.ID = state.ID
-	podV1SetMetadata(&plan, pod.ObjectMeta)
-	plan.Spec, diags = podV1Spec().FlattenSpec(ctx, pod.Spec, plan.Spec, path.Root("spec"))
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, podV1Identity(namespace, name))...)
+	resp.Diagnostics.Append(podV1WriteResult(ctx, &resp.State, req.Plan, plan, pod)...)
 }
 
 func (p *PodV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -258,6 +233,7 @@ func (p *PodV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Pod ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(namespace, name))...)
 	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
@@ -284,6 +260,20 @@ func (p *PodV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *re
 	if err != nil {
 		resp.Diagnostics.AddError("Error waiting for Pod deletion", err.Error())
 	}
+}
+
+// podV1WriteResult records the plan after a write, with the values Kubernetes
+// chose for those it left unknown. The spec is flattened against the plan.
+func podV1WriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model PodV1Model, pod *corev1.Pod) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		model.ID = types.StringValue(kubernetes.BuildId(pod.ObjectMeta))
+		podV1SetMetadata(&model, pod.ObjectMeta)
+		spec, diags := podV1Spec().FlattenSpec(ctx, pod.Spec, model.Spec, path.Root("spec"))
+		if !diags.HasError() {
+			model.Spec = spec
+		}
+		return append(diags, actual.Set(ctx, &model)...)
+	})
 }
 
 func podV1SetMetadata(model *PodV1Model, metadata metav1.ObjectMeta) {

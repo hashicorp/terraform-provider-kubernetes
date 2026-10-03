@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -52,7 +51,7 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	}
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	spec, diags := expandJobSpec(ctx, plan.Spec, true, path.Root("spec"))
+	spec, diags := expandJobSpec(ctx, plan.Spec, true, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -63,11 +62,9 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		return
 	}
 	// The Job exists now: keep it in state even if waiting for it fails.
-	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(out.Namespace, out.Name))...)
-	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(out.Namespace, out.Name))...)
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
 		return
 	}
@@ -87,6 +84,7 @@ func (r *JobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		resp.Diagnostics.AddError("Invalid Job ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(namespace, name))...)
 	clients, filters, diags := r.sdkv2Meta()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -111,9 +109,6 @@ func (r *JobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
-	}
 }
 
 func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -132,6 +127,7 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Job ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(namespace, name))...)
 	clients, filters, diags := r.sdkv2Meta()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -173,11 +169,8 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		resp.Diagnostics.AddError("Failed to update Job", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
-	}
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
 		return
 	}
@@ -201,6 +194,7 @@ func (r *JobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Job ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(namespace, name))...)
 	clients, _, diags := r.sdkv2Meta()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -284,24 +278,12 @@ func flattenJob(ctx context.Context, job *batchapi.Job, model *JobV1Model, filte
 
 // jobWriteResult records the plan after a write, with the values Kubernetes
 // chose for those it left unknown.
-func jobWriteResult(ctx context.Context, state *tfsdk.State, plan JobV1Model, out *batchapi.Job, filters kubernetes.MetadataFilters) diag.Diagnostics {
-	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
-	planned := tfsdk.State{Schema: state.Schema}
-	diags := planned.Set(ctx, &plan)
-	actual := tfsdk.State{Schema: state.Schema, Raw: tftypes.NewValue(state.Schema.Type().TerraformType(ctx), nil)}
-	model := plan
-	if flattenDiags := flattenJob(ctx, out, &model, filters, false); flattenDiags.HasError() {
-		diags.Append(flattenDiags...)
-	} else {
-		diags.Append(actual.Set(ctx, &model)...)
-	}
-	merged, err := knownOrActual(planned.Raw, actual.Raw)
-	if err != nil {
-		diags.AddError("Unable to record Job state", err.Error())
-		return diags
-	}
-	state.Raw = merged
-	return diags
+func jobWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model JobV1Model, out *batchapi.Job, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		model.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
+		diags := flattenJob(ctx, out, &model, filters, false)
+		return append(diags, actual.Set(ctx, &model)...)
+	})
 }
 
 func removeJobGeneratedLabels(labels map[string]string) {
@@ -352,9 +334,9 @@ func patchJobSpec(ctx context.Context, state, plan types.List) (kubernetes.Patch
 			return nil, diags
 		}
 	}
-	spec, expandDiags := expandJobSpec(ctx, payloadPlan, true, path.Root("spec"))
+	spec, expandDiags := expandJobSpec(ctx, payloadPlan, true, nil, path.Root("spec"))
 	diags.Append(expandDiags...)
-	previousSpec, previousDiags := expandJobSpec(ctx, state, true, path.Root("spec"))
+	previousSpec, previousDiags := expandJobSpec(ctx, state, true, nil, path.Root("spec"))
 	diags.Append(previousDiags...)
 	if diags.HasError() {
 		return nil, diags

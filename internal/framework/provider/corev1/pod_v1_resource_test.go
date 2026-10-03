@@ -23,6 +23,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -213,6 +214,38 @@ func TestAccKubernetesPodV1_scheduler(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.scheduler_name", schedulerName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
 				),
+			},
+		},
+	})
+}
+
+// Kubernetes adds tolerations for built-in taints on its own; a configured one
+// is kept instead of planning a replacement.
+func TestAccKubernetesPodV1_builtInToleration(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	config := testAccKubernetesPodV1ConfigBuiltInToleration(name, kubetest.BusyboxImage)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("toleration"), knownvalue.ListExact([]knownvalue.Check{
+						knownvalue.ObjectPartial(map[string]knownvalue.Check{
+							"key":                knownvalue.StringExact("node.kubernetes.io/not-ready"),
+							"toleration_seconds": knownvalue.StringExact("100"),
+						}),
+					})),
+				},
+			},
+			{
+				Config:            config,
+				ConfigPlanChecks:  resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+				ConfigStateChecks: []statecheck.StateCheck{statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("toleration"), knownvalue.ListSizeExact(1))},
 			},
 		},
 	})
@@ -2052,6 +2085,27 @@ func testAccKubernetesPodV1ConfigScheduler(podName, schedulerName, imageName str
   }
 }
 `, podName, schedulerName, imageName)
+}
+
+func testAccKubernetesPodV1ConfigBuiltInToleration(name, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+    }
+    toleration {
+      key                = "node.kubernetes.io/not-ready"
+      operator           = "Exists"
+      effect             = "NoExecute"
+      toleration_seconds = "100"
+    }
+  }
+}
+`, name, imageName)
 }
 
 func testAccKubernetesPodV1ConfigWithInitContainer(podName, image string) string {

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -95,7 +96,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	spec, diags := expandDeploymentSpec(ctx, plan.Spec, path.Root("spec"))
+	spec, diags := expandDeploymentSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -120,19 +121,8 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), kubernetes.BuildId(out.ObjectMeta))...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(deploymentAPIVersion),
-			Kind:       types.StringValue(deploymentKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
-	createdState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters, false)
-	resp.Diagnostics.Append(stateDiags...)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &createdState)...)
-	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(out.Namespace, out.Name))...)
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,7 +134,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for deployment rollout",
-			fmt.Sprintf("Deployment %q was created but rollout did not complete: %s", createdState.ID.ValueString(), err),
+			fmt.Sprintf("Deployment %q was created but rollout did not complete: %s", kubernetes.BuildId(out.ObjectMeta), err),
 		)
 	}
 }
@@ -172,6 +162,7 @@ func (d *DeploymentV1) Read(ctx context.Context, req resource.ReadRequest, resp 
 		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
 	out, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -189,14 +180,6 @@ func (d *DeploymentV1) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &refreshed)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(deploymentAPIVersion),
-			Kind:       types.StringValue(deploymentKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
 }
 
 func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -235,6 +218,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
 
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddError("Invalid deployment metadata", "Expected exactly one metadata block in state and plan.")
@@ -243,14 +227,14 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 	var original, desired *appsv1.DeploymentSpec
 	if !plan.Spec.Equal(state.Spec) {
 		var diags diag.Diagnostics
-		original, diags = expandDeploymentSpec(ctx, state.Spec, path.Root("spec"))
+		original, diags = expandDeploymentSpec(ctx, state.Spec, nil, path.Root("spec"))
 		resp.Diagnostics.Append(diags...)
-		desired, diags = expandDeploymentSpec(ctx, plan.Spec, path.Root("spec"))
+		desired, diags = expandDeploymentSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		// Unset replicas are left to an autoscaler, so the live count is kept.
+		// A planned replicas of "" leaves the live count alone; an omitted value is planned from state and sent.
 		if desired.Replicas == nil {
 			original.Replicas = nil
 		}
@@ -307,24 +291,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(deploymentAPIVersion),
-			Kind:       types.StringValue(deploymentKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	updatedState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters, false)
-	resp.Diagnostics.Append(stateDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &updatedState)...)
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -345,11 +312,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError("Error reading deployment after update", err.Error())
 		return
 	}
-	updatedState, stateDiags = deploymentModelFromObject(ctx, out, plan, filters, false)
-	resp.Diagnostics.Append(stateDiags...)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &updatedState)...)
-	}
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 }
 
 func (d *DeploymentV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -374,6 +337,7 @@ func (d *DeploymentV1) Delete(ctx context.Context, req resource.DeleteRequest, r
 		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
 	deleteTimeout, dTimeout := state.Timeouts.Delete(ctx, defaultDeleteTimeout)
 	resp.Diagnostics.Append(dTimeout...)
 	if resp.Diagnostics.HasError() {
@@ -406,7 +370,9 @@ func (d *DeploymentV1) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 }
 
-func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (*appsv1.DeploymentSpec, diag.Diagnostics) {
+// expandDeploymentSpec converts the "spec" list at path at; config is passed
+// for a write payload, see podspec.Built.ExpandSpec.
+func expandDeploymentSpec(ctx context.Context, value types.List, config *tfsdk.Config, at path.Path) (*appsv1.DeploymentSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if value.IsNull() || value.IsUnknown() || len(value.Elements()) != 1 {
 		diags.AddAttributeError(at, "Invalid deployment specification", "Exactly one spec block is required.")
@@ -423,7 +389,7 @@ func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (
 		return nil, diags
 	}
 
-	input := models[0]
+	input, element := models[0], at.AtListIndex(0)
 	out := &appsv1.DeploymentSpec{
 		MinReadySeconds: int32(input.MinReadySeconds.ValueInt64()),
 		Paused:          input.Paused.ValueBool(),
@@ -434,30 +400,30 @@ func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (
 	if !input.Replicas.IsNull() && !input.Replicas.IsUnknown() && input.Replicas.ValueString() != "" {
 		replicas, err := strconvParseInt32(input.Replicas.ValueString())
 		if err != nil {
-			diags.AddAttributeError(at.AtName("replicas"), "Invalid replicas value", err.Error())
+			diags.AddAttributeError(element.AtName("replicas"), "Invalid replicas value", err.Error())
 			return nil, diags
 		}
 		out.Replicas = ptr.To(replicas)
 	}
 
 	if len(input.Selector) > 0 {
-		selector, d := expandSelector(ctx, input.Selector[0], at.AtName("selector").AtListIndex(0))
+		selector, d := expandSelector(ctx, input.Selector[0], element.AtName("selector").AtListIndex(0))
 		diags.Append(d...)
 		out.Selector = selector
 	}
 
-	strategy, d := expandDeploymentStrategy(ctx, input.Strategy, at.AtName("strategy"))
+	strategy, d := expandDeploymentStrategy(ctx, input.Strategy, element.AtName("strategy"))
 	diags.Append(d...)
 	out.Strategy = strategy
 
 	if len(input.Template) != 1 {
-		diags.AddAttributeError(at.AtName("template"), "Invalid deployment template", "Exactly one template block is required.")
+		diags.AddAttributeError(element.AtName("template"), "Invalid deployment template", "Exactly one template block is required.")
 		return nil, diags
 	}
 	template := input.Template[0]
 	metadata, d := common.ExpandNamespacedMetadata(ctx, template.Metadata)
 	diags.Append(d...)
-	spec, d := podspec.For(podspec.Deployment()).ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	spec, d := podspec.For(podspec.Deployment()).ExpandSpec(ctx, template.Spec, config, element.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	if diags.HasError() {
 		return nil, diags
@@ -532,7 +498,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	}
 	templateSpec, d := flatten(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
-	templateMetadata, d := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata, refresh)
+	templateMetadata, d := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata)
 	diags.Append(d...)
 	model.Template = []workloadTemplateModel{{
 		Metadata: templateMetadata,
@@ -744,6 +710,18 @@ func deploymentMetadataPatchOps(state, plan DeploymentV1Model, live metav1.Objec
 	return common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live)
 }
 
+// deploymentWriteResult records the plan after a write, with the values
+// Kubernetes chose for those it left unknown.
+func deploymentWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model DeploymentV1Model, out *appsv1.Deployment, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		written, diags := deploymentModelFromObject(ctx, out, model, filters, false)
+		if diags.HasError() {
+			return diags
+		}
+		return append(diags, actual.Set(ctx, &written)...)
+	})
+}
+
 func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, baseline DeploymentV1Model, filters kubernetes.MetadataFilters, refresh bool) (DeploymentV1Model, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	metadata, metadataDiags := common.FlattenNamespacedMetadata(
@@ -754,9 +732,6 @@ func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, b
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
-	if !refresh {
-		common.KeepPlannedMetadataMaps(metadata, baseline.Metadata)
-	}
 	spec, specDiags := flattenDeploymentSpec(ctx, object.Spec, baseline.Spec, path.Root("spec"), refresh)
 	diags.Append(specDiags...)
 

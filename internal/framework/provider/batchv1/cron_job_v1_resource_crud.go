@@ -5,9 +5,7 @@ package batchv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -23,7 +21,6 @@ import (
 	batch "k8s.io/api/batch/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sretry "k8s.io/client-go/util/retry"
@@ -50,7 +47,7 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 	}
 	metadata, diagnostics := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diagnostics...)
-	spec, diagnostics := expandCronJobSpec(ctx, plan.Spec, path.Root("spec"))
+	spec, diagnostics := expandCronJobSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -64,10 +61,8 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 		resp.Diagnostics.AddError("Error creating CronJob", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, plan, out, filters)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
-	}
+	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(out.Namespace, out.Name))...)
 }
 
 func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -81,6 +76,7 @@ func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *re
 		resp.Diagnostics.AddError("Invalid CronJob ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(namespace, name))...)
 	clients, filters, diagnostics := r.sdkv2Meta()
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -105,9 +101,6 @@ func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *re
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
-	}
 }
 
 func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -122,6 +115,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Invalid CronJob ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(namespace, name))...)
 	clients, filters, diagnostics := r.sdkv2Meta()
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -136,7 +130,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Invalid CronJob metadata", "Expected exactly one metadata block in the state and plan.")
 		return
 	}
-	previousSpec, diagnostics := expandCronJobSpec(ctx, state.Spec, path.Root("spec"))
+	previousSpec, diagnostics := expandCronJobSpec(ctx, state.Spec, nil, path.Root("spec"))
 	resp.Diagnostics.Append(diagnostics...)
 	desiredSpec, diagnostics := cronJobDesiredSpec(ctx, req)
 	resp.Diagnostics.Append(diagnostics...)
@@ -162,7 +156,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 			return err
 		}
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, out.ObjectMeta)
-		specOps, err := cronJobSpecOps(raw, previousSpec, desiredSpec)
+		specOps, err := common.StrategicMergeSpecOps(raw, previousSpec, desiredSpec, batch.CronJob{})
 		if err != nil {
 			return err
 		}
@@ -182,10 +176,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Error updating CronJob", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, plan, out, filters)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
-	}
+	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 }
 
 func (r *CronJobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -204,6 +195,7 @@ func (r *CronJobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp
 		resp.Diagnostics.AddError("Invalid CronJob ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(namespace, name))...)
 	clients, _, diagnostics := r.sdkv2Meta()
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -239,9 +231,10 @@ func (r *CronJobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp
 	}
 }
 
-// expandCronJobSpec converts the single "spec" element with SDKv2's field
-// semantics: history limits are sent only when they differ from the defaults.
-func expandCronJobSpec(ctx context.Context, value types.List, at path.Path) (batch.CronJobSpec, diag.Diagnostics) {
+// expandCronJobSpec converts the single "spec" element at path at with SDKv2's
+// field semantics: history limits are sent only when they differ from the
+// defaults. config is passed for a write payload, see podspec.Built.ExpandSpec.
+func expandCronJobSpec(ctx context.Context, value types.List, config *tfsdk.Config, at path.Path) (batch.CronJobSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	spec, ok := singleObject(value)
 	if !ok {
@@ -274,7 +267,7 @@ func expandCronJobSpec(ctx context.Context, value types.List, at path.Path) (bat
 		diags.AddAttributeError(at.AtListIndex(0).AtName("job_template"), "Invalid CronJob specification", "Exactly one known job_template block is required.")
 		return out, diags
 	}
-	jobSpec, d := expandJobSpec(ctx, template.Attributes()["spec"].(types.List), false, at.AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec"))
+	jobSpec, d := expandJobSpec(ctx, template.Attributes()["spec"].(types.List), false, config, at.AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	out.JobTemplate = batch.JobTemplateSpec{ObjectMeta: expandTemplateMetadata(template.Attributes()["metadata"]), Spec: jobSpec}
 	return out, diags
@@ -329,24 +322,12 @@ func flattenCronJob(ctx context.Context, out *batch.CronJob, model *CronJobV1Mod
 
 // cronJobWriteResult records the plan after a write, with the values Kubernetes
 // chose for those it left unknown.
-func cronJobWriteResult(ctx context.Context, state *tfsdk.State, plan CronJobV1Model, out *batch.CronJob, filters kubernetes.MetadataFilters) diag.Diagnostics {
-	plan.ID = types.StringValue(out.Namespace + "/" + out.Name)
-	planned := tfsdk.State{Schema: state.Schema}
-	diags := planned.Set(ctx, &plan)
-	actual := tfsdk.State{Schema: state.Schema, Raw: tftypes.NewValue(state.Schema.Type().TerraformType(ctx), nil)}
-	model := plan
-	if flattenDiags := flattenCronJob(ctx, out, &model, filters, false); flattenDiags.HasError() {
-		diags.Append(flattenDiags...)
-	} else {
-		diags.Append(actual.Set(ctx, &model)...)
-	}
-	merged, err := knownOrActual(planned.Raw, actual.Raw)
-	if err != nil {
-		diags.AddError("Unable to record CronJob state", err.Error())
-		return diags
-	}
-	state.Raw = merged
-	return diags
+func cronJobWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model CronJobV1Model, out *batch.CronJob, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		model.ID = types.StringValue(out.Namespace + "/" + out.Name)
+		diags := flattenCronJob(ctx, out, &model, filters, false)
+		return append(diags, actual.Set(ctx, &model)...)
+	})
 }
 
 // cronJobDesiredSpec is the planned spec, with the values the plan leaves to
@@ -370,28 +351,5 @@ func cronJobDesiredSpec(ctx context.Context, req resource.UpdateRequest) (batch.
 		diags.AddError("Unable to read CronJob specification", err.Error())
 		return batch.CronJobSpec{}, diags
 	}
-	return expandCronJobSpec(ctx, value.(types.List), path.Root("spec"))
-}
-
-// cronJobSpecOps moves the live spec from previous to desired with a three-way
-// strategic merge, and returns nothing when that leaves the live spec as it is.
-func cronJobSpecOps(live *unstructured.Unstructured, previous, desired batch.CronJobSpec) (kubernetes.PatchOperations, error) {
-	ops, err := common.StrategicMergeSpecOps(live, previous, desired, batch.CronJob{})
-	if err != nil {
-		return nil, err
-	}
-	for _, op := range ops {
-		if replace, ok := op.(*kubernetes.ReplaceOperation); !ok || replace.Path != "/spec" || !sameJSON(replace.Value, live.Object["spec"]) {
-			return ops, nil
-		}
-	}
-	return nil, nil
-}
-
-func sameJSON(a, b any) bool {
-	var x, y any
-	dataA, errA := json.Marshal(a)
-	dataB, errB := json.Marshal(b)
-	return errA == nil && errB == nil && json.Unmarshal(dataA, &x) == nil && json.Unmarshal(dataB, &y) == nil &&
-		reflect.DeepEqual(x, y)
+	return expandCronJobSpec(ctx, value.(types.List), &req.Config, path.Root("spec"))
 }

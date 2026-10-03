@@ -115,7 +115,7 @@ func mustFlatten(t *testing.T, spec corev1.PodSpec, baseline types.List) types.L
 
 func mustExpand(t *testing.T, value types.List) corev1.PodSpec {
 	t.Helper()
-	spec, diagnostics := For(Deployment()).ExpandSpec(context.Background(), value, templatePath)
+	spec, diagnostics := For(Deployment()).ExpandSpec(context.Background(), value, nil, templatePath)
 	if diagnostics.HasError() {
 		t.Fatal(diagnostics)
 	}

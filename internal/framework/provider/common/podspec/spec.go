@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -80,10 +83,17 @@ func (b *Built) ObjectType() basetypes.ObjectTypable {
 	return b.objectType
 }
 
-// ExpandSpec converts the "spec" list into a PodSpec with the SDKv2 expander.
-// Unknown values are rejected unless the schema marks them API-computed.
-func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
+// ExpandSpec converts the "spec" list at path at into a PodSpec with the SDKv2
+// expander. Unknown values are rejected unless the schema marks them
+// API-computed. A write payload passes the configuration, which decides how
+// zero-valued podZeroBlockUnset blocks are sent; without one they are unset,
+// so expansions of a plan and a state agree.
+func (b *Built) ExpandSpec(ctx context.Context, value types.List, config *tfsdk.Config, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
+	configured := types.ListNull(b.objectType)
+	if config != nil {
+		diagnostics.Append(config.GetAttribute(ctx, at, &configured)...)
+	}
 	if value.IsUnknown() {
 		diagnostics.AddAttributeError(at, "Unknown Pod Template Specification", "The pod template spec must be known before it is sent to Kubernetes.")
 		return corev1.PodSpec{}, diagnostics
@@ -96,6 +106,7 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) 
 	if diagnostics.HasError() {
 		return corev1.PodSpec{}, diagnostics
 	}
+	podUnsetZeroBlocks(raw.([]interface{}), value, configured)
 	result, err := kubernetes.ExpandPodSpecForFramework(raw.([]interface{}))
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Expand Pod Template Specification", err.Error())
@@ -105,10 +116,14 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) 
 }
 
 // FlattenSpec converts an API PodSpec into the "spec" list after a write. The
-// plan, as baseline, decides null versus empty values and kept spellings.
+// plan, as baseline, decides null versus empty values, kept spellings and the
+// built-in tolerations a bare Pod records.
 func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
-	raw, err := kubernetes.FlattenPodSpecForFramework(spec, b.template)
+	if !b.template {
+		spec.Tolerations = podKeptTolerations(spec.Tolerations, baseline)
+	}
+	raw, err := kubernetes.FlattenPodSpecForFramework(spec)
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Flatten Pod Template Specification", err.Error())
 		return types.ListNull(b.objectType), diagnostics
@@ -129,9 +144,117 @@ func (b *Built) RefreshSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 	return r.FlattenSpec(ctx, spec, baseline, at)
 }
 
+// podKeptTolerations drops the tolerations of built-in taints, which
+// Kubernetes adds to a bare Pod on its own, unless the baseline holds an equal
+// one. Without a baseline, as on import, it drops them all.
+func podKeptTolerations(tolerations []corev1.Toleration, baseline types.List) []corev1.Toleration {
+	configured := podSpecBlock(baseline, "toleration")
+	kept := make([]corev1.Toleration, 0, len(tolerations))
+	for _, toleration := range tolerations {
+		if kubernetes.IsBuiltInToleration(toleration.Key) {
+			i := slices.IndexFunc(configured, func(element attr.Value) bool { return podTolerationMatches(element, toleration) })
+			if i < 0 {
+				continue
+			}
+			configured = slices.Delete(configured, i, i+1)
+		}
+		kept = append(kept, toleration)
+	}
+	return kept
+}
+
+// podTolerationMatches reports whether a "toleration" element equals
+// toleration as the expander converts it. An unknown attribute matches any
+// value, so a planned element still finds its live toleration.
+func podTolerationMatches(element attr.Value, toleration corev1.Toleration) bool {
+	object, ok := element.(types.Object)
+	if !ok || object.IsNull() || object.IsUnknown() {
+		return false
+	}
+	live := map[string]string{
+		"key":      toleration.Key,
+		"operator": string(toleration.Operator),
+		"value":    toleration.Value,
+		"effect":   string(toleration.Effect),
+	}
+	for name, value := range object.Attributes() {
+		s, ok := value.(types.String)
+		if !ok {
+			return false
+		}
+		if s.IsUnknown() {
+			continue
+		}
+		if name != "toleration_seconds" {
+			if s.ValueString() != live[name] {
+				return false
+			}
+			continue
+		}
+		if s.ValueString() == "" {
+			if toleration.TolerationSeconds != nil {
+				return false
+			}
+			continue
+		}
+		n, err := strconv.ParseInt(s.ValueString(), 10, 64)
+		if err != nil || toleration.TolerationSeconds == nil || *toleration.TolerationSeconds != n {
+			return false
+		}
+	}
+	return true
+}
+
 // A pod security_context holding only zero values is sent as unset, as SDKv2
-// sent it as [nil]; Kubernetes treats run_as_non_root false and unset alike.
+// sent it as [nil], unless its configuration sets a bool or a nested block:
+// SDKv2 then sent runAsNonRoot = false, which Pod Security admission checks.
 var podZeroBlockUnset = map[string]bool{"spec.security_context": true}
+
+// podUnsetZeroBlocks sends the zero-valued podZeroBlockUnset blocks of raw as
+// unset unless configured sets a value in them.
+func podUnsetZeroBlocks(raw []interface{}, value, configured types.List) {
+	if len(raw) != 1 {
+		return
+	}
+	spec, _ := raw[0].(map[string]interface{})
+	for key := range podZeroBlockUnset {
+		name := strings.TrimPrefix(key, "spec.")
+		planned := podSpecBlock(value, name)
+		if len(planned) == 1 && podZeroValue(planned[0]) && !slices.ContainsFunc(podSpecBlock(configured, name), podConfigSets) {
+			spec[name] = []interface{}{nil}
+		}
+	}
+}
+
+// podSpecBlock returns the elements of the named block in a "spec" list.
+func podSpecBlock(spec types.List, name string) []attr.Value {
+	if len(spec.Elements()) != 1 {
+		return nil
+	}
+	object, _ := spec.Elements()[0].(types.Object)
+	block, _ := object.Attributes()[name].(types.List)
+	return block.Elements()
+}
+
+// podConfigSets reports whether a configured value is one SDKv2 sent: any
+// bool, non-empty string or collection, or nested block element.
+func podConfigSets(value attr.Value) bool {
+	if value == nil || value.IsNull() {
+		return false
+	}
+	switch v := value.(type) {
+	case types.Object:
+		for _, child := range v.Attributes() {
+			if podConfigSets(child) {
+				return true
+			}
+		}
+		return false
+	case types.Bool:
+		return true
+	}
+	return podNonzeroValue(value)
+}
 
 // podSpecAPIValue converts a known Framework value into SDKv2 expander input.
 func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key string, computed map[string]bool, diagnostics *diag.Diagnostics) interface{} {
@@ -176,9 +299,6 @@ func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key st
 		}
 		return result
 	case types.List:
-		if podZeroBlockUnset[key] && len(v.Elements()) == 1 && podZeroValue(v.Elements()[0]) {
-			return []interface{}{nil}
-		}
 		result := make([]interface{}, len(v.Elements()))
 		for index, entry := range v.Elements() {
 			if entry.IsUnknown() {
@@ -485,7 +605,7 @@ func podRoundTrip(b *Built, element interface{}) (interface{}, bool) {
 	if data, err := json.Marshal(spec); err != nil || json.Unmarshal(data, &echo) != nil {
 		return nil, false
 	}
-	flat, err := kubernetes.FlattenPodSpecForFramework(echo, b.template)
+	flat, err := kubernetes.FlattenPodSpecForFramework(echo)
 	return flat, err == nil
 }
 

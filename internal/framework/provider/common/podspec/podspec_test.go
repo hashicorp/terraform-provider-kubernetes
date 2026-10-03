@@ -5,6 +5,7 @@ package podspec
 
 import (
 	"context"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -245,6 +247,94 @@ func TestKeepUnsetString(t *testing.T) {
 		if got := podKeepUnsetString(tc.baseline, tc.api, tc.refresh); got != tc.keep {
 			t.Errorf("baseline %s, API %q, refresh %t: keep = %t, want %t", tc.baseline, tc.api, tc.refresh, got, tc.keep)
 		}
+	}
+}
+
+// Admission can set a bare Pod's priority class, so the Pod records it like
+// other API-defaulted strings; a template keeps its "" default.
+func TestPriorityClassNameComputed(t *testing.T) {
+	for name, tc := range map[string]struct {
+		options  Options
+		computed bool
+	}{
+		"pod":        {Pod(), true},
+		"deployment": {Deployment(), false},
+		"job":        {Job(), false},
+	} {
+		b := For(tc.options)
+		attribute := b.Spec.NestedObject.Attributes["priority_class_name"].(schema.StringAttribute)
+		if b.computed["spec.priority_class_name"] != tc.computed || (attribute.Default == nil) != tc.computed {
+			t.Errorf("%s: priority_class_name API-computed = %t, want %t", name, b.computed["spec.priority_class_name"], tc.computed)
+		}
+	}
+}
+
+// A bare Pod records a toleration of a built-in taint only when its baseline
+// holds an equal one, since Kubernetes adds such tolerations on its own.
+func TestBuiltInTolerations(t *testing.T) {
+	ctx := context.Background()
+	at := path.Root("spec")
+	toleration := func(key string, seconds int64) corev1.Toleration {
+		return corev1.Toleration{Key: key, Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoExecute, TolerationSeconds: &seconds}
+	}
+	notReady := toleration(corev1.TaintNodeNotReady, 100)
+	user := corev1.Toleration{Key: "example.com/foo", Operator: corev1.TolerationOpExists, Effect: corev1.TaintEffectNoSchedule}
+	live := corev1.PodSpec{
+		Containers:  []corev1.Container{{Name: "app", Image: "pause"}},
+		Tolerations: []corev1.Toleration{notReady, toleration(corev1.TaintNodeUnreachable, 300), user},
+	}
+	// baseline flattens tolerations through a template, which records them all.
+	baseline := func(tolerations ...corev1.Toleration) types.List {
+		spec := *live.DeepCopy()
+		spec.Tolerations = tolerations
+		list, diags := For(Deployment()).FlattenSpec(ctx, spec, types.ListNull(For(Deployment()).ObjectType()), at)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		return list
+	}
+	// unknownSeconds is the configured baseline with the not-ready toleration_seconds unknown, as planned.
+	unknownSeconds := func() types.List {
+		list := baseline(notReady, user)
+		spec := list.Elements()[0].(types.Object).Attributes()
+		tolerations := spec["toleration"].(types.List).Elements()
+		first := tolerations[0].(types.Object).Attributes()
+		first["toleration_seconds"] = types.StringUnknown()
+		tolerations[0] = types.ObjectValueMust(tolerations[0].(types.Object).AttributeTypes(ctx), first)
+		spec["toleration"] = types.ListValueMust(tolerations[0].Type(ctx), tolerations)
+		return types.ListValueMust(list.ElementType(ctx), []attr.Value{types.ObjectValueMust(list.Elements()[0].(types.Object).AttributeTypes(ctx), spec)})
+	}()
+	for name, tc := range map[string]struct {
+		options  Options
+		baseline types.List
+		refresh  bool
+		want     []string
+	}{
+		"configured":      {Pod(), baseline(notReady, user), false, []string{"node.kubernetes.io/not-ready=100", "example.com/foo="}},
+		"other seconds":   {Pod(), baseline(toleration(corev1.TaintNodeNotReady, 200), user), false, []string{"example.com/foo="}},
+		"unknown seconds": {Pod(), unknownSeconds, false, []string{"node.kubernetes.io/not-ready=100", "example.com/foo="}},
+		"no baseline":     {Pod(), types.ListNull(For(Pod()).ObjectType()), false, []string{"example.com/foo="}},
+		"template":        {Deployment(), types.ListNull(For(Deployment()).ObjectType()), false, []string{"node.kubernetes.io/not-ready=100", "node.kubernetes.io/unreachable=300", "example.com/foo="}},
+		"refresh":         {Pod(), baseline(notReady), true, []string{"node.kubernetes.io/not-ready=100", "example.com/foo="}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			flatten := For(tc.options).FlattenSpec
+			if tc.refresh {
+				flatten = For(tc.options).RefreshSpec
+			}
+			got, diags := flatten(ctx, live, tc.baseline, at)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			var keys []string
+			for _, element := range got.Elements()[0].(types.Object).Attributes()["toleration"].(types.List).Elements() {
+				attributes := element.(types.Object).Attributes()
+				keys = append(keys, attributes["key"].(types.String).ValueString()+"="+attributes["toleration_seconds"].(types.String).ValueString())
+			}
+			if !slices.Equal(keys, tc.want) {
+				t.Errorf("tolerations = %v, want %v", keys, tc.want)
+			}
+		})
 	}
 }
 
@@ -523,5 +613,75 @@ func TestNumberSpellingPaths(t *testing.T) {
 	}
 	if b.spelling["spec.container.image"] != nil {
 		t.Error("spec.container.image: spelling kept")
+	}
+}
+
+// As in SDKv2, a pod security_context holding only zero values is sent with
+// runAsNonRoot = false when its configuration sets a bool or a nested block.
+// Without a configuration it is unset, as plan predictions compare it.
+func TestZeroSecurityContextPayload(t *testing.T) {
+	ctx := context.Background()
+	b := For(Pod())
+	at := path.Root("spec")
+	// block is one element of typ with every attribute null except set; a nil
+	// value in set stands for one such element of a nested block.
+	var block func(typ attr.Type, set map[string]attr.Value) types.List
+	block = func(typ attr.Type, set map[string]attr.Value) types.List {
+		object := typ.(types.ObjectType)
+		values := map[string]attr.Value{}
+		for name, child := range object.AttrTypes {
+			values[name], _ = child.ValueFromTerraform(ctx, tftypes.NewValue(child.TerraformType(ctx), nil))
+			if value, ok := set[name]; ok && value == nil {
+				values[name] = block(child.(types.ListType).ElemType, nil)
+			} else if ok {
+				values[name] = value
+			}
+		}
+		return types.ListValueMust(object, []attr.Value{types.ObjectValueMust(object.AttrTypes, values)})
+	}
+	zero := corev1.PodSecurityContext{RunAsNonRoot: ptr.To(false)}
+	noGroups := types.SetValueMust(types.Int64Type, nil)
+	for _, tc := range []struct {
+		name   string
+		live   corev1.PodSecurityContext
+		config map[string]attr.Value // nil: no configuration
+		want   *bool
+	}{
+		{"empty block", zero, map[string]attr.Value{}, nil},
+		{"empty supplemental groups", zero, map[string]attr.Value{"supplemental_groups": noGroups}, nil},
+		{"empty run_as_user", zero, map[string]attr.Value{"run_as_user": types.StringValue("")}, nil},
+		{"run_as_non_root false", zero, map[string]attr.Value{"run_as_non_root": types.BoolValue(false)}, ptr.To(false)},
+		{"false with empty groups", zero, map[string]attr.Value{"run_as_non_root": types.BoolValue(false), "supplemental_groups": noGroups}, ptr.To(false)},
+		{"empty se_linux_options", zero, map[string]attr.Value{"se_linux_options": nil}, ptr.To(false)},
+		{"run_as_non_root true", corev1.PodSecurityContext{RunAsNonRoot: ptr.To(true)}, map[string]attr.Value{"run_as_non_root": types.BoolValue(true)}, ptr.To(true)},
+		{"run_as_user set", corev1.PodSecurityContext{RunAsUser: ptr.To(int64(1000))}, map[string]attr.Value{"run_as_user": types.StringValue("1000")}, ptr.To(false)},
+		{"no configuration", zero, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			live := corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Image: "pause"}}, SecurityContext: &tc.live}
+			plan, diags := b.FlattenSpec(ctx, live, types.ListNull(b.ObjectType()), at)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			var config *tfsdk.Config
+			if tc.config != nil {
+				spec := plan.Elements()[0].(types.Object)
+				attributes := spec.Attributes()
+				attributes["security_context"] = block(attributes["security_context"].(types.List).ElementType(ctx), tc.config)
+				configured := types.ListValueMust(plan.ElementType(ctx), []attr.Value{types.ObjectValueMust(spec.AttributeTypes(ctx), attributes)})
+				raw, err := types.ObjectValueMust(map[string]attr.Type{"spec": plan.Type(ctx)}, map[string]attr.Value{"spec": configured}).ToTerraformValue(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				config = &tfsdk.Config{Schema: schema.Schema{Blocks: map[string]schema.Block{"spec": b.Spec}}, Raw: raw}
+			}
+			got, diags := b.ExpandSpec(ctx, plan, config, at)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !reflect.DeepEqual(got.SecurityContext.RunAsNonRoot, tc.want) {
+				t.Errorf("runAsNonRoot = %v, want %v", got.SecurityContext.RunAsNonRoot, tc.want)
+			}
+		})
 	}
 }

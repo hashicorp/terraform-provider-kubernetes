@@ -5,12 +5,19 @@ package batchv1
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	k8sclient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 )
 
@@ -204,7 +213,7 @@ func TestCronJobSpecOps(t *testing.T) {
 				t.Fatal(err)
 			}
 			raw := &unstructured.Unstructured{Object: object}
-			ops, err := cronJobSpecOps(raw, spec(nil), tc.desired)
+			ops, err := common.StrategicMergeSpecOps(raw, spec(nil), tc.desired, batch.CronJob{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -222,7 +231,11 @@ func TestCronJobSpecOps(t *testing.T) {
 			}
 			container(&want).ImagePullPolicy = corev1.PullIfNotPresent
 			want.JobTemplate.Spec.Template.Spec.PriorityClassName = "admission"
-			if got := ops[0].(*kubernetes.ReplaceOperation).Value; !sameJSON(got, want) {
+			wantSpec, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&batch.CronJob{Spec: want})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := ops[0].(*kubernetes.ReplaceOperation).Value; !reflect.DeepEqual(got, wantSpec["spec"]) {
 				t.Errorf("patched spec = %v", got)
 			}
 		})
@@ -335,5 +348,71 @@ func TestSelectorEmptyValues(t *testing.T) {
 		if got := flattenLabelSelector(live, tc.prior, typ, nil); !got.Equal(tc.want) {
 			t.Errorf("%s: got %s, want %s", name, got, tc.want)
 		}
+	}
+}
+
+type planClientsets struct {
+	kubernetes.KubeClientsets
+	client *k8sclient.Clientset
+}
+
+func (c planClientsets) MainClientset() (*k8sclient.Clientset, error) { return c.client, nil }
+func (planClientsets) GetIgnoreAnnotations() []string                 { return nil }
+func (planClientsets) GetIgnoreLabels() []string                      { return nil }
+
+// The prior state cannot tell a removed runAsNonRoot: false from an unset field.
+func TestJobV1ModifyPlanReadsLiveJob(t *testing.T) {
+	ctx := context.Background()
+	for name, test := range map[string]struct {
+		status      int
+		wantReplace bool
+		wantError   bool
+	}{
+		"live Job holds the removed block": {status: http.StatusOK, wantReplace: true},
+		"Job no longer exists":             {status: http.StatusNotFound},
+		"forbidden":                        {status: http.StatusForbidden, wantError: true},
+		"unavailable":                      {status: http.StatusServiceUnavailable, wantError: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/apis/batch/v1/namespaces/ns/jobs/j" || test.status != http.StatusOK {
+					http.Error(w, "unavailable", test.status)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(&batch.Job{Spec: batch.JobSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
+					Containers:      []corev1.Container{{Name: "c", Image: "i"}},
+					SecurityContext: &corev1.PodSecurityContext{RunAsNonRoot: ptr.To(false)},
+				}}}})
+			}))
+			defer server.Close()
+			client, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+			if err != nil {
+				t.Fatal(err)
+			}
+			job := &JobV1{SDKv2Meta: func() any { return planClientsets{client: client} }}
+			var schemaResp resource.SchemaResponse
+			job.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+			value := func(podSpec string) tfsdk.State {
+				raw := tfprotov6.RawState{JSON: []byte(`{"id":"ns/j","wait_for_completion":false,
+					"metadata":[{"name":"j","namespace":"ns"}],
+					"spec":[{"template":[{"spec":[{"container":[{"name":"c","image":"i"}]` + podSpec + `}]}]}]}`)}
+				v, err := raw.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				return tfsdk.State{Schema: schemaResp.Schema, Raw: v}
+			}
+			state, planned := value(`,"security_context":[{"run_as_non_root":false}]`), value("")
+			req := resource.ModifyPlanRequest{State: state, Plan: tfsdk.Plan(planned), Config: tfsdk.Config(planned)}
+			resp := resource.ModifyPlanResponse{Plan: req.Plan}
+			job.ModifyPlan(ctx, req, &resp)
+			if resp.Diagnostics.HasError() != test.wantError {
+				t.Fatalf("diagnostics: %v", resp.Diagnostics)
+			}
+			if replace := len(resp.RequiresReplace) == 1 && resp.RequiresReplace[0].Equal(jobTemplatePath); replace != test.wantReplace {
+				t.Fatalf("requires replace = %v, want %t", resp.RequiresReplace, test.wantReplace)
+			}
+		})
 	}
 }

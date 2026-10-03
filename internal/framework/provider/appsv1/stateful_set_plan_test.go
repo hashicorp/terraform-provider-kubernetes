@@ -125,7 +125,6 @@ func TestStatefulSetVolumeClaimRequiresReplace(t *testing.T) {
 }
 
 func TestFlattenClaimTemplateMetadataMaps(t *testing.T) {
-	ctx := context.Background()
 	live := corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{
 		Name: "data", Labels: map[string]string{"app": "a", "admission.example.com/injected": "true"},
 	}}
@@ -133,19 +132,8 @@ func TestFlattenClaimTemplateMetadataMaps(t *testing.T) {
 	baseline := &PersistentVolumeClaimModel{Metadata: []common.NamespacedMetadataModel{{MetadataModel: common.MetadataModel{
 		MetadataBase: common.MetadataBase{Labels: planned, Annotations: types.MapNull(types.StringType)},
 	}}}}
-	for _, tc := range []struct {
-		name    string
-		refresh bool
-		labels  int
-	}{
-		{"write records the plan", false, 1},
-		{"read records live keys", true, 2},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got, diags := flattenPersistentVolumeClaim(ctx, live, baseline, tc.refresh)
-			if diags.HasError() || len(got.Metadata[0].Labels.Elements()) != tc.labels || !got.Metadata[0].Annotations.IsNull() {
-				t.Errorf("got %s, %s (%v)", got.Metadata[0].Labels, got.Metadata[0].Annotations, diags)
-			}
-		})
+	got, diags := flattenPersistentVolumeClaim(context.Background(), live, baseline)
+	if diags.HasError() || len(got.Metadata[0].Labels.Elements()) != 2 || !got.Metadata[0].Annotations.IsNull() {
+		t.Errorf("got %s, %s (%v)", got.Metadata[0].Labels, got.Metadata[0].Annotations, diags)
 	}
 }

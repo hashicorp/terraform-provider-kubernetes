@@ -217,7 +217,7 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 			"image_pull_secrets":               b.references("name", immutable),
 			"node_name":                        b.str(false, true, immutable, ""),
 			"node_selector":                    b.emptyCompatibleMap(immutable),
-			"priority_class_name":              b.str(false, false, immutable, ""),
+			"priority_class_name":              b.str(false, !b.o.Template, immutable, ""), // admission sets a Pod's default class
 			"readiness_gate":                   b.references("condition_type", immutable),
 			"restart_policy":                   b.str(false, false, immutable, b.o.RestartPolicy, stringvalidator.OneOf(restartPolicy...)),
 			"runtime_class_name":               b.str(false, false, immutable, ""),

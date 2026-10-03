@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -29,6 +31,18 @@ type ResourceIdentity struct {
 type NamespacedResourceIdentity struct {
 	ResourceIdentity
 	Namespace types.String `tfsdk:"namespace"`
+}
+
+// SetIdentity records identity as soon as an operation knows which object it
+// acts on, before its first API call, so every response that keeps or removes
+// state carries it. Terraform sends no identity to the delete half of a
+// replacement, and Framework rejects a Read that returns none even when it
+// removes the resource.
+func SetIdentity(ctx context.Context, identity *tfsdk.ResourceIdentity, value any) diag.Diagnostics {
+	if identity == nil {
+		return nil
+	}
+	return identity.Set(ctx, value)
 }
 
 // IdentitySchema returns the identity schema for a cluster-scoped object. It reproduces

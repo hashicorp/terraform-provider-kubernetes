@@ -73,7 +73,7 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 		resp.Diagnostics.AddAttributeError(path.Root("spec"), "Invalid spec", "Expected exactly one spec block")
 		return
 	}
-	spec, d := expandStatefulSetSpec(ctx, plan.Spec[0])
+	spec, d := expandStatefulSetSpec(ctx, plan.Spec[0], &req.Config)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -87,24 +87,8 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	plan.ID = types.StringValue(kubernetes.BuildId(created.ObjectMeta))
-	plan.Metadata[0].Name = types.StringValue(created.Name)
-	plan.Metadata[0].Namespace = types.StringValue(created.Namespace)
-	plan.Metadata[0].UID = types.StringValue(string(created.UID))
-	plan.Metadata[0].ResourceVersion = types.StringValue(created.ResourceVersion)
-	plan.Metadata[0].Generation = types.Int64Value(created.Generation)
-
-	resp.Diagnostics.Append(setStatefulSetState(ctx, &resp.State, plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, statefulSetIdentityModel{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(statefulSetAPIVersion),
-			Kind:       types.StringValue(statefulSetKind),
-			Name:       types.StringValue(created.Name),
-		},
-		Namespace: types.StringValue(created.Namespace),
-	})...)
+	resp.Diagnostics.Append(r.statefulSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(created.Namespace, created.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -117,12 +101,7 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 		}
 	}
 
-	state, ident, d := r.readStateFromAPI(ctx, conn, filters, plan)
-	resp.Diagnostics.Append(d...)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(setStatefulSetState(ctx, &resp.State, state)...)
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, ident)...)
-	}
+	resp.Diagnostics.Append(r.statefulSetReadWriteResult(ctx, &resp.State, req.Plan, plan, conn, filters)...)
 }
 
 func (r *StatefulSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -156,6 +135,7 @@ func (r *StatefulSetV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError("Error parsing resource ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(namespace, name))...)
 	obj, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -205,6 +185,7 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.AddError("Error parsing resource ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(namespace, name))...)
 
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddAttributeError(path.Root("metadata"), "Invalid metadata", "Expected exactly one metadata block in state and plan")
@@ -212,9 +193,15 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	var original, desired *appsv1.StatefulSetSpec
 	if len(plan.Spec) == 1 && len(state.Spec) == 1 {
-		original, d = expandStatefulSetSpec(ctx, state.Spec[0])
+		// The configuration is read only for a changed spec, so an unchanged one
+		// expands alike from plan and state and is not patched.
+		var config *tfsdk.Config
+		if !reflect.DeepEqual(plan.Spec, state.Spec) {
+			config = &req.Config
+		}
+		original, d = expandStatefulSetSpec(ctx, state.Spec[0], nil)
 		resp.Diagnostics.Append(d...)
-		desired, d = expandStatefulSetSpec(ctx, plan.Spec[0])
+		desired, d = expandStatefulSetSpec(ctx, plan.Spec[0], config)
 		resp.Diagnostics.Append(d...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -238,13 +225,11 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live.ObjectMeta)
 		if desired != nil {
 			from, to := statefulSetPatchSpecs(*original, *desired, live.Spec)
-			if !reflect.DeepEqual(from, to) {
-				specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.StatefulSet{})
-				if err != nil {
-					return err
-				}
-				ops = append(ops, specOps...)
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.StatefulSet{})
+			if err != nil {
+				return err
 			}
+			ops = append(ops, specOps...)
 		}
 		if len(ops) == 0 {
 			return nil
@@ -270,14 +255,7 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 	}
 
-	stateOut, identOut, d := r.readStateFromAPI(ctx, conn, filters, plan)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	keepPlannedClaimTemplateChanges(stateOut.Spec, plan.Spec)
-	resp.Diagnostics.Append(setStatefulSetState(ctx, &resp.State, stateOut)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, identOut)...)
+	resp.Diagnostics.Append(r.statefulSetReadWriteResult(ctx, &resp.State, req.Plan, plan, conn, filters)...)
 }
 
 func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -311,6 +289,7 @@ func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		resp.Diagnostics.AddError("Error parsing resource ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(namespace, name))...)
 
 	err = conn.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -379,19 +358,33 @@ func setStatefulSetState(ctx context.Context, state *tfsdk.State, model Stateful
 	return diags
 }
 
-func (r *StatefulSetV1) readStateFromAPI(ctx context.Context, conn *k8sclient.Clientset, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model) (StatefulSetV1Model, statefulSetIdentityModel, diag.Diagnostics) {
+// statefulSetWriteResult records the plan after a write, with the values
+// Kubernetes chose for those it left unknown.
+func (r *StatefulSetV1) statefulSetWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model StatefulSetV1Model, obj *appsv1.StatefulSet, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		written, _, diags := r.flattenStateFromObject(ctx, filters, model, obj, false)
+		if diags.HasError() {
+			return diags
+		}
+		return append(diags, setStatefulSetState(ctx, actual, written)...)
+	})
+}
+
+// statefulSetReadWriteResult is statefulSetWriteResult for the StatefulSet as
+// it is after a rollout.
+func (r *StatefulSetV1) statefulSetReadWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model StatefulSetV1Model, conn *k8sclient.Clientset, filters kubernetes.MetadataFilters) diag.Diagnostics {
 	var diags diag.Diagnostics
-	namespace, name, err := kubernetes.IdParts(baseline.ID.ValueString())
+	namespace, name, err := kubernetes.IdParts(model.ID.ValueString())
 	if err != nil {
 		diags.AddError("Error parsing resource ID", err.Error())
-		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
+		return diags
 	}
 	obj, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		diags.AddError("Error reading StatefulSet", err.Error())
-		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
+		return diags
 	}
-	return r.flattenStateFromObject(ctx, filters, baseline, obj, false)
+	return r.statefulSetWriteResult(ctx, state, plan, model, obj, filters)
 }
 
 func (r *StatefulSetV1) refreshStateFromObject(ctx context.Context, filters kubernetes.MetadataFilters, baseline StatefulSetV1Model, obj *appsv1.StatefulSet, resp *resource.ReadResponse) {
@@ -411,9 +404,6 @@ func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kube
 	if diags.HasError() {
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
 	}
-	if !refresh {
-		common.KeepPlannedMetadataMaps(metadata, baseline.Metadata)
-	}
 	var baselineSpec *StatefulSetSpecModel
 	if len(baseline.Spec) > 0 {
 		baselineSpec = &baseline.Spec[0]
@@ -423,26 +413,24 @@ func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kube
 	if diags.HasError() {
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
 	}
-	if !refresh && baselineSpec != nil &&
-		!baselineSpec.Replicas.IsNull() && !baselineSpec.Replicas.IsUnknown() &&
-		baselineSpec.Replicas.ValueString() == "" {
-		spec.Replicas = baselineSpec.Replicas
-	}
 
 	state := baseline
 	state.ID = types.StringValue(kubernetes.BuildId(obj.ObjectMeta))
 	state.Metadata = metadata
 	state.Spec = []StatefulSetSpecModel{spec}
 
-	ident := statefulSetIdentityModel{
+	return state, statefulSetIdentity(obj.Namespace, obj.Name), diags
+}
+
+func statefulSetIdentity(namespace, name string) statefulSetIdentityModel {
+	return statefulSetIdentityModel{
 		ResourceIdentity: common.ResourceIdentity{
 			APIVersion: types.StringValue(statefulSetAPIVersion),
 			Kind:       types.StringValue(statefulSetKind),
-			Name:       types.StringValue(obj.Name),
+			Name:       types.StringValue(name),
 		},
-		Namespace: types.StringValue(obj.Namespace),
+		Namespace: types.StringValue(namespace),
 	}
-	return state, ident, diags
 }
 
 // statefulSetPatchSpecs returns the specs to strategic-merge from and to.
@@ -477,27 +465,6 @@ func statefulSetPatchSpecs(original, desired, live appsv1.StatefulSetSpec) (apps
 		from.PersistentVolumeClaimRetentionPolicy = live.PersistentVolumeClaimRetentionPolicy
 	}
 	return from, to
-}
-
-// keepPlannedClaimTemplateChanges records the planned claim-template fields an
-// update cannot send (see statefulSetVolumeClaimRequiresReplace).
-func keepPlannedClaimTemplateChanges(out, plan []StatefulSetSpecModel) {
-	if len(out) != 1 || len(plan) != 1 {
-		return
-	}
-	for i := range out[0].VolumeClaimTemplate {
-		if i >= len(plan[0].VolumeClaimTemplate) {
-			return
-		}
-		got, want := &out[0].VolumeClaimTemplate[i], plan[0].VolumeClaimTemplate[i]
-		if len(got.Metadata) == 1 && len(want.Metadata) == 1 {
-			got.Metadata[0].Labels = want.Metadata[0].Labels
-			got.Metadata[0].Annotations = want.Metadata[0].Annotations
-		}
-		if len(got.Spec) == 1 && len(want.Spec) == 1 && len(got.Spec[0].Resources) == 1 && len(want.Spec[0].Resources) == 1 {
-			got.Spec[0].Resources[0].Requests = want.Spec[0].Resources[0].Requests
-		}
-	}
 }
 
 func retryUntilStatefulSetRolloutComplete(ctx context.Context, conn *k8sclient.Clientset, ns, name string) retry.RetryFunc {

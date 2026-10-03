@@ -4,10 +4,21 @@
 package corev1
 
 import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	k8sclient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
 )
 
@@ -67,6 +78,76 @@ func TestPodV1SpecRequiresReplacement(t *testing.T) {
 			test.edit(&planned)
 			if got := podV1SpecRequiresReplacement(prior, planned); got != test.want {
 				t.Fatalf("requires replacement = %t, want %t", got, test.want)
+			}
+		})
+	}
+}
+
+type planClientsets struct {
+	kubernetes.KubeClientsets
+	client *k8sclient.Clientset
+}
+
+func (c planClientsets) MainClientset() (*k8sclient.Clientset, error) { return c.client, nil }
+func (planClientsets) GetIgnoreAnnotations() []string                 { return nil }
+func (planClientsets) GetIgnoreLabels() []string                      { return nil }
+
+// A Pod created by SDKv2 holds runAsNonRoot: false, which the prior state
+// cannot tell apart from an unset field.
+func TestPodV1ModifyPlanReadsLivePod(t *testing.T) {
+	ctx := context.Background()
+	for name, test := range map[string]struct {
+		status      int
+		wantReplace bool
+		wantError   bool
+	}{
+		"live Pod holds the removed block": {status: http.StatusOK, wantReplace: true},
+		"Pod no longer exists":             {status: http.StatusNotFound},
+		"forbidden":                        {status: http.StatusForbidden, wantError: true},
+		"unavailable":                      {status: http.StatusServiceUnavailable, wantError: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/api/v1/namespaces/ns/pods/p" || test.status != http.StatusOK {
+					http.Error(w, "unavailable", test.status)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(&corev1.Pod{Spec: corev1.PodSpec{
+					Containers:      []corev1.Container{{Name: "c", Image: "i"}},
+					SecurityContext: &corev1.PodSecurityContext{RunAsNonRoot: ptr.To(false)},
+				}})
+			}))
+			defer server.Close()
+			client, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+			if err != nil {
+				t.Fatal(err)
+			}
+			pod := &PodV1{SDKv2Meta: func() any { return planClientsets{client: client} }}
+			var schemaResp fwresource.SchemaResponse
+			pod.Schema(ctx, fwresource.SchemaRequest{}, &schemaResp)
+			value := func(spec string) tfsdk.State {
+				raw := tfprotov6.RawState{JSON: []byte(`{"id":"ns/p","metadata":[{"name":"p","namespace":"ns"}],
+					"spec":[{"container":[{"name":"c","image":"i"}]` + spec + `}]}`)}
+				v, err := raw.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				return tfsdk.State{Schema: schemaResp.Schema, Raw: v}
+			}
+			state, planned := value(`,"security_context":[{"run_as_non_root":false}]`), value("")
+			req := fwresource.ModifyPlanRequest{
+				State:  state,
+				Plan:   tfsdk.Plan(planned),
+				Config: tfsdk.Config(planned),
+			}
+			resp := fwresource.ModifyPlanResponse{Plan: req.Plan}
+			pod.ModifyPlan(ctx, req, &resp)
+			if resp.Diagnostics.HasError() != test.wantError {
+				t.Fatalf("diagnostics: %v", resp.Diagnostics)
+			}
+			if replace := len(resp.RequiresReplace) == 1 && resp.RequiresReplace[0].Equal(path.Root("spec")); replace != test.wantReplace {
+				t.Fatalf("requires replace = %v, want %t", resp.RequiresReplace, test.wantReplace)
 			}
 		})
 	}

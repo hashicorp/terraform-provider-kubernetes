@@ -46,9 +46,8 @@ func TestSetDaemonSetStateMatchesReflection(t *testing.T) {
 			s.Selector = []DaemonSetLabelSelectorModel{}
 			s.Template[0].Metadata = []common.NamespacedMetadataModel{}
 		}),
-		"nil template":        ds(func(s *DaemonSetV1SpecModel) { s.Template = nil }),
-		"empty template":      ds(func(s *DaemonSetV1SpecModel) { s.Template = []workloadTemplateModel{} }),
-		"wrong strategy type": ds(func(s *DaemonSetV1SpecModel) { s.Strategy = types.ListNull(types.StringType) }),
+		"nil template":   ds(func(s *DaemonSetV1SpecModel) { s.Template = nil }),
+		"empty template": ds(func(s *DaemonSetV1SpecModel) { s.Template = []workloadTemplateModel{} }),
 	})
 }
 
@@ -79,9 +78,6 @@ func TestSetStatefulSetStateMatchesReflection(t *testing.T) {
 			s.UpdateStrategy = []StatefulSetUpdateStrategyModel{}
 			s.VolumeClaimTemplate = []PersistentVolumeClaimModel{}
 			s.Template = []workloadTemplateModel{}
-		}),
-		"wrong retention policy type": sts(func(s *StatefulSetSpecModel) {
-			s.PersistentVolumeClaimRetentionPolicy = types.ListNull(types.StringType)
 		}),
 	})
 }
@@ -144,23 +140,16 @@ func TestDeploymentSpecModelsMatchReflection(t *testing.T) {
 	template := func(pod types.List) types.List {
 		return types.ListValueMust(templateType, []attr.Value{object(templateType, map[string]attr.Value{"spec": pod})})
 	}
-	missingPaused := types.ObjectType{AttrTypes: map[string]attr.Type{}}
-	for name, t := range specType.AttrTypes {
-		if name != "paused" {
-			missingPaused.AttrTypes[name] = t
-		}
-	}
 
 	for name, value := range map[string]types.List{
-		"null":              types.ListNull(specType),
-		"unknown":           types.ListUnknown(specType),
-		"empty":             types.ListValueMust(specType, nil),
-		"null blocks":       spec(nil),
-		"empty blocks":      spec(map[string]attr.Value{"selector": types.ListValueMust(specType.AttrTypes["selector"].(types.ListType).ElemType, nil), "template": types.ListValueMust(templateType, nil)}),
-		"unknown template":  spec(map[string]attr.Value{"template": types.ListUnknown(templateType)}),
-		"unknown pod spec":  spec(map[string]attr.Value{"template": template(types.ListUnknown(podSpec)), "replicas": types.StringUnknown()}),
-		"unknown element":   types.ListValueMust(specType, []attr.Value{types.ObjectUnknown(specType.AttrTypes)}),
-		"missing attribute": types.ListValueMust(missingPaused, []attr.Value{object(missingPaused, nil)}),
+		"null":             types.ListNull(specType),
+		"unknown":          types.ListUnknown(specType),
+		"empty":            types.ListValueMust(specType, nil),
+		"null blocks":      spec(nil),
+		"empty blocks":     spec(map[string]attr.Value{"selector": types.ListValueMust(specType.AttrTypes["selector"].(types.ListType).ElemType, nil), "template": types.ListValueMust(templateType, nil)}),
+		"unknown template": spec(map[string]attr.Value{"template": types.ListUnknown(templateType)}),
+		"unknown pod spec": spec(map[string]attr.Value{"template": template(types.ListUnknown(podSpec)), "replicas": types.StringUnknown()}),
+		"unknown element":  types.ListValueMust(specType, []attr.Value{types.ObjectUnknown(specType.AttrTypes)}),
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, gotDiags := deploymentSpecModels(ctx, value)

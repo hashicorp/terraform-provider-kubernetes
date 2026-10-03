@@ -14,11 +14,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
 
-var workloadAddresses = []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"}
+var (
+	workloadAddresses = []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"}
+
+	testAccCheckWorkloadsV1Destroy = resource.ComposeAggregateTestCheckFunc(
+		testAccCheckKubernetesDeploymentV1Destroy,
+		testAccCheckKubernetesDaemonSetV1Destroy,
+		testAccCheckKubernetesStatefulSetV1Destroy,
+	)
+)
 
 func expectWorkloadActions(action plancheck.ResourceActionType) []plancheck.PlanCheck {
 	checks := make([]plancheck.PlanCheck, len(workloadAddresses))
@@ -33,27 +42,21 @@ func expectWorkloadActions(action plancheck.ResourceActionType) []plancheck.Plan
 func TestAccKubernetesWorkloadsV1_upgradeWithoutRefresh(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:             func() { testAccPreCheck(t) },
+		PreCheck:             func() { kubetest.PreCheck(t) },
 		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
-		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccCheckKubernetesDeploymentV1Destroy,
-			testAccCheckKubernetesDaemonSetV1Destroy,
-			testAccCheckKubernetesStatefulSetV1Destroy,
-		),
+		CheckDestroy:         testAccCheckWorkloadsV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: testAccWorkloadsV1Config(name, "", ""),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            testAccWorkloadsV1Config(name, "", ""),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccWorkloadsV1Config(name, "", ""),
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 			},
 			{
-				ProtoV6ProviderFactories: testAccProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccWorkloadsV1Config(name, "\n          working_dir = \"/tmp\"", ""),
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: expectWorkloadActions(plancheck.ResourceActionUpdate)},
 			},
@@ -74,13 +77,9 @@ func TestAccKubernetesWorkloadsV1_templateRestartAnnotation(t *testing.T) {
 		}
 	}
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
-		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccCheckKubernetesDeploymentV1Destroy,
-			testAccCheckKubernetesDaemonSetV1Destroy,
-			testAccCheckKubernetesStatefulSetV1Destroy,
-		),
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckWorkloadsV1Destroy,
 		Steps: []resource.TestStep{
 			{Config: testAccWorkloadsV1Config(name, "", "")},
 			{
@@ -104,7 +103,7 @@ func TestAccKubernetesWorkloadsV1_templateRestartAnnotation(t *testing.T) {
 
 // testAccRestartWorkloads sets the template annotation kubectl rollout restart sets.
 func testAccRestartWorkloads(name, annotation string) error {
-	client, err := testAccWorkloadClient()
+	client, err := kubetest.Clientset()
 	if err != nil {
 		return err
 	}
@@ -133,7 +132,7 @@ func TestAccKubernetesWorkloadsV1_containerPortsSharingNumber(t *testing.T) {
 	var testSteps []resource.TestStep
 	for _, ports := range steps {
 		var checks []resource.TestCheckFunc
-		for _, resourceName := range []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"} {
+		for _, resourceName := range workloadAddresses {
 			prefix := "spec.0.template.0.spec.0.container.0.port"
 			checks = append(checks, resource.TestCheckResourceAttr(resourceName, prefix+".#", fmt.Sprint(len(ports))))
 			for i, port := range ports {
@@ -150,14 +149,10 @@ func TestAccKubernetesWorkloadsV1_containerPortsSharingNumber(t *testing.T) {
 		})
 	}
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
-		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccCheckKubernetesDeploymentV1Destroy,
-			testAccCheckKubernetesDaemonSetV1Destroy,
-			testAccCheckKubernetesStatefulSetV1Destroy,
-		),
-		Steps: testSteps,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckWorkloadsV1Destroy,
+		Steps:                    testSteps,
 	})
 }
 
@@ -189,7 +184,7 @@ func TestAccKubernetesWorkloadsV1_httpGetDefaultPath(t *testing.T) {
               port = 8080%s
             }`, attribute)
 		var checks []resource.TestCheckFunc
-		for _, resourceName := range []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"} {
+		for _, resourceName := range workloadAddresses {
 			prefix := "spec.0.template.0.spec.0.container.0."
 			checks = append(checks,
 				resource.TestCheckResourceAttr(resourceName, prefix+"liveness_probe.0.http_get.0.path", path),
@@ -208,14 +203,10 @@ func TestAccKubernetesWorkloadsV1_httpGetDefaultPath(t *testing.T) {
 		})
 	}
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
-		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccCheckKubernetesDeploymentV1Destroy,
-			testAccCheckKubernetesDaemonSetV1Destroy,
-			testAccCheckKubernetesStatefulSetV1Destroy,
-		),
-		Steps: testSteps,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckWorkloadsV1Destroy,
+		Steps:                    testSteps,
 	})
 }
 
@@ -224,10 +215,8 @@ func TestAccKubernetesWorkloadsV1_httpGetDefaultPath(t *testing.T) {
 // SDKv2: neither unknown block is itself replace-on-change.
 func TestAccKubernetesWorkloadsV1_addBlocksWithUnknownContent(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	var updates []plancheck.PlanCheck
 	var checks []resource.TestCheckFunc
-	for _, resourceName := range []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"} {
-		updates = append(updates, plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate))
+	for _, resourceName := range workloadAddresses {
 		checks = append(checks,
 			resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.config_map.0.items.0.key", "k1"),
 			resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.affinity.0.node_affinity.0.required_during_scheduling_ignored_during_execution.0.node_selector_term.0.match_expressions.0.key", "example.com/k1"),
@@ -264,18 +253,14 @@ func TestAccKubernetesWorkloadsV1_addBlocksWithUnknownContent(t *testing.T) {
           }
         }`
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
-		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccCheckKubernetesDeploymentV1Destroy,
-			testAccCheckKubernetesDaemonSetV1Destroy,
-			testAccCheckKubernetesStatefulSetV1Destroy,
-		),
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckWorkloadsV1Destroy,
 		Steps: []resource.TestStep{
 			{Config: testAccWorkloadsV1Config(name, "", "")},
 			{
 				Config:           "resource \"terraform_data\" \"keys\" {\n  input = [\"k1\"]\n}\n" + testAccWorkloadsV1Config(name, "", volume),
-				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: updates},
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: expectWorkloadActions(plancheck.ResourceActionUpdate)},
 				Check:            resource.ComposeAggregateTestCheckFunc(checks...),
 			},
 		},
@@ -287,8 +272,8 @@ func TestAccKubernetesWorkloadsV1_addBlocksWithUnknownContent(t *testing.T) {
 func TestAccKubernetesWorkloadsV1_emptyStrategyRejected(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		Steps: []resource.TestStep{{
 			Config:      strings.Replace(testAccWorkloadsV1Config(name, "", ""), "replicas = 1", "replicas = 1\n    strategy = []", 1),
 			PlanOnly:    true,
@@ -309,13 +294,9 @@ func TestAccKubernetesWorkloadsV1_numberSpelling(t *testing.T) {
 	config = strings.Replace(config, "replicas = 1", "replicas = \"01\"", 1)
 	config = strings.Replace(config, "spec {\n    \n", "spec {\n    "+strategy+"\n", 1)
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
-		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
-			testAccCheckKubernetesDeploymentV1Destroy,
-			testAccCheckKubernetesDaemonSetV1Destroy,
-			testAccCheckKubernetesStatefulSetV1Destroy,
-		),
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckWorkloadsV1Destroy,
 		Steps: []resource.TestStep{{
 			Config: config,
 			Check: resource.ComposeAggregateTestCheckFunc(
@@ -365,7 +346,7 @@ func testAccWorkloadsV1Config(name, container, podSpec string) string {
   }
   wait_for_rollout = false
 }
-`, workload.resourceType, name, workload.extraSpec, workload.app, workload.app, busyboxImage, container, podSpec)
+`, workload.resourceType, name, workload.extraSpec, workload.app, workload.app, kubetest.BusyboxImage, container, podSpec)
 	}
 	return config.String()
 }

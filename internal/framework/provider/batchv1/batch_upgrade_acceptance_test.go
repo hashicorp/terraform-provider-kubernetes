@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 	batchv1 "k8s.io/api/batch/v1"
 )
 
@@ -25,20 +26,18 @@ func TestAccKubernetesJobV1_upgradeExplicitEmpty(t *testing.T) {
 	const address = "kubernetes_job_v1.test"
 	var before, after batchv1.Job
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { kubetest.PreCheck(t) },
 		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: testAccBatchExplicitEmptyJob(name, sdkResources("0.5", "64Mi")),
-				Check:  testAccCheckKubernetesJobV1Exists(address, &before),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            testAccBatchExplicitEmptyJob(name, sdkResources("0.5", "64Mi")),
+				Check:             testAccCheckKubernetesJobV1Exists(address, &before),
 				// The SDKv2 provider never settles on these values.
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccBatchExplicitEmptyJob(name, frameworkResources("0.5", "64Mi")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{expectNoReplacement(address)},
@@ -51,7 +50,7 @@ func TestAccKubernetesJobV1_upgradeExplicitEmpty(t *testing.T) {
 			},
 			{
 				// The template is immutable: a real change replaces the Job.
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccBatchExplicitEmptyJob(name, frameworkResources("0.5", "128Mi")),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionDestroyBeforeCreate)},
@@ -72,18 +71,16 @@ func TestAccKubernetesJobV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
         }`
 	var created, upgraded, replaced batchv1.Job
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { kubetest.PreCheck(t) },
 		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: testAccBatchSecurityContextJob(name, securityContext),
-				Check:  testAccCheckKubernetesJobV1Exists(address, &created),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            testAccBatchSecurityContextJob(name, securityContext),
+				Check:             testAccCheckKubernetesJobV1Exists(address, &created),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccBatchSecurityContextJob(name, securityContext),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -94,7 +91,7 @@ func TestAccKubernetesJobV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccBatchSecurityContextJob(name, ""),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionDestroyBeforeCreate)},
@@ -130,18 +127,16 @@ func TestAccKubernetesJobV1_upgradeRemoveTemplateLabel(t *testing.T) {
 			var created, upgraded, removed batchv1.Job
 			replaced := tc.removeAction == plancheck.ResourceActionDestroyBeforeCreate
 			resource.ParallelTest(t, resource.TestCase{
-				PreCheck:     func() { testAccPreCheck(t) },
+				PreCheck:     func() { kubetest.PreCheck(t) },
 				CheckDestroy: testAccCheckKubernetesJobV1Destroy,
 				Steps: []resource.TestStep{
 					{
-						ExternalProviders: map[string]resource.ExternalProvider{
-							"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-						},
-						Config: labels(tc.created),
-						Check:  testAccCheckKubernetesJobV1Exists(address, &created),
+						ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+						Config:            labels(tc.created),
+						Check:             testAccCheckKubernetesJobV1Exists(address, &created),
 					},
 					{
-						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						ProtoV6ProviderFactories: kubetest.ProviderFactories,
 						Config:                   labels(tc.upgraded),
 						ConfigPlanChecks: resource.ConfigPlanChecks{
 							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, tc.upgradeAction)},
@@ -153,7 +148,7 @@ func TestAccKubernetesJobV1_upgradeRemoveTemplateLabel(t *testing.T) {
 						),
 					},
 					{
-						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						ProtoV6ProviderFactories: kubetest.ProviderFactories,
 						Config:                   labels(`app = "a"`),
 						ConfigPlanChecks: resource.ConfigPlanChecks{
 							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, tc.removeAction)},
@@ -183,20 +178,18 @@ func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {
 	const address = "kubernetes_cron_job_v1.test"
 	var before, after batchv1.CronJob
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { kubetest.PreCheck(t) },
 		CheckDestroy: testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: testAccBatchExplicitEmptyCronJob(name, sdkResources("0.5", "64Mi"), "busybox:1.36"),
-				Check:  testAccCheckKubernetesCronJobV1Exists(address, &before),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            testAccBatchExplicitEmptyCronJob(name, sdkResources("0.5", "64Mi"), "busybox:1.36"),
+				Check:             testAccCheckKubernetesCronJobV1Exists(address, &before),
 				// The SDKv2 provider never settles on these values.
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccBatchExplicitEmptyCronJob(name, frameworkResources("0.5", "64Mi"), "busybox:1.36"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{expectNoReplacement(address)},
@@ -217,7 +210,7 @@ func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {
 			},
 			{
 				// One quantity changes while the other keeps its respelled value.
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   testAccBatchExplicitEmptyCronJob(name, frameworkResources("0.5", "128Mi"), "busybox:1.37"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)},
@@ -262,10 +255,10 @@ resource "kubernetes_cron_job_v1" "test" {
     }
   }
 }
-`, name, schedule, busyboxImage)
+`, name, schedule, kubetest.BusyboxImage)
 	}
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:             func() { testAccPreCheck(t) },
+		PreCheck:             func() { kubetest.PreCheck(t) },
 		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
 		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
 			testAccCheckKubernetesJobV1Destroy,
@@ -273,18 +266,16 @@ resource "kubernetes_cron_job_v1" "test" {
 		),
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config: config("0 0 1 1 *"),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            config("0 0 1 1 *"),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   config("0 0 1 1 *"),
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   config("0 0 2 1 *"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction("kubernetes_cron_job_v1.test", plancheck.ResourceActionUpdate),
@@ -319,21 +310,19 @@ func TestAccKubernetesJobV1_upgradeTaintedGeneratedName(t *testing.T) {
   }
   wait_for_completion = true
 }
-`, prefix, busyboxImage, command)
+`, prefix, kubetest.BusyboxImage, command)
 	}
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheck(t) },
+		PreCheck:     func() { kubetest.PreCheck(t) },
 		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
-				},
-				Config:      config("exit 1"),
-				ExpectError: regexp.MustCompile("is in failed state"),
+				ExternalProviders: kubetest.ReleasedProvider("3.3.0"),
+				Config:            config("exit 1"),
+				ExpectError:       regexp.MustCompile("is in failed state"),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config:                   config("true"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 					plancheck.ExpectResourceAction("kubernetes_job_v1.test", plancheck.ResourceActionReplace),
@@ -410,7 +399,7 @@ func testAccBatchExplicitEmptyJob(name, resources string) string {
   }
   wait_for_completion = false
 }
-`, name, name, busyboxImage, resources)
+`, name, name, kubetest.BusyboxImage, resources)
 }
 
 func testAccBatchExplicitEmptyCronJob(name, resources, image string) string {
@@ -463,5 +452,5 @@ func testAccBatchSecurityContextJob(name, securityContext string) string {
   }
   wait_for_completion = false
 }
-`, name, securityContext, busyboxImage)
+`, name, securityContext, kubetest.BusyboxImage)
 }

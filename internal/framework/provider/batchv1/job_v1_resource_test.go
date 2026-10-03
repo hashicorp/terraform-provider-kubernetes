@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,12 +30,12 @@ import (
 func TestAccKubernetesJobV1_wait_for_completion(t *testing.T) {
 	var conf batchv1.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -53,15 +54,15 @@ func TestAccKubernetesJobV1_wait_for_completion(t *testing.T) {
 
 func TestAccKubernetesJobV1_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_job_v1.test"
 	// Import cannot discover this provider-only setting from Kubernetes.
 	config := strings.Replace(testAccKubernetesJobV1Config_basic(name, imageName),
 		"wait_for_completion = false", "wait_for_completion = true", 1)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
@@ -93,16 +94,16 @@ func TestAccKubernetesJobV1_identity(t *testing.T) {
 func TestAccKubernetesJobV1_basic(t *testing.T) {
 	var conf batchv1.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.26.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.26.0")
 		},
 
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -161,17 +162,17 @@ func TestAccKubernetesJobV1_basic(t *testing.T) {
 func TestAccKubernetesJobV1_update(t *testing.T) {
 	var conf1, conf2, conf3 batchv1.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
-	imageName1 := agnhostImage
+	imageName := kubetest.BusyboxImage
+	imageName1 := kubetest.AgnhostImage
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.26.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.26.0")
 		},
 
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -251,13 +252,60 @@ func TestAccKubernetesJobV1_update(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesJobV1_pod_failure_policy_update(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-policy-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	initial := strings.Replace(testAccKubernetesJobV1Config_basic(name, kubetest.BusyboxImage),
+		`container_name = "hello"`, "", 1)
+	updated := strings.Replace(initial, `action = "FailJob"`, `action = "Ignore"`, 1)
+	var before, after batchv1.Job
+	const address = "kubernetes_job_v1.test"
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.26.0")
+		},
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: initial,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(address, &before),
+					resource.TestCheckResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", ""),
+				),
+			},
+			{
+				Config: updated,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(address, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists(address, &after),
+					testAccCheckKubernetesJobV1ForceNew(&before, &after, true),
+					resource.TestCheckResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.action", "Ignore"),
+					resource.TestCheckResourceAttr(address, "spec.0.pod_failure_policy.0.rule.0.on_exit_codes.0.container_name", ""),
+				),
+			},
+			{
+				Config: updated,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 	var before, after batchv1.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	const address = "kubernetes_job_v1.test"
-	withSubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, `sub_path = "data"`)
-	withoutSubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, "")
-	emptySubPath := testAccKubernetesJobV1Config_volumeMount(name, busyboxImage, `sub_path = ""`)
+	withSubPath := testAccKubernetesJobV1Config_volumeMount(name, kubetest.BusyboxImage, `sub_path = "data"`)
+	withoutSubPath := testAccKubernetesJobV1Config_volumeMount(name, kubetest.BusyboxImage, "")
+	emptySubPath := testAccKubernetesJobV1Config_volumeMount(name, kubetest.BusyboxImage, `sub_path = ""`)
 	noEscalation := strings.Replace(emptySubPath, `command = ["sh", "-c", "true"]`, `command = ["sh", "-c", "true"]
           security_context {
             allow_privilege_escalation = false
@@ -294,8 +342,8 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 		}
 	}
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -327,12 +375,12 @@ func TestAccKubernetesJobV1_removeTemplateValue(t *testing.T) {
 func TestAccKubernetesJobV1_ttl_seconds_after_finished(t *testing.T) {
 	var conf batchv1.Job
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.21.0") },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t); kubetest.SkipIfClusterVersionLessThan(t, "1.21.0") },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
@@ -376,7 +424,7 @@ func testAccCheckKubernetesJobV1ForceNew(old, new *batchv1.Job, wantNew bool) re
 }
 
 func testAccCheckKubernetesJobV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
+	conn, err := kubetest.Clientset()
 	if err != nil {
 		return err
 	}
@@ -411,7 +459,7 @@ func testAccCheckKubernetesJobV1Exists(n string, obj *batchv1.Job) resource.Test
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
+		conn, err := kubetest.Clientset()
 		if err != nil {
 			return err
 		}
@@ -628,12 +676,12 @@ func testAccKubernetesJobV1Config_wait_for_completion(name, imageName string) st
 // converges instead of planning it again after every refresh.
 func TestAccKubernetesJobV1_emptySelectorValues(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	config := strings.Replace(testAccKubernetesJobV1Config_modified(name, busyboxImage), `selector = [{`,
+	config := strings.Replace(testAccKubernetesJobV1Config_modified(name, kubetest.BusyboxImage), `selector = [{`,
 		`selector = [{
       match_expressions = [{ key = "foo", operator = "Exists", values = [] }]`, 1)
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{{
 			Config: config,
@@ -680,25 +728,23 @@ func testAccKubernetesJobV1Config_modified(name, imageName string) string {
 
 func TestAccKubernetesJobV1_upgrade(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	config := testAccKubernetesJobV1Config_basic(name, busyboxImage)
+	config := testAccKubernetesJobV1Config_basic(name, kubetest.BusyboxImage)
 	var before, after batchv1.Job
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.26.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.26.0")
 		},
 		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: config,
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.2.1"},
-				},
-				Check: testAccCheckKubernetesJobV1Exists("kubernetes_job_v1.test", &before),
+				Config:            config,
+				ExternalProviders: kubetest.ReleasedProvider("3.2.1"),
+				Check:             testAccCheckKubernetesJobV1Exists("kubernetes_job_v1.test", &before),
 			},
 			{
 				Config:                   config,
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -718,7 +764,7 @@ func TestAccKubernetesJobV1_upgrade(t *testing.T) {
 			},
 			{
 				Config:                   config,
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
@@ -751,26 +797,24 @@ func TestAccKubernetesJobV1_moveFromLegacyState(t *testing.T) {
   }
   wait_for_completion = false
 }
-`, name, busyboxImage)
+`, name, kubetest.BusyboxImage)
 	var before, after batchv1.Job
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
+		PreCheck: func() { kubetest.PreCheck(t) },
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
 		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 2.3.0"},
-				},
-				Config: strings.Replace(config, `"kubernetes_job_v1"`, `"kubernetes_job"`, 1),
-				Check:  testAccCheckKubernetesJobV1Exists("kubernetes_job.test", &before),
+				ExternalProviders: kubetest.ReleasedProvider("2.3.0"),
+				Config:            strings.Replace(config, `"kubernetes_job_v1"`, `"kubernetes_job"`, 1),
+				Check:             testAccCheckKubernetesJobV1Exists("kubernetes_job.test", &before),
 				// 2.3.0 does not settle on empty values it reads back.
 				ExpectNonEmptyPlan: true,
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
 				Config: config + `
 moved {
   from = kubernetes_job.test
@@ -794,15 +838,15 @@ func TestAccKubernetesJobV1_disappears(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	var job batchv1.Job
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesJobV1Destroy,
 		Steps: []resource.TestStep{{
-			Config: testAccKubernetesJobV1Config_updateImmutableFields(name, busyboxImage, "1"),
+			Config: testAccKubernetesJobV1Config_updateImmutableFields(name, kubetest.BusyboxImage, "1"),
 			Check: resource.ComposeAggregateTestCheckFunc(
 				testAccCheckKubernetesJobV1Exists("kubernetes_job_v1.test", &job),
 				func(_ *terraform.State) error {
-					client, err := testAccProvider.Meta().(kubernetes.KubeClientsets).MainClientset()
+					client, err := kubetest.Clientset()
 					if err != nil {
 						return err
 					}

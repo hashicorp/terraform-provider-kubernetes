@@ -675,8 +675,8 @@ func testAccKubernetesJobV1Config_wait_for_completion(name, imageName string) st
 // converges instead of planning it again after every refresh.
 func TestAccKubernetesJobV1_emptySelectorValues(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	config := strings.Replace(testAccKubernetesJobV1Config_modified(name, kubetest.BusyboxImage), `selector = [{`,
-		`selector = [{
+	config := strings.Replace(testAccKubernetesJobV1Config_modified(name, kubetest.BusyboxImage), `selector = {`,
+		`selector = {
       match_expressions = [{ key = "foo", operator = "Exists", values = [] }]`, 1)
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { kubetest.PreCheck(t) },
@@ -701,11 +701,11 @@ func testAccKubernetesJobV1Config_modified(name, imageName string) string {
   }
   spec {
     manual_selector = true
-    selector = [{
+    selector = {
       match_labels = {
         "foo" = "bar"
       }
-    }]
+    }
     template {
       metadata {
         labels = {

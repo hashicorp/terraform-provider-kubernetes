@@ -105,8 +105,8 @@ func expandTemplateMetadata(value attr.Value) metav1.ObjectMeta {
 }
 
 func expandLabelSelector(value attr.Value) *metav1.LabelSelector {
-	selector, ok := singleObject(value)
-	if !ok {
+	selector, ok := value.(types.Object)
+	if !ok || selector.IsNull() || selector.IsUnknown() {
 		return nil
 	}
 	a := selector.Attributes()
@@ -209,7 +209,7 @@ func flattenJobSpec(ctx context.Context, in batchapi.JobSpec, prior types.List, 
 		"max_failed_indexes":         types.Int64Value(int64(ptr.Deref(in.MaxFailedIndexes, 0))),
 		"parallelism":                types.Int64Value(int64(ptr.Deref(in.Parallelism, 0))),
 		"pod_failure_policy":         flattenPodFailurePolicy(in.PodFailurePolicy, typ.AttrTypes["pod_failure_policy"].(types.ListType)),
-		"selector":                   flattenLabelSelector(in.Selector, previous["selector"], typ.AttrTypes["selector"].(types.ListType), selectorLabels),
+		"selector":                   flattenLabelSelector(in.Selector, previous["selector"], typ.AttrTypes["selector"].(types.ObjectType), selectorLabels),
 		"template":                   template,
 		"ttl_seconds_after_finished": types.StringValue(ttl),
 	}
@@ -285,13 +285,12 @@ func templateMap(in map[string]string, prior attr.Value, live bool, generated []
 	return types.MapValueMust(types.StringType, values)
 }
 
-func flattenLabelSelector(in *metav1.LabelSelector, prior attr.Value, typ types.ListType, generatedLabels []string) types.List {
-	objectType := typ.ElemType.(types.ObjectType)
+func flattenLabelSelector(in *metav1.LabelSelector, prior attr.Value, objectType types.ObjectType, generatedLabels []string) types.Object {
 	if in == nil {
-		return types.ListValueMust(objectType, []attr.Value{})
+		return types.ObjectNull(objectType.AttrTypes)
 	}
 	var previous map[string]attr.Value
-	if element, ok := singleObject(prior); ok {
+	if element, ok := prior.(types.Object); ok && !element.IsNull() && !element.IsUnknown() {
 		previous = element.Attributes()
 	}
 	labels := map[string]attr.Value{}
@@ -332,9 +331,9 @@ func flattenLabelSelector(in *metav1.LabelSelector, prior attr.Value, typ types.
 		}
 		expressions = types.ListValueMust(expressionType, elements)
 	}
-	return types.ListValueMust(objectType, []attr.Value{types.ObjectValueMust(objectType.AttrTypes, map[string]attr.Value{
+	return types.ObjectValueMust(objectType.AttrTypes, map[string]attr.Value{
 		"match_labels": matchLabels, "match_expressions": expressions,
-	})})
+	})
 }
 
 func flattenPodFailurePolicy(in *batchapi.PodFailurePolicy, typ types.ListType) types.List {

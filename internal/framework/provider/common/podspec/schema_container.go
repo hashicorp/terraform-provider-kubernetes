@@ -5,29 +5,25 @@ package podspec
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 func (b builder) podContainerObject() schema.NestedBlockObject {
-	resources := schema.ListNestedAttribute{
-		Description: "Compute resources required by this container. Omit or use null to retain API-populated values; a configured list must contain exactly one object. Use [{}] to leave limits and requests unset. An empty list is not omission.",
+	resources := schema.SingleNestedAttribute{
+		Description: "Compute resources required by this container. Omit or use null to retain API-populated values. Use {} to leave limits and requests unset.",
 		Optional:    true, Computed: true,
-		Validators:    []validator.List{common.NotEmptyList(), listvalidator.SizeAtMost(1)},
-		PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
-		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+		PlanModifiers: []planmodifier.Object{objectplanmodifier.UseStateForUnknown()},
+		Attributes: map[string]schema.Attribute{
 			"limits":   b.quantityMap(true, immutable),
 			"requests": b.quantityMap(true, immutable),
-		}},
+		},
 	}
 	if b.replace(immutable) {
-		resources.PlanModifiers = append(resources.PlanModifiers, podListStructureRequiresReplace{absentZero: true})
+		resources.PlanModifiers = append(resources.PlanModifiers, podResourcesRequiresReplace{})
 	}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{

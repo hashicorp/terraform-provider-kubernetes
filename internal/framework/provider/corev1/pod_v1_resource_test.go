@@ -1022,12 +1022,12 @@ func TestAccKubernetesPodV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.memory", "50Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.cpu", "250m"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.ephemeral-storage", "128Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.limits.cpu", "0.5"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.limits.ephemeral-storage", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.requests.memory", "50Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.requests.ephemeral-storage", "128Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.limits.cpu", "0.5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.limits.ephemeral-storage", "512Mi"),
 				),
 			},
 			{
@@ -1037,14 +1037,14 @@ func TestAccKubernetesPodV1_with_resource_requirements(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"spec.0.container.0.resources.0.limits.cpu",
+					"spec.0.container.0.resources.limits.cpu",
 				},
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
 					if len(states) != 1 {
 						return fmt.Errorf("imported %d states, want one", len(states))
 					}
-					if got, want := states[0].Attributes["spec.0.container.0.resources.0.limits.cpu"], "500m"; got != want {
-						return fmt.Errorf("imported spec.0.container.0.resources.0.limits.cpu = %q, want %q", got, want)
+					if got, want := states[0].Attributes["spec.0.container.0.resources.limits.cpu"], "500m"; got != want {
+						return fmt.Errorf("imported spec.0.container.0.resources.limits.cpu = %q, want %q", got, want)
 					}
 					return nil
 				},
@@ -1055,11 +1055,13 @@ func TestAccKubernetesPodV1_with_resource_requirements(t *testing.T) {
 			},
 			{
 				Config: testAccKubernetesPodV1ConfigWithEmptyResourceRequirements(podName, imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("container").AtSliceIndex(0).AtMapKey("resources").AtMapKey("requests"), knownvalue.MapExact(map[string]knownvalue.Check{})),
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("container").AtSliceIndex(0).AtMapKey("resources").AtMapKey("limits"), knownvalue.MapExact(map[string]knownvalue.Check{})),
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.limits.#", "0"),
 				),
 			},
 			{
@@ -1067,10 +1069,10 @@ func TestAccKubernetesPodV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.cpu", "500m"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.requests.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.requests.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.limits.cpu", "500m"),
 				),
 			},
 			{
@@ -1078,8 +1080,8 @@ func TestAccKubernetesPodV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.0.requests.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.requests.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.resources.requests.cpu", "500m"),
 				),
 			},
 		},
@@ -2124,12 +2126,12 @@ func testAccKubernetesPodV1ConfigWithInitContainer(podName, image string) string
       image   = "%s"
       command = ["sh", "-c", "echo The app is running! && sleep 300"]
 
-      resources = [{
+      resources = {
         requests = {
           memory = "64Mi"
           cpu    = "50m"
         }
-      }]
+      }
     }
 
     init_container {
@@ -2137,12 +2139,12 @@ func testAccKubernetesPodV1ConfigWithInitContainer(podName, image string) string
       image   = "%s"
       command = ["sh", "-c", "until nslookup %s-init-service.default.svc.cluster.local; do echo waiting for init-service; sleep 2; done"]
 
-      resources = [{
+      resources = {
         requests = {
           memory = "64Mi"
           cpu    = "50m"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -2873,7 +2875,7 @@ func testAccKubernetesPodV1ConfigWithResourceRequirements(podName, imageName str
       image = "%s"
       name  = "containername"
 
-      resources = [{
+      resources = {
         limits = {
           cpu                 = "0.5"
           memory              = "512Mi"
@@ -2885,7 +2887,7 @@ func testAccKubernetesPodV1ConfigWithResourceRequirements(podName, imageName str
           memory              = "50Mi"
           "ephemeral-storage" = "128Mi"
         }
-      }]
+      }
     }
   }
 }
@@ -2907,10 +2909,10 @@ func testAccKubernetesPodV1ConfigWithEmptyResourceRequirements(podName, imageNam
       image = "%s"
       name  = "containername"
 
-      resources = [{
+      resources = {
         limits   = {}
         requests = {}
-      }]
+      }
     }
   }
 }
@@ -2932,12 +2934,12 @@ func testAccKubernetesPodV1ConfigWithResourceRequirementsLimitsOnly(podName, ima
       image = "%s"
       name  = "containername"
 
-      resources = [{
+      resources = {
         limits = {
           cpu    = "500m"
           memory = "512Mi"
         }
-      }]
+      }
     }
   }
 }
@@ -2959,12 +2961,12 @@ func testAccKubernetesPodV1ConfigWithResourceRequirementsRequestsOnly(podName, i
       image = "%s"
       name  = "containername"
 
-      resources = [{
+      resources = {
         requests = {
           cpu    = "500m"
           memory = "512Mi"
         }
-      }]
+      }
     }
   }
 }
@@ -3446,11 +3448,11 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
     access_modes       = ["ReadWriteOnce"]
     storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
     volume_name        = kubernetes_persistent_volume_v1.test.metadata.0.name
-    resources = [{
+    resources = {
       requests = {
         storage = "1G"
       }
-    }]
+    }
   }
 }
 
@@ -3672,11 +3674,11 @@ resource "kubernetes_pod_v1" "scheduler" {
         }
         initial_delay_seconds = 15
       }
-      resources = [{
+      resources = {
         requests = {
           cpu = "0.1"
         }
-      }]
+      }
       security_context {
         privileged = false
       }

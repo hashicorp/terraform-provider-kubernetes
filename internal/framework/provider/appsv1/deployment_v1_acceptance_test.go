@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -115,9 +117,9 @@ func TestAccKubernetesDeploymentV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "25%"),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},
@@ -147,7 +149,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf1),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.0.requests.memory", "64Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.requests.memory", "64Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.env.2.value", "testvar"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.restart_policy", "Always"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.1.name", "initcontainer2"),
@@ -171,7 +173,7 @@ func TestAccKubernetesDeploymentV1_initContainerForceNew(t *testing.T) {
 						"initcontainer2", initCommand, "IfNotPresent"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf2),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.0.requests.memory", "80Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.init_container.0.resources.requests.memory", "80Mi"),
 					testAccCheckKubernetesDeploymentForceNew(&conf1, &conf2, false),
 				),
 			},
@@ -816,21 +818,24 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.nvidia/gpu", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.nvidia/gpu", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.memory", "50Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.nvidia/gpu", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.nvidia/gpu", "1"),
 				),
 			},
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithEmptyResourceRequirements(deploymentName, imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("template").AtSliceIndex(0).AtMapKey("spec").AtSliceIndex(0).AtMapKey("container").AtSliceIndex(0).AtMapKey("resources"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"limits": knownvalue.MapSizeExact(0), "requests": knownvalue.MapSizeExact(0),
+					})),
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.#", "0"),
 				),
 			},
 			{
@@ -838,8 +843,8 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.cpu", "500m"),
 				),
 			},
 			{
@@ -847,8 +852,8 @@ func TestAccKubernetesDeploymentV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.cpu", "500m"),
 				),
 			},
 		},
@@ -981,31 +986,29 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate(t *tes
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "25%"),
 				),
 			},
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "Recreate", imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("strategy").AtMapKey("rolling_update"), knownvalue.Null()),
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "Recreate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "Recreate"),
 				),
 			},
 			{
-				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName),
+				// An explicit empty object resets Recreate to the default RollingUpdate.
+				Config: strings.Replace(testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName), `type = "RollingUpdate"`, "", 1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "25%"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "25%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "25%"),
 				),
 			},
 		},
@@ -1051,11 +1054,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "30%", "40%", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "30%"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "40%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "30%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "40%"),
 				),
 			},
 		},
@@ -1078,11 +1079,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "200%", "0%", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "200%"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "0%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "200%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "0%"),
 				),
 			},
 		},
@@ -1105,11 +1104,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "0", "1", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "1"),
 				),
 			},
 		},
@@ -1132,11 +1129,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "1", "0", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "0"),
 				),
 			},
 		},
@@ -1159,11 +1154,9 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate_max_su
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(deploymentName, "1", "2", imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_unavailable", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "2"),
 				),
 			},
 		},
@@ -1184,11 +1177,12 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_recreate(t *testing.
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "Recreate", imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("strategy").AtMapKey("rolling_update"), knownvalue.Null()),
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "Recreate"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "Recreate"),
 				),
 			},
 		},
@@ -1248,7 +1242,7 @@ func TestAccKubernetesDeploymentV1_with_resource_field_selector(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.memory", "512Mi"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.0.name", "K8S_LIMITS_CPU"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.env.0.value_from.0.resource_field_ref.0.container_name", "containername"),
@@ -1529,12 +1523,12 @@ func testAccKubernetesDeploymentV1Config_basic(name, imageName string) string {
             }
           }
 
-          resources = [{
+          resources = {
             requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -1641,7 +1635,7 @@ resource "kubernetes_deployment_v1" "test" {
               }
             }
           }
-          resources = [{
+          resources = {
             requests = {
               memory = "%s"
               cpu    = "50m"
@@ -1650,7 +1644,7 @@ resource "kubernetes_deployment_v1" "test" {
               memory = "100Mi"
               cpu    = "100m"
             }
-          }]
+          }
           env {
             name = "LIMITS_CPU"
             value_from {
@@ -2592,7 +2586,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirements(deploymentName,
           image = "%s"
           name  = "containername"
 
-          resources = [{
+          resources = {
             limits = {
               cpu          = "500m"
               memory       = "512Mi"
@@ -2604,7 +2598,7 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirements(deploymentName,
               memory       = "50Mi"
               "nvidia/gpu" = "1"
             }
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -2645,10 +2639,10 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyResourceRequirements(deployment
           image = "%s"
           name  = "containername"
 
-          resources = [{
+          resources = {
             limits   = {}
             requests = {}
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -2689,12 +2683,12 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirementsLimitsOnly(deplo
           image = "%s"
           name  = "containername"
 
-          resources = [{
+          resources = {
             limits = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -2735,12 +2729,12 @@ func testAccKubernetesDeploymentV1ConfigWithResourceRequirementsRequestsOnly(dep
           image = "%s"
           name  = "containername"
 
-          resources = [{
+          resources = {
             requests = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -2927,9 +2921,9 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, s
       }
     }
 
-    strategy = [{
+    strategy = {
       type = "%s"
-    }]
+    }
 
     template {
       metadata {
@@ -3013,14 +3007,14 @@ func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategyRollingUpdate(depl
       }
     }
 
-    strategy = [{
+    strategy = {
       type = "RollingUpdate"
 
-      rolling_update = [{
+      rolling_update = {
         max_surge       = "%s"
         max_unavailable = "%s"
-      }]
-    }]
+      }
+    }
 
     template {
       metadata {
@@ -3086,12 +3080,12 @@ func testAccKubernetesDeploymentV1ConfigHostAliases(name string, imageName strin
           name    = "tf-acc-test"
           command = ["sleep", "300"]
 
-          resources = [{
+          resources = {
             requests = {
               memory = "64Mi"
               cpu    = "50m"
             }
-          }]
+          }
         }
 
         host_aliases {
@@ -3233,11 +3227,11 @@ func testAccKubernetesDeploymentV1ConfigWithResourceFieldSelector(rcName, imageN
           image   = "%s"
           name    = "containername"
           command = ["sleep", "300"]
-          resources = [{
+          resources = {
             limits = {
               memory = "512Mi"
             }
-          }]
+          }
           env {
             name = "K8S_LIMITS_CPU"
             value_from {

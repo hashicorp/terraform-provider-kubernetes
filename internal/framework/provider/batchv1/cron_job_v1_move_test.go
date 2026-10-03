@@ -46,7 +46,7 @@ func TestCronJobV1MoveLegacyState(t *testing.T) {
 			container := path.Root("spec").AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec").AtListIndex(0).
 				AtName("template").AtListIndex(0).AtName("spec").AtListIndex(0).AtName("container").AtListIndex(0)
 			var cpu, timezone types.String
-			resp.Diagnostics.Append(resp.TargetState.GetAttribute(ctx, container.AtName("resources").AtListIndex(0).AtName("limits").AtMapKey("cpu"), &cpu)...)
+			resp.Diagnostics.Append(resp.TargetState.GetAttribute(ctx, container.AtName("resources").AtName("limits").AtMapKey("cpu"), &cpu)...)
 			resp.Diagnostics.Append(resp.TargetState.GetAttribute(ctx, path.Root("spec").AtListIndex(0).AtName("timezone"), &timezone)...)
 			if resp.Diagnostics.HasError() {
 				t.Fatal(resp.Diagnostics)

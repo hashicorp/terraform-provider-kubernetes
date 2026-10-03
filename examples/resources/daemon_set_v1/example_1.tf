@@ -26,7 +26,7 @@ resource "kubernetes_daemon_set_v1" "example" {
           image = "nginx:1.21.6"
           name  = "example"
 
-          resources = [{
+          resources = {
             limits = {
               cpu    = "0.5"
               memory = "512Mi"
@@ -35,7 +35,7 @@ resource "kubernetes_daemon_set_v1" "example" {
               cpu    = "250m"
               memory = "50Mi"
             }
-          }]
+          }
 
           liveness_probe {
             http_get {

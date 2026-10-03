@@ -323,12 +323,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "64M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -369,12 +369,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "64M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -421,12 +421,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "50M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -468,12 +468,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "50M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -525,12 +525,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -586,12 +586,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -643,12 +643,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }
@@ -703,12 +703,12 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources = [{
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"
         }
-      }]
+      }
     }
     termination_grace_period_seconds = 1
   }

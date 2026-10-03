@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -487,7 +488,7 @@ func (m jobSelectorRequiresReplace) MarkdownDescription(ctx context.Context) str
 	return m.Description(ctx)
 }
 
-func (jobSelectorRequiresReplace) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
+func (jobSelectorRequiresReplace) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.PlanValue.Equal(req.StateValue) {
 		return
 	}
@@ -514,7 +515,7 @@ func (jobPolicyRequiresReplace) PlanModifyList(ctx context.Context, req planmodi
 		!payloadsEqual(expandPodFailurePolicy(req.StateValue), expandPodFailurePolicy(req.PlanValue))
 }
 
-func fullyKnown(ctx context.Context, value types.List) bool {
+func fullyKnown(ctx context.Context, value attr.Value) bool {
 	raw, err := value.ToTerraformValue(ctx)
 	return err == nil && raw.IsFullyKnown()
 }

@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -117,16 +117,15 @@ func jobSpecBlock(job bool) schema.ListNestedBlock {
 	}
 }
 
-func jobSelectorAttribute() schema.ListNestedAttribute {
-	return schema.ListNestedAttribute{
-		Description: "A label query over the pods owned by the job. Omit it to keep the selector Kubernetes generates; a configured list must contain exactly one object. Changes require replacement.",
+func jobSelectorAttribute() schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Description: "A label query over the pods owned by the job. Omit it to keep the selector Kubernetes generates. Changes require replacement.",
 		Optional:    true, Computed: true,
-		Validators: []validator.List{common.NotEmptyList(), listvalidator.SizeAtMost(1)},
-		PlanModifiers: []planmodifier.List{
-			listplanmodifier.UseStateForUnknown(),
+		PlanModifiers: []planmodifier.Object{
+			objectplanmodifier.UseStateForUnknown(),
 			jobSelectorRequiresReplace{},
 		},
-		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+		Attributes: map[string]schema.Attribute{
 			"match_labels": schema.MapAttribute{Description: common.LabelSelectorMatchLabelsDescription, Optional: true, ElementType: types.StringType},
 			"match_expressions": schema.ListNestedAttribute{
 				Description: common.LabelSelectorMatchExpressionsDescription,
@@ -137,7 +136,7 @@ func jobSelectorAttribute() schema.ListNestedAttribute {
 					"values":   schema.SetAttribute{Description: common.LabelSelectorValuesDescription, Optional: true, ElementType: types.StringType},
 				}},
 			},
-		}},
+		},
 	}
 }
 

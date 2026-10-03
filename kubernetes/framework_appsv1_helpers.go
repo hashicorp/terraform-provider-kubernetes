@@ -20,8 +20,3 @@ func WaitForDeploymentReplicasForFramework(ctx context.Context, conn *kubernetes
 func WaitForDaemonSetPodsForFramework(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
 	return waitForDaemonSetPodsFunc(ctx, conn, ns, name)
 }
-
-// UpgradeTemplatePodSpecWithResourcesFieldV0ForFramework applies v0->v1 resources migration.
-func UpgradeTemplatePodSpecWithResourcesFieldV0ForFramework(ctx context.Context, rawState map[string]interface{}) map[string]interface{} {
-	return upgradeTemplatePodSpecWithResourcesFieldV0(ctx, rawState, nil)
-}

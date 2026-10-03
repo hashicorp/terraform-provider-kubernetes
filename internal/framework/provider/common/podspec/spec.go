@@ -274,6 +274,9 @@ func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key st
 		return int(v.ValueInt64())
 	case types.Object:
 		if v.IsNull() {
+			if podContainerResourcesPath(key) {
+				return podSpecOmitted
+			}
 			diagnostics.AddAttributeError(at, "Invalid Pod Template Specification", "A nested pod template spec object cannot be null.")
 			return nil
 		}
@@ -335,8 +338,11 @@ func podSpecComputedPaths(attributes map[string]schema.Attribute, blocks map[str
 		if attribute.IsComputed() && !podAttributeHasDefault(attribute) {
 			computed[key] = true
 		}
-		if nested, ok := attribute.(schema.ListNestedAttribute); ok {
+		switch nested := attribute.(type) {
+		case schema.ListNestedAttribute:
 			podSpecComputedPaths(nested.NestedObject.Attributes, nil, key, computed)
+		case schema.SingleNestedAttribute:
+			podSpecComputedPaths(nested.Attributes, nil, key, computed)
 		}
 	}
 	for name, block := range blocks {
@@ -426,6 +432,9 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		}
 		v, d := types.ObjectValue(t.AttrTypes, entries)
 		diagnostics.Append(d...)
+		if podContainerResourcesPath(key) && !b.refresh && prior != nil && prior.IsNull() && podZeroValue(v) {
+			return prior
+		}
 		result = v
 	case types.ListType:
 		var previous []attr.Value
@@ -718,4 +727,8 @@ func Satisfies(actual, planned attr.Value) bool {
 		return len(x.Attributes()) == len(y.Attributes())
 	}
 	return actual.Equal(planned)
+}
+
+func podContainerResourcesPath(key string) bool {
+	return key == "spec.container.resources" || key == "spec.init_container.resources"
 }

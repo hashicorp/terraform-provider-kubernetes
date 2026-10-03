@@ -1,13 +1,17 @@
 ```release-note:breaking-change
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, pod spec `image_pull_secrets` and `readiness_gate`, Deployment and DaemonSet `strategy` and its `rolling_update`, and StatefulSet `persistent_volume_claim_retention_policy` change from blocks to list-of-object arguments, for example `resources = [{ ... }]`. An empty list is rejected; omit the argument instead. See the v4 upgrade guide.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, Deployment and DaemonSet `strategy` and its `rolling_update`, and StatefulSet `persistent_volume_claim_retention_policy` change from blocks to object arguments, for example `resources = { ... }`. Pod spec `image_pull_secrets` and `readiness_gate` become lists of objects. See the v4 upgrade guide.
 ```
 
 ```release-note:breaking-change
-`resource/kubernetes_pod_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, `image_pull_secrets` and `readiness_gate` change from blocks to list-of-object arguments, for example `resources = [{ ... }]`. An empty list is rejected; omit the argument instead. See the v4 upgrade guide.
+`resource/kubernetes_pod_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources` change from blocks to object arguments, for example `resources = { ... }`. `image_pull_secrets` and `readiness_gate` become lists of objects. See the v4 upgrade guide.
 ```
 
 ```release-note:breaking-change
-`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. The Job `selector` and its `match_expressions`, container and init container `resources`, and pod spec `image_pull_secrets` and `readiness_gate` change from blocks to list-of-object arguments, for example `selector = [{ ... }]`. An empty list is rejected; omit the argument instead. See the v4 upgrade guide.
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. JobSpec `selector` and container and init container `resources` change from blocks to object arguments, for example `selector = { ... }`. `selector.match_expressions`, pod spec `image_pull_secrets` and `readiness_gate` become lists of objects. See the v4 upgrade guide.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: State upgrades convert the selected singleton lists to objects. Remove the corresponding `[0]` from references and `ignore_changes` child paths, and update module interfaces that expose these values from `list(object(...))` to `object(...)`. Omit an object or use `null` to leave it unset; use `{}` for an explicit empty object. Existing 3.x versioned resources do not need a `moved` block or re-import.
 ```
 
 ```release-note:breaking-change

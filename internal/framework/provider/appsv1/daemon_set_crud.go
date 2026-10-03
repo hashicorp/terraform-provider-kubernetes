@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
@@ -468,7 +469,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 	templateBaseline := types.ListNull(specType)
 	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
 	var selectorBaseline []LabelSelectorModel
-	strategyBaseline := types.ListNull(daemonSetStrategyObjectType())
+	strategyBaseline := types.ObjectNull(daemonSetStrategyObjectType().AttrTypes)
 	if len(baseline) == 1 {
 		selectorBaseline = baseline[0].Selector
 		strategyBaseline = baseline[0].Strategy
@@ -560,53 +561,52 @@ func expandDaemonSetSelector(ctx context.Context, in []DaemonSetLabelSelectorMod
 	return selector, diagnostics
 }
 
-func expandDaemonSetStrategyModel(ctx context.Context, in types.List, at path.Path) (appsv1.DaemonSetUpdateStrategy, diag.Diagnostics) {
+func expandDaemonSetStrategyModel(ctx context.Context, in types.Object, at path.Path) (appsv1.DaemonSetUpdateStrategy, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	strategy := appsv1.DaemonSetUpdateStrategy{Type: appsv1.RollingUpdateDaemonSetStrategyType}
-	if in.IsNull() || in.IsUnknown() || len(in.Elements()) == 0 {
+	if in.IsNull() || in.IsUnknown() {
 		return strategy, diagnostics
 	}
-	var models []DaemonSetStrategyModel
-	diagnostics.Append(in.ElementsAs(ctx, &models, false)...)
-	if diagnostics.HasError() || len(models) == 0 {
+	var model DaemonSetStrategyModel
+	diagnostics.Append(in.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diagnostics.HasError() {
 		diagnostics.AddAttributeError(at, "Invalid daemonset strategy", "Unable to decode the strategy value.")
 		return strategy, diagnostics
 	}
-	model := models[0]
 	if !model.Type.IsNull() && !model.Type.IsUnknown() && model.Type.ValueString() != "" {
 		strategy.Type = appsv1.DaemonSetUpdateStrategyType(model.Type.ValueString())
 	}
 	if strategy.Type == appsv1.OnDeleteDaemonSetStrategyType || model.RollingUpdate.IsNull() ||
-		model.RollingUpdate.IsUnknown() || len(model.RollingUpdate.Elements()) == 0 {
+		model.RollingUpdate.IsUnknown() {
 		return strategy, diagnostics
 	}
-	var updates []DaemonSetRollingUpdateModel
-	diagnostics.Append(model.RollingUpdate.ElementsAs(ctx, &updates, false)...)
-	if diagnostics.HasError() || len(updates) == 0 {
+	var update DaemonSetRollingUpdateModel
+	diagnostics.Append(model.RollingUpdate.As(ctx, &update, basetypes.ObjectAsOptions{})...)
+	if diagnostics.HasError() {
 		diagnostics.AddAttributeError(at.AtName("rolling_update"), "Invalid rolling update strategy", "Unable to decode the rolling_update value.")
 		return strategy, diagnostics
 	}
 	rolling := &appsv1.RollingUpdateDaemonSet{}
-	if !updates[0].MaxSurge.IsNull() && !updates[0].MaxSurge.IsUnknown() {
-		value := intstr.Parse(updates[0].MaxSurge.ValueString())
+	if !update.MaxSurge.IsNull() && !update.MaxSurge.IsUnknown() {
+		value := intstr.Parse(update.MaxSurge.ValueString())
 		rolling.MaxSurge = &value
 	}
-	if !updates[0].MaxUnavailable.IsNull() && !updates[0].MaxUnavailable.IsUnknown() {
-		value := intstr.Parse(updates[0].MaxUnavailable.ValueString())
+	if !update.MaxUnavailable.IsNull() && !update.MaxUnavailable.IsUnknown() {
+		value := intstr.Parse(update.MaxUnavailable.ValueString())
 		rolling.MaxUnavailable = &value
 	}
 	strategy.RollingUpdate = rolling
 	return strategy, diagnostics
 }
 
-func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdateStrategy, prior types.List, diagnostics *diag.Diagnostics) types.List {
+func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdateStrategy, prior types.Object, diagnostics *diag.Diagnostics) types.Object {
 	strategyType := in.Type
 	if strategyType == "" {
 		strategyType = appsv1.RollingUpdateDaemonSetStrategyType
 	}
 	model := DaemonSetStrategyModel{
 		Type:          types.StringValue(string(strategyType)),
-		RollingUpdate: types.ListNull(daemonSetRollingUpdateObjectType()),
+		RollingUpdate: types.ObjectNull(daemonSetRollingUpdateObjectType().AttrTypes),
 	}
 	if in.RollingUpdate != nil {
 		rolling := DaemonSetRollingUpdateModel{
@@ -619,11 +619,11 @@ func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdat
 		if in.RollingUpdate.MaxUnavailable != nil {
 			rolling.MaxUnavailable = rollingUpdateSpelling(prior, "max_unavailable", in.RollingUpdate.MaxUnavailable.String())
 		}
-		value, diags := types.ListValueFrom(ctx, daemonSetRollingUpdateObjectType(), []DaemonSetRollingUpdateModel{rolling})
+		value, diags := types.ObjectValueFrom(ctx, daemonSetRollingUpdateObjectType().AttrTypes, rolling)
 		diagnostics.Append(diags...)
 		model.RollingUpdate = value
 	}
-	value, diags := types.ListValueFrom(ctx, daemonSetStrategyObjectType(), []DaemonSetStrategyModel{model})
+	value, diags := types.ObjectValueFrom(ctx, daemonSetStrategyObjectType().AttrTypes, model)
 	diagnostics.Append(diags...)
 	return value
 }

@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapdefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -210,31 +210,28 @@ func persistentVolumeClaimRetentionPolicyBlock() schema.ListNestedBlock {
 	}
 }
 
-func persistentVolumeClaimRetentionPolicyAttribute() schema.ListNestedAttribute {
-	return schema.ListNestedAttribute{
+func persistentVolumeClaimRetentionPolicyAttribute() schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
 		Description: "The field controls if and how PVCs are deleted during the lifecycle of a StatefulSet.",
 		Optional:    true,
 		Computed:    true,
-		Validators:  []validator.List{common.NotEmptyList(), listvalidator.SizeAtMost(1)},
-		PlanModifiers: []planmodifier.List{
-			listplanmodifier.UseStateForUnknown(),
+		PlanModifiers: []planmodifier.Object{
+			objectplanmodifier.UseStateForUnknown(),
 		},
-		NestedObject: schema.NestedAttributeObject{
-			Attributes: map[string]schema.Attribute{
-				"when_deleted": schema.StringAttribute{
-					Description: "This field controls what happens when a Statefulset is deleted. Default is Retain.",
-					Optional:    true,
-					Computed:    true,
-					Default:     stringdefault.StaticString("Retain"),
-					Validators:  []validator.String{stringvalidator.OneOf("Retain", "Delete")},
-				},
-				"when_scaled": schema.StringAttribute{
-					Description: "This field controls what happens when a Statefulset is scaled. Default is Retain.",
-					Optional:    true,
-					Computed:    true,
-					Default:     stringdefault.StaticString("Retain"),
-					Validators:  []validator.String{stringvalidator.OneOf("Retain", "Delete")},
-				},
+		Attributes: map[string]schema.Attribute{
+			"when_deleted": schema.StringAttribute{
+				Description: "This field controls what happens when a Statefulset is deleted. Default is Retain.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("Retain"),
+				Validators:  []validator.String{stringvalidator.OneOf("Retain", "Delete")},
+			},
+			"when_scaled": schema.StringAttribute{
+				Description: "This field controls what happens when a Statefulset is scaled. Default is Retain.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString("Retain"),
+				Validators:  []validator.String{stringvalidator.OneOf("Retain", "Delete")},
 			},
 		},
 	}

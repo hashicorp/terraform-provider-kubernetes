@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,7 +42,7 @@ type StatefulSetSpecModel struct {
 	Template                             []workloadTemplateModel          `tfsdk:"template"`
 	UpdateStrategy                       []StatefulSetUpdateStrategyModel `tfsdk:"update_strategy"`
 	VolumeClaimTemplate                  []PersistentVolumeClaimModel     `tfsdk:"volume_claim_template"`
-	PersistentVolumeClaimRetentionPolicy types.List                       `tfsdk:"persistent_volume_claim_retention_policy"`
+	PersistentVolumeClaimRetentionPolicy types.Object                     `tfsdk:"persistent_volume_claim_retention_policy"`
 	MinReadySeconds                      types.Int64                      `tfsdk:"min_ready_seconds"`
 }
 
@@ -126,12 +127,12 @@ func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel, confi
 		out.UpdateStrategy = u
 	}
 
-	retention, d := statefulSetPVCRetentionPolicyModels(ctx, spec.PersistentVolumeClaimRetentionPolicy, path.Root("spec").AtListIndex(0).AtName("persistent_volume_claim_retention_policy"))
+	retention, d := statefulSetPVCRetentionPolicyModel(ctx, spec.PersistentVolumeClaimRetentionPolicy, path.Root("spec").AtListIndex(0).AtName("persistent_volume_claim_retention_policy"))
 	diags.Append(d...)
-	if len(retention) > 0 {
+	if retention != nil {
 		out.PersistentVolumeClaimRetentionPolicy = &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
-			WhenDeleted: appsv1.PersistentVolumeClaimRetentionPolicyType(retention[0].WhenDeleted.ValueString()),
-			WhenScaled:  appsv1.PersistentVolumeClaimRetentionPolicyType(retention[0].WhenScaled.ValueString()),
+			WhenDeleted: appsv1.PersistentVolumeClaimRetentionPolicyType(retention.WhenDeleted.ValueString()),
+			WhenScaled:  appsv1.PersistentVolumeClaimRetentionPolicyType(retention.WhenScaled.ValueString()),
 		}
 	}
 
@@ -170,7 +171,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		Replicas:                             types.StringNull(),
 		RevisionHistoryLimit:                 types.Int64Null(),
 		ServiceName:                          types.StringValue(spec.ServiceName),
-		PersistentVolumeClaimRetentionPolicy: types.ListNull(statefulSetPVCRetentionPolicyObjectType()),
+		PersistentVolumeClaimRetentionPolicy: types.ObjectNull(statefulSetPVCRetentionPolicyObjectType().AttrTypes),
 		MinReadySeconds:                      types.Int64Value(int64(spec.MinReadySeconds)),
 	}
 
@@ -217,10 +218,10 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 	}
 
 	if spec.PersistentVolumeClaimRetentionPolicy != nil {
-		value, d := types.ListValueFrom(ctx, statefulSetPVCRetentionPolicyObjectType(), []StatefulSetPVCRetentionPolicyModel{{
+		value, d := types.ObjectValueFrom(ctx, statefulSetPVCRetentionPolicyObjectType().AttrTypes, StatefulSetPVCRetentionPolicyModel{
 			WhenDeleted: types.StringValue(string(spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted)),
 			WhenScaled:  types.StringValue(string(spec.PersistentVolumeClaimRetentionPolicy.WhenScaled)),
-		}})
+		})
 		diags.Append(d...)
 		out.PersistentVolumeClaimRetentionPolicy = value
 	}
@@ -564,103 +565,17 @@ func statefulSetPVCRetentionPolicyObjectType() types.ObjectType {
 	}}
 }
 
-func statefulSetPVCRetentionPolicyModels(ctx context.Context, value types.List, at path.Path) ([]StatefulSetPVCRetentionPolicyModel, diag.Diagnostics) {
+func statefulSetPVCRetentionPolicyModel(ctx context.Context, value types.Object, at path.Path) (*StatefulSetPVCRetentionPolicyModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	if value.IsNull() || value.IsUnknown() || len(value.Elements()) == 0 {
+	if value.IsNull() || value.IsUnknown() {
 		return nil, diags
 	}
-	var models []StatefulSetPVCRetentionPolicyModel
-	diags.Append(value.ElementsAs(ctx, &models, false)...)
+	var model StatefulSetPVCRetentionPolicyModel
+	diags.Append(value.As(ctx, &model, basetypes.ObjectAsOptions{})...)
 	if diags.HasError() {
 		diags.AddAttributeError(at, "Invalid persistent volume claim retention policy", "Unable to decode the configured retention policy.")
 	}
-	return models, diags
-}
-
-func upgradeStatefulSetV0State(rawState map[string]any) error {
-	applyStatefulSetV0ResourceUpgrade(rawState)
-	return nil
-}
-
-func applyStatefulSetV0ResourceUpgrade(rawState map[string]interface{}) map[string]interface{} {
-	s, ok := rawState["spec"].([]interface{})
-	if !ok || len(s) == 0 {
-		return rawState
-	}
-
-	spec, ok := s[0].(map[string]interface{})
-	if !ok {
-		return rawState
-	}
-	t, ok := spec["template"].([]interface{})
-	if !ok || len(t) == 0 {
-		return rawState
-	}
-	template, ok := t[0].(map[string]interface{})
-	if !ok {
-		return rawState
-	}
-	ps, ok := template["spec"].([]interface{})
-	if !ok || len(ps) == 0 {
-		return rawState
-	}
-
-	podSpec, ok := ps[0].(map[string]interface{})
-	if !ok {
-		return rawState
-	}
-	template["spec"] = []interface{}{upgradeContainersV0ToV1(podSpec)}
-	return rawState
-}
-
-func upgradeContainersV0ToV1(rawState map[string]interface{}) map[string]interface{} {
-	upgrade := func(listKey string) {
-		containers, ok := rawState[listKey].([]interface{})
-		if !ok || len(containers) == 0 {
-			return
-		}
-		for _, c := range containers {
-			container, ok := c.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			r, ok := container["resources"].([]interface{})
-			if !ok || len(r) == 0 {
-				continue
-			}
-			resources, ok := r[0].(map[string]interface{})
-			if !ok {
-				continue
-			}
-
-			if req, ok := resources["requests"].([]interface{}); ok {
-				if len(req) > 0 {
-					if m, ok := req[0].(map[string]interface{}); ok {
-						resources["requests"] = m
-					} else {
-						resources["requests"] = map[string]interface{}{}
-					}
-				} else {
-					resources["requests"] = map[string]interface{}{}
-				}
-			}
-			if lim, ok := resources["limits"].([]interface{}); ok {
-				if len(lim) > 0 {
-					if m, ok := lim[0].(map[string]interface{}); ok {
-						resources["limits"] = m
-					} else {
-						resources["limits"] = map[string]interface{}{}
-					}
-				} else {
-					resources["limits"] = map[string]interface{}{}
-				}
-			}
-		}
-	}
-
-	upgrade("init_container")
-	upgrade("container")
-	return rawState
+	return &model, diags
 }
 
 // UpgradeState accepts the SDKv2 schema versions 0 and 1.
@@ -685,8 +600,8 @@ func (r *StatefulSetV1) UpgradeState(ctx context.Context) map[int64]resource.Sta
 		}
 	}
 	return map[int64]resource.StateUpgrader{
-		0: upgrader(upgradeStatefulSetV0State),
-		1: upgrader(nil),
+		0: upgrader(upgradeWorkloadState(0, "persistent_volume_claim_retention_policy")),
+		1: upgrader(upgradeWorkloadState(1, "persistent_volume_claim_retention_policy")),
 	}
 }
 
@@ -703,10 +618,7 @@ func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
 				if req.SourceProviderAddress == "" || !hasProviderSuffix(req.SourceProviderAddress) {
 					return
 				}
-				var rewrite func(map[string]any) error
-				if req.SourceSchemaVersion == 0 {
-					rewrite = upgradeStatefulSetV0State
-				}
+				rewrite := upgradeWorkloadState(req.SourceSchemaVersion, "persistent_volume_claim_retention_policy")
 				value, err := common.DecodeLegacyState(ctx, req.SourceRawState, schemaResp.Schema, rewrite)
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to move StatefulSet state", fmt.Sprintf("The source state could not be decoded: %s", err))

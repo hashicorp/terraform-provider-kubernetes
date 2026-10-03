@@ -19,6 +19,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -112,7 +113,7 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},
@@ -381,10 +382,10 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.memory", "50Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.cpu", "500m"),
 				),
 			},
 			{
@@ -398,11 +399,14 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(daemonSetName, imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("template").AtSliceIndex(0).AtMapKey("spec").AtSliceIndex(0).AtMapKey("container").AtSliceIndex(0).AtMapKey("resources"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"limits": knownvalue.MapSizeExact(0), "requests": knownvalue.MapSizeExact(0),
+					})),
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.#", "0"),
 				),
 			},
 			{
@@ -410,8 +414,8 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.cpu", "500m"),
 				),
 			},
 			{
@@ -419,8 +423,8 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.cpu", "500m"),
 				),
 			},
 		},
@@ -480,49 +484,49 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "0"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "0"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "5"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "5"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "10"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "10"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "100"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "100"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "5%"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "5%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "5%"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "10%"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "10%"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "100%"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "100%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "100%"),
 				),
 			},
 		},
@@ -632,12 +636,12 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
       }
     }
 
-    strategy = [{
-      rolling_update = [{
+    strategy = {
+      rolling_update = {
         max_surge       = "%s"
         max_unavailable = "1" # Set maxUnavailable to 1 if maxSurge is 0
-      }]
-    }]
+      }
+    }
   }
 }
 `, name, imageName, maxSurge)
@@ -673,12 +677,12 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
       }
     }
 
-    strategy = [{
-      rolling_update = [{
+    strategy = {
+      rolling_update = {
         max_surge       = "%s"
         max_unavailable = "0" # Set maxUnavailable to 0 if maxSurge is set
-      }]
-    }]
+      }
+    }
   }
 }
 `, name, imageName, maxSurge)
@@ -1217,7 +1221,7 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(deploymentName, 
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources = [{
+          resources = {
             limits = {
               cpu    = "500m"
               memory = "512Mi"
@@ -1227,7 +1231,7 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(deploymentName, 
               cpu    = "250m"
               memory = "50Mi"
             }
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -1267,10 +1271,10 @@ func testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(deploymentN
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources = [{
+          resources = {
             limits   = {}
             requests = {}
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -1310,12 +1314,12 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsLimitsOnly(deploy
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources = [{
+          resources = {
             limits = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }
@@ -1355,12 +1359,12 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsRequestsOnly(depl
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources = [{
+          resources = {
             requests = {
               cpu    = "500m"
               memory = "512Mi"
             }
-          }]
+          }
         }
         termination_grace_period_seconds = 1
       }

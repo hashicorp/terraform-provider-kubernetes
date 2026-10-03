@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -100,14 +102,20 @@ func TestPodV1ModifyPlanReadsLivePod(t *testing.T) {
 		status      int
 		wantReplace bool
 		wantError   bool
+		resources   string
 	}{
-		"live Pod holds the removed block": {status: http.StatusOK, wantReplace: true},
-		"Pod no longer exists":             {status: http.StatusNotFound},
-		"forbidden":                        {status: http.StatusForbidden, wantError: true},
-		"unavailable":                      {status: http.StatusServiceUnavailable, wantError: true},
+		"live Pod holds the removed block":            {status: http.StatusOK, wantReplace: true},
+		"Pod no longer exists":                        {status: http.StatusNotFound},
+		"forbidden":                                   {status: http.StatusForbidden, wantError: true},
+		"unavailable":                                 {status: http.StatusServiceUnavailable, wantError: true},
+		"empty legacy resources with API unavailable": {status: http.StatusInternalServerError, resources: `[]`},
+		"empty resource element with API unavailable": {status: http.StatusInternalServerError, resources: `[{}]`},
+		"zero resource maps with API unavailable":     {status: http.StatusInternalServerError, resources: `[{"limits":{},"requests":{}}]`},
 	} {
 		t.Run(name, func(t *testing.T) {
+			var requests atomic.Int64
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests.Add(1)
 				if r.URL.Path != "/api/v1/namespaces/ns/pods/p" || test.status != http.StatusOK {
 					http.Error(w, "unavailable", test.status)
 					return
@@ -136,6 +144,23 @@ func TestPodV1ModifyPlanReadsLivePod(t *testing.T) {
 				return tfsdk.State{Schema: schemaResp.Schema, Raw: v}
 			}
 			state, planned := value(`,"security_context":[{"run_as_non_root":false}]`), value("")
+			if test.resources != "" {
+				legacy := `{"id":"ns/p","metadata":[{"name":"p","namespace":"ns"}],"target_state":[],"spec":[{"container":[{"name":"c","image":"i","resources":RESOURCES}]}]}`
+				upgraded := fwresource.UpgradeStateResponse{State: tfsdk.State{Schema: schemaResp.Schema}}
+				pod.UpgradeState(ctx)[1].StateUpgrader(ctx, fwresource.UpgradeStateRequest{RawState: &tfprotov6.RawState{JSON: []byte(strings.Replace(legacy, "RESOURCES", test.resources, 1))}}, &upgraded)
+				if upgraded.Diagnostics.HasError() {
+					t.Fatal(upgraded.Diagnostics)
+				}
+				state = upgraded.State
+				raw := &tfprotov6.RawState{JSON: []byte(strings.Replace(legacy, "RESOURCES", `{"limits":{},"requests":{}}`, 1))}
+				planned.Raw, err = raw.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !state.Raw.Equal(planned.Raw) {
+					t.Fatal("upgraded state does not equal object plan")
+				}
+			}
 			req := fwresource.ModifyPlanRequest{
 				State:  state,
 				Plan:   tfsdk.Plan(planned),
@@ -143,6 +168,9 @@ func TestPodV1ModifyPlanReadsLivePod(t *testing.T) {
 			}
 			resp := fwresource.ModifyPlanResponse{Plan: req.Plan}
 			pod.ModifyPlan(ctx, req, &resp)
+			if test.resources != "" && requests.Load() != 0 {
+				t.Fatalf("unchanged plan made %d GETs", requests.Load())
+			}
 			if resp.Diagnostics.HasError() != test.wantError {
 				t.Fatalf("diagnostics: %v", resp.Diagnostics)
 			}

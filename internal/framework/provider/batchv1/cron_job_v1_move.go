@@ -41,10 +41,7 @@ func (r *CronJobV1) MoveState(ctx context.Context) []resource.StateMover {
 					return fmt.Errorf("invalid spec object")
 				}
 				spec["timezone"] = ""
-				if req.SourceSchemaVersion == 0 {
-					return cronJobUpgradeContainerResources(spec)
-				}
-				return nil
+				return cronJobUpgradeJobSpec(spec, req.SourceSchemaVersion == 0)
 			})
 			if err != nil {
 				resp.Diagnostics.AddError("Unable to move kubernetes_cron_job state", err.Error())
@@ -65,7 +62,14 @@ func (r *CronJobV1) UpgradeState(ctx context.Context) map[int64]resource.StateUp
 	return map[int64]resource.StateUpgrader{
 		0: {
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				value, err := common.DecodeLegacyState(ctx, req.RawState, schemaResponse.Schema, nil)
+				value, err := common.DecodeLegacyState(ctx, req.RawState, schemaResponse.Schema, func(values map[string]any) error {
+					spec, ok := jobLegacyObject(values["spec"])
+					if !ok {
+						return fmt.Errorf("expected exactly one spec element")
+					}
+					// Same-type SDKv2 CronJob v0 already stored quantity maps.
+					return cronJobUpgradeJobSpec(spec, false)
+				})
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to upgrade kubernetes_cron_job_v1 state", err.Error())
 					return
@@ -76,7 +80,7 @@ func (r *CronJobV1) UpgradeState(ctx context.Context) map[int64]resource.StateUp
 	}
 }
 
-func cronJobUpgradeContainerResources(spec map[string]interface{}) error {
+func cronJobUpgradeJobSpec(spec map[string]any, legacyQuantities bool) error {
 	jobSpec := spec
 	for _, field := range []string{"job_template", "spec"} {
 		elements, ok := jobSpec[field].([]interface{})
@@ -88,5 +92,5 @@ func cronJobUpgradeContainerResources(spec map[string]interface{}) error {
 			return fmt.Errorf("invalid %s object in historical CronJob state", field)
 		}
 	}
-	return upgradeJobResourcesV0(jobSpec)
+	return upgradeJobSpecState(jobSpec, "spec[0].job_template[0].spec[0]", legacyQuantities)
 }

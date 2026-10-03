@@ -83,10 +83,7 @@ func (d *DaemonSetV1) MoveState(ctx context.Context) []resource.StateMover {
 					return
 				}
 
-				var rewrite func(map[string]any) error
-				if req.SourceSchemaVersion == 0 {
-					rewrite = upgradeDaemonSetV0State(ctx)
-				}
+				rewrite := upgradeWorkloadState(req.SourceSchemaVersion, "strategy")
 				value, err := common.DecodeLegacyState(ctx, req.SourceRawState, resourceSchema, rewrite)
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to move daemon set state", err.Error())
@@ -134,77 +131,9 @@ func (d *DaemonSetV1) UpgradeState(ctx context.Context) map[int64]resource.State
 		}
 	}
 	return map[int64]resource.StateUpgrader{
-		0: upgrader(upgradeDaemonSetV0State(ctx)),
-		1: upgrader(nil),
+		0: upgrader(upgradeWorkloadState(0, "strategy")),
+		1: upgrader(upgradeWorkloadState(1, "strategy")),
 	}
-}
-
-// upgradeDaemonSetV0State converts schema version 0 container resources.
-func upgradeDaemonSetV0State(ctx context.Context) func(map[string]any) error {
-	return func(raw map[string]any) error {
-		if err := validateDaemonSetV0State(raw); err != nil {
-			return err
-		}
-		kubernetes.UpgradeTemplatePodSpecWithResourcesFieldV0ForFramework(ctx, raw)
-		return nil
-	}
-}
-
-func validateDaemonSetV0State(raw map[string]interface{}) error {
-	specs, ok := raw["spec"].([]interface{})
-	if !ok || len(specs) == 0 {
-		return nil
-	}
-	spec, ok := specs[0].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("stored spec element has unexpected type %T", specs[0])
-	}
-	templates, ok := spec["template"].([]interface{})
-	if !ok || len(templates) == 0 {
-		return nil
-	}
-	template, ok := templates[0].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("stored template element has unexpected type %T", templates[0])
-	}
-	podSpecs, ok := template["spec"].([]interface{})
-	if !ok || len(podSpecs) == 0 {
-		return nil
-	}
-	podSpec, ok := podSpecs[0].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("stored pod spec element has unexpected type %T", podSpecs[0])
-	}
-	for _, field := range []string{"container", "init_container"} {
-		containers, ok := podSpec[field].([]interface{})
-		if !ok {
-			continue
-		}
-		for i, value := range containers {
-			container, ok := value.(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("stored %s element %d has unexpected type %T", field, i, value)
-			}
-			resources, ok := container["resources"].([]interface{})
-			if !ok || len(resources) == 0 {
-				continue
-			}
-			resource, ok := resources[0].(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("stored %s element %d resources has unexpected type %T", field, i, resources[0])
-			}
-			for _, resourceField := range []string{"requests", "limits"} {
-				values, ok := resource[resourceField].([]interface{})
-				if !ok || len(values) == 0 {
-					continue
-				}
-				if _, ok := values[0].(map[string]interface{}); !ok {
-					return fmt.Errorf("stored %s element %d resources.%s has unexpected type %T", field, i, resourceField, values[0])
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func (d *DaemonSetV1) schemasForStateMoves(ctx context.Context) (schema.Schema, diag.Diagnostics) {

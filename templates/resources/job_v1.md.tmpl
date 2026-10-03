@@ -11,7 +11,7 @@ description: |-
 
 {{ .Description }}
 
-~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = [{ ... }]`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = { ... }`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
 
 ~> `spec.backoff_limit_per_index` and `spec.max_failed_indexes` default to `0` when omitted; this is a provider default, not a Kubernetes one. Changing `backoff_limit_per_index` requires replacement of the Job.
 

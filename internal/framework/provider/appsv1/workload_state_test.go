@@ -21,10 +21,10 @@ import (
 func TestSetDaemonSetStateMatchesReflection(t *testing.T) {
 	dsType := daemonSetSpecListType().ElemType.(types.ObjectType)
 	dsPodSpec := listAttrType(dsType, "template", "spec")
-	strategy := dsType.AttrTypes["strategy"].(types.ListType).ElemType
+	strategy := dsType.AttrTypes["strategy"].(types.ObjectType)
 	ds := func(edit func(*DaemonSetV1SpecModel)) []DaemonSetV1SpecModel {
 		spec := DaemonSetV1SpecModel{
-			Strategy: types.ListNull(strategy),
+			Strategy: types.ObjectNull(strategy.AttrTypes),
 			Template: []workloadTemplateModel{{Spec: types.ListNull(dsPodSpec.ElemType)}},
 		}
 		edit(&spec)
@@ -33,16 +33,16 @@ func TestSetDaemonSetStateMatchesReflection(t *testing.T) {
 	assertStateMatchesReflection(t, daemonSetFrozenSchema, setDaemonSetState, func(spec []DaemonSetV1SpecModel, t timeouts.Value) DaemonSetV1Model {
 		return DaemonSetV1Model{ID: types.StringValue("ns/name"), Spec: spec, Timeouts: t}
 	}, map[string][]DaemonSetV1SpecModel{
-		"nil spec":   nil,
-		"empty spec": {},
-		"null lists": ds(func(*DaemonSetV1SpecModel) {}),
-		"unknown lists": ds(func(s *DaemonSetV1SpecModel) {
-			s.Strategy = types.ListUnknown(strategy)
+		"nil spec":               nil,
+		"empty spec":             {},
+		"null objects and lists": ds(func(*DaemonSetV1SpecModel) {}),
+		"unknown objects and lists": ds(func(s *DaemonSetV1SpecModel) {
+			s.Strategy = types.ObjectUnknown(strategy.AttrTypes)
 			s.Template[0].Spec = types.ListUnknown(dsPodSpec.ElemType)
 			s.MinReadySeconds = types.Int64Unknown()
 		}),
-		"empty lists and slices": ds(func(s *DaemonSetV1SpecModel) {
-			s.Strategy = types.ListValueMust(strategy, nil)
+		"empty objects and slices": ds(func(s *DaemonSetV1SpecModel) {
+			s.Strategy = types.ObjectValueMust(strategy.AttrTypes, map[string]attr.Value{"type": types.StringNull(), "rolling_update": types.ObjectNull(daemonSetRollingUpdateObjectType().AttrTypes)})
 			s.Selector = []DaemonSetLabelSelectorModel{}
 			s.Template[0].Metadata = []common.NamespacedMetadataModel{}
 		}),
@@ -54,10 +54,10 @@ func TestSetDaemonSetStateMatchesReflection(t *testing.T) {
 func TestSetStatefulSetStateMatchesReflection(t *testing.T) {
 	stsType := statefulSetSpecListType().ElemType.(types.ObjectType)
 	stsPodSpec := listAttrType(stsType, "template", "spec")
-	retention := stsType.AttrTypes["persistent_volume_claim_retention_policy"].(types.ListType).ElemType
+	retention := stsType.AttrTypes["persistent_volume_claim_retention_policy"].(types.ObjectType)
 	sts := func(edit func(*StatefulSetSpecModel)) []StatefulSetSpecModel {
 		spec := StatefulSetSpecModel{
-			PersistentVolumeClaimRetentionPolicy: types.ListNull(retention),
+			PersistentVolumeClaimRetentionPolicy: types.ObjectNull(retention.AttrTypes),
 			Template:                             []workloadTemplateModel{{Spec: types.ListNull(stsPodSpec.ElemType)}},
 		}
 		edit(&spec)
@@ -66,15 +66,15 @@ func TestSetStatefulSetStateMatchesReflection(t *testing.T) {
 	assertStateMatchesReflection(t, statefulSetFrozenSchema, setStatefulSetState, func(spec []StatefulSetSpecModel, t timeouts.Value) StatefulSetV1Model {
 		return StatefulSetV1Model{ID: types.StringValue("ns/name"), Spec: spec, Timeouts: t}
 	}, map[string][]StatefulSetSpecModel{
-		"nil spec":   nil,
-		"null lists": sts(func(*StatefulSetSpecModel) {}),
-		"unknown lists": sts(func(s *StatefulSetSpecModel) {
-			s.PersistentVolumeClaimRetentionPolicy = types.ListUnknown(retention)
+		"nil spec":               nil,
+		"null objects and lists": sts(func(*StatefulSetSpecModel) {}),
+		"unknown objects and lists": sts(func(s *StatefulSetSpecModel) {
+			s.PersistentVolumeClaimRetentionPolicy = types.ObjectUnknown(retention.AttrTypes)
 			s.Template[0].Spec = types.ListUnknown(stsPodSpec.ElemType)
 			s.Replicas = types.StringUnknown()
 		}),
-		"empty lists and slices": sts(func(s *StatefulSetSpecModel) {
-			s.PersistentVolumeClaimRetentionPolicy = types.ListValueMust(retention, nil)
+		"empty objects and slices": sts(func(s *StatefulSetSpecModel) {
+			s.PersistentVolumeClaimRetentionPolicy = types.ObjectValueMust(retention.AttrTypes, map[string]attr.Value{"when_deleted": types.StringNull(), "when_scaled": types.StringNull()})
 			s.UpdateStrategy = []StatefulSetUpdateStrategyModel{}
 			s.VolumeClaimTemplate = []PersistentVolumeClaimModel{}
 			s.Template = []workloadTemplateModel{}

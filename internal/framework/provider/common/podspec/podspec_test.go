@@ -378,3 +378,130 @@ func TestAbsentZeroBlockWriteBack(t *testing.T) {
 		}
 	}
 }
+
+// Adding a pod-spec element replaces a workload only when it holds a value that
+// forces replacement for that owner. As in SDKv2, an unknown value, such as a
+// dynamic block over a value known only after apply, replaces only when the
+// unknown node is itself ForceNew.
+func TestAddedElementReplacement(t *testing.T) {
+	ctx := context.Background()
+	object := func(typ attr.Type, set map[string]attr.Value) types.Object {
+		t := typ.(types.ObjectType)
+		values := map[string]attr.Value{}
+		for name, typ := range t.AttrTypes {
+			if v, ok := set[name]; ok {
+				values[name] = v
+				continue
+			}
+			values[name], _ = typ.ValueFromTerraform(ctx, tftypes.NewValue(typ.TerraformType(ctx), nil))
+		}
+		return types.ObjectValueMust(t.AttrTypes, values)
+	}
+	elem := func(parent attr.Type, name string) attr.Type {
+		return parent.(types.ObjectType).AttrTypes[name].(types.ListType).ElemType
+	}
+	one := func(typ attr.Type, set map[string]attr.Value) types.List {
+		return types.ListValueMust(typ, []attr.Value{object(typ, set)})
+	}
+	volume := func(b builder) schema.NestedBlockObject { return b.podVolumeObject() }
+	affinity := func(b builder) schema.NestedBlockObject { return b.podAffinityObject() }
+	// nodeTerms builds node_affinity.required_during_scheduling_ignored_during_execution.
+	nodeTerms := func(a attr.Type, terms func(term attr.Type) types.List) map[string]attr.Value {
+		node := elem(a, "node_affinity")
+		required := elem(node, "required_during_scheduling_ignored_during_execution")
+		return map[string]attr.Value{"node_affinity": one(node, map[string]attr.Value{
+			"required_during_scheduling_ignored_during_execution": one(required, map[string]attr.Value{
+				"node_selector_term": terms(elem(required, "node_selector_term")),
+			}),
+		})}
+	}
+	for name, tc := range map[string]struct {
+		options Options
+		object  func(builder) schema.NestedBlockObject
+		element func(typ attr.Type) map[string]attr.Value
+		replace bool
+	}{
+		"config_map with unknown items": {DaemonSet(), volume, func(v attr.Type) map[string]attr.Value {
+			cm := elem(v, "config_map")
+			return map[string]attr.Value{"name": types.StringValue("v"), "config_map": one(cm, map[string]attr.Value{
+				"name": types.StringValue("cm"), "items": types.ListUnknown(elem(cm, "items")),
+			})}
+		}, false},
+		"unknown azure_file": {DaemonSet(), volume, func(v attr.Type) map[string]attr.Value {
+			return map[string]attr.Value{"name": types.StringValue("v"), "azure_file": types.ListUnknown(elem(v, "azure_file"))}
+		}, false},
+		"unknown secret_namespace": {DaemonSet(), volume, func(v attr.Type) map[string]attr.Value {
+			return map[string]attr.Value{"name": types.StringValue("v"), "azure_file": one(elem(v, "azure_file"), map[string]attr.Value{
+				"secret_name": types.StringValue("s"), "share_name": types.StringValue("s"), "secret_namespace": types.StringUnknown(),
+			})}
+		}, true},
+		"unknown empty_dir on a template": {DaemonSet(), volume, func(v attr.Type) map[string]attr.Value {
+			return map[string]attr.Value{"name": types.StringValue("v"), "empty_dir": types.ListUnknown(elem(v, "empty_dir"))}
+		}, false},
+		"unknown node_selector_term": {Deployment(), affinity, func(a attr.Type) map[string]attr.Value {
+			return nodeTerms(a, types.ListUnknown)
+		}, false},
+		"unknown match_fields": {Deployment(), affinity, func(a attr.Type) map[string]attr.Value {
+			return nodeTerms(a, func(term attr.Type) types.List {
+				return one(term, map[string]attr.Value{"match_fields": types.ListUnknown(elem(term, "match_fields"))})
+			})
+		}, true},
+		"known match_expressions": {Deployment(), affinity, func(a attr.Type) map[string]attr.Value {
+			return nodeTerms(a, func(term attr.Type) types.List {
+				expression := elem(term, "match_expressions")
+				return one(term, map[string]attr.Value{"match_expressions": one(expression, map[string]attr.Value{
+					"key": types.StringValue("k"), "operator": types.StringValue("Exists"),
+				})})
+			})
+		}, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			parent := tc.object(builder{o: tc.options})
+			typ := parent.Type()
+			req := planmodifier.ListRequest{
+				StateValue: types.ListValueMust(typ, nil),
+				PlanValue:  types.ListValueMust(typ, []attr.Value{object(typ, tc.element(typ))}),
+			}
+			req.State.Raw = tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+			req.Plan.Raw = req.State.Raw
+			var resp planmodifier.ListResponse
+			podListInheritedRequiresReplace{object: parent}.PlanModifyList(ctx, req, &resp)
+			if resp.RequiresReplace != tc.replace {
+				t.Errorf("replace = %t, want %t", resp.RequiresReplace, tc.replace)
+			}
+		})
+	}
+}
+
+// As in SDKv2, a replacing collection that is unknown until apply replaces.
+func TestCollectionSizeReplacement(t *testing.T) {
+	element := types.ObjectType{AttrTypes: map[string]attr.Type{"key": types.StringType}}
+	list := func(n int) types.List {
+		elements := make([]attr.Value, n)
+		for i := range elements {
+			elements[i] = types.ObjectValueMust(element.AttrTypes, map[string]attr.Value{"key": types.StringValue("k")})
+		}
+		return types.ListValueMust(element, elements)
+	}
+	for name, tc := range map[string]struct {
+		state, plan types.List
+		replace     bool
+	}{
+		"same size":     {list(1), list(1), false},
+		"added":         {list(0), list(1), true},
+		"removed":       {list(1), types.ListNull(element), true},
+		"unknown":       {list(1), types.ListUnknown(element), true},
+		"unknown prior": {types.ListUnknown(element), list(1), false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			req := planmodifier.ListRequest{StateValue: tc.state, PlanValue: tc.plan}
+			req.State.Raw = tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+			req.Plan.Raw = req.State.Raw
+			var resp planmodifier.ListResponse
+			podListStructureRequiresReplace{}.PlanModifyList(context.Background(), req, &resp)
+			if resp.RequiresReplace != tc.replace {
+				t.Errorf("replace = %t, want %t", resp.RequiresReplace, tc.replace)
+			}
+		})
+	}
+}

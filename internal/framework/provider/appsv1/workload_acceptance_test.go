@@ -44,16 +44,16 @@ func TestAccKubernetesWorkloadsV1_upgradeWithoutRefresh(t *testing.T) {
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
 				},
-				Config: testAccWorkloadsV1Config(name, ""),
+				Config: testAccWorkloadsV1Config(name, "", ""),
 			},
 			{
 				ProtoV6ProviderFactories: testAccProviderFactories,
-				Config:                   testAccWorkloadsV1Config(name, ""),
+				Config:                   testAccWorkloadsV1Config(name, "", ""),
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 			},
 			{
 				ProtoV6ProviderFactories: testAccProviderFactories,
-				Config:                   testAccWorkloadsV1Config(name, "\n          working_dir = \"/tmp\""),
+				Config:                   testAccWorkloadsV1Config(name, "\n          working_dir = \"/tmp\"", ""),
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: expectWorkloadActions(plancheck.ResourceActionUpdate)},
 			},
 		},
@@ -65,7 +65,7 @@ func TestAccKubernetesWorkloadsV1_upgradeWithoutRefresh(t *testing.T) {
 func TestAccKubernetesWorkloadsV1_templateRestartAnnotation(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	const annotation = "kubectl.kubernetes.io/restartedAt"
-	ignored := strings.ReplaceAll(testAccWorkloadsV1Config(name, ""), "  wait_for_rollout = false\n",
+	ignored := strings.ReplaceAll(testAccWorkloadsV1Config(name, "", ""), "  wait_for_rollout = false\n",
 		fmt.Sprintf("  wait_for_rollout = false\n  lifecycle {\n    ignore_changes = [spec[0].template[0].metadata[0].annotations[%q]]\n  }\n", annotation))
 	restart := func() {
 		if err := testAccRestartWorkloads(name, annotation); err != nil {
@@ -81,10 +81,10 @@ func TestAccKubernetesWorkloadsV1_templateRestartAnnotation(t *testing.T) {
 			testAccCheckKubernetesStatefulSetV1Destroy,
 		),
 		Steps: []resource.TestStep{
-			{Config: testAccWorkloadsV1Config(name, "")},
+			{Config: testAccWorkloadsV1Config(name, "", "")},
 			{
 				PreConfig:        restart,
-				Config:           testAccWorkloadsV1Config(name, ""),
+				Config:           testAccWorkloadsV1Config(name, "", ""),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: expectWorkloadActions(plancheck.ResourceActionUpdate)},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckNoResourceAttr(workloadAddresses[0], "spec.0.template.0.metadata.0.annotations."+annotation),
@@ -170,7 +170,7 @@ func testAccWorkloadsV1ContainerPortsConfig(name string, ports []string) string 
             protocol       = %q
           }`, number, protocol)
 	}
-	return testAccWorkloadsV1Config(name, portBlocks.String())
+	return testAccWorkloadsV1Config(name, portBlocks.String(), "")
 }
 
 // An http_get path left unset is defaulted to "/" by the API and must not
@@ -202,7 +202,7 @@ func TestAccKubernetesWorkloadsV1_httpGetDefaultPath(t *testing.T) {
           lifecycle {
             pre_stop {%s
             }
-          }`, handler, handler)),
+          }`, handler, handler), ""),
 			Check: resource.ComposeAggregateTestCheckFunc(checks...),
 		})
 	}
@@ -218,7 +218,70 @@ func TestAccKubernetesWorkloadsV1_httpGetDefaultPath(t *testing.T) {
 	})
 }
 
-func testAccWorkloadsV1Config(name, container string) string {
+// Adding a volume and an affinity whose nested blocks come from dynamic blocks
+// over a value known only after apply updates each workload in place, as in
+// SDKv2: neither unknown block is itself replace-on-change.
+func TestAccKubernetesWorkloadsV1_addBlocksWithUnknownContent(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	var updates []plancheck.PlanCheck
+	var checks []resource.TestCheckFunc
+	for _, resourceName := range []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"} {
+		updates = append(updates, plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate))
+		checks = append(checks,
+			resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.config_map.0.items.0.key", "k1"),
+			resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.affinity.0.node_affinity.0.required_during_scheduling_ignored_during_execution.0.node_selector_term.0.match_expressions.0.key", "example.com/k1"),
+		)
+	}
+	volume := `
+        volume {
+          name = "config"
+          config_map {
+            name     = "absent"
+            optional = true
+            dynamic "items" {
+              for_each = terraform_data.keys.output
+              content {
+                key  = items.value
+                path = items.value
+              }
+            }
+          }
+        }
+        affinity {
+          node_affinity {
+            required_during_scheduling_ignored_during_execution {
+              dynamic "node_selector_term" {
+                for_each = terraform_data.keys.output
+                content {
+                  match_expressions {
+                    key      = "example.com/${node_selector_term.value}"
+                    operator = "DoesNotExist"
+                  }
+                }
+              }
+            }
+          }
+        }`
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesDeploymentV1Destroy,
+			testAccCheckKubernetesDaemonSetV1Destroy,
+			testAccCheckKubernetesStatefulSetV1Destroy,
+		),
+		Steps: []resource.TestStep{
+			{Config: testAccWorkloadsV1Config(name, "", "")},
+			{
+				Config:           "resource \"terraform_data\" \"keys\" {\n  input = [\"k1\"]\n}\n" + testAccWorkloadsV1Config(name, "", volume),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: updates},
+				Check:            resource.ComposeAggregateTestCheckFunc(checks...),
+			},
+		},
+	})
+}
+
+func testAccWorkloadsV1Config(name, container, podSpec string) string {
 	var config strings.Builder
 	for _, workload := range []struct{ resourceType, app, extraSpec string }{
 		{"kubernetes_deployment_v1", name + "-deploy", "replicas = 1"},
@@ -248,13 +311,13 @@ func testAccWorkloadsV1Config(name, container string) string {
           name    = "main"
           image   = %q
           command = ["sleep", "300"]%s
-        }
+        }%s
       }
     }
   }
   wait_for_rollout = false
 }
-`, workload.resourceType, name, workload.extraSpec, workload.app, workload.app, busyboxImage, container)
+`, workload.resourceType, name, workload.extraSpec, workload.app, workload.app, busyboxImage, container, podSpec)
 	}
 	return config.String()
 }

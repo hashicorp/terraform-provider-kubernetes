@@ -29,10 +29,7 @@ func (v podListStructureRequiresReplace) MarkdownDescription(ctx context.Context
 	return v.Description(ctx)
 }
 func (m podListStructureRequiresReplace) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
-	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.PlanValue.IsUnknown() {
-		return
-	}
-	if req.StateValue.IsUnknown() {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
 		return
 	}
 	if m.absentZero && len(req.StateValue.Elements()) == 0 && len(req.PlanValue.Elements()) == 1 && podZeroElement(req.ConfigValue) {
@@ -48,7 +45,8 @@ func (m podListStructureRequiresReplace) PlanModifyList(ctx context.Context, req
 		resp.PlanValue = types.ListValueMust(element.Type(ctx), []attr.Value{types.ObjectValueMust(element.AttributeTypes(ctx), attributes)})
 		return
 	}
-	resp.RequiresReplace = len(req.StateValue.Elements()) != len(req.PlanValue.Elements())
+	// As in SDKv2, a collection known only after apply may change its size.
+	resp.RequiresReplace = req.PlanValue.IsUnknown() || len(req.StateValue.Elements()) != len(req.PlanValue.Elements())
 }
 
 func podZeroElement(config types.List) bool {
@@ -288,28 +286,35 @@ func podModifiersRequireReplacement[T any](modifiers []T) bool {
 	return false
 }
 
+// podAttributeRequiresReplacement reports whether an attribute is itself
+// ForceNew, regardless of its descendants.
+func podAttributeRequiresReplacement(attribute schema.Attribute) bool {
+	switch a := attribute.(type) {
+	case schema.StringAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.BoolAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.Int64Attribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.ListAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.MapAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.SetAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.ListNestedAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	}
+	return false
+}
+
 func podObjectRequiresStructuralReplacement(object schema.NestedBlockObject) bool {
 	for _, attribute := range object.Attributes {
-		var replace bool
-		switch a := attribute.(type) {
-		case schema.StringAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.BoolAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.Int64Attribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.ListAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.MapAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.SetAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.ListNestedAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers) ||
-				podObjectRequiresStructuralReplacement(schema.NestedBlockObject{Attributes: a.NestedObject.Attributes})
+		if podAttributeRequiresReplacement(attribute) {
+			return true
 		}
-
-		if replace {
+		if a, ok := attribute.(schema.ListNestedAttribute); ok &&
+			podObjectRequiresStructuralReplacement(schema.NestedBlockObject{Attributes: a.NestedObject.Attributes}) {
 			return true
 		}
 	}
@@ -354,19 +359,29 @@ func (m podListInheritedRequiresReplace) PlanModifyList(_ context.Context, req p
 	}
 }
 
+// As in SDKv2, an unknown value replaces only when it is itself ForceNew for
+// this owner; a dynamic block over an unknown collection is updated in place
+// even when its elements could hold values that force replacement.
 func podObjectHasImmutableValue(object schema.NestedBlockObject, value attr.Value) bool {
-	if value.IsNull() {
+	if value.IsNull() || value.IsUnknown() {
 		return false
-	}
-	if value.IsUnknown() {
-		return true
 	}
 	values := value.(types.Object).Attributes()
 	for name, attribute := range object.Attributes {
-		if podObjectRequiresStructuralReplacement(schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{name: attribute},
-		}) && podNonzeroValue(values[name]) {
+		if !podNonzeroValue(values[name]) {
+			continue
+		}
+		if podAttributeRequiresReplacement(attribute) {
 			return true
+		}
+		nested, ok := attribute.(schema.ListNestedAttribute)
+		if !ok || values[name].IsUnknown() {
+			continue
+		}
+		for _, element := range values[name].(types.List).Elements() {
+			if podObjectHasImmutableValue(schema.NestedBlockObject{Attributes: nested.NestedObject.Attributes}, element) {
+				return true
+			}
 		}
 	}
 	for name, block := range object.Blocks {
@@ -374,8 +389,11 @@ func podObjectHasImmutableValue(object schema.NestedBlockObject, value attr.Valu
 		if !ok || !podNonzeroValue(values[name]) {
 			continue
 		}
-		if podModifiersRequireReplacement(b.PlanModifiers) || values[name].IsUnknown() {
+		if podModifiersRequireReplacement(b.PlanModifiers) {
 			return true
+		}
+		if values[name].IsUnknown() {
+			continue
 		}
 		for _, nested := range values[name].(types.List).Elements() {
 			if podObjectHasImmutableValue(b.NestedObject, nested) {

@@ -13,10 +13,17 @@ func ExpandPodSpecForFramework(spec []interface{}) (*corev1.PodSpec, error) {
 	return expandPodSpec(spec)
 }
 
-// FlattenPodSpecForFramework exposes the pure SDKv2 PodSpec flattener. A bare
-// Pod (isTemplate false) drops the built-in tolerations Kubernetes adds; both
-// drop the injected service-account token volume.
-func FlattenPodSpecForFramework(spec corev1.PodSpec, isTemplate bool) ([]interface{}, error) {
+// FlattenPodSpecForFramework exposes the pure SDKv2 PodSpec flattener. It
+// keeps every toleration, as for a pod template, and drops the injected
+// service-account token volume.
+func FlattenPodSpecForFramework(spec corev1.PodSpec) ([]interface{}, error) {
 	// The flattener removes the token volume from its slice in place.
-	return flattenPodSpec(*spec.DeepCopy(), isTemplate)
+	return flattenPodSpec(*spec.DeepCopy(), true)
+}
+
+// IsBuiltInToleration reports whether key is a taint whose toleration
+// Kubernetes can add to a Pod on its own.
+func IsBuiltInToleration(key string) bool {
+	_, ok := builtInTolerations[key]
+	return ok
 }

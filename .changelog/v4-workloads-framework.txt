@@ -43,6 +43,10 @@
 ```
 
 ```release-note:bug
+`resource/kubernetes_pod_v1`: Keep a configured toleration of a built-in taint, such as `node.kubernetes.io/not-ready` with `toleration_seconds`, instead of replacing the Pod on every plan.
+```
+
+```release-note:bug
 `resource/kubernetes_pod_v1`: Keep several projections in one `projected` volume `sources` block without reporting a change on every plan.
 ```
 

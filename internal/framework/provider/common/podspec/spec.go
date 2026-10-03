@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -115,10 +116,14 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, config *tfsdk.
 }
 
 // FlattenSpec converts an API PodSpec into the "spec" list after a write. The
-// plan, as baseline, decides null versus empty values and kept spellings.
+// plan, as baseline, decides null versus empty values, kept spellings and the
+// built-in tolerations a bare Pod records.
 func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
-	raw, err := kubernetes.FlattenPodSpecForFramework(spec, b.template)
+	if !b.template {
+		spec.Tolerations = podKeptTolerations(spec.Tolerations, baseline)
+	}
+	raw, err := kubernetes.FlattenPodSpecForFramework(spec)
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Flatten Pod Template Specification", err.Error())
 		return types.ListNull(b.objectType), diagnostics
@@ -137,6 +142,67 @@ func (b *Built) RefreshSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 	r := *b
 	r.refresh = true
 	return r.FlattenSpec(ctx, spec, baseline, at)
+}
+
+// podKeptTolerations drops the tolerations of built-in taints, which
+// Kubernetes adds to a bare Pod on its own, unless the baseline holds an equal
+// one. Without a baseline, as on import, it drops them all.
+func podKeptTolerations(tolerations []corev1.Toleration, baseline types.List) []corev1.Toleration {
+	configured := podSpecBlock(baseline, "toleration")
+	kept := make([]corev1.Toleration, 0, len(tolerations))
+	for _, toleration := range tolerations {
+		if kubernetes.IsBuiltInToleration(toleration.Key) {
+			i := slices.IndexFunc(configured, func(element attr.Value) bool { return podTolerationMatches(element, toleration) })
+			if i < 0 {
+				continue
+			}
+			configured = slices.Delete(configured, i, i+1)
+		}
+		kept = append(kept, toleration)
+	}
+	return kept
+}
+
+// podTolerationMatches reports whether a "toleration" element equals
+// toleration as the expander converts it. An unknown attribute matches any
+// value, so a planned element still finds its live toleration.
+func podTolerationMatches(element attr.Value, toleration corev1.Toleration) bool {
+	object, ok := element.(types.Object)
+	if !ok || object.IsNull() || object.IsUnknown() {
+		return false
+	}
+	live := map[string]string{
+		"key":      toleration.Key,
+		"operator": string(toleration.Operator),
+		"value":    toleration.Value,
+		"effect":   string(toleration.Effect),
+	}
+	for name, value := range object.Attributes() {
+		s, ok := value.(types.String)
+		if !ok {
+			return false
+		}
+		if s.IsUnknown() {
+			continue
+		}
+		if name != "toleration_seconds" {
+			if s.ValueString() != live[name] {
+				return false
+			}
+			continue
+		}
+		if s.ValueString() == "" {
+			if toleration.TolerationSeconds != nil {
+				return false
+			}
+			continue
+		}
+		n, err := strconv.ParseInt(s.ValueString(), 10, 64)
+		if err != nil || toleration.TolerationSeconds == nil || *toleration.TolerationSeconds != n {
+			return false
+		}
+	}
+	return true
 }
 
 // A pod security_context holding only zero values is sent as unset, as SDKv2
@@ -539,7 +605,7 @@ func podRoundTrip(b *Built, element interface{}) (interface{}, bool) {
 	if data, err := json.Marshal(spec); err != nil || json.Unmarshal(data, &echo) != nil {
 		return nil, false
 	}
-	flat, err := kubernetes.FlattenPodSpecForFramework(echo, b.template)
+	flat, err := kubernetes.FlattenPodSpecForFramework(echo)
 	return flat, err == nil
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
@@ -47,7 +48,7 @@ type deploymentSpecModel struct {
 	Replicas                types.String              `tfsdk:"replicas"`
 	RevisionHistoryLimit    types.Int64               `tfsdk:"revision_history_limit"`
 	Selector                []deploymentSelectorModel `tfsdk:"selector"`
-	Strategy                types.List                `tfsdk:"strategy"`
+	Strategy                types.Object              `tfsdk:"strategy"`
 	Template                []workloadTemplateModel   `tfsdk:"template"`
 }
 
@@ -57,7 +58,7 @@ type deploymentSelectorRequirementModel = LabelSelectorRequirementModel
 
 type deploymentStrategyModel struct {
 	Type          types.String `tfsdk:"type"`
-	RollingUpdate types.List   `tfsdk:"rolling_update"`
+	RollingUpdate types.Object `tfsdk:"rolling_update"`
 }
 
 type deploymentRollingUpdateModel struct {
@@ -456,7 +457,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	var priorTemplateSpec types.List
 	var priorTemplateMetadata []common.NamespacedMetadataModel
 	var priorSelector []LabelSelectorModel
-	priorStrategy := types.ListNull(deploymentStrategyObjectType())
+	priorStrategy := types.ObjectNull(deploymentStrategyObjectType().AttrTypes)
 	if !baseline.IsNull() && !baseline.IsUnknown() {
 		priorSpecs, d := deploymentSpecModels(ctx, baseline)
 		diags.Append(d...)
@@ -557,7 +558,7 @@ func deploymentSpecModels(ctx context.Context, value types.List) ([]deploymentSp
 			ProgressDeadlineSeconds: attributeAs[types.Int64](attrs, "progress_deadline_seconds", diags),
 			Replicas:                attributeAs[types.String](attrs, "replicas", diags),
 			RevisionHistoryLimit:    attributeAs[types.Int64](attrs, "revision_history_limit", diags),
-			Strategy:                attributeAs[types.List](attrs, "strategy", diags),
+			Strategy:                attributeAs[types.Object](attrs, "strategy", diags),
 		}
 		attributeElementsAs(ctx, attrs, "selector", &model.Selector, diags)
 		template, d := workloadTemplateModels(ctx, attributeAs[types.List](attrs, "template", diags))
@@ -590,47 +591,41 @@ func expandSelector(ctx context.Context, in deploymentSelectorModel, at path.Pat
 	return out, diags
 }
 
-func expandDeploymentStrategy(ctx context.Context, value types.List, at path.Path) (appsv1.DeploymentStrategy, diag.Diagnostics) {
+func expandDeploymentStrategy(ctx context.Context, value types.Object, at path.Path) (appsv1.DeploymentStrategy, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	result := appsv1.DeploymentStrategy{
-		Type: appsv1.RollingUpdateDeploymentStrategyType,
-	}
-	if value.IsNull() || value.IsUnknown() || len(value.Elements()) == 0 {
+	result := appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}
+	if value.IsNull() || value.IsUnknown() {
 		return result, diags
 	}
-	var in []deploymentStrategyModel
-	diags.Append(value.ElementsAs(ctx, &in, false)...)
-	if diags.HasError() || len(in) == 0 {
+	var in deploymentStrategyModel
+	diags.Append(value.As(ctx, &in, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return result, diags
 	}
-	if !in[0].Type.IsNull() && !in[0].Type.IsUnknown() && in[0].Type.ValueString() != "" {
-		result.Type = appsv1.DeploymentStrategyType(in[0].Type.ValueString())
+	if !in.Type.IsNull() && !in.Type.IsUnknown() && in.Type.ValueString() != "" {
+		result.Type = appsv1.DeploymentStrategyType(in.Type.ValueString())
 	}
-	if !in[0].RollingUpdate.IsNull() && !in[0].RollingUpdate.IsUnknown() && len(in[0].RollingUpdate.Elements()) > 0 {
-		var updates []deploymentRollingUpdateModel
-		diags.Append(in[0].RollingUpdate.ElementsAs(ctx, &updates, false)...)
-		if len(updates) > 0 {
-			update := &appsv1.RollingUpdateDeployment{}
-			if !updates[0].MaxSurge.IsNull() && !updates[0].MaxSurge.IsUnknown() {
-				value := intstr.Parse(updates[0].MaxSurge.ValueString())
-				update.MaxSurge = &value
+	if !in.RollingUpdate.IsNull() && !in.RollingUpdate.IsUnknown() {
+		var update deploymentRollingUpdateModel
+		diags.Append(in.RollingUpdate.As(ctx, &update, basetypes.ObjectAsOptions{})...)
+		if !diags.HasError() {
+			rolling := &appsv1.RollingUpdateDeployment{}
+			if !update.MaxSurge.IsNull() && !update.MaxSurge.IsUnknown() {
+				v := intstr.Parse(update.MaxSurge.ValueString())
+				rolling.MaxSurge = &v
 			}
-			if !updates[0].MaxUnavailable.IsNull() && !updates[0].MaxUnavailable.IsUnknown() {
-				value := intstr.Parse(updates[0].MaxUnavailable.ValueString())
-				update.MaxUnavailable = &value
+			if !update.MaxUnavailable.IsNull() && !update.MaxUnavailable.IsUnknown() {
+				v := intstr.Parse(update.MaxUnavailable.ValueString())
+				rolling.MaxUnavailable = &v
 			}
-			result.RollingUpdate = update
+			result.RollingUpdate = rolling
 		}
 	}
 	if result.Type == appsv1.RecreateDeploymentStrategyType {
 		result.RollingUpdate = nil
 	} else if result.RollingUpdate == nil {
-		defaults := &appsv1.RollingUpdateDeployment{}
-		maxSurge := intstr.Parse("25%")
-		maxUnavailable := intstr.Parse("25%")
-		defaults.MaxSurge = &maxSurge
-		defaults.MaxUnavailable = &maxUnavailable
-		result.RollingUpdate = defaults
+		maxSurge, maxUnavailable := intstr.Parse("25%"), intstr.Parse("25%")
+		result.RollingUpdate = &appsv1.RollingUpdateDeployment{MaxSurge: &maxSurge, MaxUnavailable: &maxUnavailable}
 	}
 	if diags.HasError() {
 		diags.AddAttributeError(at, "Invalid strategy", "Unable to decode strategy values.")
@@ -638,39 +633,32 @@ func expandDeploymentStrategy(ctx context.Context, value types.List, at path.Pat
 	return result, diags
 }
 
-func flattenDeploymentStrategy(ctx context.Context, strategy appsv1.DeploymentStrategy, prior types.List) (types.List, diag.Diagnostics) {
+func flattenDeploymentStrategy(ctx context.Context, strategy appsv1.DeploymentStrategy, prior types.Object) (types.Object, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if strategy.Type == "" {
 		strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
 	}
-	var rolling types.List
-	rollingType := strategyObjectRollingUpdateListType()
-	if strategy.RollingUpdate == nil {
-		rolling = types.ListNull(rollingType.ElemType)
-	} else {
-		maxSurge := ""
-		maxUnavailable := ""
+	rollingType := deploymentStrategyObjectType().AttrTypes["rolling_update"].(types.ObjectType)
+	rolling := types.ObjectNull(rollingType.AttrTypes)
+	if strategy.RollingUpdate != nil {
+		maxSurge, maxUnavailable := "", ""
 		if strategy.RollingUpdate.MaxSurge != nil {
 			maxSurge = strategy.RollingUpdate.MaxSurge.String()
 		}
 		if strategy.RollingUpdate.MaxUnavailable != nil {
 			maxUnavailable = strategy.RollingUpdate.MaxUnavailable.String()
 		}
-		object, d := types.ObjectValue(strategyObjectRollingUpdateElementType().AttrTypes, map[string]attr.Value{
+		value, d := types.ObjectValue(rollingType.AttrTypes, map[string]attr.Value{
 			"max_surge":       rollingUpdateSpelling(prior, "max_surge", maxSurge),
 			"max_unavailable": rollingUpdateSpelling(prior, "max_unavailable", maxUnavailable),
 		})
 		diags.Append(d...)
-		rolling, d = types.ListValue(rollingType.ElemType, []attr.Value{object})
-		diags.Append(d...)
+		rolling = value
 	}
-
-	strategyObject, d := types.ObjectValue(deploymentStrategyObjectType().AttrTypes, map[string]attr.Value{
+	value, d := types.ObjectValue(deploymentStrategyObjectType().AttrTypes, map[string]attr.Value{
 		"type":           types.StringValue(string(strategy.Type)),
 		"rolling_update": rolling,
 	})
-	diags.Append(d...)
-	value, d := types.ListValue(deploymentStrategyObjectType(), []attr.Value{strategyObject})
 	diags.Append(d...)
 	return value, diags
 }
@@ -680,28 +668,6 @@ func templateSpecNull() types.List {
 }
 
 var deploymentSpecListType = workloadSpecListType(deploymentFrozenSchema)
-
-func strategyObjectRollingUpdateListType() types.ListType {
-	return deploymentStrategyObjectType().AttrTypes["rolling_update"].(types.ListType)
-}
-
-func strategyObjectRollingUpdateElementType() types.ObjectType {
-	return strategyObjectRollingUpdateListType().ElemType.(types.ObjectType)
-}
-
-func strategyTypeFromList(ctx context.Context, value types.List) string {
-	if value.IsNull() || value.IsUnknown() || len(value.Elements()) == 0 {
-		return "RollingUpdate"
-	}
-	var strategy []deploymentStrategyModel
-	if diags := value.ElementsAs(ctx, &strategy, false); diags.HasError() || len(strategy) == 0 {
-		return "RollingUpdate"
-	}
-	if strategy[0].Type.IsNull() || strategy[0].Type.IsUnknown() || strategy[0].Type.ValueString() == "" {
-		return "RollingUpdate"
-	}
-	return strategy[0].Type.ValueString()
-}
 
 func deploymentMetadataPatchOps(state, plan DeploymentV1Model, live metav1.ObjectMeta) kubernetes.PatchOperations {
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {

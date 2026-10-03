@@ -344,7 +344,7 @@ func (c noReplacement) CheckPlan(_ context.Context, req plancheck.CheckPlanReque
 	}
 }
 
-// The SDKv2 provider spells container resources as a block, v4 as a list.
+// The SDKv2 provider spells container resources as a block, v4 as an object.
 func sdkResources(cpu, memory string) string {
 	return fmt.Sprintf(`resources {
               limits = { cpu = %q, memory = %q }
@@ -352,7 +352,7 @@ func sdkResources(cpu, memory string) string {
 }
 
 func frameworkResources(cpu, memory string) string {
-	return fmt.Sprintf(`resources = [{ limits = { cpu = %q, memory = %q } }]`, cpu, memory)
+	return fmt.Sprintf(`resources = { limits = { cpu = %q, memory = %q } }`, cpu, memory)
 }
 
 const testAccBatchExplicitEmptyPodSpec = `

@@ -324,26 +324,26 @@ func TestTemplateMap(t *testing.T) {
 
 // Kubernetes drops empty selector values; a configured empty set is kept.
 func TestSelectorEmptyValues(t *testing.T) {
-	typ := jobSpecObjectType(true).AttrTypes["selector"].(types.ListType)
-	expressionType := typ.ElemType.(types.ObjectType).AttrTypes["match_expressions"].(types.ListType).ElemType.(types.ObjectType)
-	selector := func(values types.Set) types.List {
+	typ := jobSpecObjectType(true).AttrTypes["selector"].(types.ObjectType)
+	expressionType := typ.AttrTypes["match_expressions"].(types.ListType).ElemType.(types.ObjectType)
+	selector := func(values types.Set) types.Object {
 		expression := types.ObjectValueMust(expressionType.AttrTypes, map[string]attr.Value{
 			"key": types.StringValue("app"), "operator": types.StringValue("Exists"), "values": values,
 		})
-		return types.ListValueMust(typ.ElemType, []attr.Value{types.ObjectValueMust(typ.ElemType.(types.ObjectType).AttrTypes, map[string]attr.Value{
+		return types.ObjectValueMust(typ.AttrTypes, map[string]attr.Value{
 			"match_labels":      types.MapNull(types.StringType),
 			"match_expressions": types.ListValueMust(expressionType, []attr.Value{expression}),
-		})})
+		})
 	}
 	empty, null := types.SetValueMust(types.StringType, []attr.Value{}), types.SetNull(types.StringType)
 	live := &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "app", Operator: metav1.LabelSelectorOpExists}}}
 	for name, tc := range map[string]struct {
 		prior attr.Value
-		want  types.List
+		want  types.Object
 	}{
 		"configured empty": {selector(empty), selector(empty)},
 		"unset":            {selector(null), selector(null)},
-		"no prior":         {types.ListNull(typ.ElemType), selector(null)},
+		"no prior":         {types.ObjectNull(typ.AttrTypes), selector(null)},
 	} {
 		if got := flattenLabelSelector(live, tc.prior, typ, nil); !got.Equal(tc.want) {
 			t.Errorf("%s: got %s, want %s", name, got, tc.want)

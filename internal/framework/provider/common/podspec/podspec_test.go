@@ -102,6 +102,9 @@ func frameworkReplacement(path string, attributes map[string]schema.Attribute, b
 		case schema.ListNestedAttribute:
 			out[p] = hasReplacement(a.PlanModifiers)
 			frameworkReplacement(p, a.NestedObject.Attributes, nil, out)
+		case schema.SingleNestedAttribute:
+			out[p] = hasReplacement(a.PlanModifiers)
+			frameworkReplacement(p, a.Attributes, nil, out)
 		default:
 			out[p] = podObjectRequiresStructuralReplacement(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{name: attribute}})
 		}
@@ -117,10 +120,10 @@ func frameworkReplacement(path string, attributes map[string]schema.Attribute, b
 	}
 }
 
-func hasReplacement(modifiers []planmodifier.List) bool {
-	return slices.ContainsFunc(modifiers, func(m planmodifier.List) bool {
-		_, inherited := m.(podListInheritedRequiresReplace)
-		return !inherited && podModifiersRequireReplacement([]planmodifier.List{m})
+func hasReplacement[T any](modifiers []T) bool {
+	return slices.ContainsFunc(modifiers, func(m T) bool {
+		_, inherited := any(m).(podListInheritedRequiresReplace)
+		return !inherited && podModifiersRequireReplacement([]T{m})
 	})
 }
 
@@ -159,39 +162,61 @@ func TestReplacementIgnoresZeroValues(t *testing.T) {
 	}
 }
 
-// SDKv2 state holds container resources with only zero values as [], the same
-// object Kubernetes holds for a configured [{}].
-func TestAbsentZeroListStructure(t *testing.T) {
+// An omitted legacy resources value and an explicitly empty object describe
+// the same Kubernetes zero value. Real quantity edits remain child decisions.
+func TestResourcesObjectPlan(t *testing.T) {
 	ctx := context.Background()
-	element := types.ObjectType{AttrTypes: map[string]attr.Type{
-		"limits":   types.MapType{ElemType: types.StringType},
-		"requests": types.MapType{ElemType: types.StringType},
-	}}
-	resources := func(limits, requests types.Map) types.List {
-		return types.ListValueMust(element, []attr.Value{types.ObjectValueMust(element.AttrTypes, map[string]attr.Value{"limits": limits, "requests": requests})})
+	typesByName := map[string]attr.Type{"limits": types.MapType{ElemType: types.StringType}, "requests": types.MapType{ElemType: types.StringType}}
+	resources := func(limits, requests types.Map) types.Object {
+		return types.ObjectValueMust(typesByName, map[string]attr.Value{"limits": limits, "requests": requests})
 	}
 	null, unknown := types.MapNull(types.StringType), types.MapUnknown(types.StringType)
 	empty := types.MapValueMust(types.StringType, map[string]attr.Value{})
 	cpu := types.MapValueMust(types.StringType, map[string]attr.Value{"cpu": types.StringValue("100m")})
+	absent, unresolved := types.ObjectNull(typesByName), types.ObjectUnknown(typesByName)
 	for name, tc := range map[string]struct {
-		modifier     podListStructureRequiresReplace
-		config, plan types.List
-		replace      bool
-		want         types.List
+		state, config, plan types.Object
+		replace             bool
+		want                types.Object
 	}{
-		"zero element":       {podListStructureRequiresReplace{absentZero: true}, resources(null, null), resources(unknown, unknown), false, resources(empty, empty)},
-		"limits set":         {podListStructureRequiresReplace{absentZero: true}, resources(cpu, null), resources(cpu, unknown), true, resources(cpu, unknown)},
-		"other list":         {podListStructureRequiresReplace{}, resources(null, null), resources(unknown, unknown), true, resources(unknown, unknown)},
-		"unknown configured": {podListStructureRequiresReplace{absentZero: true}, resources(unknown, null), resources(unknown, unknown), true, resources(unknown, unknown)},
+		"null prior zero config":       {absent, resources(null, null), resources(unknown, unknown), false, resources(empty, empty)},
+		"zero prior zero config":       {resources(empty, empty), resources(null, null), resources(unknown, unknown), false, resources(empty, empty)},
+		"null child maps preserved":    {resources(null, null), resources(null, null), resources(unknown, unknown), false, resources(null, null)},
+		"null limits preserved":        {resources(null, empty), resources(null, null), resources(unknown, unknown), false, resources(null, empty)},
+		"null requests preserved":      {resources(empty, null), resources(null, null), resources(unknown, unknown), false, resources(empty, null)},
+		"explicit empty limits":        {resources(null, null), resources(empty, null), resources(empty, unknown), false, resources(empty, null)},
+		"explicit empty requests":      {resources(null, null), resources(null, empty), resources(unknown, empty), false, resources(null, empty)},
+		"explicit empty maps":          {resources(null, null), resources(empty, empty), resources(empty, empty), false, resources(empty, empty)},
+		"known maps retained":          {absent, resources(empty, null), resources(empty, unknown), false, resources(empty, empty)},
+		"limits set handled by child":  {absent, resources(cpu, null), resources(cpu, unknown), false, resources(cpu, unknown)},
+		"unknown configured object":    {absent, unresolved, unresolved, true, unresolved},
+		"unknown map handled by child": {absent, resources(unknown, null), resources(unknown, unknown), false, resources(unknown, unknown)},
+		"omitted config":               {resources(empty, empty), absent, resources(empty, empty), false, resources(empty, empty)},
+		"populated prior preserved":    {resources(cpu, empty), resources(null, null), resources(cpu, unknown), false, resources(cpu, unknown)},
 	} {
-		req := planmodifier.ListRequest{StateValue: types.ListValueMust(element, nil), ConfigValue: tc.config, PlanValue: tc.plan}
-		req.State.Raw = tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
-		req.Plan.Raw = req.State.Raw
-		resp := planmodifier.ListResponse{PlanValue: tc.plan}
-		tc.modifier.PlanModifyList(ctx, req, &resp)
-		if resp.RequiresReplace != tc.replace || !resp.PlanValue.Equal(tc.want) {
-			t.Errorf("%s: replace = %t, plan = %s; want %t, %s", name, resp.RequiresReplace, resp.PlanValue, tc.replace, tc.want)
-		}
+		t.Run(name, func(t *testing.T) {
+			req := planmodifier.ObjectRequest{StateValue: tc.state, ConfigValue: tc.config, PlanValue: tc.plan}
+			req.State.Raw = tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+			req.Plan.Raw = req.State.Raw
+			resp := planmodifier.ObjectResponse{PlanValue: tc.plan}
+			podResourcesRequiresReplace{}.PlanModifyObject(ctx, req, &resp)
+			if resp.RequiresReplace != tc.replace || !resp.PlanValue.Equal(tc.want) {
+				t.Fatalf("replace = %t, plan = %s; want %t, %s", resp.RequiresReplace, resp.PlanValue, tc.replace, tc.want)
+			}
+			for _, create := range []bool{true, false} {
+				guarded := req
+				if create {
+					guarded.State.Raw = tftypes.NewValue(tftypes.Object{}, nil)
+				} else {
+					guarded.Plan.Raw = tftypes.NewValue(tftypes.Object{}, nil)
+				}
+				resp := planmodifier.ObjectResponse{PlanValue: tc.plan}
+				podResourcesRequiresReplace{}.PlanModifyObject(ctx, guarded, &resp)
+				if resp.RequiresReplace || !resp.PlanValue.Equal(tc.plan) {
+					t.Fatal("create/destroy changed by resources modifier")
+				}
+			}
+		})
 	}
 }
 
@@ -412,10 +437,9 @@ func TestSatisfies(t *testing.T) {
 	}
 }
 
-// SDKv2 recorded a block Kubernetes always holds, such as container resources,
-// as an empty list when it held only zero values. A write keeps that list; a
-// read records the live block.
-func TestAbsentZeroBlockWriteBack(t *testing.T) {
+// A write preserves planned null resources when Kubernetes reports only its
+// zero value. A refresh records the API object, including empty quantity maps.
+func TestAbsentResourcesWriteBack(t *testing.T) {
 	ctx := context.Background()
 	b := For(Job())
 	at := path.Root("spec")
@@ -427,13 +451,13 @@ func TestAbsentZeroBlockWriteBack(t *testing.T) {
 	spec := full.Elements()[0].(types.Object)
 	containers := spec.Attributes()["container"].(types.List)
 	container := containers.Elements()[0].(types.Object)
-	resources := container.Attributes()["resources"].(types.List)
+	resources := container.Attributes()["resources"].(types.Object)
 	with := func(object types.Object, name string, value attr.Value) types.Object {
 		attributes := object.Attributes()
 		attributes[name] = value
 		return types.ObjectValueMust(object.AttributeTypes(ctx), attributes)
 	}
-	container = with(container, "resources", types.ListValueMust(resources.ElementType(ctx), nil))
+	container = with(container, "resources", types.ObjectNull(resources.AttributeTypes(ctx)))
 	spec = with(spec, "container", types.ListValueMust(containers.ElementType(ctx), []attr.Value{container}))
 	baseline := types.ListValueMust(full.ElementType(ctx), []attr.Value{spec})
 
@@ -454,12 +478,12 @@ func TestAbsentZeroBlockWriteBack(t *testing.T) {
 			t.Fatal(diags)
 		}
 		if Satisfies(got, baseline) != tc.want {
-			t.Errorf("%s: satisfies a planned empty resources list = %t, want %t", tc.name, !tc.want, tc.want)
+			t.Errorf("%s: satisfies planned null resources = %t, want %t", tc.name, !tc.want, tc.want)
 		}
 	}
 	for key, want := range map[string]bool{
-		"spec.container.resources":        true,
-		"spec.init_container.resources":   true,
+		"spec.container.resources":        false,
+		"spec.init_container.resources":   false,
 		"spec.security_context":           false,
 		"spec.container.security_context": false,
 	} {

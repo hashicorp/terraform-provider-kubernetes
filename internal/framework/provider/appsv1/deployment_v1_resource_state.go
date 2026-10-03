@@ -5,7 +5,6 @@ package appsv1
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -78,12 +77,7 @@ func (d *DeploymentV1) decodeHistoricalState(ctx context.Context, raw *tfprotov6
 	d.Schema(ctx, resource.SchemaRequest{}, &response)
 	diagnostics.Append(response.Diagnostics...)
 	state := tfsdk.State{Schema: response.Schema}
-	var rewrite func(map[string]any) error
-	if version == 0 {
-		rewrite = func(values map[string]any) error {
-			return upgradeDeploymentV0Resources(values, "state", []string{"spec", "template", "spec"})
-		}
-	}
+	rewrite := upgradeWorkloadState(version, "strategy")
 	value, err := common.DecodeLegacyState(ctx, raw, response.Schema, rewrite)
 	if err != nil {
 		diagnostics.AddError("Unable to decode legacy deployment state", err.Error())
@@ -91,80 +85,4 @@ func (d *DeploymentV1) decodeHistoricalState(ctx context.Context, raw *tfprotov6
 	}
 	state.Raw = value
 	return state, diagnostics
-}
-
-func upgradeDeploymentV0Resources(object map[string]any, location string, path []string) error {
-	if object == nil {
-		return fmt.Errorf("%s must be an object", location)
-	}
-	if len(path) > 0 {
-		name := path[0]
-		value, exists := object[name]
-		if !exists || value == nil {
-			return nil
-		}
-		list, ok := value.([]any)
-		if !ok || len(list) > 1 {
-			return fmt.Errorf("%s.%s must be a list with at most one object", location, name)
-		}
-		for _, entry := range list {
-			child, ok := entry.(map[string]any)
-			if !ok {
-				return fmt.Errorf("%s.%s[0] must be an object", location, name)
-			}
-			if err := upgradeDeploymentV0Resources(child, location+"."+name+"[0]", path[1:]); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	for _, name := range []string{"container", "init_container"} {
-		value := object[name]
-		if value == nil {
-			continue
-		}
-		containers, ok := value.([]any)
-		if !ok {
-			return fmt.Errorf("%s.%s must be a list", location, name)
-		}
-		for i, entry := range containers {
-			container, ok := entry.(map[string]any)
-			if !ok {
-				return fmt.Errorf("%s.%s[%d] must be an object", location, name, i)
-			}
-			if container["resources"] == nil {
-				continue
-			}
-			resources, ok := container["resources"].([]any)
-			if !ok || len(resources) > 1 {
-				return fmt.Errorf("%s.%s[%d].resources must contain at most one object", location, name, i)
-			}
-			for _, entry := range resources {
-				resourceMap, ok := entry.(map[string]any)
-				if !ok {
-					return fmt.Errorf("%s.%s[%d].resources[0] must be an object", location, name, i)
-				}
-				for _, field := range []string{"limits", "requests"} {
-					value := resourceMap[field]
-					if value == nil {
-						resourceMap[field] = map[string]any{}
-						continue
-					}
-					list, ok := value.([]any)
-					if !ok || len(list) > 1 {
-						return fmt.Errorf("%s.%s[%d].resources[0].%s must be a legacy singleton list", location, name, i, field)
-					}
-					converted := map[string]any{}
-					if len(list) == 1 {
-						converted, ok = list[0].(map[string]any)
-						if !ok {
-							return fmt.Errorf("%s.%s[%d].resources[0].%s[0] must be an object", location, name, i, field)
-						}
-					}
-					resourceMap[field] = converted
-				}
-			}
-		}
-	}
-	return nil
 }

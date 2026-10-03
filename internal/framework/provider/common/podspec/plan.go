@@ -17,10 +17,8 @@ import (
 	kquantity "k8s.io/apimachinery/pkg/api/resource"
 )
 
-// SDKv2's ForceNew on a list of objects governs only its size. absentZero marks
-// a list Kubernetes always holds as one element, which SDKv2 recorded as empty
-// when that element held only zero values.
-type podListStructureRequiresReplace struct{ absentZero bool }
+// SDKv2's ForceNew on a list of objects governs only its size.
+type podListStructureRequiresReplace struct{}
 
 func (podListStructureRequiresReplace) Description(context.Context) string {
 	return "changes to the collection size require replacement"
@@ -28,29 +26,45 @@ func (podListStructureRequiresReplace) Description(context.Context) string {
 func (v podListStructureRequiresReplace) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
 }
-func (m podListStructureRequiresReplace) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
+func (podListStructureRequiresReplace) PlanModifyList(_ context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
 		return
 	}
-	if m.absentZero && len(req.StateValue.Elements()) == 0 && len(req.PlanValue.Elements()) == 1 && podZeroElement(req.ConfigValue) {
-		// The configured zero-valued element is the object Kubernetes already
-		// holds; plan its unset maps as the empty maps it reports.
-		element := req.PlanValue.Elements()[0].(types.Object)
-		attributes := element.Attributes()
-		for name, value := range attributes {
-			if quantities, ok := value.(types.Map); ok && quantities.IsUnknown() {
-				attributes[name] = types.MapValueMust(quantities.ElementType(ctx), map[string]attr.Value{})
-			}
-		}
-		resp.PlanValue = types.ListValueMust(element.Type(ctx), []attr.Value{types.ObjectValueMust(element.AttributeTypes(ctx), attributes)})
-		return
-	}
-	// As in SDKv2, a collection known only after apply may change its size.
 	resp.RequiresReplace = req.PlanValue.IsUnknown() || len(req.StateValue.Elements()) != len(req.PlanValue.Elements())
 }
 
-func podZeroElement(config types.List) bool {
-	return !config.IsNull() && !config.IsUnknown() && len(config.Elements()) == 1 && podZeroValue(config.Elements()[0])
+// Resource quantities are compared by their child modifiers. Comparing the
+// whole object here would replace equivalent quantities before normalization.
+type podResourcesRequiresReplace struct{}
+
+func (podResourcesRequiresReplace) Description(context.Context) string {
+	return "unknown configured resources require replacement; empty resources retain the API zero value"
+}
+func (v podResourcesRequiresReplace) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (podResourcesRequiresReplace) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
+		return
+	}
+	if req.ConfigValue.IsUnknown() {
+		resp.RequiresReplace = true
+		return
+	}
+	if req.ConfigValue.IsNull() || !podZeroValue(req.ConfigValue) || !podZeroValue(req.StateValue) || req.PlanValue.IsNull() || req.PlanValue.IsUnknown() {
+		return
+	}
+	values := req.PlanValue.Attributes()
+	for _, name := range []string{"limits", "requests"} {
+		if quantities, ok := values[name].(types.Map); ok && quantities.IsUnknown() {
+			if !req.StateValue.IsNull() {
+				values[name] = req.StateValue.Attributes()[name]
+				continue
+			}
+			values[name] = types.MapValueMust(quantities.ElementType(ctx), map[string]attr.Value{})
+		}
+	}
+	resp.PlanValue = types.ObjectValueMust(req.PlanValue.AttributeTypes(ctx), values)
 }
 
 func (b builder) quantityString(f forceNew, fallback string) schema.StringAttribute {
@@ -269,6 +283,7 @@ func (podListRequiresReplace) podRequiresReplacement()          {}
 func (podMapRequiresReplace) podRequiresReplacement()           {}
 func (podSetRequiresReplace) podRequiresReplacement()           {}
 func (podListStructureRequiresReplace) podRequiresReplacement() {}
+func (podResourcesRequiresReplace) podRequiresReplacement()     {}
 
 func (m podStringRequiresReplace) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
 	if !podZeroEquivalent(req.StateValue, req.PlanValue) {
@@ -337,6 +352,8 @@ func podAttributeRequiresReplacement(attribute schema.Attribute) bool {
 	case schema.SetAttribute:
 		return podModifiersRequireReplacement(a.PlanModifiers)
 	case schema.ListNestedAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.SingleNestedAttribute:
 		return podModifiersRequireReplacement(a.PlanModifiers)
 	}
 	return false

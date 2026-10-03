@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 )
 
 func (r *JobV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -108,10 +109,7 @@ func (r *JobV1) jobLegacyState(ctx context.Context, raw *tfprotov6.RawState, ver
 		if !ok {
 			return fmt.Errorf("expected exactly one spec element")
 		}
-		if version == 0 {
-			return upgradeJobResourcesV0(spec)
-		}
-		return nil
+		return upgradeJobSpecState(spec, "spec[0]", version == 0)
 	})
 	if err != nil {
 		diags.AddError(summary, err.Error())
@@ -130,76 +128,36 @@ func jobLegacyObject(value interface{}) (map[string]interface{}, bool) {
 	return object, ok
 }
 
-// Schema v0 stored resource requests/limits as singleton blocks. The Framework
-// does not chain state upgraders, so this converts straight to maps.
-func upgradeJobResourcesV0(spec map[string]interface{}) error {
-	template, ok := jobLegacyObject(spec["template"])
-	if !ok {
-		return fmt.Errorf("expected exactly one pod template in Job v0 state")
+// upgradeJobSpecState converts only the selected singleton attributes. Source
+// version gates decide whether the historical quantity-list repair is needed.
+func upgradeJobSpecState(spec map[string]any, location string, legacyQuantities bool) error {
+	if legacyQuantities {
+		if _, ok := jobLegacyObject(spec["template"]); !ok {
+			return fmt.Errorf("expected exactly one pod template in Job v0 state")
+		}
 	}
-	pod, err := jobOptionalLegacyObject(template["spec"], "template.spec")
-	if err != nil {
+	if err := podspec.UpgradeResourcesState(spec, location, []string{"template", "spec"}, legacyQuantities); err != nil {
 		return err
 	}
-	if pod == nil {
-		return nil
-	}
-	for _, name := range []string{"container", "init_container"} {
-		if pod[name] == nil {
-			continue
+	switch selector := spec["selector"].(type) {
+	case nil:
+	case map[string]any:
+		// Already converted; leave child collections untouched.
+	case []any:
+		if len(selector) == 0 {
+			spec["selector"] = nil
+			return nil
 		}
-		containers, ok := pod[name].([]interface{})
-		if !ok {
-			return fmt.Errorf("expected %s to be a list in Job v0 state", name)
+		if len(selector) != 1 {
+			return fmt.Errorf("%s.selector: expected at most one element", location)
 		}
-		for _, value := range containers {
-			container, ok := value.(map[string]interface{})
-			if !ok || container == nil {
-				return fmt.Errorf("invalid %s in Job v0 state", name)
-			}
-			resources, err := jobOptionalLegacyObject(container["resources"], name+".resources")
-			if err != nil {
-				return err
-			}
-			if resources == nil {
-				continue
-			}
-			for _, field := range []string{"limits", "requests"} {
-				list, ok := resources[field].([]interface{})
-				if !ok && resources[field] != nil {
-					return fmt.Errorf("expected v0 %s to be a list", field)
-				}
-				if len(list) == 0 {
-					resources[field] = map[string]interface{}{}
-				} else if len(list) == 1 {
-					object, ok := list[0].(map[string]interface{})
-					if !ok {
-						return fmt.Errorf("invalid v0 %s object", field)
-					}
-					resources[field] = object
-				} else {
-					return fmt.Errorf("expected at most one v0 %s element", field)
-				}
-			}
+		object, ok := selector[0].(map[string]any)
+		if !ok || object == nil {
+			return fmt.Errorf("%s.selector[0]: expected an object", location)
 		}
+		spec["selector"] = object
+	default:
+		return fmt.Errorf("%s.selector: expected a singleton list or object", location)
 	}
 	return nil
-}
-
-func jobOptionalLegacyObject(value interface{}, field string) (map[string]interface{}, error) {
-	if value == nil {
-		return nil, nil
-	}
-	list, ok := value.([]interface{})
-	if !ok || len(list) > 1 {
-		return nil, fmt.Errorf("expected %s to be a list with at most one element in Job v0 state", field)
-	}
-	if len(list) == 0 {
-		return nil, nil
-	}
-	object, ok := list[0].(map[string]interface{})
-	if !ok || object == nil {
-		return nil, fmt.Errorf("invalid %s object in Job v0 state", field)
-	}
-	return object, nil
 }

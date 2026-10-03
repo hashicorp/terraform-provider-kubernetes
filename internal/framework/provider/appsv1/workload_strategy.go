@@ -10,18 +10,18 @@ import (
 )
 
 // rollingUpdateSpelling returns max_surge or max_unavailable read from
-// Kubernetes, keeping the spelling in the prior strategy list, such as "01",
+// Kubernetes, keeping the spelling in the prior strategy object, such as "01",
 // when it denotes the same value.
-func rollingUpdateSpelling(prior types.List, name, current string) types.String {
+func rollingUpdateSpelling(prior types.Object, name, current string) types.String {
 	value := types.StringValue(current)
-	if prior.IsNull() || prior.IsUnknown() || len(prior.Elements()) != 1 {
+	if prior.IsNull() || prior.IsUnknown() {
 		return value
 	}
-	rolling, ok := priorAttribute(prior.Elements()[0], "rolling_update").(types.List)
-	if !ok || rolling.IsNull() || rolling.IsUnknown() || len(rolling.Elements()) != 1 {
+	rolling, ok := priorAttribute(prior, "rolling_update").(types.Object)
+	if !ok || rolling.IsNull() || rolling.IsUnknown() {
 		return value
 	}
-	if spelled, ok := priorAttribute(rolling.Elements()[0], name).(types.String); ok {
+	if spelled, ok := priorAttribute(rolling, name).(types.String); ok {
 		return common.KeepIntOrStringSpelling(spelled, value)
 	}
 	return value

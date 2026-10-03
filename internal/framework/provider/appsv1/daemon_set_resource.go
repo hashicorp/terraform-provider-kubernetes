@@ -53,7 +53,7 @@ type DaemonSetV1SpecModel struct {
 	MinReadySeconds      types.Int64                   `tfsdk:"min_ready_seconds"`
 	RevisionHistoryLimit types.Int64                   `tfsdk:"revision_history_limit"`
 	Selector             []DaemonSetLabelSelectorModel `tfsdk:"selector"`
-	Strategy             types.List                    `tfsdk:"strategy"`
+	Strategy             types.Object                  `tfsdk:"strategy"`
 	Template             []workloadTemplateModel       `tfsdk:"template"`
 }
 
@@ -63,7 +63,7 @@ type DaemonSetMatchExpressionModel = LabelSelectorRequirementModel
 
 type DaemonSetStrategyModel struct {
 	Type          types.String `tfsdk:"type"`
-	RollingUpdate types.List   `tfsdk:"rolling_update"`
+	RollingUpdate types.Object `tfsdk:"rolling_update"`
 }
 
 type DaemonSetRollingUpdateModel struct {

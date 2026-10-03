@@ -16,7 +16,7 @@ Version 4.0.0 moves six workload resources from the Terraform Plugin SDKv2 to th
 - `kubernetes_job_v1`
 - `kubernetes_cron_job_v1`
 
-All six share one pod spec implementation. Their resource type names, `namespace/name` import IDs, import identities and Kubernetes API versions do not change, and existing state is upgraded without re-importing anything. A few nested blocks become list-of-object arguments, which changes their configuration syntax.
+All six share one pod spec implementation. Their resource type names, `namespace/name` import IDs, import identities and Kubernetes API versions do not change, and existing state is upgraded without re-importing anything. Selected nested blocks become object arguments or lists of objects, which changes their configuration syntax.
 
 All other resources, including the deprecated unversioned types such as `kubernetes_deployment`, are unchanged.
 
@@ -44,7 +44,7 @@ When upgrading from 2.x, also follow the [v3 upgrade guide](v3-upgrade-guide.md)
     }
     ```
 
-4. **Install the provider.** Run `terraform init -upgrade`.
+4. **Install the provider.** Run `terraform init -upgrade`. Recreate saved plans after upgrading the provider and configuration.
 5. **Review the plan.** Run `terraform validate` and `terraform plan`. A syntax-only change must not replace or update a workload in Kubernetes. A one-time in-place update that changes only Terraform state is expected in some cases (see [Behavior changes](#behavior-changes)). Investigate any replacement before applying.
 6. **Apply and confirm.** Apply the reviewed plan, then run `terraform plan` again and confirm that it is empty.
 
@@ -52,23 +52,24 @@ Test the upgrade in a non-production workspace first, and repeat these steps for
 
 ## Configuration syntax changes
 
-The following arguments change from nested blocks to list-of-object arguments, assigned with `=`:
+The following arguments change from 3.x nested blocks to attributes assigned with `=`:
 
-| Argument | Resources |
-| --- | --- |
-| `resources` in `container` and `init_container` | All six |
-| `image_pull_secrets` and `readiness_gate` in the pod spec | All six |
-| `strategy` and its nested `rolling_update` | Deployment, DaemonSet |
-| `persistent_volume_claim_retention_policy` | StatefulSet |
-| `selector` and its nested `match_expressions` | Job, CronJob |
+| Argument | Resources | v4 value |
+| --- | --- | --- |
+| `resources` in `container` and `init_container` | All six | One object |
+| `strategy` and its nested `rolling_update` | Deployment, DaemonSet | One object each |
+| `persistent_volume_claim_retention_policy` | StatefulSet | One object |
+| JobSpec `selector` | Job, CronJob | One object |
+| `image_pull_secrets` and `readiness_gate` in the pod spec | All six | List of objects |
+| `selector.match_expressions` | Job, CronJob | List of objects |
 
-The following rules apply to all of them:
+For each object argument, change `name { ... }` to `name = { ... }`. Omit the argument or set it to `null` to leave it unset. An empty object `{}` is valid; an empty list `[]` is the wrong type. Maps such as `limits`, `requests` and `match_labels` stay maps, and expression `values` stays a set of strings.
 
-- `resources`, `strategy`, `rolling_update`, `persistent_volume_claim_retention_policy` and `selector` take exactly one object. `image_pull_secrets` and `readiness_gate` take one or more objects.
-- To leave one of these arguments unset, omit it or set it to `null`. An empty list `[]` is rejected during planning, except for `match_expressions`.
-- Replace an empty block such as `resources {}` with `resources = [{}]`.
-- Values keep their types: maps such as `limits`, `requests` and `match_labels` remain maps.
-- State keeps the same shape, so references such as `kubernetes_deployment_v1.example.spec[0].template[0].spec[0].container[0].resources[0].limits["cpu"]` are unchanged.
+In `.tf.json` configuration, use the object form `"resources": { ... }`; the array form `"resources": [{ ... }]` is rejected.
+
+The repeated `image_pull_secrets` and `readiness_gate` arguments still require a nonempty list when configured. Omit them or use `null` instead of `[]`. `match_expressions = []` is allowed.
+
+The object fields also change shape in state. Update references, `ignore_changes` child paths and module types as described in [References and module interfaces](#references-and-module-interfaces).
 
 All other blocks keep their block syntax, including `metadata`, `spec`, `template`, `container`, `volume`, `affinity`, the StatefulSet `update_strategy` and `volume_claim_template` (and the `resources` and `selector` blocks inside a claim template), the Job `pod_failure_policy`, and selectors inside affinity and topology spread terms.
 
@@ -103,7 +104,7 @@ container {
   name  = "app"
   image = "nginx:1.27"
 
-  resources = [{
+  resources = {
     limits = {
       cpu    = "500m"
       memory = "512Mi"
@@ -112,11 +113,11 @@ container {
       cpu    = "250m"
       memory = "128Mi"
     }
-  }]
+  }
 }
 ```
 
-Make the same change in every `init_container`.
+Make the same change in every `init_container`. Replace an empty `resources {}` block with `resources = {}`. Omitted `limits` and `requests` can keep their prior or API-computed values; use an explicit empty map, such as `limits = {}`, when you intend to clear that map.
 
 Image pull secrets and readiness gates, before:
 
@@ -142,28 +143,99 @@ readiness_gate = [{
 }]
 ```
 
-### Dynamic blocks
+### Dynamic blocks and conditional values
 
-A `dynamic` block cannot generate one of the changed arguments. Replace it with a list expression, keeping the original order:
+A `dynamic` block cannot generate one of the changed arguments. For an object argument, assign a nullable object directly:
 
 ```terraform
-image_pull_secrets = [
+resources = var.container_resources
+```
+
+To conditionally set the object:
+
+```terraform
+resources = var.configure_resources ? var.container_resources : null
+```
+
+For a repeated argument, use a list expression and preserve the original order:
+
+```terraform
+image_pull_secrets = length(var.image_pull_secret_names) == 0 ? null : [
   for name in var.image_pull_secret_names : {
     name = name
   }
 ]
 ```
 
-When the source can be absent or empty, use a conditional that yields `null`, since an empty list is rejected:
+`dynamic` blocks for unchanged blocks, such as `container` or `volume`, remain valid.
+
+### References and module interfaces
+
+Remove only the indexes belonging to the converted objects. Keep indexes on enclosing blocks and real collections.
+
+Before:
 
 ```terraform
-resources = var.container_resources == null ? null : [{
-  limits   = var.container_resources.limits
-  requests = var.container_resources.requests
-}]
+output "cpu_limit" {
+  value = kubernetes_deployment_v1.example.spec[0].template[0].spec[0].container[0].resources[0].limits["cpu"]
+}
 ```
 
-`dynamic` blocks for unchanged blocks, such as `container` or `volume`, remain valid.
+After:
+
+```terraform
+output "cpu_limit" {
+  value = kubernetes_deployment_v1.example.spec[0].template[0].spec[0].container[0].resources.limits["cpu"]
+}
+```
+
+Apply the same change to selected `strategy`, `rolling_update`, retention-policy and JobSpec `selector` references. For example, `spec[0].strategy[0].rolling_update[0].max_surge` becomes `spec[0].strategy.rolling_update.max_surge`. Deployment, DaemonSet and StatefulSet selectors retain their `[0]` because they remain blocks.
+
+Child paths in `lifecycle.ignore_changes` need the same edit. For a Deployment, this 3.x path:
+
+```terraform
+lifecycle {
+  ignore_changes = [spec[0].template[0].spec[0].container[0].resources[0].limits]
+}
+```
+
+becomes:
+
+```terraform
+lifecycle {
+  ignore_changes = [spec[0].template[0].spec[0].container[0].resources.limits]
+}
+```
+
+A path that ignores the entire `resources` argument keeps its existing spelling.
+
+Module variables that expose the complete singleton value change from `list(object(...))` to `object(...)`. For example, replace this interface:
+
+```terraform
+variable "container_resources" {
+  type = list(object({
+    limits   = map(string)
+    requests = map(string)
+  }))
+  default = null
+}
+```
+
+with:
+
+```terraform
+variable "container_resources" {
+  type = object({
+    limits   = optional(map(string))
+    requests = optional(map(string))
+  })
+  default = null
+}
+```
+
+Optional object attributes require Terraform 1.3 or later. On earlier versions, keep both fields as `map(string)` and pass `null` for an omitted map.
+
+Update callers to pass an object or `null`, and update outputs and downstream consumers that expect a singleton list. Terraform's state upgrade does not rewrite configuration, module interfaces or remote-state consumers.
 
 ### kubernetes_deployment_v1
 
@@ -185,16 +257,16 @@ strategy {
 After:
 
 ```terraform
-strategy = [{
+strategy = {
   type = "RollingUpdate"
-  rolling_update = [{
+  rolling_update = {
     max_surge       = "25%"
     max_unavailable = "25%"
-  }]
-}]
+  }
+}
 ```
 
-Do not configure `rolling_update` with the `Recreate` strategy.
+Do not configure `rolling_update` with the `Recreate` strategy; its read value is `null`. Omitting `strategy` keeps the prior or API-computed strategy. Setting `strategy = {}` selects the default `RollingUpdate`, so it changes an existing `Recreate` strategy.
 
 ### kubernetes_daemon_set_v1
 
@@ -216,16 +288,16 @@ strategy {
 After:
 
 ```terraform
-strategy = [{
+strategy = {
   type = "RollingUpdate"
-  rolling_update = [{
+  rolling_update = {
     max_surge       = "0"
     max_unavailable = "1"
-  }]
-}]
+  }
+}
 ```
 
-Keep the DaemonSet's own values; its defaults (`max_surge = "0"`, `max_unavailable = "1"`) differ from a Deployment's. Do not configure `rolling_update` with the `OnDelete` strategy.
+Keep the DaemonSet's own values; its defaults (`max_surge = "0"`, `max_unavailable = "1"`) differ from a Deployment's. Do not configure `rolling_update` with the `OnDelete` strategy; its read value is `null`. Setting `strategy = {}` selects `RollingUpdate`, including when the existing strategy is `OnDelete`; omitting it keeps the prior or API-computed strategy.
 
 ### kubernetes_stateful_set_v1
 
@@ -243,13 +315,15 @@ persistent_volume_claim_retention_policy {
 After:
 
 ```terraform
-persistent_volume_claim_retention_policy = [{
+persistent_volume_claim_retention_policy = {
   when_deleted = "Delete"
   when_scaled  = "Retain"
-}]
+}
 ```
 
-`update_strategy` and `volume_claim_template` keep their block syntax.
+`persistent_volume_claim_retention_policy = {}` selects `Retain` for both children, including when an existing policy uses `Delete`. Preserve the previous values during a syntax-only upgrade. Omitting the object keeps the prior or API-computed policy.
+
+`update_strategy` and `volume_claim_template` keep their block syntax, including the claim template's `resources` block. If old state contains more than one retention policy, migration reports an error instead of choosing one; reduce it to one policy with the previous provider before upgrading.
 
 ### kubernetes_pod_v1
 
@@ -278,7 +352,7 @@ selector {
 After:
 
 ```terraform
-selector = [{
+selector = {
   match_labels = {
     app = "report"
   }
@@ -287,8 +361,10 @@ selector = [{
     operator = "In"
     values   = ["batch"]
   }]
-}]
+}
 ```
+
+Leave the selector omitted when Kubernetes should generate it; keep the existing `manual_selector` setting.
 
 ### kubernetes_cron_job_v1
 
@@ -314,19 +390,17 @@ moved {
 }
 ```
 
-Keep all other values unchanged, and do not keep both resource blocks for the same object. A move changes only the Terraform address; review the plan and investigate any replacement before applying.
+Keep all other values unchanged, and do not keep both resource blocks for the same object. A move converts the Terraform address and stored value shapes without recreating the Kubernetes object; review the plan and investigate any replacement before applying.
 
 - `kubernetes_cron_job` manages `batch/v1beta1` CronJobs, which Kubernetes 1.25 and later no longer serve. Make sure the CronJob is available through `batch/v1` before moving it.
 - Provider 1.x stored `false` for an omitted `automount_service_account_token`, whose default has been `true` since 2.0. Kubernetes cannot change it on an existing Pod or Job, so a Pod or Job whose state was last written by 1.x plans a replacement. Set `automount_service_account_token = false` to keep the object. Likewise, provider versions before 2.21.0 sent and stored `0` for an omitted Job `backoff_limit`, whose default is now `6`; set `backoff_limit = 0` to keep such a Job unchanged.
 
 ## Behavior changes
 
-- **Empty lists are rejected** for the list-of-object arguments above during planning. Omit the argument or use `null`.
 - **One-time state updates.** Earlier versions stored some empty values differently, such as explicitly configured `labels = {}`. The first plan can show an in-place update for them that changes only Terraform state, not the object in Kubernetes. In an update plan, computed metadata such as `metadata[0].resource_version` can show as `(known after apply)`.
 - **State after apply.** After a create or update, state records the planned values; only values the plan leaves unknown, such as `uid`, come from Kubernetes. Fields that admission webhooks or other clients add, such as an injected sidecar container, are not recorded by the apply; the next refreshed plan shows them as drift, as in 3.x, and `lifecycle { ignore_changes = [...] }` keeps them out of the plan.
-- **Numbers keep their spelling.** A number Kubernetes stores, such as `run_as_user = "01000"`, `replicas = "01"` or a file mode, keeps the configured spelling in state instead of planning a change on every plan.
+- **Numbers and quantities keep their spelling.** A number or quantity Kubernetes stores, such as `run_as_user = "01000"`, `replicas = "01"`, `cpu = "0.5"` or a file mode, keeps the configured spelling in state instead of planning a change on every plan. This can change string outputs without changing resource allocations.
 - **Empty strings on API-defaulted fields.** `""` on a pod spec field that Kubernetes defaults, such as `image_pull_policy`, `service_account_name` or `scheduler_name`, keeps the Kubernetes default and never forces replacement. A new object records `""` until the next refresh, which records the value Kubernetes chose. On other fields, such as the CronJob `timezone` or a volume mount `sub_path`, `""` clears the value.
-- **Pod resource quantities** keep the configured spelling in state for new Pods, such as `"0.5"` rather than `"500m"`. This can change string outputs, not allocations.
 - **Pod replacement.** The provider updates only the labels, annotations and `active_deadline_seconds` of an existing Pod. Changing any other spec field, such as a volume, volume mount, probe or affinity, replaces the Pod; earlier versions reported success without changing it. Setting or lowering `active_deadline_seconds` is an in-place update, but raising or removing it replaces the Pod, since Kubernetes rejects that change.
 - **Pod priority class.** A Pod that leaves out `priority_class_name` records the class Kubernetes assigns, such as a `globalDefault` PriorityClass, instead of planning a replacement on every plan. Removing a configured `priority_class_name` keeps the Pod and its class.
 - **Pod tolerations of built-in taints.** A configured toleration of a taint Kubernetes manages, such as `node.kubernetes.io/not-ready` with its own `toleration_seconds`, is recorded in state instead of planning a replacement on every plan. A Pod whose state 3.x last wrote is replaced once more. Tolerations Kubernetes adds for these taints on its own are still not recorded.

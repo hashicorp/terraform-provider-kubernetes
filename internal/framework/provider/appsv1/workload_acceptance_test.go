@@ -267,8 +267,7 @@ func TestAccKubernetesWorkloadsV1_addBlocksWithUnknownContent(t *testing.T) {
 	})
 }
 
-// An empty list does not omit a list-of-object argument such as strategy, so
-// it is rejected rather than planned and then contradicted by the API.
+// Strategy is an object.
 func TestAccKubernetesWorkloadsV1_emptyStrategyRejected(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resource.ParallelTest(t, resource.TestCase{
@@ -277,7 +276,7 @@ func TestAccKubernetesWorkloadsV1_emptyStrategyRejected(t *testing.T) {
 		Steps: []resource.TestStep{{
 			Config:      strings.Replace(testAccWorkloadsV1Config(name, "", ""), "replicas = 1", "replicas = 1\n    strategy = []", 1),
 			PlanOnly:    true,
-			ExpectError: regexp.MustCompile(`must\s+be\s+omitted\s+or\s+null`),
+			ExpectError: regexp.MustCompile(`object required`),
 		}},
 	})
 }
@@ -286,7 +285,7 @@ func TestAccKubernetesWorkloadsV1_emptyStrategyRejected(t *testing.T) {
 // configured "01" is kept as spelled rather than read back as "1".
 func TestAccKubernetesWorkloadsV1_numberSpelling(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	strategy := `strategy = [{ rolling_update = [{ max_surge = "01", max_unavailable = "00" }] }]`
+	strategy := `strategy = { rolling_update = { max_surge = "01", max_unavailable = "00" } }`
 	config := testAccWorkloadsV1Config(name, "", "")
 	// The Deployment, then the StatefulSet, sets replicas; the DaemonSet has
 	// no other spec arguments.
@@ -301,9 +300,9 @@ func TestAccKubernetesWorkloadsV1_numberSpelling(t *testing.T) {
 			Config: config,
 			Check: resource.ComposeAggregateTestCheckFunc(
 				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.replicas", "01"),
-				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.strategy.0.rolling_update.0.max_surge", "01"),
-				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "00"),
-				resource.TestCheckResourceAttr("kubernetes_daemon_set_v1.test", "spec.0.strategy.0.rolling_update.0.max_surge", "01"),
+				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.strategy.rolling_update.max_surge", "01"),
+				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.strategy.rolling_update.max_unavailable", "00"),
+				resource.TestCheckResourceAttr("kubernetes_daemon_set_v1.test", "spec.0.strategy.rolling_update.max_surge", "01"),
 				resource.TestCheckResourceAttr("kubernetes_stateful_set_v1.test", "spec.0.replicas", "01"),
 			),
 		}},

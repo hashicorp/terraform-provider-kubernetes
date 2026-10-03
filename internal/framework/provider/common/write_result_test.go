@@ -166,3 +166,36 @@ func TestSetWriteResult(t *testing.T) {
 		})
 	}
 }
+
+func TestSetWriteResultResourcesObject(t *testing.T) {
+	ctx := context.Background()
+	quantities := schema.MapAttribute{Optional: true, Computed: true, ElementType: types.StringType}
+	s := schema.Schema{Attributes: map[string]schema.Attribute{"resources": schema.SingleNestedAttribute{Optional: true, Computed: true, Attributes: map[string]schema.Attribute{"limits": quantities, "requests": quantities}}}}
+	typ := map[string]attr.Type{"limits": types.MapType{ElemType: types.StringType}, "requests": types.MapType{ElemType: types.StringType}}
+	cpu := types.MapValueMust(types.StringType, map[string]attr.Value{"cpu": types.StringValue("500m")})
+	enriched := types.MapValueMust(types.StringType, map[string]attr.Value{"cpu": types.StringValue("500m"), "memory": types.StringValue("128Mi")})
+	object := func(limits, requests types.Map) types.Object {
+		return types.ObjectValueMust(typ, map[string]attr.Value{"limits": limits, "requests": requests})
+	}
+	model := func(resources types.Object) any {
+		return struct {
+			Resources types.Object `tfsdk:"resources"`
+		}{Resources: resources}
+	}
+	plan := tfsdk.Plan{Schema: s}
+	diags := plan.Set(ctx, model(object(cpu, types.MapUnknown(types.StringType))))
+	state := tfsdk.State{Schema: s}
+	diags.Append(SetWriteResult(ctx, &state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		return actual.Set(ctx, model(object(enriched, enriched)))
+	})...)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	want := tfsdk.State{Schema: s}
+	if d := want.Set(ctx, model(object(cpu, enriched))); d.HasError() {
+		t.Fatal(d)
+	}
+	if !state.Raw.Equal(want.Raw) {
+		t.Fatalf("got %s, want %s", state.Raw, want.Raw)
+	}
+}

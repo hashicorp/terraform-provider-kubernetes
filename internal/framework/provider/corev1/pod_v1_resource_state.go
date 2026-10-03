@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -220,9 +221,12 @@ func (p *PodV1) decodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, 
 			values["target_state"] = []any{}
 		}
 		if version == 0 {
-			return podV1UpgradeResourcesFieldV0(values)
+			spec, ok := values["spec"].([]any)
+			if !ok || len(spec) != 1 {
+				return fmt.Errorf("expected exactly one spec element")
+			}
 		}
-		return nil
+		return podspec.UpgradeResourcesState(values, "state", []string{"spec"}, version == 0)
 	})
 	if err != nil {
 		diags.AddError(summary, err.Error())
@@ -230,109 +234,6 @@ func (p *PodV1) decodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, 
 	}
 	state.Raw = value
 	return state, namespace, name, diags
-}
-
-func podV1UpgradeResourcesFieldV0(state map[string]any) error {
-	specRaw, ok := state["spec"]
-	if !ok || specRaw == nil {
-		return fmt.Errorf("spec is missing")
-	}
-
-	specList, ok := specRaw.([]any)
-	if !ok {
-		return fmt.Errorf("spec is %T, expected list", specRaw)
-	}
-	if len(specList) != 1 {
-		return fmt.Errorf("spec has %d elements, expected exactly 1", len(specList))
-	}
-
-	spec, ok := specList[0].(map[string]any)
-	if !ok {
-		return fmt.Errorf("spec[0] is %T, expected object", specList[0])
-	}
-	if err := podV1UpgradeContainerResourcesFieldV0(spec, "container", "spec[0].container"); err != nil {
-		return err
-	}
-	if err := podV1UpgradeContainerResourcesFieldV0(spec, "init_container", "spec[0].init_container"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func podV1UpgradeContainerResourcesFieldV0(spec map[string]any, fieldName, path string) error {
-	containersRaw, ok := spec[fieldName]
-	if !ok || containersRaw == nil {
-		return nil
-	}
-	containers, ok := containersRaw.([]any)
-	if !ok {
-		return fmt.Errorf("%s is %T, expected list", path, containersRaw)
-	}
-
-	for i, containerRaw := range containers {
-		container, ok := containerRaw.(map[string]any)
-		if !ok {
-			return fmt.Errorf("%s[%d] is %T, expected object", path, i, containerRaw)
-		}
-		resourcesRaw, ok := container["resources"]
-		if !ok || resourcesRaw == nil {
-			continue
-		}
-		resourcesList, ok := resourcesRaw.([]any)
-		if !ok {
-			if _, alreadyMap := resourcesRaw.(map[string]any); alreadyMap {
-				continue
-			}
-			return fmt.Errorf("%s[%d].resources is %T, expected list", path, i, resourcesRaw)
-		}
-		if len(resourcesList) == 0 {
-			continue
-		}
-		if len(resourcesList) > 1 {
-			return fmt.Errorf("%s[%d].resources has %d elements, expected at most 1", path, i, len(resourcesList))
-		}
-		resources, ok := resourcesList[0].(map[string]any)
-		if !ok {
-			return fmt.Errorf("%s[%d].resources[0] is %T, expected object", path, i, resourcesList[0])
-		}
-		if err := podV1UpgradeResourceQuantityFieldV0(resources, "requests", fmt.Sprintf("%s[%d].resources[0].requests", path, i)); err != nil {
-			return err
-		}
-		if err := podV1UpgradeResourceQuantityFieldV0(resources, "limits", fmt.Sprintf("%s[%d].resources[0].limits", path, i)); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func podV1UpgradeResourceQuantityFieldV0(resources map[string]any, fieldName, path string) error {
-	raw, ok := resources[fieldName]
-	if !ok || raw == nil {
-		resources[fieldName] = map[string]any{}
-		return nil
-	}
-
-	switch v := raw.(type) {
-	case map[string]any:
-		return nil
-	case []any:
-		if len(v) == 0 {
-			resources[fieldName] = map[string]any{}
-			return nil
-		}
-		if len(v) > 1 {
-			return fmt.Errorf("%s has %d elements, expected at most 1", path, len(v))
-		}
-		objectValue, ok := v[0].(map[string]any)
-		if !ok {
-			return fmt.Errorf("%s[0] is %T, expected object", path, v[0])
-		}
-		resources[fieldName] = objectValue
-		return nil
-	default:
-		return fmt.Errorf("%s is %T, expected list", path, raw)
-	}
 }
 
 func podV1ParseID(id string) (string, string, error) {

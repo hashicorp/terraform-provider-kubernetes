@@ -357,6 +357,58 @@ func TestAccKubernetesPodV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
 	})
 }
 
+// Kubernetes stores run_as_user as a number. A configured "01000" is kept as
+// spelled, and state that 3.3.0 recorded as "1000" for it plans no change.
+func TestAccKubernetesPodV1_numberSpelling(t *testing.T) {
+	var created, upgraded, replaced api.Pod
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	runAsUser := func(user string) string {
+		return testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, fmt.Sprintf(`security_context {
+      run_as_user = %q
+    }`, user))
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPodV1PreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: runAsUser("01000"),
+				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &created),
+				// 3.3.0 replaces the Pod on every plan for this spelling.
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   runAsUser("01000"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionNoop)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &upgraded),
+					testAccCheckKubernetesPodForceNew(&created, &upgraded, false),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   runAsUser("02000"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &replaced),
+					testAccCheckKubernetesPodForceNew(&upgraded, &replaced, true),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.run_as_user", "02000"),
+				),
+			},
+		},
+	})
+}
+
 // State written by 3.3.0 plans no change before its first refresh.
 func TestAccKubernetesPodV1_upgradeWithoutRefresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")

@@ -11,7 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	kquantity "k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -158,6 +160,40 @@ func podPreserveQuantity(prior, current attr.Value) attr.Value {
 	}
 	value, _ := types.MapValue(types.StringType, entries)
 	return value
+}
+
+// podSpelling returns how to keep the spelling of a string Kubernetes stores
+// as a number, such as run_as_user "01000", or nil for other strings.
+func podSpelling(validators []validator.String) func(prior, current types.String) types.String {
+	for _, v := range validators {
+		switch v {
+		case podStringRule("nullable-int"):
+			return common.KeepIntSpelling
+		case podStringRule("port"):
+			return common.KeepIntOrStringSpelling
+		case podStringRule("mode"):
+			return common.KeepOctalSpelling
+		}
+	}
+	return nil
+}
+
+// As with quantities, respelling a number Kubernetes stores, such as "1000" as
+// "01000", plans the prior value instead of a change or a replacement.
+type podSpellingPlanModifier struct {
+	keep func(prior, current types.String) types.String
+}
+
+func (podSpellingPlanModifier) Description(context.Context) string {
+	return "preserves the spelling of an equal number"
+}
+func (m podSpellingPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (m podSpellingPlanModifier) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if !req.PlanValue.IsUnknown() {
+		resp.PlanValue = m.keep(req.StateValue, req.PlanValue)
+	}
 }
 
 // The API defaults an empty http_get path to "/", so the two are equivalent:

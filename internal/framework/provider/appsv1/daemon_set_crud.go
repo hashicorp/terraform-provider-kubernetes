@@ -416,8 +416,10 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 	templateBaseline := types.ListNull(specType)
 	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
 	var selectorBaseline []LabelSelectorModel
+	strategyBaseline := types.ListNull(daemonSetStrategyObjectType())
 	if len(baseline) == 1 {
 		selectorBaseline = baseline[0].Selector
+		strategyBaseline = baseline[0].Strategy
 	}
 	if len(baseline) == 1 && len(baseline[0].Template) == 1 {
 		templateBaseline = baseline[0].Template[0].Spec
@@ -451,7 +453,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 			MinReadySeconds:      types.Int64Value(int64(spec.MinReadySeconds)),
 			RevisionHistoryLimit: revisionHistoryLimit,
 			Selector:             selector,
-			Strategy:             flattenDaemonSetStrategyModel(ctx, spec.UpdateStrategy, &diagnostics),
+			Strategy:             flattenDaemonSetStrategyModel(ctx, spec.UpdateStrategy, strategyBaseline, &diagnostics),
 			Template: []DaemonSetTemplateModel{
 				{
 					Metadata: templateMetadata,
@@ -545,7 +547,7 @@ func expandDaemonSetStrategyModel(ctx context.Context, in types.List, at path.Pa
 	return strategy, diagnostics
 }
 
-func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdateStrategy, diagnostics *diag.Diagnostics) types.List {
+func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdateStrategy, prior types.List, diagnostics *diag.Diagnostics) types.List {
 	strategyType := in.Type
 	if strategyType == "" {
 		strategyType = appsv1.RollingUpdateDaemonSetStrategyType
@@ -560,10 +562,10 @@ func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdat
 			MaxUnavailable: types.StringValue("1"),
 		}
 		if in.RollingUpdate.MaxSurge != nil {
-			rolling.MaxSurge = types.StringValue(in.RollingUpdate.MaxSurge.String())
+			rolling.MaxSurge = rollingUpdateSpelling(prior, "max_surge", in.RollingUpdate.MaxSurge.String())
 		}
 		if in.RollingUpdate.MaxUnavailable != nil {
-			rolling.MaxUnavailable = types.StringValue(in.RollingUpdate.MaxUnavailable.String())
+			rolling.MaxUnavailable = rollingUpdateSpelling(prior, "max_unavailable", in.RollingUpdate.MaxUnavailable.String())
 		}
 		value, diags := types.ListValueFrom(ctx, daemonSetRollingUpdateObjectType(), []DaemonSetRollingUpdateModel{rolling})
 		diagnostics.Append(diags...)

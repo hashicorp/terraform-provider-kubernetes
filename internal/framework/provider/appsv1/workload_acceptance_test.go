@@ -297,6 +297,38 @@ func TestAccKubernetesWorkloadsV1_emptyStrategyRejected(t *testing.T) {
 	})
 }
 
+// Kubernetes stores replicas, max_surge and max_unavailable as numbers. A
+// configured "01" is kept as spelled rather than read back as "1".
+func TestAccKubernetesWorkloadsV1_numberSpelling(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	strategy := `strategy = [{ rolling_update = [{ max_surge = "01", max_unavailable = "00" }] }]`
+	config := testAccWorkloadsV1Config(name, "", "")
+	// The Deployment, then the StatefulSet, sets replicas; the DaemonSet has
+	// no other spec arguments.
+	config = strings.Replace(config, "replicas = 1", "replicas = \"01\"\n    "+strategy, 1)
+	config = strings.Replace(config, "replicas = 1", "replicas = \"01\"", 1)
+	config = strings.Replace(config, "spec {\n    \n", "spec {\n    "+strategy+"\n", 1)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesDeploymentV1Destroy,
+			testAccCheckKubernetesDaemonSetV1Destroy,
+			testAccCheckKubernetesStatefulSetV1Destroy,
+		),
+		Steps: []resource.TestStep{{
+			Config: config,
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.replicas", "01"),
+				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.strategy.0.rolling_update.0.max_surge", "01"),
+				resource.TestCheckResourceAttr("kubernetes_deployment_v1.test", "spec.0.strategy.0.rolling_update.0.max_unavailable", "00"),
+				resource.TestCheckResourceAttr("kubernetes_daemon_set_v1.test", "spec.0.strategy.0.rolling_update.0.max_surge", "01"),
+				resource.TestCheckResourceAttr("kubernetes_stateful_set_v1.test", "spec.0.replicas", "01"),
+			),
+		}},
+	})
+}
+
 func testAccWorkloadsV1Config(name, container, podSpec string) string {
 	var config strings.Builder
 	for _, workload := range []struct{ resourceType, app, extraSpec string }{

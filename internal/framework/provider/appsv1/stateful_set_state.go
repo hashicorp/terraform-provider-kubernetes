@@ -186,6 +186,9 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 	}
 	if spec.Replicas != nil {
 		out.Replicas = types.StringValue(strconv.Itoa(int(*spec.Replicas)))
+		if baseline != nil {
+			out.Replicas = common.KeepIntSpelling(baseline.Replicas, out.Replicas)
+		}
 	}
 	if spec.RevisionHistoryLimit != nil {
 		out.RevisionHistoryLimit = types.Int64Value(int64(*spec.RevisionHistoryLimit))

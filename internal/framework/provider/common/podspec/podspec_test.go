@@ -505,3 +505,23 @@ func TestCollectionSizeReplacement(t *testing.T) {
 		})
 	}
 }
+
+// Strings Kubernetes stores as numbers keep their configured spelling.
+func TestNumberSpellingPaths(t *testing.T) {
+	b := For(Pod())
+	for _, key := range []string{
+		"spec.security_context.run_as_user",
+		"spec.container.security_context.run_as_group",
+		"spec.toleration.toleration_seconds",
+		"spec.container.liveness_probe.http_get.port",
+		"spec.volume.secret.default_mode",
+		"spec.volume.config_map.items.mode",
+	} {
+		if b.spelling[key] == nil {
+			t.Errorf("%s: spelling not kept", key)
+		}
+	}
+	if b.spelling["spec.container.image"] != nil {
+		t.Error("spec.container.image: spelling kept")
+	}
+}

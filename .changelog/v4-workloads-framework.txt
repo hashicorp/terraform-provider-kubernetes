@@ -39,6 +39,10 @@
 ```
 
 ```release-note:bug
+`resource/kubernetes_pod_v1`, `resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Keep the configured spelling of a number Kubernetes stores, such as `run_as_user = "01000"`, `max_surge = "01"` or `replicas = "01"`. Earlier versions recorded `"1000"` or `"1"` and planned the change again on every plan, which replaced a Pod or Job.
+```
+
+```release-note:bug
 `resource/kubernetes_job_v1`: Apply changes to `ttl_seconds_after_finished` and `max_failed_indexes` to the Job.
 ```
 

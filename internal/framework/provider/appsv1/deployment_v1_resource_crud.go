@@ -493,16 +493,10 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	if spec.Replicas != nil {
 		model.Replicas = types.StringValue(fmt.Sprintf("%d", *spec.Replicas))
 	}
-	strategyValue, d := flattenDeploymentStrategy(ctx, spec.Strategy)
-	diags.Append(d...)
-	model.Strategy = strategyValue
-	if diags.HasError() {
-		return types.ListNull(deploymentSpecListType().ElemType), diags
-	}
-
 	var priorTemplateSpec types.List
 	var priorTemplateMetadata []common.NamespacedMetadataModel
 	var priorSelector []LabelSelectorModel
+	priorStrategy := types.ListNull(deploymentStrategyObjectType())
 	if !baseline.IsNull() && !baseline.IsUnknown() {
 		var priorSpecs []deploymentSpecModel
 		diags.Append(baseline.ElementsAs(ctx, &priorSpecs, false)...)
@@ -511,6 +505,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 		}
 		if len(priorSpecs) == 1 {
 			priorSelector = priorSpecs[0].Selector
+			priorStrategy = priorSpecs[0].Strategy
 		}
 		if len(priorSpecs) == 1 && len(priorSpecs[0].Template) == 1 {
 			priorTemplateSpec = priorSpecs[0].Template[0].Spec
@@ -524,6 +519,12 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 				}
 			}
 		}
+	}
+	strategyValue, d := flattenDeploymentStrategy(ctx, spec.Strategy, priorStrategy)
+	diags.Append(d...)
+	model.Strategy = strategyValue
+	if diags.HasError() {
+		return types.ListNull(deploymentSpecListType().ElemType), diags
 	}
 	model.Selector, d = flattenWorkloadSelector(ctx, spec.Selector, priorSelector)
 	diags.Append(d...)
@@ -675,7 +676,7 @@ func expandDeploymentStrategy(ctx context.Context, value types.List, at path.Pat
 	return result, diags
 }
 
-func flattenDeploymentStrategy(ctx context.Context, strategy appsv1.DeploymentStrategy) (types.List, diag.Diagnostics) {
+func flattenDeploymentStrategy(ctx context.Context, strategy appsv1.DeploymentStrategy, prior types.List) (types.List, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if strategy.Type == "" {
 		strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
@@ -694,8 +695,8 @@ func flattenDeploymentStrategy(ctx context.Context, strategy appsv1.DeploymentSt
 			maxUnavailable = strategy.RollingUpdate.MaxUnavailable.String()
 		}
 		object, d := types.ObjectValue(strategyObjectRollingUpdateElementType().AttrTypes, map[string]attr.Value{
-			"max_surge":       types.StringValue(maxSurge),
-			"max_unavailable": types.StringValue(maxUnavailable),
+			"max_surge":       rollingUpdateSpelling(prior, "max_surge", maxSurge),
+			"max_unavailable": rollingUpdateSpelling(prior, "max_unavailable", maxUnavailable),
 		})
 		diags.Append(d...)
 		rolling, d = types.ListValue(rollingType.ElemType, []attr.Value{object})

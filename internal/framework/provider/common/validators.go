@@ -29,6 +29,7 @@ var (
 	_ validator.String = dnsLabelPrefixValidator{}
 	_ validator.Map    = annotationsValidator{}
 	_ validator.Map    = labelsValidator{}
+	_ validator.List   = emptyListValidator{}
 )
 
 // DNSSubdomainNameValidator returns a validator that checks a string is a valid DNS
@@ -226,4 +227,30 @@ func (v rbacNameValidator) ValidateString(_ context.Context, req validator.Strin
 		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 			req.Path, msg, req.ConfigValue.ValueString()))
 	}
+}
+
+// NotEmptyList rejects a configured empty list for an optional list of objects.
+// Such arguments replaced SDKv2 blocks, and [] does not mean "omitted" the way
+// an absent block did, so the message says how to leave the argument unset.
+func NotEmptyList() validator.List {
+	return emptyListValidator{}
+}
+
+type emptyListValidator struct{}
+
+func (v emptyListValidator) Description(_ context.Context) string {
+	return "must be omitted or null to leave it unset, not an empty list"
+}
+
+func (v emptyListValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v emptyListValidator) ValidateList(_ context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || len(req.ConfigValue.Elements()) != 0 {
+		return
+	}
+	resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(req.Path,
+		"must be omitted or null to leave it unset, not an empty list. When it is built from a value that can be absent or empty, use a conditional expression that yields null in that case instead of a dynamic block",
+		"[]"))
 }

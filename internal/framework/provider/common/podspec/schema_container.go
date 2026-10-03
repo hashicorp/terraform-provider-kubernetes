@@ -12,13 +12,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 func (b builder) podContainerObject() schema.NestedBlockObject {
 	resources := schema.ListNestedAttribute{
 		Description: "Compute resources required by this container. Omit or use null to retain API-populated values; a configured list must contain exactly one object. Use [{}] to leave limits and requests unset. An empty list is not omission.",
 		Optional:    true, Computed: true,
-		Validators:    []validator.List{listvalidator.SizeBetween(1, 1)},
+		Validators:    []validator.List{common.NotEmptyList(), listvalidator.SizeAtMost(1)},
 		PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 		NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
 			"limits":   b.quantityMap(true, immutable),

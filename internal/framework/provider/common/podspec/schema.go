@@ -257,7 +257,7 @@ func (b builder) references(child string, f forceNew) schema.ListAttribute {
 		Optional: true, Computed: true,
 		Description:   "List of reference objects. Omit or use null to retain API-populated references. When configured, supply at least one reference; an empty list is not omission.",
 		ElementType:   types.ObjectType{AttrTypes: map[string]attr.Type{child: types.StringType}},
-		Validators:    []validator.List{listvalidator.SizeAtLeast(1), podRequiredReference{child: child}},
+		Validators:    []validator.List{common.NotEmptyList(), podRequiredReference{child: child}},
 		PlanModifiers: []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 	}
 	if b.replace(f) {

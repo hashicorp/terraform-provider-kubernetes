@@ -57,6 +57,10 @@ func (podResourcesRequiresReplace) PlanModifyObject(ctx context.Context, req pla
 	values := req.PlanValue.Attributes()
 	for _, name := range []string{"limits", "requests"} {
 		if quantities, ok := values[name].(types.Map); ok && quantities.IsUnknown() {
+			if !req.StateValue.IsNull() {
+				values[name] = req.StateValue.Attributes()[name]
+				continue
+			}
 			values[name] = types.MapValueMust(quantities.ElementType(ctx), map[string]attr.Value{})
 		}
 	}

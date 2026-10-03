@@ -220,6 +220,12 @@ func (p *PodV1) decodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, 
 		if values["target_state"] == nil {
 			values["target_state"] = []any{}
 		}
+		if version == 0 {
+			spec, ok := values["spec"].([]any)
+			if !ok || len(spec) != 1 {
+				return fmt.Errorf("expected exactly one spec element")
+			}
+		}
 		return podspec.UpgradeResourcesState(values, "state", []string{"spec"}, version == 0)
 	})
 	if err != nil {

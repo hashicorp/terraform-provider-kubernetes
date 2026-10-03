@@ -82,3 +82,48 @@ func TestPodResourcesStateRoutes(t *testing.T) {
 		}
 	}
 }
+
+func TestPodLegacyStateSpecValidation(t *testing.T) {
+	ctx := context.Background()
+	pod := &PodV1{}
+	var schemaResponse resource.SchemaResponse
+	pod.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
+	for _, version := range []int64{0, 1} {
+		for _, move := range []bool{false, true} {
+			for _, tc := range []struct {
+				name, field string
+				invalid     bool
+				missing     bool
+			}{
+				{"absent", "", false, true},
+				{"null", `,"spec":null`, false, true},
+				{"empty", `,"spec":[]`, false, true},
+				{"one object", `,"spec":[{}]`, false, false},
+				{"multiple objects", `,"spec":[{},{}]`, true, false},
+				{"null element", `,"spec":[null]`, true, false},
+			} {
+				t.Run(fmt.Sprintf("v%d/move=%t/%s", version, move, tc.name), func(t *testing.T) {
+					raw := &tfprotov6.RawState{JSON: []byte(`{"id":"ns/p","metadata":[{"name":"p","namespace":"ns"}]` + tc.field + `}`)}
+					state := tfsdk.State{Schema: schemaResponse.Schema}
+					wantError := tc.invalid || version == 0 && tc.missing
+					if move {
+						response := resource.MoveStateResponse{TargetState: state}
+						pod.MoveState(ctx)[0].StateMover(ctx, resource.MoveStateRequest{
+							SourceTypeName: "kubernetes_pod", SourceSchemaVersion: version,
+							SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes", SourceRawState: raw,
+						}, &response)
+						if response.Diagnostics.HasError() != wantError {
+							t.Fatalf("diagnostics = %v, want error = %t", response.Diagnostics, wantError)
+						}
+					} else {
+						response := resource.UpgradeStateResponse{State: state}
+						pod.UpgradeState(ctx)[version].StateUpgrader(ctx, resource.UpgradeStateRequest{RawState: raw}, &response)
+						if response.Diagnostics.HasError() != wantError {
+							t.Fatalf("diagnostics = %v, want error = %t", response.Diagnostics, wantError)
+						}
+					}
+				})
+			}
+		}
+	}
+}

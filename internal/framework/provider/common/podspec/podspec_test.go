@@ -181,6 +181,12 @@ func TestResourcesObjectPlan(t *testing.T) {
 	}{
 		"null prior zero config":       {absent, resources(null, null), resources(unknown, unknown), false, resources(empty, empty)},
 		"zero prior zero config":       {resources(empty, empty), resources(null, null), resources(unknown, unknown), false, resources(empty, empty)},
+		"null child maps preserved":    {resources(null, null), resources(null, null), resources(unknown, unknown), false, resources(null, null)},
+		"null limits preserved":        {resources(null, empty), resources(null, null), resources(unknown, unknown), false, resources(null, empty)},
+		"null requests preserved":      {resources(empty, null), resources(null, null), resources(unknown, unknown), false, resources(empty, null)},
+		"explicit empty limits":        {resources(null, null), resources(empty, null), resources(empty, unknown), false, resources(empty, null)},
+		"explicit empty requests":      {resources(null, null), resources(null, empty), resources(unknown, empty), false, resources(null, empty)},
+		"explicit empty maps":          {resources(null, null), resources(empty, empty), resources(empty, empty), false, resources(empty, empty)},
 		"known maps retained":          {absent, resources(empty, null), resources(empty, unknown), false, resources(empty, empty)},
 		"limits set handled by child":  {absent, resources(cpu, null), resources(cpu, unknown), false, resources(cpu, unknown)},
 		"unknown configured object":    {absent, unresolved, unresolved, true, unresolved},
@@ -433,7 +439,7 @@ func TestSatisfies(t *testing.T) {
 
 // A write preserves planned null resources when Kubernetes reports only its
 // zero value. A refresh records the API object, including empty quantity maps.
-func TestAbsentZeroBlockWriteBack(t *testing.T) {
+func TestAbsentResourcesWriteBack(t *testing.T) {
 	ctx := context.Background()
 	b := For(Job())
 	at := path.Root("spec")

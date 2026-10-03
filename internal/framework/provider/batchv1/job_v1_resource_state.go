@@ -131,6 +131,11 @@ func jobLegacyObject(value interface{}) (map[string]interface{}, bool) {
 // upgradeJobSpecState converts only the selected singleton attributes. Source
 // version gates decide whether the historical quantity-list repair is needed.
 func upgradeJobSpecState(spec map[string]any, location string, legacyQuantities bool) error {
+	if legacyQuantities {
+		if _, ok := jobLegacyObject(spec["template"]); !ok {
+			return fmt.Errorf("expected exactly one pod template in Job v0 state")
+		}
+	}
 	if err := podspec.UpgradeResourcesState(spec, location, []string{"template", "spec"}, legacyQuantities); err != nil {
 		return err
 	}

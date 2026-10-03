@@ -307,9 +307,17 @@ func flattenLabelSelector(in *metav1.LabelSelector, prior attr.Value, typ types.
 	expressionType := expressionsType.ElemType.(types.ObjectType)
 	expressions := types.ListNull(expressionType)
 	if len(in.MatchExpressions) > 0 || isEmptyCollection(previous["match_expressions"]) {
+		var previousExpressions []attr.Value
+		if list, ok := previous["match_expressions"].(types.List); ok {
+			previousExpressions = list.Elements()
+		}
 		elements := make([]attr.Value, 0, len(in.MatchExpressions))
-		for _, expression := range in.MatchExpressions {
+		for i, expression := range in.MatchExpressions {
 			values := types.SetNull(types.StringType)
+			// Kubernetes drops empty values; keep a configured empty set.
+			if i < len(previousExpressions) && isEmptyCollection(objectAttribute(previousExpressions[i], "values")) {
+				values = types.SetValueMust(types.StringType, []attr.Value{})
+			}
 			if len(expression.Values) > 0 {
 				items := make([]attr.Value, len(expression.Values))
 				for i, v := range expression.Values {
@@ -439,6 +447,15 @@ func isEmptyCollection(value attr.Value) bool {
 		return !v.IsNull() && !v.IsUnknown() && len(v.Elements()) == 0
 	case types.Map:
 		return !v.IsNull() && !v.IsUnknown() && len(v.Elements()) == 0
+	case types.Set:
+		return !v.IsNull() && !v.IsUnknown() && len(v.Elements()) == 0
 	}
 	return false
+}
+
+func objectAttribute(value attr.Value, name string) attr.Value {
+	if object, ok := value.(types.Object); ok && !object.IsNull() && !object.IsUnknown() {
+		return object.Attributes()[name]
+	}
+	return nil
 }

@@ -134,12 +134,10 @@ func noOpPlan(req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse)
 	return unchanged
 }
 
-// Kubernetes does not allow a Job's pod template to change. The fields SDKv2
-// declared ForceNew replace the Job on their own; any other configured change
-// to the template the API would receive replaces it here, rather than planning
-// an update that cannot take effect. Unless owned, the state's template labels
-// and annotations may include keys admission added, so dropping one updates
-// only state, as earlier versions did.
+// Kubernetes does not allow a Job's pod template to change, so any configured
+// change the API would receive replaces the Job. Unless owned, state's template
+// labels and annotations may hold keys admission added; dropping one only
+// updates state.
 func jobTemplateChanged(ctx context.Context, configRaw, planRaw, stateRaw tftypes.Value, apiDefaulted func(*tftypes.AttributePath) bool, owned bool) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	at := tftypes.NewAttributePath().WithAttributeName("spec").WithElementKeyInt(0).WithAttributeName("template")
@@ -187,9 +185,8 @@ func keepPlannedKeys(prior, planned map[string]string) {
 	}
 }
 
-// Job Create and Update set this private state key: their state holds only
-// the configured pod template labels and annotations. State from an import or
-// an earlier version also holds any that admission added.
+// Job Create and Update set this private state key: their state holds only the
+// configured pod template labels and annotations, not keys admission added.
 const podTemplateMetadataOwnershipInitialized = "pod_template_metadata_ownership_initialized"
 
 // podTemplatesEqual reports whether a Job holding the template have already
@@ -205,11 +202,8 @@ func podTemplatesEqual(have, want corev1.PodTemplateSpec) bool {
 	return payloadsEqual(have, want)
 }
 
-// clearUnsetFalse clears the pointer booleans whose false is what Kubernetes
-// does when they are unset. Every other false is a request of its own:
-// allowPrivilegeEscalation, automountServiceAccountToken and
-// enableServiceLinks default to true, and the restricted Pod Security Standard
-// rejects runAsNonRoot false.
+// clearUnsetFalse clears the pointer booleans for which false means unset. The
+// others default to true, or, like runAsNonRoot, are checked by Pod Security.
 func clearUnsetFalse(spec *corev1.PodSpec) {
 	unset := func(b **bool) {
 		if *b != nil && !**b {
@@ -227,9 +221,8 @@ func clearUnsetFalse(spec *corev1.PodSpec) {
 	}
 }
 
-// payloadsEqual compares objects as the API receives them, where absent, null
-// and empty values are the same and quantities have one spelling. False is a
-// value: callers clear the booleans for which it is not (see clearUnsetFalse).
+// payloadsEqual compares objects as the API receives them: absent, null and
+// empty values are equal and quantities have one spelling.
 func payloadsEqual(a, b any) bool {
 	x, errA := prunedJSON(a)
 	y, errB := prunedJSON(b)
@@ -272,9 +265,8 @@ func prune(v any) any {
 	return v
 }
 
-// apiDefaultedStrings reports the strings the API fills when they are empty:
-// those Optional and Computed without a default, as SDKv2's Optional+Computed
-// strings were. Configuring "" for one of them keeps the value Kubernetes has.
+// apiDefaultedStrings reports the strings the API fills when empty: those
+// Optional and Computed without a default.
 func apiDefaultedStrings(ctx context.Context, s any) func(*tftypes.AttributePath) bool {
 	resourceSchema, _ := s.(schema.Schema)
 	return func(at *tftypes.AttributePath) bool {
@@ -285,10 +277,8 @@ func apiDefaultedStrings(ctx context.Context, s any) func(*tftypes.AttributePath
 }
 
 // resolveUnconfigured replaces unknown values, and API-defaulted strings
-// configured as "", with their prior values, so that comparing API payloads
-// ignores server-populated values. An unconfigured unknown value without a
-// prior, such as one in a new element, stays unknown and is left to the API.
-// It reports false when a configured value is unknown.
+// configured as "", with their prior values so payload comparison ignores
+// server-populated values. It reports false when a configured value is unknown.
 func resolveUnconfigured(at *tftypes.AttributePath, config, plan, state tftypes.Value, apiDefaulted func(*tftypes.AttributePath) bool) (tftypes.Value, bool) {
 	if !config.IsKnown() {
 		return plan, false

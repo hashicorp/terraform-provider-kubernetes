@@ -26,7 +26,6 @@ func podV1Spec() *podspec.Built {
 	return podspec.For(podspec.Pod())
 }
 
-// The schema is built and frozen once per process; see common.FrozenSchema.
 var podV1FrozenSchema = common.FrozenSchema(buildPodV1Schema)
 
 func (p *PodV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

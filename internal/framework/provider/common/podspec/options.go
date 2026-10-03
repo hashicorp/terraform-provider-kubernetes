@@ -3,17 +3,12 @@
 
 package podspec
 
-// Options selects the owner-specific variations of the PodSpec. They mirror
-// the switches SDKv2 applied around podSpecFields(isUpdatable, false); the
-// field set, its representation and its null-versus-zero handling are shared.
-// Options must stay comparable: For builds each distinct value once.
+// Options selects the per-resource variations of the PodSpec. It must stay
+// comparable: For builds each distinct value once.
 type Options struct {
-	// Immutable forces replacement for every field SDKv2 declared
-	// ForceNew: !isUpdatable (a bare Pod and a Job's pod template).
+	// Immutable forces replacement for every field SDKv2 declared ForceNew: !isUpdatable.
 	Immutable bool
-	// Template selects pod-template semantics: the spec describes the pods of
-	// a workload, sits next to template metadata owned by the resource, and
-	// keeps built-in tolerations on read. A bare Pod filters them out.
+	// Template selects pod-template semantics, which keep built-in tolerations on read.
 	Template bool
 	// RestartPolicy is the default of restart_policy.
 	RestartPolicy string

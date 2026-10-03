@@ -28,7 +28,6 @@ import (
 
 var daemonSetRollingValuePattern = regexp.MustCompile(`^(\+?[0-9]+|[1-9][0-9]?%|100%)$`)
 
-// The schema is built and frozen once per process; see common.FrozenSchema.
 var daemonSetFrozenSchema = common.FrozenSchema(buildDaemonSetSchema)
 
 func (d *DaemonSetV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

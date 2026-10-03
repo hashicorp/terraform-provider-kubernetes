@@ -130,9 +130,8 @@ func jobLegacyObject(value interface{}) (map[string]interface{}, bool) {
 	return object, ok
 }
 
-// Schema v0 stored resource requests/limits as singleton blocks, including in
-// init containers. Upgrade directly to today's map values; Framework does not
-// chain state upgraders.
+// Schema v0 stored resource requests/limits as singleton blocks. The Framework
+// does not chain state upgraders, so this converts straight to maps.
 func upgradeJobResourcesV0(spec map[string]interface{}) error {
 	template, ok := jobLegacyObject(spec["template"])
 	if !ok {

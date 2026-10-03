@@ -80,10 +80,8 @@ func (b *Built) ObjectType() basetypes.ObjectTypable {
 	return b.objectType
 }
 
-// ExpandSpec converts the "spec" list at the given path into a PodSpec
-// through the shared pure SDKv2 expander. A null or empty list yields an
-// empty PodSpec, as SDKv2 did. Unknown values are rejected unless the schema
-// marks them API-computed, in which case the API default is selected.
+// ExpandSpec converts the "spec" list into a PodSpec with the SDKv2 expander.
+// Unknown values are rejected unless the schema marks them API-computed.
 func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	if value.IsUnknown() {
@@ -107,9 +105,7 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) 
 }
 
 // FlattenSpec converts an API PodSpec into the "spec" list after a write. The
-// baseline is the plan; it decides null versus empty collection ownership,
-// retains semantically equal quantity spellings and keeps a planned "" on
-// API-defaulted strings.
+// plan, as baseline, decides null versus empty values and kept spellings.
 func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	raw, err := kubernetes.FlattenPodSpecForFramework(spec, b.template)
@@ -133,16 +129,11 @@ func (b *Built) RefreshSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 	return r.FlattenSpec(ctx, spec, baseline, at)
 }
 
-// SDKv2 passed a block with nothing configured as [nil]. For the pod security
-// context that omits runAsNonRoot rather than sending false, so a block such as
-// security_context { supplemental_groups = [] } leaves the API object unchanged.
-// The plan cannot tell a configured false from the zero default, so a block
-// with only run_as_non_root = false is sent as unset too; Kubernetes treats
-// both alike.
+// A pod security_context holding only zero values is sent as unset, as SDKv2
+// sent it as [nil]; Kubernetes treats run_as_non_root false and unset alike.
 var podZeroBlockUnset = map[string]bool{"spec.security_context": true}
 
-// This boundary translates known Framework values to the input of the shared
-// pure PodSpec API helpers, never to ResourceData. Unknowns cannot reach client-go.
+// podSpecAPIValue converts a known Framework value into SDKv2 expander input.
 func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key string, computed map[string]bool, diagnostics *diag.Diagnostics) interface{} {
 	if value.IsUnknown() {
 		if computed[key] {
@@ -281,9 +272,8 @@ func podSpecBlockPaths(object schema.NestedBlockObject, prefix string, blocks ma
 	}
 }
 
-// The existing pure flatteners return maps, slices, enum aliases, and pointers.
-// Read those values through the native template PodSpec type so every SDKv2 path
-// has its declared Terraform type without erasing null/empty collection ownership.
+// podSpecStateValue converts SDKv2 flattener output into a value of typ, with
+// prior deciding null versus empty.
 func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prior attr.Value, names []string, key string, b *Built, diagnostics *diag.Diagnostics) attr.Value {
 	if set, ok := raw.(*sdkschema.Set); ok {
 		raw = set.List()
@@ -334,9 +324,8 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		if count == 0 && !rv.IsValid() && !b.blocks[key] && prior == nil {
 			return types.ListNull(t.ElemType)
 		}
-		// As in SDKv2, a block holding only zero values is the same as no block
-		// after a write. A read keeps it only if Kubernetes cannot hold it, so
-		// removing a block out of band shows as drift.
+		// A block holding only zero values is the same as no block after a write;
+		// a read keeps it only if Kubernetes cannot hold it.
 		if count == 0 && b.blocks[key] && len(previous) == 1 && podZeroValue(previous[0]) && (!b.refresh || b.zeroAbsent[key]) {
 			return prior
 		}
@@ -348,9 +337,8 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 			}
 			entries[i] = podSpecStateValue(ctx, t.ElemType, rv.Index(i).Interface(), old, names, key, b, diagnostics)
 		}
-		// Kubernetes holds some blocks, such as container resources, whether or
-		// not one was sent. After a write a planned empty list, which SDKv2
-		// recorded for such a block with only zero values, stays empty.
+		// Kubernetes holds some blocks, such as container resources, even when
+		// none was sent, so a planned empty list stays empty after a write.
 		if count == 1 && plannedEmpty && !b.refresh && b.absentZero[key] && podZeroValue(entries[0]) {
 			return prior
 		}
@@ -459,9 +447,8 @@ func podZeroValue(value attr.Value) bool {
 	return !podNonzeroValue(value)
 }
 
-// podZeroAbsentBlocks sends each block with only zero values through the
-// expander, a JSON round trip and the flattener, and records those that come
-// back absent.
+// podZeroAbsentBlocks records the blocks that come back absent when sent with
+// only zero values through the expander, JSON and the flattener.
 func podZeroAbsentBlocks(b *Built) map[string]bool {
 	result := map[string]bool{}
 	for key := range b.blocks {
@@ -473,9 +460,8 @@ func podZeroAbsentBlocks(b *Built) map[string]bool {
 	return result
 }
 
-// podAbsentZeroBlocks sends each list of objects, block or attribute, absent
-// from a zero-valued enclosing element through the same round trip, and records
-// those that come back present.
+// podAbsentZeroBlocks records the lists of objects that come back present when
+// left out of a zero-valued enclosing element.
 func podAbsentZeroBlocks(b *Built) map[string]bool {
 	keys := map[string]bool{}
 	podObjectListPaths(b.objectType, "spec", keys)

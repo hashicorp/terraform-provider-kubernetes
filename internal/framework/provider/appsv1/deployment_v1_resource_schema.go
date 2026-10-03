@@ -27,7 +27,6 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 )
 
-// The schema is built and frozen once per process; see common.FrozenSchema.
 var deploymentFrozenSchema = common.FrozenSchema(buildDeploymentSchema)
 
 func (d *DeploymentV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {

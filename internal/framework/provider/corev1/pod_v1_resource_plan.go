@@ -41,9 +41,7 @@ func (p *PodV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 		return
 	}
 
-	// Quantity modifiers can restore semantic equality after Framework has
-	// marked metadata unknown. Restore API revisions only for an otherwise
-	// identical plan; genuine updates must still receive fresh API values.
+	// Keep API revisions only when the plan is otherwise identical to state.
 	candidate := req.Plan
 	plannedMetadata := planned.Elements()[0].(types.Object).Attributes()
 	priorMetadata := prior.Elements()[0].(types.Object).Attributes()

@@ -16,12 +16,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-// DecodeLegacyState decodes JSON state written by an SDKv2 version of a
-// resource, for UpgradeState and MoveState. Attributes the schema no longer
-// has, such as metadata.self_link, are dropped as SDKv2 dropped them. When
-// rewrite is set it is applied to the decoded JSON object first, to convert
-// an older schema version's shapes. The result is passed through
-// NormalizeLegacyState.
+// DecodeLegacyState decodes SDKv2 JSON state for UpgradeState and MoveState,
+// dropping attributes the schema no longer has. rewrite, if set, converts an
+// older schema version's shapes in the JSON object first.
 func DecodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, s schema.Schema, rewrite func(map[string]any) error) (tftypes.Value, error) {
 	if raw == nil || len(raw.JSON) == 0 {
 		return tftypes.Value{}, errors.New("the source state has no JSON data")
@@ -72,11 +69,9 @@ func NormalizeLegacyState(value tftypes.Value) (tftypes.Value, error) {
 	})
 }
 
-// LegacyStateName returns the namespace and name of decoded SDKv2 state from
-// its namespace/name ID and checks them against its single metadata block.
-// SDKv2 saved a failed create, such as a tainted generate_name object, before
-// reading the object back, so an empty metadata name or namespace is filled
-// from the ID. Two different non-empty values are an error.
+// LegacyStateName returns the namespace and name from the ID of SDKv2 state.
+// SDKv2 saved a failed create before reading the object back, so an empty
+// metadata name or namespace is filled from the ID; a mismatch is an error.
 func LegacyStateName(values map[string]any) (string, string, error) {
 	id, _ := values["id"].(string)
 	namespace, name, ok := strings.Cut(id, "/")

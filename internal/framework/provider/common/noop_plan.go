@@ -10,9 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-// NoOpPlan keeps computed-only differences from scheduling a spurious update. Unlike
-// UseStateForUnknown on mutable metadata, this leaves all computed values unknown
-// when any configured value changes or configuration is not yet fully known.
+// NoOpPlan returns state when plan differs from it only in unknown computed
+// values and the configuration is fully known; otherwise it returns plan.
 func NoOpPlan(config, plan, state tftypes.Value) (tftypes.Value, bool, error) {
 	if config.IsNull() || plan.IsNull() || state.IsNull() {
 		return plan, false, nil

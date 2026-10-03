@@ -1,10 +1,8 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-// Package podspec provides the native Framework schema and pure API
-// conversions for the PodSpec of Deployment, DaemonSet, StatefulSet, Pod, Job
-// and CronJob. It mirrors SDKv2's podSpecFields(isUpdatable, false); Options
-// carries the per-resource differences.
+// Package podspec provides the Framework schema and API conversions for the
+// PodSpec of Deployment, DaemonSet, StatefulSet, Pod, Job and CronJob.
 package podspec
 
 import (
@@ -81,9 +79,7 @@ func (b builder) specBlock() schema.ListNestedBlock {
 	return block
 }
 
-// These constructors describe the PodSpec's static native schema. The zero
-// defaults preserve SDKv2's omitted-scalar values; null and unknown remain
-// distinct until Framework planning applies the defaults or the API boundary is reached.
+// Optional scalars default to zero, the value SDKv2 stored when omitted.
 func (b builder) str(required, computed bool, f forceNew, fallback string, validators ...validator.String) schema.StringAttribute {
 	a := schema.StringAttribute{Required: required, Optional: !required, Computed: computed, Validators: validators}
 	if !required && !computed {
@@ -183,9 +179,8 @@ func (b builder) mapping(computed bool, f forceNew) schema.MapAttribute {
 	return a
 }
 
-// block mirrors an SDKv2 TypeList block. Its own ForceNew only governs the
-// number of elements; descendants that force replacement are inherited so
-// that adding or removing an element still replaces.
+// block mirrors an SDKv2 TypeList block. Its ForceNew governs only the number
+// of elements; descendants that force replacement still replace on removal.
 func (b builder) block(object schema.NestedBlockObject, minimum, maximum int, f forceNew) schema.ListNestedBlock {
 	l := schema.ListNestedBlock{NestedObject: object}
 	if minimum > 0 {
@@ -253,8 +248,7 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 	}
 }
 
-// References are atomic objects with explicitly validated children. Assignment
-// syntax is required because resources disables legacy block decoding.
+// references is an attribute list of objects, set with assignment syntax.
 func (b builder) references(child string, f forceNew) schema.ListAttribute {
 	a := schema.ListAttribute{
 		Optional: true, Computed: true,

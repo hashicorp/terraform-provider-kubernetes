@@ -13,13 +13,9 @@ import (
 )
 
 // FreezeSchema returns a copy of s in which every nested block carries its
-// derived type in CustomType. Without it the framework rebuilds a block's type
-// on every Type() call, and it makes one for each prefix of each value path it
-// visits, which is quadratic in the size of the pod spec.
-//
-// The stored types are the ones the framework would derive, so the protocol
-// schema and values are unchanged. Existing CustomTypes are kept, and maps are
-// copied rather than mutated because schema constructors share them.
+// derived type in CustomType. Otherwise the framework rebuilds block types for
+// every value path it visits, which is quadratic in the size of the pod spec.
+// Maps are copied rather than mutated because schema constructors share them.
 func FreezeSchema(s schema.Schema) schema.Schema {
 	s.Blocks = freezeBlocks(s.Blocks)
 	return s
@@ -78,9 +74,8 @@ func FreezeNestedBlockObject(o schema.NestedBlockObject) schema.NestedBlockObjec
 // SchemaFunc is the signature of resource.Resource.Schema.
 type SchemaFunc func(context.Context, resource.SchemaRequest, *resource.SchemaResponse)
 
-// FrozenSchema wraps a resource schema builder so that it runs once per
-// process and every caller shares the frozen result read-only. The builder
-// must not depend on the request.
+// FrozenSchema runs a request-independent schema builder once per process and
+// shares the frozen result read-only.
 func FrozenSchema(build SchemaFunc) SchemaFunc {
 	once := sync.OnceValue(func() resource.SchemaResponse {
 		var resp resource.SchemaResponse

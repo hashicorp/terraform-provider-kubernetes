@@ -3448,11 +3448,11 @@ resource "kubernetes_persistent_volume_claim_v1" "test" {
     access_modes       = ["ReadWriteOnce"]
     storage_class_name = kubernetes_storage_class_v1.test.metadata.0.name
     volume_name        = kubernetes_persistent_volume_v1.test.metadata.0.name
-    resources = {
+    resources = [{
       requests = {
         storage = "1G"
       }
-    }
+    }]
   }
 }
 

@@ -39,6 +39,9 @@ type Built struct {
 	// zeroAbsent marks blocks that Kubernetes returns as absent when sent with
 	// only zero values, so a read keeps such a configured block.
 	zeroAbsent map[string]bool
+	// absentZero marks blocks that Kubernetes returns with one zero-valued
+	// element when sent without them, so a write keeps a planned empty list.
+	absentZero map[string]bool
 }
 
 var built sync.Map // Options -> *Built
@@ -64,6 +67,7 @@ func build(o Options) *Built {
 	podSpecComputedPaths(spec.NestedObject.Attributes, spec.NestedObject.Blocks, "spec", b.computed)
 	podSpecBlockPaths(spec.NestedObject, "spec", b.blocks)
 	b.zeroAbsent = podZeroAbsentBlocks(b)
+	b.absentZero = podAbsentZeroBlocks(b)
 	return b
 }
 
@@ -295,8 +299,10 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		result = v
 	case types.ListType:
 		var previous []attr.Value
+		plannedEmpty := false
 		if list, ok := prior.(types.List); ok && !list.IsNull() && !list.IsUnknown() {
 			previous = list.Elements()
+			plannedEmpty = len(previous) == 0
 		}
 		count := 0
 		if rv.IsValid() && (rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array) {
@@ -321,6 +327,12 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 				old = previous[i]
 			}
 			entries[i] = podSpecStateValue(ctx, t.ElemType, rv.Index(i).Interface(), old, names, key, b, diagnostics)
+		}
+		// Kubernetes holds some blocks, such as container resources, whether or
+		// not one was sent. After a write a planned empty list, which SDKv2
+		// recorded for such a block with only zero values, stays empty.
+		if count == 1 && plannedEmpty && !b.refresh && b.absentZero[key] && podZeroValue(entries[0]) {
+			return prior
 		}
 		v, d := types.ListValue(t.ElemType, entries)
 		diagnostics.Append(d...)
@@ -429,21 +441,57 @@ func podZeroValue(value attr.Value) bool {
 func podZeroAbsentBlocks(b *Built) map[string]bool {
 	result := map[string]bool{}
 	for key := range b.blocks {
-		raw := []interface{}{podZeroRaw(b.objectType, "spec", key)}
-		spec, err := kubernetes.ExpandPodSpecForFramework(raw)
-		if err != nil {
-			continue
-		}
-		var echo corev1.PodSpec
-		if data, err := json.Marshal(spec); err != nil || json.Unmarshal(data, &echo) != nil {
-			continue
-		}
-		flat, err := kubernetes.FlattenPodSpecForFramework(echo, b.template)
-		if err == nil && podRawAbsent(flat, strings.Split(key, ".")[1:]) {
+		flat, ok := podRoundTrip(b, podZeroRaw(b.objectType, "spec", key))
+		if ok && podRawAbsent(flat, strings.Split(key, ".")[1:]) {
 			result[key] = true
 		}
 	}
 	return result
+}
+
+// podAbsentZeroBlocks sends each list of objects, block or attribute, absent
+// from a zero-valued enclosing element through the same round trip, and records
+// those that come back present.
+func podAbsentZeroBlocks(b *Built) map[string]bool {
+	keys := map[string]bool{}
+	podObjectListPaths(b.objectType, "spec", keys)
+	result := map[string]bool{}
+	for key := range keys {
+		parent := key[:strings.LastIndex(key, ".")]
+		flat, ok := podRoundTrip(b, podZeroRaw(b.objectType, "spec", parent))
+		if ok && !podRawAbsent(flat, strings.Split(key, ".")[1:]) {
+			result[key] = true
+		}
+	}
+	return result
+}
+
+func podRoundTrip(b *Built, element interface{}) (interface{}, bool) {
+	spec, err := kubernetes.ExpandPodSpecForFramework([]interface{}{element})
+	if err != nil {
+		return nil, false
+	}
+	var echo corev1.PodSpec
+	if data, err := json.Marshal(spec); err != nil || json.Unmarshal(data, &echo) != nil {
+		return nil, false
+	}
+	flat, err := kubernetes.FlattenPodSpecForFramework(echo, b.template)
+	return flat, err == nil
+}
+
+func podObjectListPaths(typ attr.Type, key string, keys map[string]bool) {
+	switch t := typ.(type) {
+	case basetypes.ObjectTypable:
+		object, _ := t.ValueType(context.Background()).(basetypes.ObjectValuable).ToObjectValue(context.Background())
+		for name, child := range object.AttributeTypes(context.Background()) {
+			podObjectListPaths(child, key+"."+name, keys)
+		}
+	case types.ListType:
+		if _, ok := t.ElemType.(basetypes.ObjectTypable); ok {
+			keys[key] = true
+			podObjectListPaths(t.ElemType, key, keys)
+		}
+	}
 }
 
 // podZeroRaw is the expander input for a spec holding one zero-valued block at

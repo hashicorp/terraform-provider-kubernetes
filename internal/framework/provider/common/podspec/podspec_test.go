@@ -20,6 +20,7 @@ import (
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
 
@@ -282,5 +283,62 @@ func TestSatisfies(t *testing.T) {
 				t.Fatalf("Satisfies = %t, want %t", got, test.want)
 			}
 		})
+	}
+}
+
+// SDKv2 recorded a block Kubernetes always holds, such as container resources,
+// as an empty list when it held only zero values. A write keeps that list; a
+// read records the live block.
+func TestAbsentZeroBlockWriteBack(t *testing.T) {
+	ctx := context.Background()
+	b := For(Job())
+	at := path.Root("spec")
+	live := corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Image: "busybox"}}}
+	full, diags := b.FlattenSpec(ctx, live, types.ListNull(b.ObjectType()), at)
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	spec := full.Elements()[0].(types.Object)
+	containers := spec.Attributes()["container"].(types.List)
+	container := containers.Elements()[0].(types.Object)
+	resources := container.Attributes()["resources"].(types.List)
+	with := func(object types.Object, name string, value attr.Value) types.Object {
+		attributes := object.Attributes()
+		attributes[name] = value
+		return types.ObjectValueMust(object.AttributeTypes(ctx), attributes)
+	}
+	container = with(container, "resources", types.ListValueMust(resources.ElementType(ctx), nil))
+	spec = with(spec, "container", types.ListValueMust(containers.ElementType(ctx), []attr.Value{container}))
+	baseline := types.ListValueMust(full.ElementType(ctx), []attr.Value{spec})
+
+	limited := *live.DeepCopy()
+	limited.Containers[0].Resources.Limits = corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m")}
+	for _, tc := range []struct {
+		name    string
+		flatten func(context.Context, corev1.PodSpec, types.List, path.Path) (types.List, diag.Diagnostics)
+		live    corev1.PodSpec
+		want    bool
+	}{
+		{"write", b.FlattenSpec, live, true},
+		{"read", b.RefreshSpec, live, false},
+		{"write with limits", b.FlattenSpec, limited, false},
+	} {
+		got, diags := tc.flatten(ctx, tc.live, baseline, at)
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if Satisfies(got, baseline) != tc.want {
+			t.Errorf("%s: satisfies a planned empty resources list = %t, want %t", tc.name, !tc.want, tc.want)
+		}
+	}
+	for key, want := range map[string]bool{
+		"spec.container.resources":        true,
+		"spec.init_container.resources":   true,
+		"spec.security_context":           false,
+		"spec.container.security_context": false,
+	} {
+		if b.absentZero[key] != want {
+			t.Errorf("%s: absent block held as zero = %t, want %t", key, b.absentZero[key], want)
+		}
 	}
 }

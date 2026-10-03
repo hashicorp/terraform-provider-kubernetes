@@ -6,7 +6,9 @@ package batchv1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -21,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batchapi "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,6 +33,9 @@ var (
 )
 
 var jobTemplatePath = path.Root("spec").AtListIndex(0).AtName("template")
+
+// jobPlanReadTimeout bounds the read of the live Job while planning.
+const jobPlanReadTimeout = 30 * time.Second
 
 func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
@@ -48,11 +54,17 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	initialized, keyDiags := req.Private.GetKey(ctx, podTemplateMetadataOwnershipInitialized)
 	resp.Diagnostics.Append(keyDiags...)
 	owned := string(initialized) == "true"
-	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw, apiDefaulted, owned)
 	// Decide against the Job as it is now: state written without a refresh can
 	// be stale, and the API comparison reads a zero value as unset, so it cannot
-	// see a removed block that Kubernetes holds with zero values.
-	if job, filters, ok := r.liveJob(ctx, req.State); ok {
+	// see a removed block that Kubernetes holds with zero values. The state
+	// stands in for a Job that no longer exists; Update then reports it as missing.
+	job, filters, liveDiags := r.liveJob(ctx, req.State)
+	resp.Diagnostics.Append(liveDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw, apiDefaulted, owned)
+	if job != nil {
 		if replace {
 			if live, ok := liveState(ctx, job, req.State, filters); ok {
 				replace, diags = jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, live, apiDefaulted, owned)
@@ -66,28 +78,40 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	}
 }
 
-func (r *JobV1) liveJob(ctx context.Context, state tfsdk.State) (*batchapi.Job, kubernetes.MetadataFilters, bool) {
+// liveJob reads the Job for planning. It returns nil when the Job no longer exists.
+func (r *JobV1) liveJob(ctx context.Context, state tfsdk.State) (*batchapi.Job, kubernetes.MetadataFilters, diag.Diagnostics) {
 	var id types.String
-	if state.GetAttribute(ctx, path.Root("id"), &id).HasError() || r.SDKv2Meta == nil {
-		return nil, nil, false
+	diags := state.GetAttribute(ctx, path.Root("id"), &id)
+	if diags.HasError() {
+		return nil, nil, diags
 	}
 	namespace, name, err := kubernetes.IdParts(id.ValueString())
 	if err != nil {
-		return nil, nil, false
+		diags.AddError("Invalid Job ID", err.Error())
+		return nil, nil, diags
 	}
-	clients, filters, diags := r.sdkv2Meta()
+	clients, filters, d := r.sdkv2Meta()
+	diags.Append(d...)
 	if diags.HasError() {
-		return nil, nil, false
+		return nil, nil, diags
 	}
 	conn, err := clients.MainClientset()
 	if err != nil {
-		return nil, nil, false
+		diags.AddError("Kubernetes client error", err.Error())
+		return nil, nil, diags
 	}
+	ctx, cancel := context.WithTimeout(ctx, jobPlanReadTimeout)
+	defer cancel()
 	job, err := conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, nil, false
+	if apierrors.IsNotFound(err) {
+		return nil, nil, diags
 	}
-	return job, filters, true
+	if err != nil {
+		diags.AddError("Error reading Job",
+			fmt.Sprintf("Planning a change to the pod template of Job %q requires reading it from Kubernetes: %s", id.ValueString(), err))
+		return nil, nil, diags
+	}
+	return job, filters, diags
 }
 
 // liveState is the state a refresh would record for the Job.

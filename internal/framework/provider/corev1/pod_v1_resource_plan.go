@@ -6,8 +6,11 @@ package corev1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -15,8 +18,12 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// podPlanReadTimeout bounds the read of the live Pod while planning.
+const podPlanReadTimeout = 30 * time.Second
 
 func (p *PodV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
@@ -64,7 +71,8 @@ func (p *PodV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 // Kubernetes rejects most Pod spec updates, including fields SDKv2 left
 // updatable. Replace the Pod when Update, which patches only the fields that
 // podV1ApplySpecPatch sets, cannot make the live Pod match the planned spec.
-// The prior state stands in for the live Pod only when that cannot be read.
+// The prior state stands in for a Pod that no longer exists; Update then
+// reports it as missing.
 func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
 	var planned, prior types.List
 	var id types.String
@@ -80,8 +88,13 @@ func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlan
 		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("spec"))
 		return
 	}
+	live, diags := p.livePod(ctx, id.ValueString())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	var replace bool
-	if live, ok := p.livePod(ctx, id.ValueString()); ok {
+	if live != nil {
 		patched := live.Spec.DeepCopy()
 		podV1ApplySpecPatch(patched, &plannedSpec)
 		// The patched Pod, flattened as after a write, must satisfy the plan.
@@ -116,24 +129,34 @@ func rawAttributeUnchanged(plan, state tftypes.Value, name string) bool {
 	return ok && plannedValue.Equal(priorValue)
 }
 
-func (p *PodV1) livePod(ctx context.Context, id string) (*corev1.Pod, bool) {
+// livePod reads the Pod for planning. It returns nil when the Pod no longer exists.
+func (p *PodV1) livePod(ctx context.Context, id string) (*corev1.Pod, diag.Diagnostics) {
 	clients, _, diags := p.sdkv2Meta()
 	if diags.HasError() {
-		return nil, false
+		return nil, diags
 	}
 	namespace, name, err := kubernetes.IdParts(id)
 	if err != nil {
-		return nil, false
+		diags.AddError("Invalid Pod ID", err.Error())
+		return nil, diags
 	}
 	conn, err := clients.MainClientset()
 	if err != nil {
-		return nil, false
+		diags.AddError("Kubernetes client error", err.Error())
+		return nil, diags
 	}
+	ctx, cancel := context.WithTimeout(ctx, podPlanReadTimeout)
+	defer cancel()
 	pod, err := conn.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, false
+	if apierrors.IsNotFound(err) {
+		return nil, diags
 	}
-	return pod, true
+	if err != nil {
+		diags.AddError("Error reading Pod",
+			fmt.Sprintf("Planning a change to the spec of Pod %q requires reading it from Kubernetes: %s", id, err))
+		return nil, diags
+	}
+	return pod, diags
 }
 
 // podV1ApplySpecPatch sets the spec fields podV1UpdatePatch can change.

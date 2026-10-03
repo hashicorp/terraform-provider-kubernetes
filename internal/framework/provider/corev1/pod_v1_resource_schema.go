@@ -55,7 +55,7 @@ func buildPodV1Schema(ctx context.Context, _ resource.SchemaRequest, resp *resou
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"metadata": common.NamespacedMetadataSchema("pod", true),
+			"metadata": common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true)),
 			"spec":     podV1Spec().Spec,
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true, Delete: true}),
 		},

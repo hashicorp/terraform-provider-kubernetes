@@ -4,9 +4,7 @@
 package batchv1
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -59,7 +57,7 @@ func (r *JobV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrad
 	return map[int64]resource.StateUpgrader{
 		0: {
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				state, diags := r.jobLegacyState(ctx, req.RawState, 0)
+				state, _, _, diags := r.jobLegacyState(ctx, req.RawState, 0, "Unable to upgrade Job state")
 				resp.Diagnostics.Append(diags...)
 				if !resp.Diagnostics.HasError() {
 					resp.State = state
@@ -77,82 +75,48 @@ func (r *JobV1) MoveState(context.Context) []resource.StateMover {
 				!strings.HasSuffix(req.SourceProviderAddress, "/hashicorp/kubernetes") {
 				return
 			}
-			state, diags := r.jobLegacyState(ctx, req.SourceRawState, req.SourceSchemaVersion)
+			state, namespace, name, diags := r.jobLegacyState(ctx, req.SourceRawState, req.SourceSchemaVersion, "Unable to move kubernetes_job state")
 			resp.Diagnostics.Append(diags...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
 			resp.TargetState = state
 			if resp.TargetIdentity != nil {
-				var model JobV1Model
-				resp.Diagnostics.Append(state.Get(ctx, &model)...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				namespace, name, err := jobIDParts(model.ID.ValueString())
-				if err != nil {
-					resp.Diagnostics.AddError("Unable to move Job state", err.Error())
-					return
-				}
 				resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, jobIdentity(namespace, name))...)
 			}
 		},
 	}}
 }
 
-func (r *JobV1) jobLegacyState(ctx context.Context, raw *tfprotov6.RawState, version int64) (tfsdk.State, diag.Diagnostics) {
+// jobLegacyState decodes state written by the SDKv2 kubernetes_job or
+// kubernetes_job_v1 at the given schema version.
+func (r *JobV1) jobLegacyState(ctx context.Context, raw *tfprotov6.RawState, version int64, summary string) (tfsdk.State, string, string, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var schemaResponse resource.SchemaResponse
 	r.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
+	diags.Append(schemaResponse.Diagnostics...)
 	state := tfsdk.State{Schema: schemaResponse.Schema}
-	if raw == nil || len(raw.JSON) == 0 {
-		diags.AddError("Unable to upgrade Job state", "The source state has no JSON data. Legacy flatmap state is not supported.")
-		return state, diags
-	}
-	var data map[string]interface{}
-	decoder := json.NewDecoder(bytes.NewReader(raw.JSON))
-	decoder.UseNumber()
-	if err := decoder.Decode(&data); err != nil {
-		diags.AddError("Unable to upgrade Job state", err.Error())
-		return state, diags
-	}
-	id, _ := data["id"].(string)
-	namespace, name, err := jobIDParts(id)
-	if err != nil {
-		diags.AddError("Unable to upgrade Job state", err.Error())
-		return state, diags
-	}
-	metadata, ok := jobLegacyObject(data["metadata"])
-	if !ok {
-		diags.AddError("Unable to upgrade Job state", "Expected exactly one metadata element.")
-		return state, diags
-	}
-	if metadata["name"] != name || metadata["namespace"] != namespace {
-		diags.AddError("Unable to upgrade Job state", "The source metadata name and namespace must match the resource ID.")
-		return state, diags
-	}
-	spec, ok := jobLegacyObject(data["spec"])
-	if !ok {
-		diags.AddError("Unable to upgrade Job state", "Expected exactly one spec element.")
-		return state, diags
-	}
-	if version == 0 {
-		if err := upgradeJobResourcesV0(spec); err != nil {
-			diags.AddError("Unable to upgrade Job state", err.Error())
-			return state, diags
+	var namespace, name string
+	value, err := common.DecodeLegacyState(ctx, raw, schemaResponse.Schema, func(values map[string]any) error {
+		var err error
+		if namespace, name, err = common.LegacyStateName(values); err != nil {
+			return err
 		}
-	}
-	encoded, err := json.Marshal(data)
+		spec, ok := jobLegacyObject(values["spec"])
+		if !ok {
+			return fmt.Errorf("expected exactly one spec element")
+		}
+		if version == 0 {
+			return upgradeJobResourcesV0(spec)
+		}
+		return nil
+	})
 	if err != nil {
-		diags.AddError("Unable to upgrade Job state", err.Error())
-		return state, diags
+		diags.AddError(summary, err.Error())
+		return state, "", "", diags
 	}
-	converted := tfprotov6.RawState{JSON: encoded}
-	state.Raw, err = converted.Unmarshal(state.Schema.Type().TerraformType(ctx))
-	if err != nil {
-		diags.AddError("Unable to upgrade Job state", err.Error())
-	}
-	return state, diags
+	state.Raw = value
+	return state, namespace, name, diags
 }
 
 func jobLegacyObject(value interface{}) (map[string]interface{}, bool) {

@@ -8,6 +8,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -53,4 +55,23 @@ func DecodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, s schema.Sc
 		return tftypes.Value{}, errors.New("the source state is null")
 	}
 	return value, nil
+}
+
+// LegacyStateName returns the namespace and name of decoded SDKv2 state from
+// its namespace/name ID, which must match its single metadata block.
+func LegacyStateName(values map[string]any) (string, string, error) {
+	id, _ := values["id"].(string)
+	namespace, name, ok := strings.Cut(id, "/")
+	if !ok || namespace == "" || name == "" || strings.Contains(name, "/") {
+		return "", "", fmt.Errorf("the source state ID %q is not namespace/name", id)
+	}
+	list, _ := values["metadata"].([]any)
+	if len(list) != 1 {
+		return "", "", fmt.Errorf("the source state has %d metadata blocks, expected 1", len(list))
+	}
+	metadata, _ := list[0].(map[string]any)
+	if metadata["namespace"] != namespace || metadata["name"] != name {
+		return "", "", fmt.Errorf("the source state ID %q does not match its metadata namespace and name", id)
+	}
+	return namespace, name, nil
 }

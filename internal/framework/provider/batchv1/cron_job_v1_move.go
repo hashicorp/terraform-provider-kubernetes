@@ -4,14 +4,12 @@
 package batchv1
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // The deprecated alias served batch/v1beta1: schema v1 differs from v1 CronJob
@@ -27,65 +25,28 @@ func (r *CronJobV1) MoveState(ctx context.Context) []resource.StateMover {
 				!strings.HasSuffix(req.SourceProviderAddress, "/hashicorp/kubernetes") {
 				return
 			}
-			const summary = "Unable to move kubernetes_cron_job state"
-			if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {
-				resp.Diagnostics.AddError(summary, "Source JSON state is required; flatmap state is not supported.")
-				return
-			}
-			var source map[string]json.RawMessage
-			if err := json.Unmarshal(req.SourceRawState.JSON, &source); err != nil {
-				resp.Diagnostics.AddError(summary, err.Error())
-				return
-			}
-			var id string
-			if err := json.Unmarshal(source["id"], &id); err != nil {
-				resp.Diagnostics.AddError(summary, "The source must have a namespace/name ID.")
-				return
-			}
-			namespace, name, err := cronJobIDParts(id)
-			if err != nil {
-				resp.Diagnostics.AddError(summary, err.Error())
-				return
-			}
-			var metadata []struct {
-				Name      string `json:"name"`
-				Namespace string `json:"namespace"`
-			}
-			if err := json.Unmarshal(source["metadata"], &metadata); err != nil || len(metadata) != 1 {
-				resp.Diagnostics.AddError(summary, "The source must have exactly one metadata element.")
-				return
-			}
-			if metadata[0].Name != name || metadata[0].Namespace != namespace {
-				resp.Diagnostics.AddError(summary, "The source metadata does not match its namespace/name ID.")
-				return
-			}
-			var specs []map[string]interface{}
-			decoder := json.NewDecoder(bytes.NewReader(source["spec"]))
-			decoder.UseNumber()
-			if err := decoder.Decode(&specs); err != nil || len(specs) != 1 || specs[0] == nil {
-				resp.Diagnostics.AddError(summary, "The source must have exactly one spec element.")
-				return
-			}
-			specs[0]["timezone"] = ""
-			if req.SourceSchemaVersion == 0 {
-				if err := cronJobUpgradeContainerResources(specs[0]); err != nil {
-					resp.Diagnostics.AddError(summary, err.Error())
-					return
+			var namespace, name string
+			converted, err := common.DecodeLegacyState(ctx, req.SourceRawState, schemaResponse.Schema, func(values map[string]any) error {
+				var err error
+				if namespace, name, err = common.LegacyStateName(values); err != nil {
+					return err
 				}
-			}
-			source["spec"], err = json.Marshal(specs)
+				specs, _ := values["spec"].([]any)
+				if len(specs) != 1 {
+					return fmt.Errorf("expected exactly one spec element")
+				}
+				spec, ok := specs[0].(map[string]any)
+				if !ok {
+					return fmt.Errorf("invalid spec object")
+				}
+				spec["timezone"] = ""
+				if req.SourceSchemaVersion == 0 {
+					return cronJobUpgradeContainerResources(spec)
+				}
+				return nil
+			})
 			if err != nil {
-				resp.Diagnostics.AddError(summary, err.Error())
-				return
-			}
-			data, err := json.Marshal(source)
-			if err != nil {
-				resp.Diagnostics.AddError(summary, err.Error())
-				return
-			}
-			converted, err := (&tfprotov6.RawState{JSON: data}).Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
-			if err != nil {
-				resp.Diagnostics.AddError(summary, fmt.Sprintf("Could not decode the converted CronJob state: %s", err))
+				resp.Diagnostics.AddError("Unable to move kubernetes_cron_job state", err.Error())
 				return
 			}
 			resp.TargetState.Raw = converted

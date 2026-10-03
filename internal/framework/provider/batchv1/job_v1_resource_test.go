@@ -707,6 +707,69 @@ func TestAccKubernetesJobV1_upgrade(t *testing.T) {
 	})
 }
 
+// State written by 2.3.0, the last release that stored metadata.self_link,
+// moves without replacing the Job.
+func TestAccKubernetesJobV1_moveFromLegacyState(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	config := fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    name = %q
+  }
+  spec {
+    backoff_limit = 0
+    template {
+      metadata {}
+      spec {
+        restart_policy = "Never"
+        container {
+          name    = "c"
+          image   = %q
+          command = ["true"]
+        }
+      }
+    }
+  }
+  wait_for_completion = false
+}
+`, name, busyboxImage)
+	var before, after batchv1.Job
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_8_0),
+		},
+		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 2.3.0"},
+				},
+				Config: strings.Replace(config, `"kubernetes_job_v1"`, `"kubernetes_job"`, 1),
+				Check:  testAccCheckKubernetesJobV1Exists("kubernetes_job.test", &before),
+				// 2.3.0 does not settle on empty values it reads back.
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: config + `
+moved {
+  from = kubernetes_job.test
+  to   = kubernetes_job_v1.test
+}
+`,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{expectNoReplacement("kubernetes_job_v1.test")},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesJobV1Exists("kubernetes_job_v1.test", &after),
+					testAccCheckKubernetesJobV1ForceNew(&before, &after, false),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesJobV1_disappears(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	var job batchv1.Job

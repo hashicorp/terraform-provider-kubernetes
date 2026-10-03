@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -205,7 +205,11 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 		ops := daemonSetMetadataPatchOps(state, plan, updated.ObjectMeta)
 		if planned != nil {
-			specOps, err := common.StrategicMergeSpecOps(raw, *original, *planned, appsv1.DaemonSet{})
+			from, to := *original, *planned
+			// The selector is immutable and replaces on any change, so the live one is
+			// kept: state written by SDKv2 may order its set values differently.
+			from.Selector, to.Selector = updated.Spec.Selector, updated.Spec.Selector
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.DaemonSet{})
 			if err != nil {
 				return err
 			}
@@ -390,7 +394,7 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 	template := in.Template[0]
 	templateMetadata, templateMetadataDiags := common.ExpandNamespacedMetadata(ctx, template.Metadata)
 	diagnostics.Append(templateMetadataDiags...)
-	templateSpec, templateSpecDiags := podtemplate.ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	templateSpec, templateSpecDiags := podspec.For(podspec.DaemonSet()).ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diagnostics.Append(templateSpecDiags...)
 	if diagnostics.HasError() {
 		return out, diagnostics
@@ -406,7 +410,8 @@ func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, 
 func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, baseline []DaemonSetV1SpecModel) ([]DaemonSetV1SpecModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 
-	specType := podtemplate.SpecObjectType()
+	podSpec := podspec.For(podspec.DaemonSet())
+	specType := podSpec.ObjectType()
 	templateBaseline := types.ListNull(specType)
 	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
 	var selectorBaseline []LabelSelectorModel
@@ -417,7 +422,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 		templateBaseline = baseline[0].Template[0].Spec
 		templateMetadataBaseline = baseline[0].Template[0].Metadata
 	}
-	templateSpec, templateSpecDiags := podtemplate.FlattenSpec(
+	templateSpec, templateSpecDiags := podSpec.FlattenSpec(
 		ctx,
 		spec.Template.Spec,
 		templateBaseline,

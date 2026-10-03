@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -172,7 +172,7 @@ func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel) (*app
 }
 
 func expandPodTemplateSpec(ctx context.Context, value types.List, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
-	return podtemplate.ExpandSpec(ctx, value, at)
+	return podspec.For(podspec.StatefulSet()).ExpandSpec(ctx, value, at)
 }
 
 func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters) (StatefulSetSpecModel, diag.Diagnostics) {
@@ -419,7 +419,7 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	if baseline != nil && len(baseline.Template) > 0 {
 		baselineSpec = baseline.Template[0].Spec
 	}
-	podSpec, d2 := podtemplate.FlattenSpec(ctx, in.Spec, baselineSpec, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"))
+	podSpec, d2 := podspec.For(podspec.StatefulSet()).FlattenSpec(ctx, in.Spec, baselineSpec, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d2...)
 	out.Spec = podSpec
 

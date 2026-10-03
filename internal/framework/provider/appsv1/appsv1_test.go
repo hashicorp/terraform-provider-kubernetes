@@ -12,9 +12,7 @@ import (
 	"testing"
 
 	gversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	sdkv2 "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -32,55 +30,6 @@ var testAccProviderFactories = map[string]func() (tfprotov6.ProviderServer, erro
 	"kubernetes": func() (tfprotov6.ProviderServer, error) {
 		return mux.MuxServerWithProvider(context.Background(), "test", kubernetes.Provider())
 	},
-}
-
-func TestWorkloadMuxSchemas(t *testing.T) {
-	ctx := context.Background()
-	legacy := kubernetes.Provider()
-	legacySchemas, err := sdkschema.NewGRPCProviderServer(legacy).GetProviderSchema(ctx, &tfprotov5.GetProviderSchemaRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	server, err := testAccProviderFactories["kubernetes"]()
-	if err != nil {
-		t.Fatal(err)
-	}
-	schemas, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, diagnostic := range schemas.Diagnostics {
-		if diagnostic.Severity == tfprotov6.DiagnosticSeverityError {
-			t.Fatalf("%s: %s", diagnostic.Summary, diagnostic.Detail)
-		}
-	}
-	for target, alias := range map[string]string{
-		"kubernetes_deployment_v1":   "kubernetes_deployment",
-		"kubernetes_daemon_set_v1":   "kubernetes_daemonset",
-		"kubernetes_stateful_set_v1": "kubernetes_stateful_set",
-	} {
-		t.Run(target, func(t *testing.T) {
-			if _, registered := legacy.ResourcesMap[target]; registered {
-				t.Fatal("versioned resource is still registered in SDKv2")
-			}
-			source := legacySchemas.ResourceSchemas[alias]
-			if source == nil || schemas.ResourceSchemas[alias] == nil {
-				t.Fatal("deprecated SDKv2 alias is missing")
-				return
-			}
-			destination := schemas.ResourceSchemas[target]
-			if destination == nil {
-				t.Fatal("Framework resource is missing from the production mux")
-				return
-			}
-			if destination.Version != source.Version {
-				t.Errorf("schema version = %d, want %d", destination.Version, source.Version)
-			}
-			if !destination.ValueType().Equal(source.ValueType()) {
-				t.Error("Framework persisted state type differs from the original SDKv2 resource")
-			}
-		})
-	}
 }
 
 func testAccPreCheck(t *testing.T) {

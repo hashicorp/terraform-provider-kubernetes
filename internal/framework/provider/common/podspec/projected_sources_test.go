@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package podtemplate
+package podspec
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/ptr"
@@ -95,4 +96,63 @@ func TestFlattenSpecProjectedSourceGrouping(t *testing.T) {
 			t.Fatalf("import invented a grouping absent from prior state: %s", got)
 		}
 	})
+}
+
+var templatePath = path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec")
+
+func specType() types.ObjectType {
+	return For(Deployment()).ObjectType().(types.ObjectType)
+}
+
+func mustFlatten(t *testing.T, spec corev1.PodSpec, baseline types.List) types.List {
+	t.Helper()
+	value, diagnostics := For(Deployment()).FlattenSpec(context.Background(), spec, baseline, templatePath)
+	if diagnostics.HasError() {
+		t.Fatal(diagnostics)
+	}
+	return value
+}
+
+func mustExpand(t *testing.T, value types.List) corev1.PodSpec {
+	t.Helper()
+	spec, diagnostics := For(Deployment()).ExpandSpec(context.Background(), value, templatePath)
+	if diagnostics.HasError() {
+		t.Fatal(diagnostics)
+	}
+	return spec
+}
+
+// get walks object attribute names and list indexes (ints) from a value.
+func get(value attr.Value, steps ...any) attr.Value {
+	for _, step := range steps {
+		switch s := step.(type) {
+		case int:
+			value = value.(types.List).Elements()[s]
+		case string:
+			value = value.(types.Object).Attributes()[s]
+		}
+	}
+	return value
+}
+
+// with returns value with the attribute at steps replaced.
+func with(t *testing.T, value attr.Value, replacement attr.Value, steps ...any) attr.Value {
+	t.Helper()
+	if len(steps) == 0 {
+		return replacement
+	}
+	switch s := steps[0].(type) {
+	case int:
+		list := value.(types.List)
+		elements := list.Elements()
+		elements[s] = with(t, elements[s], replacement, steps[1:]...)
+		return types.ListValueMust(list.ElementType(context.Background()), elements)
+	case string:
+		object := value.(types.Object)
+		attributes := object.Attributes()
+		attributes[s] = with(t, attributes[s], replacement, steps[1:]...)
+		return types.ObjectValueMust(object.AttributeTypes(context.Background()), attributes)
+	}
+	t.Fatalf("invalid step %v", steps[0])
+	return nil
 }

@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package podtemplate
+package podspec
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	kquantity "k8s.io/apimachinery/pkg/api/resource"
 )
@@ -34,20 +35,19 @@ func (podListStructureRequiresReplace) PlanModifyList(_ context.Context, req pla
 	resp.RequiresReplace = len(req.StateValue.Elements()) != len(req.PlanValue.Elements())
 }
 
-func podQuantityString(fallback string) schema.StringAttribute {
-	a := podString(false, false, false, fallback, podStringRule("quantity"))
+func (b builder) quantityString(f forceNew, fallback string) schema.StringAttribute {
+	a := b.str(false, false, updatable, fallback, podStringRule("quantity"))
 	a.PlanModifiers = []planmodifier.String{podQuantityStringPlanModifier{}}
+	if b.replace(f) {
+		a.PlanModifiers = append(a.PlanModifiers, podStringRequiresReplace{stringplanmodifier.RequiresReplace()})
+	}
 	return a
 }
 
-func podResourceQuantityMap() schema.MapAttribute {
-	return podQuantityMap(true, false)
-}
-
-func podQuantityMap(computed, replace bool) schema.MapAttribute {
-	a := podMap(computed, false)
+func (b builder) quantityMap(computed bool, f forceNew) schema.MapAttribute {
+	a := b.mapping(computed, updatable)
 	a.PlanModifiers = append(a.PlanModifiers, podQuantityMapPlanModifier{})
-	if replace {
+	if b.replace(f) {
 		a.PlanModifiers = append(a.PlanModifiers, podMapRequiresReplace{mapplanmodifier.RequiresReplace()})
 	}
 	return a
@@ -142,6 +142,42 @@ func podPreserveQuantity(prior, current attr.Value) attr.Value {
 	return value
 }
 
+// The API defaults an empty http_get path to "/", so the two are equivalent:
+// an unset path keeps a prior "/" when planning and keeps "" when flattening.
+const httpGetDefaultPath = "/"
+
+func (b builder) httpGetPath() schema.StringAttribute {
+	a := b.str(false, false, updatable, "")
+	a.PlanModifiers = append([]planmodifier.String{podHTTPGetPathPlanModifier{}}, a.PlanModifiers...)
+	return a
+}
+
+type podHTTPGetPathPlanModifier struct{}
+
+func (podHTTPGetPathPlanModifier) Description(context.Context) string {
+	return "treats an empty path as the API default \"/\""
+}
+func (v podHTTPGetPathPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (podHTTPGetPathPlanModifier) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.PlanValue.Equal(types.StringValue("")) && req.StateValue.Equal(types.StringValue(httpGetDefaultPath)) {
+		resp.PlanValue = req.StateValue
+	}
+}
+
+func podHTTPGetPath(path []string) bool {
+	n := len(path)
+	return n > 1 && path[n-1] == "path" && path[n-2] == "http_get"
+}
+
+func podPreserveHTTPGetPath(prior, current attr.Value) attr.Value {
+	if prior.Equal(types.StringValue("")) && current.Equal(types.StringValue(httpGetDefaultPath)) {
+		return prior
+	}
+	return current
+}
+
 // Removed list elements do not run their leaf plan modifiers. Carry immutable
 // descendants' replacement rules up to the collection's structural boundary.
 type podReplacementBoundary interface {
@@ -149,10 +185,16 @@ type podReplacementBoundary interface {
 }
 
 type podStringRequiresReplace struct{ planmodifier.String }
+type podBoolRequiresReplace struct{ planmodifier.Bool }
+type podInt64RequiresReplace struct{ planmodifier.Int64 }
+type podListRequiresReplace struct{ planmodifier.List }
 type podMapRequiresReplace struct{ planmodifier.Map }
 type podSetRequiresReplace struct{ planmodifier.Set }
 
 func (podStringRequiresReplace) podRequiresReplacement()        {}
+func (podBoolRequiresReplace) podRequiresReplacement()          {}
+func (podInt64RequiresReplace) podRequiresReplacement()         {}
+func (podListRequiresReplace) podRequiresReplacement()          {}
 func (podMapRequiresReplace) podRequiresReplacement()           {}
 func (podSetRequiresReplace) podRequiresReplacement()           {}
 func (podListStructureRequiresReplace) podRequiresReplacement() {}
@@ -160,6 +202,24 @@ func (podListStructureRequiresReplace) podRequiresReplacement() {}
 func (m podStringRequiresReplace) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
 	if !podZeroEquivalent(req.StateValue, req.PlanValue) {
 		m.String.PlanModifyString(ctx, req, resp)
+	}
+}
+
+func (m podBoolRequiresReplace) PlanModifyBool(ctx context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+	if !podZeroEquivalent(req.StateValue, req.PlanValue) {
+		m.Bool.PlanModifyBool(ctx, req, resp)
+	}
+}
+
+func (m podInt64RequiresReplace) PlanModifyInt64(ctx context.Context, req planmodifier.Int64Request, resp *planmodifier.Int64Response) {
+	if !podZeroEquivalent(req.StateValue, req.PlanValue) {
+		m.Int64.PlanModifyInt64(ctx, req, resp)
+	}
+}
+
+func (m podListRequiresReplace) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
+	if !podZeroEquivalent(req.StateValue, req.PlanValue) {
+		m.List.PlanModifyList(ctx, req, resp)
 	}
 }
 

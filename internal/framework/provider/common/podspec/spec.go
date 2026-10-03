@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package podtemplate
+package podspec
 
 import (
 	"context"
@@ -22,31 +22,53 @@ import (
 
 var podSpecOmitted = &struct{}{}
 
-// podSpecMeta holds values derived from the static spec schema, computed once.
-type podSpecMeta struct {
+// Built is the PodSpec schema and conversions for one Options value. It is
+// shared by every resource with those Options and must be treated as read-only.
+type Built struct {
+	// Spec is the frozen "spec" block.
+	Spec schema.ListNestedBlock
+
+	template   bool
 	objectType basetypes.ObjectTypable
 	computed   map[string]bool
 	blocks     map[string]bool
 }
 
-var podSpecDerived = sync.OnceValue(func() podSpecMeta {
-	object := common.FreezeNestedBlockObject(podSpecObject())
-	meta := podSpecMeta{objectType: object.Type(), computed: map[string]bool{}, blocks: map[string]bool{}}
-	podSpecComputedPaths(object.Attributes, object.Blocks, "spec", meta.computed)
-	podSpecBlockPaths(object, "spec", meta.blocks)
-	return meta
-})
+var built sync.Map // Options -> *Built
 
-// SpecObjectType returns the type of one template "spec" element.
-func SpecObjectType() basetypes.ObjectTypable {
-	return podSpecDerived().objectType
+// For returns the PodSpec built for o, building and freezing it on first use.
+func For(o Options) *Built {
+	if b, ok := built.Load(o); ok {
+		return b.(*Built)
+	}
+	b, _ := built.LoadOrStore(o, build(o))
+	return b.(*Built)
 }
 
-// ExpandSpec converts the template "spec" list at the given path into a
-// PodSpec through the shared pure SDKv2 expander. A null or empty list yields an
+func build(o Options) *Built {
+	spec := common.FreezeListNestedBlock(builder{o: o}.specBlock())
+	b := &Built{
+		Spec:       spec,
+		template:   o.Template,
+		objectType: spec.NestedObject.CustomType,
+		computed:   map[string]bool{},
+		blocks:     map[string]bool{},
+	}
+	podSpecComputedPaths(spec.NestedObject.Attributes, spec.NestedObject.Blocks, "spec", b.computed)
+	podSpecBlockPaths(spec.NestedObject, "spec", b.blocks)
+	return b
+}
+
+// ObjectType returns the type of one "spec" element.
+func (b *Built) ObjectType() basetypes.ObjectTypable {
+	return b.objectType
+}
+
+// ExpandSpec converts the "spec" list at the given path into a PodSpec
+// through the shared pure SDKv2 expander. A null or empty list yields an
 // empty PodSpec, as SDKv2 did. Unknown values are rejected unless the schema
 // marks them API-computed, in which case the API default is selected.
-func ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
+func (b *Built) ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.PodSpec, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	if value.IsUnknown() {
 		diagnostics.AddAttributeError(at, "Unknown Pod Template Specification", "The pod template spec must be known before it is sent to Kubernetes.")
@@ -56,7 +78,7 @@ func ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.Pod
 		diagnostics.AddAttributeError(at, "Invalid Pod Template Specification", "At most one pod template spec block is allowed.")
 		return corev1.PodSpec{}, diagnostics
 	}
-	raw := podSpecAPIValue(ctx, value, at, "spec", podSpecDerived().computed, &diagnostics)
+	raw := podSpecAPIValue(ctx, value, at, "spec", b.computed, &diagnostics)
 	if diagnostics.HasError() {
 		return corev1.PodSpec{}, diagnostics
 	}
@@ -68,23 +90,24 @@ func ExpandSpec(ctx context.Context, value types.List, at path.Path) (corev1.Pod
 	return *result, diagnostics
 }
 
-// FlattenSpec converts an API PodSpec into the template "spec" list using
-// template semantics (built-in tolerations are kept). The baseline is the plan
-// on writes and the prior state on reads; it decides null versus empty
-// collection ownership and retains semantically equal quantity spellings.
-func FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
-	derived := podSpecDerived()
-	objectType := derived.objectType
+// FlattenSpec converts an API PodSpec into the "spec" list. The baseline is
+// the plan on writes and the prior state on reads; it decides null versus
+// empty collection ownership and retains semantically equal quantity spellings.
+func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline types.List, at path.Path) (types.List, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
-	raw, err := kubernetes.FlattenTemplatePodSpecForFramework(spec)
+	flatten := kubernetes.FlattenPodSpecForFramework
+	if b.template {
+		flatten = kubernetes.FlattenTemplatePodSpecForFramework
+	}
+	raw, err := flatten(spec)
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Flatten Pod Template Specification", err.Error())
-		return types.ListNull(objectType), diagnostics
+		return types.ListNull(b.objectType), diagnostics
 	}
 	preserveProjectedSourceGroups(ctx, spec, baseline, raw)
-	value := podSpecStateValue(ctx, types.ListType{ElemType: objectType}, raw, baseline, []string{"spec"}, "spec", derived.blocks, &diagnostics)
+	value := podSpecStateValue(ctx, types.ListType{ElemType: b.objectType}, raw, baseline, []string{"spec"}, "spec", b.blocks, &diagnostics)
 	if diagnostics.HasError() {
-		return types.ListNull(objectType), diagnostics
+		return types.ListNull(b.objectType), diagnostics
 	}
 	return value.(types.List), diagnostics
 }
@@ -319,6 +342,9 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 	}
 	if prior != nil && podQuantityPath(names) {
 		result = podPreserveQuantity(prior, result)
+	}
+	if prior != nil && podHTTPGetPath(names) {
+		result = podPreserveHTTPGetPath(prior, result)
 	}
 	return result
 }

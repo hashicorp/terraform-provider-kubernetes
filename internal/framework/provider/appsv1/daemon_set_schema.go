@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 )
 
 var daemonSetRollingValuePattern = regexp.MustCompile(`^(\+?[0-9]+|[1-9][0-9]?%|100%)$`)
@@ -143,28 +143,11 @@ func daemonSetTemplateSchema() schema.ListNestedBlock {
 		},
 		NestedObject: schema.NestedBlockObject{
 			Blocks: map[string]schema.Block{
-				"metadata": daemonSetTemplateMetadataSchema(),
-				"spec": podtemplate.SpecBlock(podtemplate.Options{
-					RestartPolicyAlways: false,
-				}),
+				"metadata": workloadTemplateMetadataBlock(),
+				"spec":     podspec.For(podspec.DaemonSet()).Spec,
 			},
 		},
 	}
-}
-
-func daemonSetTemplateMetadataSchema() schema.ListNestedBlock {
-	block := common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true))
-	namespace, ok := block.NestedObject.Attributes["namespace"].(schema.StringAttribute)
-	if ok {
-		namespace.Computed = true
-		namespace.Default = workloadTemplateNamespace{}
-		namespace.PlanModifiers = []planmodifier.String{
-			workloadTemplateNamespace{},
-			stringplanmodifier.RequiresReplace(),
-		}
-		block.NestedObject.Attributes["namespace"] = namespace
-	}
-	return block
 }
 
 func daemonSetStrategyAttribute() schema.ListNestedAttribute {

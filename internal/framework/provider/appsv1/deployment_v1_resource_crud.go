@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -287,7 +287,11 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		}
 		ops := deploymentMetadataPatchOps(state, plan, out.ObjectMeta)
 		if desired != nil {
-			specOps, err := common.StrategicMergeSpecOps(raw, *original, *desired, appsv1.Deployment{})
+			from, to := *original, *desired
+			// The selector is immutable and replaces on any change, so the live one is
+			// kept: state written by SDKv2 may order its set values differently.
+			from.Selector, to.Selector = out.Spec.Selector, out.Spec.Selector
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.Deployment{})
 			if err != nil {
 				return err
 			}
@@ -463,7 +467,7 @@ func expandDeploymentSpec(ctx context.Context, value types.List, at path.Path) (
 	template := input.Template[0]
 	metadata, d := common.ExpandNamespacedMetadata(ctx, template.Metadata)
 	diags.Append(d...)
-	spec, d := podtemplate.ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	spec, d := podspec.For(podspec.Deployment()).ExpandSpec(ctx, template.Spec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	if diags.HasError() {
 		return nil, diags
@@ -530,7 +534,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	if priorTemplateSpec.IsNull() || priorTemplateSpec.IsUnknown() {
 		priorTemplateSpec = templateSpecNull()
 	}
-	templateSpec, d := podtemplate.FlattenSpec(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	templateSpec, d := podspec.For(podspec.Deployment()).FlattenSpec(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
 	templateMetadata, d := flattenTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata)
 	diags.Append(d...)
@@ -760,7 +764,7 @@ func flattenTemplateMetadataMap(ctx context.Context, value map[string]string, pr
 }
 
 func templateSpecNull() types.List {
-	return types.ListNull(podtemplate.SpecObjectType())
+	return types.ListNull(podspec.For(podspec.Deployment()).ObjectType())
 }
 
 // deploymentSpecListType depends only on the static schema; compute it once.

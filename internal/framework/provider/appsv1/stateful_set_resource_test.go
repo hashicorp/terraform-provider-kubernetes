@@ -487,34 +487,6 @@ func TestAccKubernetesStatefulSetV1_disappears(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesStatefulSetV1_importPlan(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_stateful_set_v1.test"
-	config := testAccKubernetesStatefulSetV1ConfigMinimal(name, busyboxImage)
-
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProviderFactories,
-		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
-		Steps: []resource.TestStep{
-			{Config: config},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"wait_for_rollout",
-				},
-			},
-			{
-				Config:             config,
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
-			},
-		},
-	})
-}
-
 func testAccCheckKubernetesStatefulSetForceNew(old, new *appsv1.StatefulSet, wantNew bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if wantNew {

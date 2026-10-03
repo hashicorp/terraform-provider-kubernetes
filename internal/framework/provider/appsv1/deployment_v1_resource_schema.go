@@ -24,7 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podtemplate"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 )
 
 // The schema is built and frozen once per process; see common.FrozenSchema.
@@ -207,14 +207,6 @@ func selectorBlock() schema.ListNestedBlock {
 }
 
 func templateBlock() schema.ListNestedBlock {
-	spec := podtemplate.SpecBlock(podtemplate.Options{RestartPolicyAlways: true})
-	spec.Validators = append(spec.Validators, listvalidator.SizeAtLeast(1), listvalidator.IsRequired())
-	restartPolicy := spec.NestedObject.Attributes["restart_policy"].(schema.StringAttribute)
-	for i, validation := range restartPolicy.Validators {
-		restartPolicy.Validators[i] = deploymentRestartPolicyDiagnostics{String: validation}
-	}
-	spec.NestedObject.Attributes["restart_policy"] = restartPolicy
-	deploymentPodSpecDiagnostics(spec.NestedObject)
 	return schema.ListNestedBlock{
 		Validators: []validator.List{
 			listvalidator.SizeAtLeast(1),
@@ -223,24 +215,11 @@ func templateBlock() schema.ListNestedBlock {
 		},
 		NestedObject: schema.NestedBlockObject{
 			Blocks: map[string]schema.Block{
-				"metadata": templateMetadataBlock(),
-				"spec":     spec,
+				"metadata": workloadTemplateMetadataBlock(),
+				"spec":     podspec.For(podspec.Deployment()).Spec,
 			},
 		},
 	}
-}
-
-func templateMetadataBlock() schema.ListNestedBlock {
-	block := common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true))
-	namespace := block.NestedObject.Attributes["namespace"].(schema.StringAttribute)
-	namespace.Computed = true
-	namespace.Default = workloadTemplateNamespace{}
-	namespace.PlanModifiers = []planmodifier.String{
-		workloadTemplateNamespace{},
-		stringplanmodifier.RequiresReplace(),
-	}
-	block.NestedObject.Attributes["namespace"] = namespace
-	return block
 }
 
 func deploymentStrategyObjectType() types.ObjectType {

@@ -349,6 +349,9 @@ func (d *DaemonSetV1) daemonSetStateFromObject(
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
+	if !refresh {
+		common.KeepPlannedMetadataMaps(metadata, prior.Metadata)
+	}
 	spec, specDiags := flattenDaemonSetSpecModel(ctx, current.Spec, prior.Spec, refresh)
 	diags.Append(specDiags...)
 	if diags.HasError() {

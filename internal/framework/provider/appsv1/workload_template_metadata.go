@@ -44,7 +44,7 @@ func workloadTemplateMetadataBlock() schema.ListNestedBlock {
 // refresh or import stores every live annotation and label: the provider's
 // ignore_annotations and ignore_labels do not apply to templates, so an
 // out-of-band change such as kubectl rollout restart shows as drift. After
-// Create and Update only the planned keys are kept, so keys the API or an
+// Create and Update the planned maps are recorded, so keys the API or an
 // admission webhook adds cannot contradict the plan; the next refresh reports them.
 func flattenWorkloadTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta, prior []common.NamespacedMetadataModel, refresh bool) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
 	var previous common.NamespacedMetadataModel
@@ -78,24 +78,14 @@ func flattenWorkloadTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta
 	return []common.NamespacedMetadataModel{result}, diags
 }
 
-// workloadTemplateMetadataMap keeps a prior empty map and, unless all is set,
-// only the prior map's keys: a null plan stays null.
+// workloadTemplateMetadataMap returns the live map, keeping a prior empty map.
+// Unless all is set, a known prior map is the plan and is returned as it is.
 func workloadTemplateMetadataMap(ctx context.Context, live map[string]string, prior types.Map, all bool) (types.Map, diag.Diagnostics) {
-	if !all && prior.IsNull() {
+	if !all && !prior.IsUnknown() {
 		return prior, nil
 	}
-	known := !prior.IsNull() && !prior.IsUnknown()
-	if !all && known {
-		planned := make(map[string]string, len(prior.Elements()))
-		for key := range prior.Elements() {
-			if value, ok := live[key]; ok {
-				planned[key] = value
-			}
-		}
-		live = planned
-	}
 	if len(live) == 0 {
-		if known {
+		if !prior.IsNull() && !prior.IsUnknown() {
 			return types.MapValueMust(types.StringType, nil), nil
 		}
 		return types.MapNull(types.StringType), nil

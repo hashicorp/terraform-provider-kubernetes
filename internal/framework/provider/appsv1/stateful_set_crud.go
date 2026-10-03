@@ -367,6 +367,9 @@ func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kube
 	if diags.HasError() {
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
 	}
+	if !refresh {
+		common.KeepPlannedMetadataMaps(metadata, baseline.Metadata)
+	}
 	var baselineSpec *StatefulSetSpecModel
 	if len(baseline.Spec) > 0 {
 		baselineSpec = &baseline.Spec[0]

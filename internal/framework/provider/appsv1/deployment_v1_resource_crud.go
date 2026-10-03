@@ -775,6 +775,9 @@ func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, b
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
+	if !refresh {
+		common.KeepPlannedMetadataMaps(metadata, baseline.Metadata)
+	}
 	spec, specDiags := flattenDeploymentSpec(ctx, object.Spec, baseline.Spec, path.Root("spec"), refresh)
 	diags.Append(specDiags...)
 

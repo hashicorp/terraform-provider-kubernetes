@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package appsv1_test
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 	appsv1 "k8s.io/api/apps/v1"
 )
 
@@ -16,16 +17,16 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic(t *testing.T) {
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName),
@@ -47,8 +48,8 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.min_ready_seconds", "10"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.revision_history_limit", "11"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.service_name", "ss-test-service"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_deleted", "Delete"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_scaled", "Delete"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.when_deleted", "Delete"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.when_scaled", "Delete"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.app", "ss-test"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.#", "1"),
@@ -103,16 +104,16 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_basic_idempotency(t *testing
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName),
@@ -136,16 +137,16 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 	var conf appsv1.StatefulSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
-	imageName := agnhostImage
+	imageName := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.27.0")
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigMinimalWithVolumeDevice(name, imageName),
@@ -271,8 +272,8 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_deleted", "Retain"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.0.when_scaled", "Retain"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.when_deleted", "Retain"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.persistent_volume_claim_retention_policy.when_scaled", "Retain"),
 				),
 			},
 		},
@@ -281,18 +282,18 @@ func TestAccKubernetesStatefulSetV1WIthVolumeDevice_Update(t *testing.T) {
 
 func TestAccKubernetesStatefulSetV1WIthVolumeDevice_waitForRollout(t *testing.T) {
 	var conf1, conf2 appsv1.StatefulSet
-	imageName := busyboxImage
-	imageName1 := agnhostImage
+	imageName := kubetest.BusyboxImage
+	imageName1 := kubetest.AgnhostImage
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_stateful_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfNotRunningInEks(t)
+			kubetest.PreCheck(t)
+			kubetest.SkipIfNotRunningInEks(t)
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesStatefulSetV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesStatefulSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesStatefulSetV1ConfigWaitForRolloutWithVolumeDevice(name, imageName, "true"),
@@ -376,7 +377,7 @@ func testAccKubernetesStatefulSetV1ConfigBasicWithVolumeDevice(name, imageName s
 
     service_name = "ss-test-service"
 
-    persistent_volume_claim_retention_policy {
+    persistent_volume_claim_retention_policy = {
       when_deleted = "Delete"
       when_scaled  = "Delete"
     }
@@ -1309,10 +1310,8 @@ func testAccKubernetesStatefulSetV1ConfigUpdatePersistentVolumeClaimRetentionPol
 
     service_name = "ss-test-service"
 
-    persistent_volume_claim_retention_policy {
-      when_deleted = "Retain"
-      when_scaled  = "Retain"
-    }
+    # An empty object resets the previous Delete policy to Retain.
+    persistent_volume_claim_retention_policy = {}
 
     template {
       metadata {

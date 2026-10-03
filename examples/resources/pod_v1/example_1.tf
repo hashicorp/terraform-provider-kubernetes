@@ -8,6 +8,11 @@ resource "kubernetes_pod_v1" "test" {
       image = "nginx:1.21.6"
       name  = "example"
 
+      resources = {
+        limits   = { cpu = "100m", memory = "64Mi" }
+        requests = { cpu = "100m", memory = "64Mi" }
+      }
+
       env {
         name  = "environment"
         value = "test"

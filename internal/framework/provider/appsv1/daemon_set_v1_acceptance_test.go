@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package appsv1_test
 
 import (
 	"context"
@@ -11,11 +11,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
@@ -23,12 +27,12 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1Config_minimal(name, imageName),
@@ -46,12 +50,12 @@ func TestAccKubernetesDaemonSetV1_minimal(t *testing.T) {
 func TestAccKubernetesDaemonSetV1_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
@@ -84,13 +88,13 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
-	imageName1 := agnhostImage
+	imageName := kubetest.BusyboxImage
+	imageName1 := kubetest.AgnhostImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1Config_basic(name, imageName),
@@ -109,7 +113,7 @@ func TestAccKubernetesDaemonSetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.name", "tf-acc-test"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.type", "RollingUpdate"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "RollingUpdate"),
 					resource.TestCheckResourceAttr(resourceName, "wait_for_rollout", "true"),
 				),
 			},
@@ -160,11 +164,11 @@ func TestAccKubernetesDaemonSetV1_with_template_metadata(t *testing.T) {
 
 	depName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -200,12 +204,12 @@ func TestAccKubernetesDaemonSetV1_initContainer(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1WithInitContainer(name, imageName),
@@ -222,12 +226,12 @@ func TestAccKubernetesDaemonSetV1_noTopLevelLabels(t *testing.T) {
 	var conf appsv1.DaemonSet
 	resourceName := "kubernetes_daemon_set_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1WithNoTopLevelLabels(name, imageName),
@@ -245,13 +249,13 @@ func TestAccKubernetesDaemonSetV1_with_tolerations(t *testing.T) {
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	tolerationSeconds := 6000
 	operator := "Equal"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -275,13 +279,13 @@ func TestAccKubernetesDaemonSetV1_with_tolerations_unset_toleration_seconds(t *t
 
 	rcName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	operator := "Equal"
 	value := "value"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 
 		CheckDestroy: testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
@@ -303,13 +307,13 @@ func TestAccKubernetesDaemonSetV1_with_tolerations_unset_toleration_seconds(t *t
 func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_profile(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_daemon_set_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfile(name, imageName, "Unconfined"),
@@ -335,13 +339,17 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_localh
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			kubetest.SkipIfNotRunningInKind(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.19.0")
+		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfileLocalhost(name, imageName),
@@ -362,22 +370,22 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 
 	daemonSetName := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(daemonSetName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "50Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "250m"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.memory", "50Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.cpu", "250m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.cpu", "500m"),
 				),
 			},
 			{
@@ -391,11 +399,14 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(daemonSetName, imageName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("template").AtSliceIndex(0).AtMapKey("spec").AtSliceIndex(0).AtMapKey("container").AtSliceIndex(0).AtMapKey("resources"), knownvalue.ObjectExact(map[string]knownvalue.Check{
+						"limits": knownvalue.MapSizeExact(0), "requests": knownvalue.MapSizeExact(0),
+					})),
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.#", "0"),
 				),
 			},
 			{
@@ -403,8 +414,8 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.limits.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.limits.cpu", "500m"),
 				),
 			},
 			{
@@ -412,8 +423,8 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.image", imageName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.memory", "512Mi"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.0.requests.cpu", "500m"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.memory", "512Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.resources.requests.cpu", "500m"),
 				),
 			},
 		},
@@ -424,12 +435,12 @@ func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
 	var conf1, conf2 appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1Config_minimal(name, imageName),
@@ -439,7 +450,7 @@ func TestAccKubernetesDaemonSetV1_minimalWithTemplateNamespace(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.namespace"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace", ""),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.template.0.metadata.0.namespace"),
 				),
 			},
 			{
@@ -462,60 +473,60 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 	var conf appsv1.DaemonSet
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_daemon_set_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "0"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "0"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "5"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "5"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "5"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "10"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "10"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "100"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "100"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "100"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "5%"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "5%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "5%"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "10%"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "10%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "10%"),
 				),
 			},
 			{
 				Config: testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, "100%"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.0.rolling_update.0.max_surge", "100%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "100%"),
 				),
 			},
 		},
@@ -523,7 +534,7 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 }
 
 func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := kubetest.Clientset()
 	if err != nil {
 		return err
 	}
@@ -534,16 +545,17 @@ func testAccCheckKubernetesDaemonSetV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
 		resp, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("DaemonSet still exists: %s", rs.Primary.ID)
-			}
+			return fmt.Errorf("DaemonSet still exists: %s/%s (uid %s)", namespace, resp.Name, resp.UID)
+		}
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
 	}
 
@@ -557,13 +569,13 @@ func testAccCheckKubernetesDaemonSetV1Exists(n string, obj *appsv1.DaemonSet) re
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := kubetest.Clientset()
 		if err != nil {
 			return err
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -624,8 +636,8 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
       }
     }
 
-    strategy {
-      rolling_update {
+    strategy = {
+      rolling_update = {
         max_surge       = "%s"
         max_unavailable = "1" # Set maxUnavailable to 1 if maxSurge is 0
       }
@@ -665,8 +677,8 @@ func testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, imageName, maxSurge st
       }
     }
 
-    strategy {
-      rolling_update {
+    strategy = {
+      rolling_update = {
         max_surge       = "%s"
         max_unavailable = "0" # Set maxUnavailable to 0 if maxSurge is set
       }
@@ -1209,9 +1221,9 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirements(deploymentName, 
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources {
+          resources = {
             limits = {
-              cpu    = "0.5"
+              cpu    = "500m"
               memory = "512Mi"
             }
 
@@ -1259,7 +1271,7 @@ func testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(deploymentN
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources {
+          resources = {
             limits   = {}
             requests = {}
           }
@@ -1302,7 +1314,7 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsLimitsOnly(deploy
           name    = "containername"
           command = ["sleep", "infinity"]
 
-          resources {
+          resources = {
             limits = {
               cpu    = "500m"
               memory = "512Mi"
@@ -1343,10 +1355,11 @@ func testAccKubernetesDaemonSetV1ConfigWithResourceRequirementsRequestsOnly(depl
 
       spec {
         container {
-          image = "%s"
-          name  = "containername"
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "infinity"]
 
-          resources {
+          resources = {
             requests = {
               cpu    = "500m"
               memory = "512Mi"

@@ -264,7 +264,6 @@ func Provider() *schema.Provider {
 			"kubernetes_secret_v1":                  resourceKubernetesSecretV1(""),
 			"kubernetes_secret_v1_data":             resourceKubernetesSecretV1Data(),
 			"kubernetes_pod":                        resourceKubernetesPodV1("Deprecated; use kubernetes_pod_v1."),
-			"kubernetes_pod_v1":                     resourceKubernetesPodV1(""),
 			"kubernetes_endpoints":                  resourceKubernetesEndpointsV1("Deprecated; use kubernetes_endpoints_v1."),
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpointsV1(""),
 			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSliceV1(),
@@ -286,18 +285,13 @@ func Provider() *schema.Provider {
 			"kubernetes_api_service_v1": resourceKubernetesAPIServiceV1(""),
 
 			// apps
-			"kubernetes_deployment":      resourceKubernetesDeploymentV1("Deprecated; use kubernetes_deployment_v1."),
-			"kubernetes_deployment_v1":   resourceKubernetesDeploymentV1(""),
-			"kubernetes_daemonset":       resourceKubernetesDaemonSetV1("Deprecated; use kubernetes_daemon_set_v1."),
-			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSetV1(""),
-			"kubernetes_stateful_set":    resourceKubernetesStatefulSetV1("Deprecated; use kubernetes_stateful_set_v1."),
-			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSetV1(""),
+			"kubernetes_deployment":   resourceKubernetesDeploymentV1("Deprecated; use kubernetes_deployment_v1."),
+			"kubernetes_daemonset":    resourceKubernetesDaemonSetV1("Deprecated; use kubernetes_daemon_set_v1."),
+			"kubernetes_stateful_set": resourceKubernetesStatefulSetV1("Deprecated; use kubernetes_stateful_set_v1."),
 
 			// batch
-			"kubernetes_job":         resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
-			"kubernetes_job_v1":      resourceKubernetesJobV1(""),
-			"kubernetes_cron_job":    resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
-			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(""),
+			"kubernetes_job":      resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
+			"kubernetes_cron_job": resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
 
 			// autoscaling
 			"kubernetes_horizontal_pod_autoscaler":         resourceKubernetesHorizontalPodAutoscaler(),

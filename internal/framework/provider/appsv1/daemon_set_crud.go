@@ -1,0 +1,645 @@
+// Copyright IBM Corp. 2017, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package appsv1
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"reflect"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8Types "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	k8sclient "k8s.io/client-go/kubernetes"
+	k8sretry "k8s.io/client-go/util/retry"
+	"k8s.io/utils/ptr"
+)
+
+func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan DaemonSetV1Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	timeout, timeoutDiags := plan.Timeouts.Create(ctx, defaultDaemonSetCreateTimeout)
+	resp.Diagnostics.Append(timeoutDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	clients, filters, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	metadata, metadataDiags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
+	resp.Diagnostics.Append(metadataDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	spec, specDiags := expandDaemonSetSpecModel(ctx, plan.Spec, &req.Config, daemonSetSpecPath())
+	resp.Diagnostics.Append(specDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	created, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(ctx, &appsv1.DaemonSet{
+		ObjectMeta: metadata,
+		Spec:       spec,
+	}, metav1.CreateOptions{})
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating daemonset", err.Error())
+		return
+	}
+
+	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(created.Namespace, created.Name))...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.WaitForRollout.ValueBool() {
+		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDaemonSetPodsForFramework(ctx, conn, created.Namespace, created.Name))
+		if err != nil {
+			resp.Diagnostics.AddError("Error waiting for daemonset rollout", err.Error())
+			return
+		}
+	}
+
+	resp.Diagnostics.Append(d.daemonSetReadWriteResult(ctx, &resp.State, req.Plan, plan, conn, created.Namespace, created.Name, filters)...)
+}
+
+func (d *DaemonSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state DaemonSetV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	clients, filters, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid daemonset ID", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(namespace, name))...)
+	fresh, exists := d.readDaemonSetState(ctx, state, namespace, name, filters, conn, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !exists {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, fresh)...)
+}
+
+func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan DaemonSetV1Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var state DaemonSetV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	timeout, timeoutDiags := plan.Timeouts.Update(ctx, defaultDaemonSetUpdateTimeout)
+	resp.Diagnostics.Append(timeoutDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	clients, filters, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid daemonset ID", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(namespace, name))...)
+	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
+		resp.Diagnostics.AddError("Invalid daemonset metadata", "Expected exactly one metadata block in state and plan.")
+		return
+	}
+	var original, planned *appsv1.DaemonSetSpec
+	if !reflect.DeepEqual(plan.Spec, state.Spec) {
+		oldSpec, diags := expandDaemonSetSpecModel(ctx, state.Spec, nil, daemonSetSpecPath())
+		resp.Diagnostics.Append(diags...)
+		newSpec, diags := expandDaemonSetSpecModel(ctx, plan.Spec, &req.Config, daemonSetSpecPath())
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		patch, err := daemonSetSpecPatch(oldSpec, newSpec)
+		if err != nil {
+			resp.Diagnostics.AddError("Error creating daemonset spec patch", err.Error())
+			return
+		}
+		if string(patch) != "{}" {
+			original, planned = &oldSpec, &newSpec
+		}
+	}
+	dynamicClient, err := clients.DynamicClient()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	var updated *appsv1.DaemonSet
+	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
+		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("daemonsets")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		updated = &appsv1.DaemonSet{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, updated); err != nil {
+			return err
+		}
+		ops := daemonSetMetadataPatchOps(state, plan, updated.ObjectMeta)
+		if planned != nil {
+			from, to := *original, *planned
+			// The selector is immutable and replaces on any change, so the live one is
+			// kept: state written by SDKv2 may order its set values differently.
+			from.Selector, to.Selector = updated.Spec.Selector, updated.Spec.Selector
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.DaemonSet{})
+			if err != nil {
+				return err
+			}
+			ops = append(ops, specOps...)
+		}
+		if len(ops) == 0 {
+			return nil
+		}
+		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(raw.GetResourceVersion())}, ops...)
+		data, err := ops.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		updated, err = conn.AppsV1().DaemonSets(namespace).Patch(ctx, name, k8Types.JSONPatchType, data, metav1.PatchOptions{})
+		return err
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating daemonset", err.Error())
+		return
+	}
+
+	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, updated, filters)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.WaitForRollout.ValueBool() {
+		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDaemonSetPodsForFramework(ctx, conn, namespace, name))
+		if err != nil {
+			resp.Diagnostics.AddError("Error waiting for daemonset rollout", err.Error())
+			return
+		}
+	}
+
+	resp.Diagnostics.Append(d.daemonSetReadWriteResult(ctx, &resp.State, req.Plan, plan, conn, namespace, name, filters)...)
+}
+
+func (d *DaemonSetV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state DaemonSetV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	timeout, timeoutDiags := state.Timeouts.Delete(ctx, defaultDaemonSetDeleteTimeout)
+	resp.Diagnostics.Append(timeoutDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	clients, _, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid daemonset ID", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(namespace, name))...)
+	err = conn.AppsV1().DaemonSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		resp.Diagnostics.AddError("Error deleting daemonset", err.Error())
+		return
+	}
+	err = retry.RetryContext(ctx, timeout, func() *retry.RetryError {
+		_, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		if err != nil {
+			return retry.NonRetryableError(err)
+		}
+		return retry.RetryableError(fmt.Errorf("daemonset %s/%s still exists", namespace, name))
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Error waiting for daemonset deletion", err.Error())
+	}
+}
+
+var daemonSetSpecListType = workloadSpecListType(daemonSetFrozenSchema)
+
+// setDaemonSetState sets state to model; see workloadStateModel.
+func setDaemonSetState(ctx context.Context, state *tfsdk.State, model DaemonSetV1Model) diag.Diagnostics {
+	spec, diags := workloadListValue(daemonSetSpecListType(), model.Spec, func(in DaemonSetV1SpecModel, typ types.ObjectType) (attr.Value, diag.Diagnostics) {
+		selector, diags := types.ListValueFrom(ctx, typ.AttrTypes["selector"].(types.ListType).ElemType, in.Selector)
+		template, d := workloadTemplateListValue(ctx, typ.AttrTypes["template"].(types.ListType), in.Template)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, diags
+		}
+		object, d := types.ObjectValue(typ.AttrTypes, map[string]attr.Value{
+			"min_ready_seconds":      in.MinReadySeconds,
+			"revision_history_limit": in.RevisionHistoryLimit,
+			"selector":               selector,
+			"strategy":               in.Strategy,
+			"template":               template,
+		})
+		diags.Append(d...)
+		return object, diags
+	})
+	if diags.HasError() {
+		return diags
+	}
+	diags.Append(state.Set(ctx, &workloadStateModel{
+		ID:             model.ID,
+		Metadata:       model.Metadata,
+		Spec:           spec,
+		WaitForRollout: model.WaitForRollout,
+		Timeouts:       model.Timeouts,
+	})...)
+	return diags
+}
+
+// daemonSetWriteResult records the plan after a write, with the values
+// Kubernetes chose for those it left unknown.
+func (d *DaemonSetV1) daemonSetWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model DaemonSetV1Model, current *appsv1.DaemonSet, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		var diags diag.Diagnostics
+		written := d.daemonSetStateFromObject(ctx, model, current, filters, false, &diags)
+		if diags.HasError() {
+			return diags
+		}
+		return append(diags, setDaemonSetState(ctx, actual, written)...)
+	})
+}
+
+// daemonSetReadWriteResult is daemonSetWriteResult for the DaemonSet as it is
+// after a rollout.
+func (d *DaemonSetV1) daemonSetReadWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model DaemonSetV1Model, conn *k8sclient.Clientset, namespace, name string, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	var diags diag.Diagnostics
+	current, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return diags
+	}
+	if err != nil {
+		diags.AddError("Error reading daemonset", err.Error())
+		return diags
+	}
+	return d.daemonSetWriteResult(ctx, state, plan, model, current, filters)
+}
+
+func (d *DaemonSetV1) readDaemonSetState(
+	ctx context.Context,
+	prior DaemonSetV1Model,
+	namespace, name string,
+	filters kubernetes.MetadataFilters,
+	conn *k8sclient.Clientset,
+	diags *diag.Diagnostics,
+) (DaemonSetV1Model, bool) {
+	current, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return DaemonSetV1Model{}, false
+	}
+	if err != nil {
+		diags.AddError("Error reading daemonset", err.Error())
+		return DaemonSetV1Model{}, false
+	}
+
+	return d.daemonSetStateFromObject(ctx, prior, current, filters, true, diags), true
+}
+
+func (d *DaemonSetV1) daemonSetStateFromObject(
+	ctx context.Context,
+	prior DaemonSetV1Model,
+	current *appsv1.DaemonSet,
+	filters kubernetes.MetadataFilters,
+	refresh bool,
+	diags *diag.Diagnostics,
+) DaemonSetV1Model {
+	metadata, metadataDiags := common.FlattenNamespacedMetadata(
+		ctx,
+		current.ObjectMeta,
+		prior.Metadata,
+		filters.GetIgnoreAnnotations(),
+		filters.GetIgnoreLabels(),
+	)
+	diags.Append(metadataDiags...)
+	spec, specDiags := flattenDaemonSetSpecModel(ctx, current.Spec, prior.Spec, refresh)
+	diags.Append(specDiags...)
+	if diags.HasError() {
+		return DaemonSetV1Model{}
+	}
+
+	result := prior
+	result.ID = types.StringValue(kubernetes.BuildId(current.ObjectMeta))
+	result.Metadata = metadata
+	result.Spec = spec
+	if result.WaitForRollout.IsNull() || result.WaitForRollout.IsUnknown() {
+		// SDKv2 import state has no configuration/default pass and therefore
+		// records the bool zero value until configuration is applied.
+		result.WaitForRollout = types.BoolValue(false)
+	}
+	return result
+}
+
+// expandDaemonSetSpecModel converts the spec element at path at; config is
+// passed for a write payload, see podspec.Built.ExpandSpec.
+func expandDaemonSetSpecModel(ctx context.Context, spec []DaemonSetV1SpecModel, config *tfsdk.Config, at path.Path) (appsv1.DaemonSetSpec, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+	if len(spec) != 1 {
+		diagnostics.AddAttributeError(at, "Invalid daemonset spec", "Exactly one spec block is required.")
+		return appsv1.DaemonSetSpec{}, diagnostics
+	}
+
+	in := spec[0]
+	out := appsv1.DaemonSetSpec{
+		MinReadySeconds: int32(in.MinReadySeconds.ValueInt64()),
+	}
+
+	if !in.RevisionHistoryLimit.IsNull() && !in.RevisionHistoryLimit.IsUnknown() {
+		out.RevisionHistoryLimit = ptr.To(int32(in.RevisionHistoryLimit.ValueInt64()))
+	}
+	selector, selectorDiags := expandDaemonSetSelector(ctx, in.Selector, at.AtName("selector"))
+	diagnostics.Append(selectorDiags...)
+	out.Selector = selector
+	strategy, strategyDiags := expandDaemonSetStrategyModel(ctx, in.Strategy, at.AtName("strategy"))
+	diagnostics.Append(strategyDiags...)
+	out.UpdateStrategy = strategy
+
+	if len(in.Template) != 1 {
+		diagnostics.AddAttributeError(at.AtName("template"), "Invalid daemonset template", "Exactly one template block is required.")
+		return out, diagnostics
+	}
+	template := in.Template[0]
+	templateMetadata, templateMetadataDiags := common.ExpandNamespacedMetadata(ctx, template.Metadata)
+	diagnostics.Append(templateMetadataDiags...)
+	templateSpec, templateSpecDiags := podspec.For(podspec.DaemonSet()).ExpandSpec(ctx, template.Spec, config, at.AtName("template").AtListIndex(0).AtName("spec"))
+	diagnostics.Append(templateSpecDiags...)
+	if diagnostics.HasError() {
+		return out, diagnostics
+	}
+
+	out.Template = corev1.PodTemplateSpec{
+		ObjectMeta: templateMetadata,
+		Spec:       templateSpec,
+	}
+	return out, diagnostics
+}
+
+func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, baseline []DaemonSetV1SpecModel, refresh bool) ([]DaemonSetV1SpecModel, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+
+	podSpec := podspec.For(podspec.DaemonSet())
+	specType := podSpec.ObjectType()
+	templateBaseline := types.ListNull(specType)
+	templateMetadataBaseline := []common.NamespacedMetadataModel(nil)
+	var selectorBaseline []LabelSelectorModel
+	strategyBaseline := types.ObjectNull(daemonSetStrategyObjectType().AttrTypes)
+	if len(baseline) == 1 {
+		selectorBaseline = baseline[0].Selector
+		strategyBaseline = baseline[0].Strategy
+	}
+	if len(baseline) == 1 && len(baseline[0].Template) == 1 {
+		templateBaseline = baseline[0].Template[0].Spec
+		templateMetadataBaseline = baseline[0].Template[0].Metadata
+	}
+	flatten := podSpec.FlattenSpec
+	if refresh {
+		flatten = podSpec.RefreshSpec
+	}
+	templateSpec, templateSpecDiags := flatten(
+		ctx,
+		spec.Template.Spec,
+		templateBaseline,
+		daemonSetSpecPath().AtName("template").AtListIndex(0).AtName("spec"),
+	)
+	diagnostics.Append(templateSpecDiags...)
+	templateMetadata, templateMetadataDiags := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, templateMetadataBaseline)
+	diagnostics.Append(templateMetadataDiags...)
+	selector, selectorDiags := flattenWorkloadSelector(ctx, spec.Selector, selectorBaseline)
+	diagnostics.Append(selectorDiags...)
+	if diagnostics.HasError() {
+		return nil, diagnostics
+	}
+
+	revisionHistoryLimit := types.Int64Value(10)
+	if spec.RevisionHistoryLimit != nil {
+		revisionHistoryLimit = types.Int64Value(int64(*spec.RevisionHistoryLimit))
+	}
+	return []DaemonSetV1SpecModel{
+		{
+			MinReadySeconds:      types.Int64Value(int64(spec.MinReadySeconds)),
+			RevisionHistoryLimit: revisionHistoryLimit,
+			Selector:             selector,
+			Strategy:             flattenDaemonSetStrategyModel(ctx, spec.UpdateStrategy, strategyBaseline, &diagnostics),
+			Template: []workloadTemplateModel{
+				{
+					Metadata: templateMetadata,
+					Spec:     templateSpec,
+				},
+			},
+		},
+	}, diagnostics
+}
+
+func expandDaemonSetSelector(ctx context.Context, in []DaemonSetLabelSelectorModel, at path.Path) (*metav1.LabelSelector, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+	if len(in) == 0 {
+		return nil, diagnostics
+	}
+	selector := &metav1.LabelSelector{}
+	block := in[0]
+	if !block.MatchLabels.IsNull() && !block.MatchLabels.IsUnknown() {
+		labels := map[string]string{}
+		diagnostics.Append(block.MatchLabels.ElementsAs(ctx, &labels, false)...)
+		selector.MatchLabels = labels
+	}
+	if len(block.MatchExpressions) > 0 {
+		selector.MatchExpressions = make([]metav1.LabelSelectorRequirement, 0, len(block.MatchExpressions))
+		for i, expression := range block.MatchExpressions {
+			requirement := metav1.LabelSelectorRequirement{}
+			if !expression.Key.IsNull() && !expression.Key.IsUnknown() {
+				requirement.Key = expression.Key.ValueString()
+			}
+			if !expression.Operator.IsNull() && !expression.Operator.IsUnknown() {
+				requirement.Operator = metav1.LabelSelectorOperator(expression.Operator.ValueString())
+			}
+			if !expression.Values.IsNull() && !expression.Values.IsUnknown() {
+				values := []string{}
+				diagnostics.Append(expression.Values.ElementsAs(ctx, &values, false)...)
+				requirement.Values = values
+			}
+			if diagnostics.HasError() {
+				return nil, diagnostics
+			}
+			if requirement.Key == "" && requirement.Operator == "" && len(requirement.Values) == 0 {
+				diagnostics.AddAttributeError(
+					at.AtName("match_expressions").AtListIndex(i),
+					"Invalid selector expression",
+					"Empty selector expression is not valid.",
+				)
+				continue
+			}
+			selector.MatchExpressions = append(selector.MatchExpressions, requirement)
+		}
+	}
+	return selector, diagnostics
+}
+
+func expandDaemonSetStrategyModel(ctx context.Context, in types.Object, at path.Path) (appsv1.DaemonSetUpdateStrategy, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+	strategy := appsv1.DaemonSetUpdateStrategy{Type: appsv1.RollingUpdateDaemonSetStrategyType}
+	if in.IsNull() || in.IsUnknown() {
+		return strategy, diagnostics
+	}
+	var model DaemonSetStrategyModel
+	diagnostics.Append(in.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diagnostics.HasError() {
+		diagnostics.AddAttributeError(at, "Invalid daemonset strategy", "Unable to decode the strategy value.")
+		return strategy, diagnostics
+	}
+	if !model.Type.IsNull() && !model.Type.IsUnknown() && model.Type.ValueString() != "" {
+		strategy.Type = appsv1.DaemonSetUpdateStrategyType(model.Type.ValueString())
+	}
+	if strategy.Type == appsv1.OnDeleteDaemonSetStrategyType || model.RollingUpdate.IsNull() ||
+		model.RollingUpdate.IsUnknown() {
+		return strategy, diagnostics
+	}
+	var update DaemonSetRollingUpdateModel
+	diagnostics.Append(model.RollingUpdate.As(ctx, &update, basetypes.ObjectAsOptions{})...)
+	if diagnostics.HasError() {
+		diagnostics.AddAttributeError(at.AtName("rolling_update"), "Invalid rolling update strategy", "Unable to decode the rolling_update value.")
+		return strategy, diagnostics
+	}
+	rolling := &appsv1.RollingUpdateDaemonSet{}
+	if !update.MaxSurge.IsNull() && !update.MaxSurge.IsUnknown() {
+		value := intstr.Parse(update.MaxSurge.ValueString())
+		rolling.MaxSurge = &value
+	}
+	if !update.MaxUnavailable.IsNull() && !update.MaxUnavailable.IsUnknown() {
+		value := intstr.Parse(update.MaxUnavailable.ValueString())
+		rolling.MaxUnavailable = &value
+	}
+	strategy.RollingUpdate = rolling
+	return strategy, diagnostics
+}
+
+func flattenDaemonSetStrategyModel(ctx context.Context, in appsv1.DaemonSetUpdateStrategy, prior types.Object, diagnostics *diag.Diagnostics) types.Object {
+	strategyType := in.Type
+	if strategyType == "" {
+		strategyType = appsv1.RollingUpdateDaemonSetStrategyType
+	}
+	model := DaemonSetStrategyModel{
+		Type:          types.StringValue(string(strategyType)),
+		RollingUpdate: types.ObjectNull(daemonSetRollingUpdateObjectType().AttrTypes),
+	}
+	if in.RollingUpdate != nil {
+		rolling := DaemonSetRollingUpdateModel{
+			MaxSurge:       types.StringValue("0"),
+			MaxUnavailable: types.StringValue("1"),
+		}
+		if in.RollingUpdate.MaxSurge != nil {
+			rolling.MaxSurge = rollingUpdateSpelling(prior, "max_surge", in.RollingUpdate.MaxSurge.String())
+		}
+		if in.RollingUpdate.MaxUnavailable != nil {
+			rolling.MaxUnavailable = rollingUpdateSpelling(prior, "max_unavailable", in.RollingUpdate.MaxUnavailable.String())
+		}
+		value, diags := types.ObjectValueFrom(ctx, daemonSetRollingUpdateObjectType().AttrTypes, rolling)
+		diagnostics.Append(diags...)
+		model.RollingUpdate = value
+	}
+	value, diags := types.ObjectValueFrom(ctx, daemonSetStrategyObjectType().AttrTypes, model)
+	diagnostics.Append(diags...)
+	return value
+}
+
+func daemonSetMetadataPatchOps(state, plan DaemonSetV1Model, live metav1.ObjectMeta) kubernetes.PatchOperations {
+	return common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live)
+}
+
+func daemonSetSpecPatch(original, modified appsv1.DaemonSetSpec) ([]byte, error) {
+	originalJSON, err := json.Marshal(appsv1.DaemonSet{Spec: original})
+	if err != nil {
+		return nil, err
+	}
+	modifiedJSON, err := json.Marshal(appsv1.DaemonSet{Spec: modified})
+	if err != nil {
+		return nil, err
+	}
+	return strategicpatch.CreateTwoWayMergePatch(originalJSON, modifiedJSON, appsv1.DaemonSet{})
+}

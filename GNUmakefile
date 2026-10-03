@@ -82,7 +82,7 @@ testfuncs: fmtcheck
 	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
 
 frameworkacc:
-	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
+	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
@@ -172,6 +172,11 @@ docs-lint: tools
 	@echo "==> Checking for broken links..."
 	@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 
+# Renders the registry pages of Plugin Framework resources, by default the six
+# workload resources: make docs-framework PAGES="deployment_v1 pod_v1"
+docs-framework:
+	@./scripts/framework-docs.sh $(PAGES)
+
 docs-lint-fix: tools
 	@echo "==> Applying automatic website linter fixes..."
 	@misspell -w -source=text ./docs
@@ -180,4 +185,4 @@ docs-lint-fix: tools
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
 	@terrafmt fmt ./docs --pattern '*.markdown'
 
-.PHONY: build test testacc frameworkacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry
+.PHONY: build test testacc frameworkacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix docs-framework changelog changelog-entry

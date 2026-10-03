@@ -5,9 +5,13 @@ description: |-
   A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context.
 ---
 
+{{- /* Render this page with `make docs-framework`; plain tfplugindocs omits block item counts. */}}
+
 # {{ .Name }}
 
 {{ .Description }}
+
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = { ... }`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
 
 {{ .SchemaMarkdown }}
 
@@ -30,3 +34,5 @@ Pod can be imported using the namespace and name, e.g.
 ```
 $ terraform import kubernetes_pod_v1.example default/terraform-example
 ```
+
+To move from the deprecated `kubernetes_pod` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

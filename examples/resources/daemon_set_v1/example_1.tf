@@ -26,7 +26,7 @@ resource "kubernetes_daemon_set_v1" "example" {
           image = "nginx:1.21.6"
           name  = "example"
 
-          resources {
+          resources = {
             limits = {
               cpu    = "0.5"
               memory = "512Mi"

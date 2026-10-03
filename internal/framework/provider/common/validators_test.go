@@ -272,3 +272,26 @@ func TestDataSourceMetadataValidatorsAcceptNullValues(t *testing.T) {
 		})
 	}
 }
+
+func TestNotEmptyList(t *testing.T) {
+	t.Parallel()
+
+	object := types.ObjectType{AttrTypes: map[string]attr.Type{"name": types.StringType}}
+	for name, tc := range map[string]struct {
+		value      types.List
+		wantErrors int
+	}{
+		"null":    {types.ListNull(object), 0},
+		"unknown": {types.ListUnknown(object), 0},
+		"one":     {types.ListValueMust(object, []attr.Value{types.ObjectValueMust(object.AttrTypes, map[string]attr.Value{"name": types.StringValue("a")})}), 0},
+		"empty":   {types.ListValueMust(object, nil), 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			resp := &validator.ListResponse{}
+			NotEmptyList().ValidateList(context.Background(), validator.ListRequest{Path: path.Root("selector"), ConfigValue: tc.value}, resp)
+			if got := resp.Diagnostics.ErrorsCount(); got != tc.wantErrors {
+				t.Errorf("errors = %d, want %d: %v", got, tc.wantErrors, resp.Diagnostics)
+			}
+		})
+	}
+}

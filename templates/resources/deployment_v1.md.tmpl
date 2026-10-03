@@ -5,9 +5,13 @@ description: |-
   A Deployment ensures that a specified number of pod “replicas” are running at any one time. In other words, a Deployment makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Deployment will start more.
 ---
 
+{{- /* Render this page with `make docs-framework`; plain tfplugindocs omits block item counts. */}}
+
 # {{ .Name }}
 
 {{ .Description }}
+
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = { ... }`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
 
 {{ .SchemaMarkdown }}
 
@@ -22,3 +26,5 @@ Deployment can be imported using the namespace and name, e.g.
 ```
 $ terraform import kubernetes_deployment_v1.example default/terraform-example
 ```
+
+To move from the deprecated `kubernetes_deployment` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

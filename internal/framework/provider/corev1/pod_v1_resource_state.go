@@ -4,11 +4,9 @@
 package corev1
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -123,19 +121,11 @@ func (p *PodV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrad
 	return map[int64]resource.StateUpgrader{
 		0: {
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				if req.RawState == nil || len(req.RawState.JSON) == 0 {
-					resp.Diagnostics.AddError(podV1UpgradeStateErrSummary,
-						"The source state has no JSON data. Flatmap state predates Terraform 0.12 and is not supported.")
-					return
-				}
-
-				stateMap, _, _, diags := podV1DecodeSourceState(req.RawState.JSON, 0, podV1UpgradeStateErrSummary)
+				state, _, _, diags := p.decodeLegacyState(ctx, req.RawState, 0, podV1UpgradeStateErrSummary)
 				resp.Diagnostics.Append(diags...)
-				if resp.Diagnostics.HasError() {
-					return
+				if !resp.Diagnostics.HasError() {
+					resp.State = state
 				}
-
-				resp.Diagnostics.Append(podV1SetStateFromJSONMap(ctx, &resp.State, stateMap, podV1UpgradeStateErrSummary)...)
 			},
 		},
 	}
@@ -165,24 +155,20 @@ func (p *PodV1) MoveState(ctx context.Context) []resource.StateMover {
 					return
 				}
 
-				if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {
-					resp.Diagnostics.AddError(podV1MoveStateErrSummary,
-						"The source state has no JSON data. Flatmap state predates Terraform 0.12 and is not supported.")
+				state, namespace, name, diags := p.decodeLegacyState(ctx, req.SourceRawState, req.SourceSchemaVersion, podV1MoveStateErrSummary)
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
 					return
 				}
-
-				stateMap, namespace, name, diags := podV1DecodeSourceState(req.SourceRawState.JSON, req.SourceSchemaVersion, podV1MoveStateErrSummary)
-				resp.Diagnostics.Append(diags...)
 				resp.Diagnostics.Append(podV1ValidateSourceIdentity(req.SourceIdentity, namespace, name)...)
 				if resp.Diagnostics.HasError() {
 					return
 				}
 
-				resp.Diagnostics.Append(podV1SetStateFromJSONMap(ctx, &resp.TargetState, stateMap, podV1MoveStateErrSummary)...)
-				if resp.Diagnostics.HasError() || resp.TargetIdentity == nil {
+				resp.TargetState = state
+				if resp.TargetIdentity == nil {
 					return
 				}
-
 				resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, podV1Identity(namespace, name))...)
 			},
 		},
@@ -204,16 +190,6 @@ func podV1Identity(namespace, name string) common.NamespacedResourceIdentity {
 	}
 }
 
-type sdkv2PodState struct {
-	ID       string               `json:"id"`
-	Metadata []sdkv2PodMetadataV1 `json:"metadata"`
-}
-
-type sdkv2PodMetadataV1 struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-}
-
 type sdkv2PodSourceIdentity struct {
 	APIVersion *string `json:"api_version"`
 	Kind       *string `json:"kind"`
@@ -221,142 +197,40 @@ type sdkv2PodSourceIdentity struct {
 	Namespace  *string `json:"namespace"`
 }
 
-var podStateTopLevelAttrs = map[string]struct{}{
-	"id": {}, "metadata": {}, "spec": {}, "target_state": {}, "timeouts": {},
-}
-
-var podStateMetadataAttrs = map[string]struct{}{
-	"annotations": {}, "generate_name": {}, "generation": {}, "labels": {},
-	"name": {}, "namespace": {}, "resource_version": {}, "uid": {},
-}
-
-var podStateTimeoutAttrs = map[string]struct{}{
-	"create": {}, "delete": {},
-}
-
-func podV1DecodeSourceState(sourceJSON []byte, sourceSchemaVersion int64, summary string) (map[string]any, string, string, diag.Diagnostics) {
+// decodeLegacyState decodes state written by the SDKv2 kubernetes_pod or
+// kubernetes_pod_v1 at the given schema version.
+func (p *PodV1) decodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, version int64, summary string) (tfsdk.State, string, string, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	var schemaResp resource.SchemaResponse
+	p.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
+	diags.Append(schemaResp.Diagnostics...)
+	state := tfsdk.State{Schema: schemaResp.Schema}
 
-	var root map[string]json.RawMessage
-	if err := json.Unmarshal(sourceJSON, &root); err != nil {
-		diags.AddError(summary, fmt.Sprintf("Could not decode the source state JSON object: %s", err))
-		return nil, "", "", diags
-	}
-	for key := range root {
-		if _, ok := podStateTopLevelAttrs[key]; !ok {
-			diags.AddError(summary, fmt.Sprintf("The source state contains unsupported top-level attribute %q.", key))
-			return nil, "", "", diags
+	var namespace, name string
+	value, err := common.DecodeLegacyState(ctx, raw, schemaResp.Schema, func(values map[string]any) error {
+		var err error
+		if namespace, name, err = common.LegacyStateName(values); err != nil {
+			return err
 		}
-	}
-
-	var prior sdkv2PodState
-	if err := json.Unmarshal(sourceJSON, &prior); err != nil {
-		diags.AddError(summary, fmt.Sprintf("Could not decode the source state: %s", err))
-		return nil, "", "", diags
-	}
-	if prior.ID == "" {
-		diags.AddError(summary, "The source state has an empty id.")
-		return nil, "", "", diags
-	}
-	namespace, name, err := podV1ParseID(prior.ID)
-	if err != nil {
-		diags.AddError(summary, err.Error())
-		return nil, "", "", diags
-	}
-	if len(prior.Metadata) != 1 {
-		diags.AddError(summary, fmt.Sprintf("Expected exactly 1 metadata element in the source state, got %d.", len(prior.Metadata)))
-		return nil, "", "", diags
-	}
-	metadata := prior.Metadata[0]
-	if metadata.Namespace != namespace || metadata.Name != name {
-		diags.AddError(summary, fmt.Sprintf("The source id %q does not match metadata namespace/name %q/%q.", prior.ID, metadata.Namespace, metadata.Name))
-		return nil, "", "", diags
-	}
-
-	if rawMetadata, ok := root["metadata"]; ok {
-		var metadataList []map[string]json.RawMessage
-		if err := json.Unmarshal(rawMetadata, &metadataList); err != nil {
-			diags.AddError(summary, fmt.Sprintf("Could not decode metadata in the source state: %s", err))
-			return nil, "", "", diags
-		}
-		if len(metadataList) != 1 {
-			diags.AddError(summary, fmt.Sprintf("Expected exactly 1 metadata element in the source state, got %d.", len(metadataList)))
-			return nil, "", "", diags
-		}
-		for key := range metadataList[0] {
-			if _, ok := podStateMetadataAttrs[key]; !ok {
-				diags.AddError(summary, fmt.Sprintf("The source state metadata contains unsupported attribute %q.", key))
-				return nil, "", "", diags
+		// Normalise a "" timeout, which SDKv2 accepted, to null.
+		if timeouts, ok := values["timeouts"].(map[string]any); ok {
+			for key, timeout := range timeouts {
+				if timeout == "" {
+					timeouts[key] = nil
+				}
 			}
 		}
-	}
-
-	var state map[string]any
-	stateDecoder := json.NewDecoder(bytes.NewReader(sourceJSON))
-	stateDecoder.UseNumber()
-	if err := stateDecoder.Decode(&state); err != nil {
-		diags.AddError(summary, fmt.Sprintf("Could not decode source state values: %s", err))
-		return nil, "", "", diags
-	}
-	if err := ensureEOF(stateDecoder); err != nil {
-		diags.AddError(summary, fmt.Sprintf("Could not decode source state values: %s", err))
-		return nil, "", "", diags
-	}
-
-	normalizedTimeouts, timeoutDiags := podV1NormalizeSourceTimeouts(root, summary)
-	diags.Append(timeoutDiags...)
-	if diags.HasError() {
-		return nil, "", "", diags
-	}
-	state["timeouts"] = normalizedTimeouts
-
-	if sourceSchemaVersion == 0 {
-		if err := podV1UpgradeResourcesFieldV0(state); err != nil {
-			diags.AddError(summary, fmt.Sprintf("Could not upgrade schema version 0 resources fields: %s", err))
-			return nil, "", "", diags
+		if version == 0 {
+			return podV1UpgradeResourcesFieldV0(values)
 		}
+		return nil
+	})
+	if err != nil {
+		diags.AddError(summary, err.Error())
+		return state, "", "", diags
 	}
-
+	state.Raw = value
 	return state, namespace, name, diags
-}
-
-func podV1NormalizeSourceTimeouts(root map[string]json.RawMessage, summary string) (any, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	rawTimeouts, ok := root["timeouts"]
-	if !ok || string(rawTimeouts) == "null" {
-		return nil, diags
-	}
-
-	var timeoutsObject map[string]json.RawMessage
-	if err := json.Unmarshal(rawTimeouts, &timeoutsObject); err != nil {
-		diags.AddError(summary, fmt.Sprintf("Could not decode source timeouts: %s", err))
-		return nil, diags
-	}
-	for key := range timeoutsObject {
-		if _, ok := podStateTimeoutAttrs[key]; !ok {
-			diags.AddError(summary, fmt.Sprintf("Source timeouts contains unsupported attribute %q.", key))
-			return nil, diags
-		}
-	}
-
-	normalized := map[string]any{"create": nil, "delete": nil}
-	for _, key := range []string{"create", "delete"} {
-		rawValue, exists := timeoutsObject[key]
-		if !exists || string(rawValue) == "null" {
-			continue
-		}
-		var value string
-		if err := json.Unmarshal(rawValue, &value); err != nil {
-			diags.AddError(summary, fmt.Sprintf("Timeout %q in source state is not a string or null: %s", key, err))
-			return nil, diags
-		}
-		if value != "" {
-			normalized[key] = value
-		}
-	}
-
-	return normalized, diags
 }
 
 func podV1UpgradeResourcesFieldV0(state map[string]any) error {
@@ -471,37 +345,6 @@ func podV1ParseID(id string) (string, string, error) {
 		return "", "", fmt.Errorf("Unexpected ID format (%q), expected %q.", id, "namespace/name")
 	}
 	return namespace, name, nil
-}
-
-func ensureEOF(decoder *json.Decoder) error {
-	var trailing json.RawMessage
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		if err == nil {
-			return fmt.Errorf("trailing data after JSON object")
-		}
-		return err
-	}
-	return nil
-}
-
-func podV1SetStateFromJSONMap(ctx context.Context, state *tfsdk.State, values map[string]any, summary string) diag.Diagnostics {
-	var diags diag.Diagnostics
-
-	data, err := json.Marshal(values)
-	if err != nil {
-		diags.AddError(summary, fmt.Sprintf("Could not encode converted state JSON: %s", err))
-		return diags
-	}
-	raw := tfprotov6.RawState{JSON: data}
-
-	typedValue, err := raw.Unmarshal(state.Schema.Type().TerraformType(ctx))
-	if err != nil {
-		diags.AddError(summary, fmt.Sprintf("Converted state does not match the current schema: %s", err))
-		return diags
-	}
-
-	state.Raw = typedValue
-	return diags
 }
 
 func podV1ValidateSourceIdentity(source *tfprotov6.RawState, namespace, name string) diag.Diagnostics {

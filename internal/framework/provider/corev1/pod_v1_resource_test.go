@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,6 +50,43 @@ func TestAccKubernetesPodV1_minimal(t *testing.T) {
 			{
 				Config:   testAccKubernetesPodV1ConfigMinimal(name, imageName),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+// State written by 2.3.0, the last release that stored metadata.self_link,
+// moves without a change.
+func TestAccKubernetesPodV1_moveFromLegacyState(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	config := testAccKubernetesPodV1ConfigMinimal(name, busyboxImage)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { testAccPodV1PreCheck(t) },
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_8_0),
+		},
+		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 2.3.0"},
+				},
+				Config: strings.Replace(config, `"kubernetes_pod_v1"`, `"kubernetes_pod"`, 1),
+				// 2.3.0 does not settle on empty values it reads back.
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config: config + `
+moved {
+  from = kubernetes_pod.test
+  to   = kubernetes_pod_v1.test
+}
+`,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
 			},
 		},
 	})

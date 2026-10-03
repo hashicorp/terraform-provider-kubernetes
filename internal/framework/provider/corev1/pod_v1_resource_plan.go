@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -21,8 +22,13 @@ func (p *PodV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
 		return
 	}
-	p.planSpecReplacement(ctx, req, resp)
-	if resp.Diagnostics.HasError() {
+	if !rawAttributeUnchanged(req.Plan.Raw, req.State.Raw, "spec") {
+		p.planSpecReplacement(ctx, req, resp)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	if rawAttributeUnchanged(req.Plan.Raw, req.State.Raw, "metadata") {
 		return
 	}
 	var planned, prior types.List
@@ -88,6 +94,26 @@ func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlan
 	if replace {
 		resp.RequiresReplace = append(resp.RequiresReplace, path.Root("spec"))
 	}
+}
+
+// rawAttributeUnchanged reports whether plan and state hold the same value for
+// a top-level attribute, without decoding either into Framework values.
+func rawAttributeUnchanged(plan, state tftypes.Value, name string) bool {
+	at := tftypes.NewAttributePath().WithAttributeName(name)
+	planned, _, err := tftypes.WalkAttributePath(plan, at)
+	if err != nil {
+		return false
+	}
+	prior, _, err := tftypes.WalkAttributePath(state, at)
+	if err != nil {
+		return false
+	}
+	plannedValue, ok := planned.(tftypes.Value)
+	if !ok {
+		return false
+	}
+	priorValue, ok := prior.(tftypes.Value)
+	return ok && plannedValue.Equal(priorValue)
 }
 
 func (p *PodV1) livePod(ctx context.Context, id string) (*corev1.Pod, bool) {

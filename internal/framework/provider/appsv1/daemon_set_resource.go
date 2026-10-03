@@ -54,12 +54,7 @@ type DaemonSetV1SpecModel struct {
 	RevisionHistoryLimit types.Int64                   `tfsdk:"revision_history_limit"`
 	Selector             []DaemonSetLabelSelectorModel `tfsdk:"selector"`
 	Strategy             types.List                    `tfsdk:"strategy"`
-	Template             []DaemonSetTemplateModel      `tfsdk:"template"`
-}
-
-type DaemonSetTemplateModel struct {
-	Metadata []common.NamespacedMetadataModel `tfsdk:"metadata"`
-	Spec     types.List                       `tfsdk:"spec"`
+	Template             []workloadTemplateModel       `tfsdk:"template"`
 }
 
 type DaemonSetLabelSelectorModel = LabelSelectorModel

@@ -9,7 +9,7 @@ description: |-
 
 A Cron Job creates Jobs on a time-based schedule.One CronJob object is like one line of a crontab (cron table) file. It runs a job periodically on a given schedule, written in Cron format.Note: All CronJob `schedule` times are based on the timezone of the master where the job is initiated. For instructions on creating and working with cron jobs, and for an example of a spec file for a cron job, see [Kubernetes reference](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/).
 
-~> Some nested blocks use list-of-object assignment syntax since the Plugin Framework migration. Review the [Job and CronJob migration guide](../guides/batch-v1-framework-migration.md) before upgrading existing configurations.
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = [{ ... }]`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
 
 ~> `spec.job_template.spec.backoff_limit_per_index` and `spec.job_template.spec.max_failed_indexes` default to `0` when omitted; this is a provider default, not a Kubernetes one. Changing `backoff_limit_per_index` requires replacement of the CronJob.
 
@@ -2482,4 +2482,4 @@ CronJobs can be imported using the namespace and name, separated by `/`:
 terraform import kubernetes_cron_job_v1.demo default/demo
 ```
 
-To move from the deprecated `kubernetes_cron_job` resource type, see the [migration guide](../guides/batch-v1-framework-migration.md#move-from-a-deprecated-resource-type).
+To move from the deprecated `kubernetes_cron_job` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

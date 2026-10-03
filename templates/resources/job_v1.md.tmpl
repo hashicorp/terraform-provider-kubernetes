@@ -9,7 +9,7 @@ description: |-
 
 {{ .Description }}
 
-~> Some nested blocks use list-of-object assignment syntax since the Plugin Framework migration. Review the [Job and CronJob migration guide](../guides/batch-v1-framework-migration.md) before upgrading existing configurations.
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = [{ ... }]`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
 
 ~> `spec.backoff_limit_per_index` and `spec.max_failed_indexes` default to `0` when omitted; this is a provider default, not a Kubernetes one. Changing `backoff_limit_per_index` requires replacement of the Job.
 
@@ -39,4 +39,4 @@ terraform import kubernetes_job_v1.demo default/demo
 
 `wait_for_completion` is not stored in Kubernetes and is set to `true` on import. If the configuration sets it to `false`, the next plan shows an in-place update that changes only state.
 
-To move from the deprecated `kubernetes_job` resource type, see the [migration guide](../guides/batch-v1-framework-migration.md#move-from-a-deprecated-resource-type).
+To move from the deprecated `kubernetes_job` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

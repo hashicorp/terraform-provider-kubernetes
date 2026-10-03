@@ -11,6 +11,8 @@ Starting with Kubernetes provider v3.3.0, existing resources and data sources ar
 
 Goal is to avoid breaking changes and preserve existing configurations, state, and Kubernetes objects. However, fixing incorrect behavior and handling empty values more precisely can change validation or plans for some configurations. The Kubernetes API versions used by these resources do not change.
 
+The workload resources `kubernetes_deployment_v1`, `kubernetes_daemon_set_v1`, `kubernetes_stateful_set_v1`, `kubernetes_pod_v1`, `kubernetes_job_v1` and `kubernetes_cron_job_v1` were migrated in v4.0.0 and change the syntax of some arguments. Their upgrade steps and behavior changes are described in the [v4 upgrade guide](v4-upgrade-guide.md).
+
 Existing resource state is supported without re-importing objects or manually editing state.
 
 ## Upgrade checklist
@@ -38,6 +40,12 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_namespace_v1` | v3.3.0 | [Namespace resource](#resource-kubernetes_namespace_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
+| Resource | `kubernetes_deployment_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_daemon_set_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_stateful_set_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_pod_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_job_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_cron_job_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
 
 ## Resource: kubernetes_namespace_v1
 

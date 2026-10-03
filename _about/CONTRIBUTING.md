@@ -61,6 +61,7 @@ This quick guide covers best practices for adding a new Resource.
 5. Add Acceptance Tests(s) for the resource.
 6. Run Acceptance Tests(s) for this resource. 
 7. Add documentation for this resource in the appropriate `docs/resources/<TYPE>_<VERSION>.go.md` file.
+   For a Plugin Framework resource, edit its template in `templates/resources/` and render the page with `make docs-framework PAGES=<TYPE>_<VERSION>`.
 <!-- 7. Add Documentation for this resource by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}). -->
 8. Execute `make docs-lint` and `make tests-lint` commands 
 9. Create a Pull Request for your changes. 

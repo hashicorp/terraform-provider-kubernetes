@@ -84,7 +84,7 @@ func (p *PodV1) planSpecReplacement(ctx context.Context, req resource.ModifyPlan
 	if live, ok := p.livePod(ctx, id.ValueString()); ok {
 		patched := live.Spec.DeepCopy()
 		podV1ApplySpecPatch(patched, &plannedSpec)
-		// Update stores this flattening, so it must satisfy the plan.
+		// The patched Pod, flattened as after a write, must satisfy the plan.
 		flattened, diags := podV1Spec().FlattenSpec(ctx, *patched, planned, path.Root("spec"))
 		replace = diags.HasError() || !podspec.Satisfies(flattened, planned)
 	} else {

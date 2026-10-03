@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -128,11 +129,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 		},
 		Namespace: types.StringValue(out.Namespace),
 	})...)
-	createdState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters, false)
-	resp.Diagnostics.Append(stateDiags...)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &createdState)...)
-	}
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -144,7 +141,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for deployment rollout",
-			fmt.Sprintf("Deployment %q was created but rollout did not complete: %s", createdState.ID.ValueString(), err),
+			fmt.Sprintf("Deployment %q was created but rollout did not complete: %s", kubernetes.BuildId(out.ObjectMeta), err),
 		)
 	}
 }
@@ -319,12 +316,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	updatedState, stateDiags := deploymentModelFromObject(ctx, out, plan, filters, false)
-	resp.Diagnostics.Append(stateDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &updatedState)...)
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -345,11 +337,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError("Error reading deployment after update", err.Error())
 		return
 	}
-	updatedState, stateDiags = deploymentModelFromObject(ctx, out, plan, filters, false)
-	resp.Diagnostics.Append(stateDiags...)
-	if !resp.Diagnostics.HasError() {
-		resp.Diagnostics.Append(resp.State.Set(ctx, &updatedState)...)
-	}
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 }
 
 func (d *DeploymentV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -532,7 +520,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	}
 	templateSpec, d := flatten(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
-	templateMetadata, d := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata, refresh)
+	templateMetadata, d := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata)
 	diags.Append(d...)
 	model.Template = []workloadTemplateModel{{
 		Metadata: templateMetadata,
@@ -744,6 +732,18 @@ func deploymentMetadataPatchOps(state, plan DeploymentV1Model, live metav1.Objec
 	return common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live)
 }
 
+// deploymentWriteResult records the plan after a write, with the values
+// Kubernetes chose for those it left unknown.
+func deploymentWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model DeploymentV1Model, out *appsv1.Deployment, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		written, diags := deploymentModelFromObject(ctx, out, model, filters, false)
+		if diags.HasError() {
+			return diags
+		}
+		return append(diags, actual.Set(ctx, &written)...)
+	})
+}
+
 func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, baseline DeploymentV1Model, filters kubernetes.MetadataFilters, refresh bool) (DeploymentV1Model, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	metadata, metadataDiags := common.FlattenNamespacedMetadata(
@@ -754,9 +754,6 @@ func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, b
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
-	if !refresh {
-		common.KeepPlannedMetadataMaps(metadata, baseline.Metadata)
-	}
 	spec, specDiags := flattenDeploymentSpec(ctx, object.Spec, baseline.Spec, path.Root("spec"), refresh)
 	diags.Append(specDiags...)
 

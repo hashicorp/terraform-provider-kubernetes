@@ -64,7 +64,7 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 		resp.Diagnostics.AddError("Error creating CronJob", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
 	}
@@ -182,7 +182,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Error updating CronJob", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
 	}
@@ -329,24 +329,12 @@ func flattenCronJob(ctx context.Context, out *batch.CronJob, model *CronJobV1Mod
 
 // cronJobWriteResult records the plan after a write, with the values Kubernetes
 // chose for those it left unknown.
-func cronJobWriteResult(ctx context.Context, state *tfsdk.State, plan CronJobV1Model, out *batch.CronJob, filters kubernetes.MetadataFilters) diag.Diagnostics {
-	plan.ID = types.StringValue(out.Namespace + "/" + out.Name)
-	planned := tfsdk.State{Schema: state.Schema}
-	diags := planned.Set(ctx, &plan)
-	actual := tfsdk.State{Schema: state.Schema, Raw: tftypes.NewValue(state.Schema.Type().TerraformType(ctx), nil)}
-	model := plan
-	if flattenDiags := flattenCronJob(ctx, out, &model, filters, false); flattenDiags.HasError() {
-		diags.Append(flattenDiags...)
-	} else {
-		diags.Append(actual.Set(ctx, &model)...)
-	}
-	merged, err := knownOrActual(planned.Raw, actual.Raw)
-	if err != nil {
-		diags.AddError("Unable to record CronJob state", err.Error())
-		return diags
-	}
-	state.Raw = merged
-	return diags
+func cronJobWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model CronJobV1Model, out *batch.CronJob, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		model.ID = types.StringValue(out.Namespace + "/" + out.Name)
+		diags := flattenCronJob(ctx, out, &model, filters, false)
+		return append(diags, actual.Set(ctx, &model)...)
+	})
 }
 
 // cronJobDesiredSpec is the planned spec, with the values the plan leaves to

@@ -206,7 +206,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		if baseline != nil && i < len(baseline.VolumeClaimTemplate) {
 			prior = &baseline.VolumeClaimTemplate[i]
 		}
-		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior, refresh)
+		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior)
 		diags.Append(fd...)
 		out.VolumeClaimTemplate[i] = model
 	}
@@ -400,7 +400,7 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	if baseline != nil && len(baseline.Template) > 0 {
 		priorMetadata = baseline.Template[0].Metadata
 	}
-	meta, d := flattenWorkloadTemplateMetadata(ctx, in.ObjectMeta, priorMetadata, refresh)
+	meta, d := flattenWorkloadTemplateMetadata(ctx, in.ObjectMeta, priorMetadata)
 	diags.Append(d...)
 	out.Metadata = meta
 
@@ -419,7 +419,7 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	return out, diags
 }
 
-func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel, refresh bool) (PersistentVolumeClaimModel, diag.Diagnostics) {
+func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel) (PersistentVolumeClaimModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := PersistentVolumeClaimModel{}
 
@@ -429,9 +429,6 @@ func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolum
 	}
 	meta, d := flattenClaimTemplateMetadata(ctx, in.ObjectMeta, priorMetadata)
 	diags.Append(d...)
-	if !refresh {
-		common.KeepPlannedMetadataMaps(meta, priorMetadata)
-	}
 	preserveEmbeddedMetadataNamespace(meta, priorMetadata, in.Namespace)
 	out.Metadata = meta
 

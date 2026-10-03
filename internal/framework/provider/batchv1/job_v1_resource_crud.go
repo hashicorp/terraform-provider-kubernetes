@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -63,7 +62,7 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		return
 	}
 	// The Job exists now: keep it in state even if waiting for it fails.
-	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(out.Namespace, out.Name))...)
@@ -173,7 +172,7 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		resp.Diagnostics.AddError("Failed to update Job", err.Error())
 		return
 	}
-	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
@@ -284,24 +283,12 @@ func flattenJob(ctx context.Context, job *batchapi.Job, model *JobV1Model, filte
 
 // jobWriteResult records the plan after a write, with the values Kubernetes
 // chose for those it left unknown.
-func jobWriteResult(ctx context.Context, state *tfsdk.State, plan JobV1Model, out *batchapi.Job, filters kubernetes.MetadataFilters) diag.Diagnostics {
-	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
-	planned := tfsdk.State{Schema: state.Schema}
-	diags := planned.Set(ctx, &plan)
-	actual := tfsdk.State{Schema: state.Schema, Raw: tftypes.NewValue(state.Schema.Type().TerraformType(ctx), nil)}
-	model := plan
-	if flattenDiags := flattenJob(ctx, out, &model, filters, false); flattenDiags.HasError() {
-		diags.Append(flattenDiags...)
-	} else {
-		diags.Append(actual.Set(ctx, &model)...)
-	}
-	merged, err := knownOrActual(planned.Raw, actual.Raw)
-	if err != nil {
-		diags.AddError("Unable to record Job state", err.Error())
-		return diags
-	}
-	state.Raw = merged
-	return diags
+func jobWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model JobV1Model, out *batchapi.Job, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		model.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
+		diags := flattenJob(ctx, out, &model, filters, false)
+		return append(diags, actual.Set(ctx, &model)...)
+	})
 }
 
 func removeJobGeneratedLabels(labels map[string]string) {

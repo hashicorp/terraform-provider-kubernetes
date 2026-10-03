@@ -78,8 +78,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	createdState := d.daemonSetStateFromObject(ctx, plan, created, filters, false, &resp.Diagnostics)
-	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, createdState)...)
+	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(created.Namespace, created.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -93,12 +92,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 	}
 
-	fresh, exists := d.readDaemonSetState(ctx, createdState, filters, conn, false, &resp.Diagnostics)
-	if !exists || resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, fresh)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(fresh.Metadata[0].Namespace.ValueString(), fresh.Metadata[0].Name.ValueString()))...)
+	resp.Diagnostics.Append(d.daemonSetReadWriteResult(ctx, &resp.State, req.Plan, plan, conn, created.Namespace, created.Name, filters)...)
 }
 
 func (d *DaemonSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -119,7 +113,7 @@ func (d *DaemonSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	fresh, exists := d.readDaemonSetState(ctx, state, filters, conn, true, &resp.Diagnostics)
+	fresh, exists := d.readDaemonSetState(ctx, state, filters, conn, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -233,8 +227,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	updatedState := d.daemonSetStateFromObject(ctx, plan, updated, filters, false, &resp.Diagnostics)
-	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, updatedState)...)
+	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, updated, filters)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(updated.Namespace, updated.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -248,12 +241,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 	}
 
-	fresh, exists := d.readDaemonSetState(ctx, plan, filters, conn, false, &resp.Diagnostics)
-	if !exists || resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, fresh)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(fresh.Metadata[0].Namespace.ValueString(), fresh.Metadata[0].Name.ValueString()))...)
+	resp.Diagnostics.Append(d.daemonSetReadWriteResult(ctx, &resp.State, req.Plan, plan, conn, namespace, name, filters)...)
 }
 
 func (d *DaemonSetV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -340,12 +328,39 @@ func setDaemonSetState(ctx context.Context, state *tfsdk.State, model DaemonSetV
 	return diags
 }
 
+// daemonSetWriteResult records the plan after a write, with the values
+// Kubernetes chose for those it left unknown.
+func (d *DaemonSetV1) daemonSetWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model DaemonSetV1Model, current *appsv1.DaemonSet, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		var diags diag.Diagnostics
+		written := d.daemonSetStateFromObject(ctx, model, current, filters, false, &diags)
+		if diags.HasError() {
+			return diags
+		}
+		return append(diags, setDaemonSetState(ctx, actual, written)...)
+	})
+}
+
+// daemonSetReadWriteResult is daemonSetWriteResult for the DaemonSet as it is
+// after a rollout.
+func (d *DaemonSetV1) daemonSetReadWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model DaemonSetV1Model, conn *k8sclient.Clientset, namespace, name string, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	var diags diag.Diagnostics
+	current, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return diags
+	}
+	if err != nil {
+		diags.AddError("Error reading daemonset", err.Error())
+		return diags
+	}
+	return d.daemonSetWriteResult(ctx, state, plan, model, current, filters)
+}
+
 func (d *DaemonSetV1) readDaemonSetState(
 	ctx context.Context,
 	prior DaemonSetV1Model,
 	filters kubernetes.MetadataFilters,
 	conn *k8sclient.Clientset,
-	refresh bool,
 	diags *diag.Diagnostics,
 ) (DaemonSetV1Model, bool) {
 	namespace, name, err := kubernetes.IdParts(prior.ID.ValueString())
@@ -362,7 +377,7 @@ func (d *DaemonSetV1) readDaemonSetState(
 		return DaemonSetV1Model{}, false
 	}
 
-	return d.daemonSetStateFromObject(ctx, prior, current, filters, refresh, diags), true
+	return d.daemonSetStateFromObject(ctx, prior, current, filters, true, diags), true
 }
 
 func (d *DaemonSetV1) daemonSetStateFromObject(
@@ -381,9 +396,6 @@ func (d *DaemonSetV1) daemonSetStateFromObject(
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
-	if !refresh {
-		common.KeepPlannedMetadataMaps(metadata, prior.Metadata)
-	}
 	spec, specDiags := flattenDaemonSetSpecModel(ctx, current.Spec, prior.Spec, refresh)
 	diags.Append(specDiags...)
 	if diags.HasError() {
@@ -472,7 +484,7 @@ func flattenDaemonSetSpecModel(ctx context.Context, spec appsv1.DaemonSetSpec, b
 		daemonSetSpecPath().AtName("template").AtListIndex(0).AtName("spec"),
 	)
 	diagnostics.Append(templateSpecDiags...)
-	templateMetadata, templateMetadataDiags := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, templateMetadataBaseline, refresh)
+	templateMetadata, templateMetadataDiags := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, templateMetadataBaseline)
 	diagnostics.Append(templateMetadataDiags...)
 	selector, selectorDiags := flattenWorkloadSelector(ctx, spec.Selector, selectorBaseline)
 	diagnostics.Append(selectorDiags...)

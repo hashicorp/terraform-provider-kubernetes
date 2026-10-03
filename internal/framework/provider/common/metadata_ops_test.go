@@ -981,34 +981,3 @@ func TestNormalizeNotFoundMetadata(t *testing.T) {
 		}
 	})
 }
-
-func TestKeepPlannedMetadataMaps(t *testing.T) {
-	live := map[string]string{"app": "x", "admission.example.com/injected": "true"}
-	planned := tfMap(map[string]string{"app": "x"})
-	empty := types.MapValueMust(types.StringType, map[string]attr.Value{})
-	for _, tc := range []struct {
-		name    string
-		planned types.Map
-		want    types.Map
-	}{
-		{name: "known plan keeps only planned keys", planned: planned, want: planned},
-		{name: "null plan stays null", planned: types.MapNull(types.StringType), want: types.MapNull(types.StringType)},
-		{name: "empty plan stays empty", planned: empty, want: empty},
-		{name: "unknown plan takes the live keys", planned: types.MapUnknown(types.StringType), want: tfMap(live)},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			metadata, diags := FlattenNamespacedMetadata(context.Background(), metav1.ObjectMeta{Name: "a", Labels: live, Annotations: live}, nil, nil, nil)
-			if diags.HasError() {
-				t.Fatal(diags)
-			}
-			plan := []NamespacedMetadataModel{{MetadataModel: MetadataModel{MetadataBase: MetadataBase{Annotations: tc.planned, Labels: tc.planned}}}}
-			KeepPlannedMetadataMaps(metadata, plan)
-			if !metadata[0].Annotations.Equal(tc.want) || !metadata[0].Labels.Equal(tc.want) {
-				t.Fatalf("got annotations %s and labels %s, want %s", metadata[0].Annotations, metadata[0].Labels, tc.want)
-			}
-			if metadata[0].Name.ValueString() != "a" {
-				t.Fatalf("name = %s, want a", metadata[0].Name)
-			}
-		})
-	}
-}

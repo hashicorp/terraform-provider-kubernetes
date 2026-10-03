@@ -366,20 +366,6 @@ func isScalar(typ tftypes.Type) bool {
 	return true
 }
 
-// knownOrActual is the state after a write: the plan, with each unknown value
-// taken from the object Kubernetes returned.
-func knownOrActual(plan, actual tftypes.Value) (tftypes.Value, error) {
-	return tftypes.Transform(plan, func(at *tftypes.AttributePath, value tftypes.Value) (tftypes.Value, error) {
-		if value.IsKnown() {
-			return value, nil
-		}
-		if found, ok := valueAt(actual, at); ok && found.IsFullyKnown() {
-			return found, nil
-		}
-		return tftypes.NewValue(value.Type(), nil), nil
-	})
-}
-
 func valueAt(root tftypes.Value, at *tftypes.AttributePath) (tftypes.Value, bool) {
 	found, _, err := tftypes.WalkAttributePath(root, at)
 	if err != nil {

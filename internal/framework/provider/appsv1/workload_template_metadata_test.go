@@ -19,23 +19,17 @@ func TestWorkloadTemplateMetadataMap(t *testing.T) {
 		name  string
 		live  map[string]string
 		prior types.Map
-		all   bool
 		want  types.Map
 	}{
-		{"refresh keeps every live key", live, planned, true, types.MapValueMust(types.StringType, map[string]attr.Value{
+		{"keeps every live key", live, planned, types.MapValueMust(types.StringType, map[string]attr.Value{
 			"app": types.StringValue("x"), "kubectl.kubernetes.io/restartedAt": types.StringValue("now"),
 		})},
-		{"apply keeps planned keys", live, planned, false, planned},
-		{"apply records the plan", map[string]string{"app": "mutated"}, planned, false, planned},
-		{"apply keeps an empty plan", live, empty, false, empty},
-		{"apply with null plan drops live keys", live, types.MapNull(types.StringType), false, types.MapNull(types.StringType)},
-		{"apply with unknown plan keeps every live key", map[string]string{"app": "x"}, types.MapUnknown(types.StringType), false, planned},
-		{"none stays null", nil, types.MapNull(types.StringType), true, types.MapNull(types.StringType)},
-		{"none keeps an empty map", nil, empty, true, empty},
-		{"removed keys leave an empty map", nil, planned, true, empty},
+		{"none stays null", nil, types.MapNull(types.StringType), types.MapNull(types.StringType)},
+		{"none keeps an empty map", nil, empty, empty},
+		{"removed keys leave an empty map", nil, planned, empty},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, diags := workloadTemplateMetadataMap(context.Background(), tc.live, tc.prior, tc.all)
+			got, diags := workloadTemplateMetadataMap(context.Background(), tc.live, tc.prior)
 			if diags.HasError() || !got.Equal(tc.want) {
 				t.Fatalf("got %s (%v), want %s", got, diags, tc.want)
 			}

@@ -40,11 +40,10 @@ func workloadTemplateMetadataBlock() schema.ListNestedBlock {
 	return block
 }
 
-// flattenWorkloadTemplateMetadata builds the template metadata state. On
-// refresh or import it records every live template annotation and label, since
-// ignore_annotations and ignore_labels do not apply to templates; after Create
-// and Update it records the planned maps.
-func flattenWorkloadTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta, prior []common.NamespacedMetadataModel, refresh bool) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
+// flattenWorkloadTemplateMetadata builds the template metadata state. It records
+// every live template annotation and label, since ignore_annotations and
+// ignore_labels do not apply to templates.
+func flattenWorkloadTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta, prior []common.NamespacedMetadataModel) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
 	var previous common.NamespacedMetadataModel
 	if len(prior) > 0 {
 		previous = prior[0]
@@ -69,19 +68,15 @@ func flattenWorkloadTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta
 	}
 
 	var diags, d diag.Diagnostics
-	result.Annotations, d = workloadTemplateMetadataMap(ctx, meta.Annotations, previous.Annotations, refresh || len(prior) == 0)
+	result.Annotations, d = workloadTemplateMetadataMap(ctx, meta.Annotations, previous.Annotations)
 	diags.Append(d...)
-	result.Labels, d = workloadTemplateMetadataMap(ctx, meta.Labels, previous.Labels, refresh || len(prior) == 0)
+	result.Labels, d = workloadTemplateMetadataMap(ctx, meta.Labels, previous.Labels)
 	diags.Append(d...)
 	return []common.NamespacedMetadataModel{result}, diags
 }
 
 // workloadTemplateMetadataMap returns the live map, keeping a prior empty map.
-// Unless all is set, a known prior map is the plan and is returned as it is.
-func workloadTemplateMetadataMap(ctx context.Context, live map[string]string, prior types.Map, all bool) (types.Map, diag.Diagnostics) {
-	if !all && !prior.IsUnknown() {
-		return prior, nil
-	}
+func workloadTemplateMetadataMap(ctx context.Context, live map[string]string, prior types.Map) (types.Map, diag.Diagnostics) {
 	if len(live) == 0 {
 		if !prior.IsNull() && !prior.IsUnknown() {
 			return types.MapValueMust(types.StringType, nil), nil

@@ -250,6 +250,25 @@ func TestKeepUnsetString(t *testing.T) {
 	}
 }
 
+// Admission can set a bare Pod's priority class, so the Pod records it like
+// other API-defaulted strings; a template keeps its "" default.
+func TestPriorityClassNameComputed(t *testing.T) {
+	for name, tc := range map[string]struct {
+		options  Options
+		computed bool
+	}{
+		"pod":        {Pod(), true},
+		"deployment": {Deployment(), false},
+		"job":        {Job(), false},
+	} {
+		b := For(tc.options)
+		attribute := b.Spec.NestedObject.Attributes["priority_class_name"].(schema.StringAttribute)
+		if b.computed["spec.priority_class_name"] != tc.computed || (attribute.Default == nil) != tc.computed {
+			t.Errorf("%s: priority_class_name API-computed = %t, want %t", name, b.computed["spec.priority_class_name"], tc.computed)
+		}
+	}
+}
+
 // A configured block holding only zero values is kept when Kubernetes returns
 // none: always after a write, and on a read only where Kubernetes cannot hold
 // such a block, so removing one out of band shows as drift.

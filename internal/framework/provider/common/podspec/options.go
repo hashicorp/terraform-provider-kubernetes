@@ -8,7 +8,8 @@ package podspec
 type Options struct {
 	// Immutable forces replacement for every field SDKv2 declared ForceNew: !isUpdatable.
 	Immutable bool
-	// Template selects pod-template semantics, which keep built-in tolerations on read.
+	// Template selects pod-template semantics. Admission does not change a
+	// template, so it records every toleration and keeps the priority_class_name default.
 	Template bool
 	// RestartPolicy is the default of restart_policy.
 	RestartPolicy string

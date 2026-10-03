@@ -6,7 +6,6 @@ package appsv1
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -217,13 +216,11 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live.ObjectMeta)
 		if desired != nil {
 			from, to := statefulSetPatchSpecs(*original, *desired, live.Spec)
-			if !reflect.DeepEqual(from, to) {
-				specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.StatefulSet{})
-				if err != nil {
-					return err
-				}
-				ops = append(ops, specOps...)
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.StatefulSet{})
+			if err != nil {
+				return err
 			}
+			ops = append(ops, specOps...)
 		}
 		if len(ops) == 0 {
 			return nil

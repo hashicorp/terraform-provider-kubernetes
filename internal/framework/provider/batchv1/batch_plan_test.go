@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -211,7 +213,7 @@ func TestCronJobSpecOps(t *testing.T) {
 				t.Fatal(err)
 			}
 			raw := &unstructured.Unstructured{Object: object}
-			ops, err := cronJobSpecOps(raw, spec(nil), tc.desired)
+			ops, err := common.StrategicMergeSpecOps(raw, spec(nil), tc.desired, batch.CronJob{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -229,7 +231,11 @@ func TestCronJobSpecOps(t *testing.T) {
 			}
 			container(&want).ImagePullPolicy = corev1.PullIfNotPresent
 			want.JobTemplate.Spec.Template.Spec.PriorityClassName = "admission"
-			if got := ops[0].(*kubernetes.ReplaceOperation).Value; !sameJSON(got, want) {
+			wantSpec, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&batch.CronJob{Spec: want})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := ops[0].(*kubernetes.ReplaceOperation).Value; !reflect.DeepEqual(got, wantSpec["spec"]) {
 				t.Errorf("patched spec = %v", got)
 			}
 		})

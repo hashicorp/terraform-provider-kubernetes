@@ -5,9 +5,7 @@ package batchv1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -23,7 +21,6 @@ import (
 	batch "k8s.io/api/batch/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sretry "k8s.io/client-go/util/retry"
@@ -162,7 +159,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 			return err
 		}
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, out.ObjectMeta)
-		specOps, err := cronJobSpecOps(raw, previousSpec, desiredSpec)
+		specOps, err := common.StrategicMergeSpecOps(raw, previousSpec, desiredSpec, batch.CronJob{})
 		if err != nil {
 			return err
 		}
@@ -359,27 +356,4 @@ func cronJobDesiredSpec(ctx context.Context, req resource.UpdateRequest) (batch.
 		return batch.CronJobSpec{}, diags
 	}
 	return expandCronJobSpec(ctx, value.(types.List), path.Root("spec"))
-}
-
-// cronJobSpecOps moves the live spec from previous to desired with a three-way
-// strategic merge, and returns nothing when that leaves the live spec as it is.
-func cronJobSpecOps(live *unstructured.Unstructured, previous, desired batch.CronJobSpec) (kubernetes.PatchOperations, error) {
-	ops, err := common.StrategicMergeSpecOps(live, previous, desired, batch.CronJob{})
-	if err != nil {
-		return nil, err
-	}
-	for _, op := range ops {
-		if replace, ok := op.(*kubernetes.ReplaceOperation); !ok || replace.Path != "/spec" || !sameJSON(replace.Value, live.Object["spec"]) {
-			return ops, nil
-		}
-	}
-	return nil, nil
-}
-
-func sameJSON(a, b any) bool {
-	var x, y any
-	dataA, errA := json.Marshal(a)
-	dataB, errB := json.Marshal(b)
-	return errA == nil && errB == nil && json.Unmarshal(dataA, &x) == nil && json.Unmarshal(dataB, &y) == nil &&
-		reflect.DeepEqual(x, y)
 }

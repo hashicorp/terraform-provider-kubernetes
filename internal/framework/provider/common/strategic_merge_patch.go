@@ -72,7 +72,8 @@ func ThreeWayStrategicMerge(original, modified, current []byte, dataStruct any) 
 }
 
 // StrategicMergeSpecOps returns a JSON patch replacing the spec of live with
-// ThreeWayStrategicMerge's result. Send it with ResourceVersionGuard.
+// ThreeWayStrategicMerge's result, or nothing when that result is the live
+// spec. Send it with ResourceVersionGuard.
 func StrategicMergeSpecOps(live *unstructured.Unstructured, original, modified, dataStruct any) (kubernetes.PatchOperations, error) {
 	var docs [3][]byte
 	for i, spec := range []any{original, modified, live.Object["spec"]} {
@@ -86,9 +87,16 @@ func StrategicMergeSpecOps(live *unstructured.Unstructured, original, modified, 
 	if err != nil {
 		return nil, err
 	}
-	var merged map[string]any
+	// Decode both sides alike so numbers compare equal.
+	var merged, current map[string]any
 	if err := json.Unmarshal(mergedJSON, &merged); err != nil {
 		return nil, err
+	}
+	if err := json.Unmarshal(docs[2], &current); err != nil {
+		return nil, err
+	}
+	if reflect.DeepEqual(merged["spec"], current["spec"]) {
+		return nil, nil
 	}
 	return kubernetes.PatchOperations{&kubernetes.ReplaceOperation{Path: "/spec", Value: merged["spec"]}}, nil
 }

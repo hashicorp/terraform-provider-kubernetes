@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 )
 
 func TestThreeWayStrategicMerge(t *testing.T) {
@@ -92,29 +93,74 @@ func TestThreeWayStrategicMerge(t *testing.T) {
 }
 
 func TestStrategicMergeSpecOps(t *testing.T) {
-	spec := func(image string) appsv1.DeploymentSpec {
+	spec := func(image string, sc *corev1.PodSecurityContext) appsv1.DeploymentSpec {
 		return appsv1.DeploymentSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
-			Containers: []corev1.Container{{Name: "app", Image: image}},
+			Containers:      []corev1.Container{{Name: "app", Image: image}},
+			SecurityContext: sc,
 		}}}
 	}
-	live := &unstructured.Unstructured{Object: map[string]any{
-		"spec": map[string]any{"replicas": int64(3), "strategy": map[string]any{}, "template": map[string]any{
-			"metadata": map[string]any{},
-			"spec": map[string]any{"containers": []any{
-				map[string]any{"name": "app", "image": "a", "resources": map[string]any{}, "futureField": true},
+	liveSpec := func(sc map[string]any) *unstructured.Unstructured {
+		podSpec := map[string]any{"containers": []any{
+			map[string]any{"name": "app", "image": "a", "resources": map[string]any{}, "futureField": true},
+		}}
+		if sc != nil {
+			podSpec["securityContext"] = sc
+		}
+		return &unstructured.Unstructured{Object: map[string]any{
+			"spec": map[string]any{"replicas": int64(3), "strategy": map[string]any{}, "template": map[string]any{
+				"metadata": map[string]any{}, "spec": podSpec,
 			}},
-		}},
-	}}
-	ops, err := StrategicMergeSpecOps(live, spec("a"), spec("b"), appsv1.Deployment{})
-	if err != nil {
-		t.Fatal(err)
+		}}
 	}
-	got, err := ops.MarshalJSON()
-	if err != nil {
-		t.Fatal(err)
+	nonRootFalse := &corev1.PodSecurityContext{RunAsNonRoot: ptr.To(false)}
+	cases := []struct {
+		name               string
+		live               *unstructured.Unstructured
+		original, modified appsv1.DeploymentSpec
+		want               string // empty: no operations
+	}{
+		{
+			name:     "image update keeps live-only fields",
+			live:     liveSpec(nil),
+			original: spec("a", nil), modified: spec("b", nil),
+			want: `[{"path":"/spec","value":{"replicas":3,"strategy":{},"template":{"metadata":{},"spec":{"containers":[{"futureField":true,"image":"b","name":"app","resources":{}}]}}},"op":"replace"}]`,
+		},
+		{
+			name:     "configured false already live",
+			live:     liveSpec(map[string]any{"runAsNonRoot": false}),
+			original: spec("a", &corev1.PodSecurityContext{SupplementalGroups: []int64{}}), modified: spec("a", nonRootFalse),
+		},
+		{
+			name:     "configured false missing live",
+			live:     liveSpec(map[string]any{}),
+			original: spec("a", &corev1.PodSecurityContext{}), modified: spec("a", nonRootFalse),
+			want: `[{"path":"/spec","value":{"replicas":3,"strategy":{},"template":{"metadata":{},"spec":{"containers":[{"futureField":true,"image":"a","name":"app","resources":{}}],"securityContext":{"runAsNonRoot":false}}}},"op":"replace"}]`,
+		},
+		{
+			name:     "empty security context already live",
+			live:     liveSpec(map[string]any{}),
+			original: spec("a", nil), modified: spec("a", &corev1.PodSecurityContext{}),
+		},
 	}
-	want := `[{"path":"/spec","value":{"replicas":3,"strategy":{},"template":{"metadata":{},"spec":{"containers":[{"futureField":true,"image":"b","name":"app","resources":{}}]}}},"op":"replace"}]`
-	if string(got) != want {
-		t.Errorf("got  %s\nwant %s", got, want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ops, err := StrategicMergeSpecOps(tc.live, tc.original, tc.modified, appsv1.Deployment{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.want == "" {
+				if len(ops) > 0 {
+					t.Errorf("got %d operations, want none", len(ops))
+				}
+				return
+			}
+			got, err := ops.MarshalJSON()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != tc.want {
+				t.Errorf("got  %s\nwant %s", got, tc.want)
+			}
+		})
 	}
 }

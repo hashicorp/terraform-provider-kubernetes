@@ -373,6 +373,8 @@ func TestAccKubernetesCronJobV1_upgrade(t *testing.T) {
 						ResourceName:             "kubernetes_cron_job_v1.test",
 						ImportState:              true,
 						ImportStateVerify:        true,
+						// The minimal CronJob runs every minute, and its status updates change the resource version.
+						ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
 					},
 				},
 			})

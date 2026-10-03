@@ -116,19 +116,21 @@ func (p *PodV1) UpgradeIdentity(ctx context.Context) map[int64]resource.Identity
 	return common.UpgradeNamespacedIdentity(podKind, podAPIVersion)
 }
 
-// UpgradeState implements [resource.ResourceWithUpgradeState].
+// UpgradeState implements [resource.ResourceWithUpgradeState] for the SDKv2
+// schema versions 0 and 1.
 func (p *PodV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
-	return map[int64]resource.StateUpgrader{
-		0: {
+	upgrader := func(version int64) resource.StateUpgrader {
+		return resource.StateUpgrader{
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-				state, _, _, diags := p.decodeLegacyState(ctx, req.RawState, 0, podV1UpgradeStateErrSummary)
+				state, _, _, diags := p.decodeLegacyState(ctx, req.RawState, version, podV1UpgradeStateErrSummary)
 				resp.Diagnostics.Append(diags...)
 				if !resp.Diagnostics.HasError() {
 					resp.State = state
 				}
 			},
-		},
+		}
 	}
+	return map[int64]resource.StateUpgrader{0: upgrader(0), 1: upgrader(1)}
 }
 
 // MoveState implements [resource.ResourceWithMoveState] for
@@ -219,6 +221,10 @@ func (p *PodV1) decodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, 
 					timeouts[key] = nil
 				}
 			}
+		}
+		// SDKv2 left an unset target_state null; the schema defaults it to empty.
+		if values["target_state"] == nil {
+			values["target_state"] = []any{}
 		}
 		if version == 0 {
 			return podV1UpgradeResourcesFieldV0(values)

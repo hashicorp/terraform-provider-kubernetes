@@ -6,6 +6,8 @@ package batchv1_test
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -107,6 +109,75 @@ func TestAccKubernetesJobV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
 	})
 }
 
+// 3.3.0 state cannot tell a configured template label from one admission
+// added, so until an apply records the configured labels, a label removed from
+// the configuration is dropped from state only. Afterwards removing one
+// replaces the Job.
+func TestAccKubernetesJobV1_upgradeRemoveTemplateLabel(t *testing.T) {
+	for _, tc := range []struct {
+		name, created, upgraded     string
+		upgradeAction, removeAction plancheck.ResourceActionType
+	}{
+		{"before an apply", `app = "a", extra = "b"`, `app = "a", extra = "b"`, plancheck.ResourceActionNoop, plancheck.ResourceActionUpdate},
+		{"after an apply", `app = "a", extra = "b", x = "c"`, `app = "a", x = "c"`, plancheck.ResourceActionUpdate, plancheck.ResourceActionDestroyBeforeCreate},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := "tf-acc-job-label-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+			const address = "kubernetes_job_v1.test"
+			labels := func(labels string) string {
+				return strings.Replace(testAccBatchSecurityContextJob(name, ""), "metadata {}", "metadata {\n        labels = {"+labels+"}\n      }", 1)
+			}
+			var created, upgraded, removed batchv1.Job
+			replaced := tc.removeAction == plancheck.ResourceActionDestroyBeforeCreate
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:     func() { testAccPreCheck(t) },
+				CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+				Steps: []resource.TestStep{
+					{
+						ExternalProviders: map[string]resource.ExternalProvider{
+							"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+						},
+						Config: labels(tc.created),
+						Check:  testAccCheckKubernetesJobV1Exists(address, &created),
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   labels(tc.upgraded),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, tc.upgradeAction)},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							testAccCheckKubernetesJobV1Exists(address, &upgraded),
+							testAccCheckKubernetesJobV1ForceNew(&created, &upgraded, false),
+						),
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   labels(`app = "a"`),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, tc.removeAction)},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							testAccCheckKubernetesJobV1Exists(address, &removed),
+							testAccCheckKubernetesJobV1ForceNew(&upgraded, &removed, replaced),
+							func(*terraform.State) error {
+								for _, key := range []string{"extra", "x"} {
+									if _, ok := removed.Spec.Template.Labels[key]; ok && replaced {
+										return fmt.Errorf("live pod template labels = %v, want no %s", removed.Spec.Template.Labels, key)
+									}
+								}
+								return nil
+							},
+						),
+					},
+				},
+			})
+		})
+	}
+}
+
 func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {
 	name := "tf-acc-cron-empty-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	const address = "kubernetes_cron_job_v1.test"
@@ -156,6 +227,117 @@ func TestAccKubernetesCronJobV1_upgradeExplicitEmpty(t *testing.T) {
 					testAccCheckKubernetesCronJobV1Exists(address, &after),
 					testAccCheckKubernetesCronJobV1ForceNew(&before, &after, false),
 				),
+			},
+		},
+	})
+}
+
+// State written by 3.3.0 plans no change before its first refresh, while a
+// CronJob schedule edit is still an in-place update.
+func TestAccKubernetesBatchV1_upgradeWithoutRefresh(t *testing.T) {
+	name := "tf-acc-batch-norefresh-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	config := func(schedule string) string {
+		return testAccBatchSecurityContextJob(name, "") + fmt.Sprintf(`
+resource "kubernetes_cron_job_v1" "test" {
+  metadata {
+    name = %q
+  }
+  spec {
+    schedule = %q
+    job_template {
+      metadata {}
+      spec {
+        template {
+          metadata {}
+          spec {
+            restart_policy = "Never"
+            container {
+              name    = "main"
+              image   = %q
+              command = ["sh", "-c", "true"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+`, name, schedule, busyboxImage)
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:             func() { testAccPreCheck(t) },
+		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesJobV1Destroy,
+			testAccCheckKubernetesCronJobV1Destroy,
+		),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: config("0 0 1 1 *"),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config("0 0 1 1 *"),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config("0 0 2 1 *"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("kubernetes_cron_job_v1.test", plancheck.ResourceActionUpdate),
+				}},
+			},
+		},
+	})
+}
+
+// A generate_name Job that 3.3.0 created but saw fail is tainted without a
+// name; the upgrade takes the name from the id and replaces it.
+func TestAccKubernetesJobV1_upgradeTaintedGeneratedName(t *testing.T) {
+	prefix := "tf-acc-test-" + acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum) + "-"
+	config := func(command string) string {
+		return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    generate_name = %q
+  }
+  spec {
+    backoff_limit = 0
+    template {
+      metadata {}
+      spec {
+        restart_policy = "Never"
+        container {
+          name    = "main"
+          image   = %q
+          command = ["sh", "-c", %q]
+        }
+      }
+    }
+  }
+  wait_for_completion = true
+}
+`, prefix, busyboxImage, command)
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config:      config("exit 1"),
+				ExpectError: regexp.MustCompile("is in failed state"),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config("true"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("kubernetes_job_v1.test", plancheck.ResourceActionReplace),
+				}},
 			},
 		},
 	})

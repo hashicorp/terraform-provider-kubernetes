@@ -28,6 +28,7 @@ var (
 	_ resource.ResourceWithImportState     = (*CronJobV1)(nil)
 	_ resource.ResourceWithMoveState       = (*CronJobV1)(nil)
 	_ resource.ResourceWithUpgradeIdentity = (*CronJobV1)(nil)
+	_ resource.ResourceWithUpgradeState    = (*CronJobV1)(nil)
 )
 
 type CronJobV1 struct {

@@ -29,7 +29,7 @@ func buildJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resourc
 	labels.Default, labels.PlanModifiers = nil, nil
 	metadata.NestedObject.Attributes["labels"] = labels
 	resp.Schema = schema.Schema{
-		Version:     1,
+		Version:     2,
 		Description: "A Job creates one or more Pods and ensures that a specified number successfully terminate.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},

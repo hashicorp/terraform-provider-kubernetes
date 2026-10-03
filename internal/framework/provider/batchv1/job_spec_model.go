@@ -225,7 +225,7 @@ func flattenPodTemplate(ctx context.Context, in corev1.PodTemplateSpec, prior at
 		priorSpec = types.ListNull(jobPodSpec(job).ObjectType())
 	}
 	spec, diags := flattenPodSpec(ctx, in.Spec, priorSpec, job, refresh, at.AtListIndex(0).AtName("spec"))
-	metadata := flattenTemplateMetadata(in.ObjectMeta, previous["metadata"], objectType.AttrTypes["metadata"].(types.ListType), generatedLabels, &diags)
+	metadata := flattenTemplateMetadata(in.ObjectMeta, previous["metadata"], objectType.AttrTypes["metadata"].(types.ListType), refresh && !job, generatedLabels, &diags)
 	if diags.HasError() {
 		return types.ListNull(objectType), diags
 	}
@@ -241,14 +241,17 @@ func flattenPodSpec(ctx context.Context, in corev1.PodSpec, prior types.List, jo
 	return jobPodSpec(job).FlattenSpec(ctx, in, prior, at)
 }
 
-// Template metadata keeps the keys configuration manages once it holds any,
-// so labels and annotations added by controllers or admission do not drift.
-func flattenTemplateMetadata(in metav1.ObjectMeta, prior attr.Value, typ types.ListType, generatedLabels []string, diags *diag.Diagnostics) types.List {
+// Template labels and annotations record the planned maps after a write. A
+// Job's template cannot change, so a refresh keeps them too, and keys or
+// values admission set at create never drift. Otherwise, as on an import, a
+// refresh records every live key, as SDKv2 did.
+func flattenTemplateMetadata(in metav1.ObjectMeta, prior attr.Value, typ types.ListType, live bool, generatedLabels []string, diags *diag.Diagnostics) types.List {
 	objectType := typ.ElemType.(types.ObjectType)
 	previous := priorAttributes(prior)
+	live = live || previous == nil
 	attributes := map[string]attr.Value{
-		"annotations":      templateMap(in.Annotations, previous["annotations"], nil),
-		"labels":           templateMap(in.Labels, previous["labels"], generatedLabels),
+		"annotations":      templateMap(in.Annotations, previous["annotations"], live, nil),
+		"labels":           templateMap(in.Labels, previous["labels"], live, generatedLabels),
 		"generate_name":    types.StringNull(),
 		"generation":       types.Int64Value(in.Generation),
 		"name":             types.StringValue(in.Name),
@@ -264,21 +267,18 @@ func flattenTemplateMetadata(in metav1.ObjectMeta, prior attr.Value, typ types.L
 	return singletonList(objectType, attributes, diags)
 }
 
-func templateMap(in map[string]string, prior attr.Value, generated []string) types.Map {
-	previous, _ := prior.(types.Map)
-	managed := previous.Elements()
-	known := !previous.IsNull() && !previous.IsUnknown()
+func templateMap(in map[string]string, prior attr.Value, live bool, generated []string) types.Map {
+	previous, ok := prior.(types.Map)
+	if ok && !live && !previous.IsUnknown() {
+		return previous
+	}
 	values := make(map[string]attr.Value, len(in))
 	for key, value := range in {
-		if _, ok := managed[key]; known && !ok {
-			continue
+		if !slices.Contains(generated, key) {
+			values[key] = types.StringValue(value)
 		}
-		if !known && slices.Contains(generated, key) {
-			continue
-		}
-		values[key] = types.StringValue(value)
 	}
-	if len(values) == 0 && !known {
+	if len(values) == 0 && (!ok || previous.IsNull() || previous.IsUnknown()) {
 		return types.MapNull(types.StringType)
 	}
 	return types.MapValueMust(types.StringType, values)

@@ -308,10 +308,6 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		out, err = conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.JSONPatchType, data, metav1.PatchOptions{})
 		return err
 	})
-	if apierrors.IsNotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating deployment", err.Error())
 		return
@@ -541,7 +537,7 @@ func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, base
 	}
 	templateSpec, d := flatten(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
 	diags.Append(d...)
-	templateMetadata, d := flattenTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata)
+	templateMetadata, d := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata, refresh)
 	diags.Append(d...)
 	model.Template = []deploymentTemplateModel{{
 		Metadata: templateMetadata,
@@ -716,58 +712,6 @@ func flattenDeploymentStrategy(ctx context.Context, strategy appsv1.DeploymentSt
 	return value, diags
 }
 
-func flattenTemplateMetadata(ctx context.Context, meta metav1.ObjectMeta, prior []common.NamespacedMetadataModel) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
-	var previous common.NamespacedMetadataModel
-	if len(prior) > 0 {
-		previous = prior[0]
-	}
-	result := common.NamespacedMetadataModel{
-		MetadataModel: common.MetadataModel{
-			MetadataBase: common.MetadataBase{
-				Name:            types.StringValue(meta.Name),
-				Generation:      types.Int64Value(meta.Generation),
-				ResourceVersion: types.StringValue(meta.ResourceVersion),
-				UID:             types.StringValue(string(meta.UID)),
-				Annotations:     types.MapNull(types.StringType),
-				Labels:          types.MapNull(types.StringType),
-			},
-			GenerateName: types.StringNull(),
-		},
-		Namespace: types.StringNull(),
-	}
-
-	annotations, d := flattenTemplateMetadataMap(ctx, meta.Annotations, previous.Annotations, len(prior) == 0)
-	labels, d2 := flattenTemplateMetadataMap(ctx, meta.Labels, previous.Labels, len(prior) == 0)
-	result.Annotations = annotations
-	result.Labels = labels
-	if meta.GenerateName != "" {
-		result.GenerateName = types.StringValue(meta.GenerateName)
-	}
-	if meta.Namespace != "" || previous.Namespace.Equal(types.StringValue("")) {
-		result.Namespace = types.StringValue(meta.Namespace)
-	}
-	var diags diag.Diagnostics
-	diags.Append(d...)
-	diags.Append(d2...)
-	return []common.NamespacedMetadataModel{result}, diags
-}
-
-func flattenTemplateMetadataMap(ctx context.Context, value map[string]string, prior types.Map, importing bool) (types.Map, diag.Diagnostics) {
-	if !importing && !prior.IsNull() && !prior.IsUnknown() {
-		managed := make(map[string]string, len(prior.Elements()))
-		for key := range prior.Elements() {
-			if current, ok := value[key]; ok {
-				managed[key] = current
-			}
-		}
-		value = managed
-	}
-	if len(value) == 0 && prior.IsNull() {
-		return types.MapNull(types.StringType), nil
-	}
-	return types.MapValueFrom(ctx, types.StringType, value)
-}
-
 func templateSpecNull() types.List {
 	return types.ListNull(podspec.For(podspec.Deployment()).ObjectType())
 }
@@ -827,6 +771,9 @@ func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, b
 		filters.GetIgnoreLabels(),
 	)
 	diags.Append(metadataDiags...)
+	if !refresh {
+		common.KeepPlannedMetadataMaps(metadata, baseline.Metadata)
+	}
 	spec, specDiags := flattenDeploymentSpec(ctx, object.Spec, baseline.Spec, path.Root("spec"), refresh)
 	diags.Append(specDiags...)
 

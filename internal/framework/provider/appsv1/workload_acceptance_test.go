@@ -4,13 +4,121 @@
 package appsv1_test
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 )
+
+var workloadAddresses = []string{"kubernetes_deployment_v1.test", "kubernetes_daemon_set_v1.test", "kubernetes_stateful_set_v1.test"}
+
+func expectWorkloadActions(action plancheck.ResourceActionType) []plancheck.PlanCheck {
+	checks := make([]plancheck.PlanCheck, len(workloadAddresses))
+	for i, address := range workloadAddresses {
+		checks[i] = plancheck.ExpectResourceAction(address, action)
+	}
+	return checks
+}
+
+// State written by 3.3.0 plans no change before its first refresh, while a
+// template edit is still an in-place update.
+func TestAccKubernetesWorkloadsV1_upgradeWithoutRefresh(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:             func() { testAccPreCheck(t) },
+		AdditionalCLIOptions: &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesDeploymentV1Destroy,
+			testAccCheckKubernetesDaemonSetV1Destroy,
+			testAccCheckKubernetesStatefulSetV1Destroy,
+		),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: testAccWorkloadsV1Config(name, ""),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   testAccWorkloadsV1Config(name, ""),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   testAccWorkloadsV1Config(name, "\n          working_dir = \"/tmp\""),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: expectWorkloadActions(plancheck.ResourceActionUpdate)},
+			},
+		},
+	})
+}
+
+// kubectl rollout restart annotates the pod template. Every workload reports
+// the annotation as drift, and ignore_changes on it keeps the plan empty.
+func TestAccKubernetesWorkloadsV1_templateRestartAnnotation(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	const annotation = "kubectl.kubernetes.io/restartedAt"
+	ignored := strings.ReplaceAll(testAccWorkloadsV1Config(name, ""), "  wait_for_rollout = false\n",
+		fmt.Sprintf("  wait_for_rollout = false\n  lifecycle {\n    ignore_changes = [spec[0].template[0].metadata[0].annotations[%q]]\n  }\n", annotation))
+	restart := func() {
+		if err := testAccRestartWorkloads(name, annotation); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProviderFactories,
+		CheckDestroy: resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesDeploymentV1Destroy,
+			testAccCheckKubernetesDaemonSetV1Destroy,
+			testAccCheckKubernetesStatefulSetV1Destroy,
+		),
+		Steps: []resource.TestStep{
+			{Config: testAccWorkloadsV1Config(name, "")},
+			{
+				PreConfig:        restart,
+				Config:           testAccWorkloadsV1Config(name, ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: expectWorkloadActions(plancheck.ResourceActionUpdate)},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(workloadAddresses[0], "spec.0.template.0.metadata.0.annotations."+annotation),
+					resource.TestCheckNoResourceAttr(workloadAddresses[1], "spec.0.template.0.metadata.0.annotations."+annotation),
+					resource.TestCheckNoResourceAttr(workloadAddresses[2], "spec.0.template.0.metadata.0.annotations."+annotation),
+				),
+			},
+			{
+				PreConfig:        restart,
+				Config:           ignored,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+			},
+		},
+	})
+}
+
+// testAccRestartWorkloads sets the template annotation kubectl rollout restart sets.
+func testAccRestartWorkloads(name, annotation string) error {
+	client, err := testAccWorkloadClient()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	patch := []byte(fmt.Sprintf(`{"spec":{"template":{"metadata":{"annotations":{%q:%q}}}}}`, annotation, time.Now().Format(time.RFC3339Nano)))
+	apps := client.AppsV1()
+	if _, err := apps.Deployments("default").Patch(ctx, name, k8stypes.StrategicMergePatchType, patch, metav1.PatchOptions{}); err != nil {
+		return err
+	}
+	if _, err := apps.DaemonSets("default").Patch(ctx, name, k8stypes.StrategicMergePatchType, patch, metav1.PatchOptions{}); err != nil {
+		return err
+	}
+	_, err = apps.StatefulSets("default").Patch(ctx, name, k8stypes.StrategicMergePatchType, patch, metav1.PatchOptions{})
+	return err
+}
 
 // Container ports sharing a number with different protocols must keep the
 // configured order through updates of each workload kind.

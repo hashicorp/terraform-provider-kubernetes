@@ -95,7 +95,7 @@ Optional:
 
 Optional:
 
-- `metadata` (Block List) Standard stateful set template metadata. (see [below for nested schema](#nestedblock--spec--template--metadata))
+- `metadata` (Block List) Standard pod's metadata. Exactly one metadata block is required. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--spec--template--metadata))
 - `spec` (Block List) Spec of the pods owned by the workload. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec))
 
 <a id="nestedblock--spec--template--metadata"></a>
@@ -103,17 +103,17 @@ Optional:
 
 Optional:
 
-- `annotations` (Map of String)
-- `generate_name` (String)
-- `labels` (Map of String)
-- `name` (String)
-- `namespace` (String)
+- `annotations` (Map of String) An unstructured key value map stored with the pod that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+- `generate_name` (String) Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency
+- `labels` (Map of String) Map of string keys and values that can be used to organize and categorize (scope and select) the pod. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+- `name` (String) Name of the pod, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+- `namespace` (String) Namespace defines the space within which name of the pod must be unique.
 
 Read-Only:
 
-- `generation` (Number)
-- `resource_version` (String)
-- `uid` (String)
+- `generation` (Number) A sequence number representing a specific generation of the desired state.
+- `resource_version` (String) An opaque value that represents the internal version of this pod that can be used by clients to determine when pod has changed. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+- `uid` (String) The unique in time and space value for this pod. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
 
 
 <a id="nestedblock--spec--template--spec"></a>

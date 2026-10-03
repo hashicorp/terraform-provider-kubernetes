@@ -35,7 +35,7 @@ func (p *PodV1) Schema(ctx context.Context, req resource.SchemaRequest, resp *re
 
 func buildPodV1Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:     1,
+		Version:     2,
 		Description: "A pod is a group of one or more containers, the shared storage for those containers, and options about how to run the containers. Pods are always co-located and co-scheduled, and run in a shared context. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod/.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -55,7 +55,7 @@ func buildPodV1Schema(ctx context.Context, _ resource.SchemaRequest, resp *resou
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"metadata": common.NamespacedMetadataSchema("pod", true),
+			"metadata": common.WithEmptyMetadataCompatibility(common.NamespacedMetadataSchema("pod", true)),
 			"spec":     podV1Spec().Spec,
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{Create: true, Delete: true}),
 		},

@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sresource "k8s.io/apimachinery/pkg/api/resource"
@@ -171,7 +170,7 @@ func expandPodTemplateSpec(ctx context.Context, value types.List, at path.Path) 
 	return podspec.For(podspec.StatefulSet()).ExpandSpec(ctx, value, at)
 }
 
-func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters, refresh bool) (StatefulSetSpecModel, diag.Diagnostics) {
+func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, refresh bool) (StatefulSetSpecModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := StatefulSetSpecModel{
 		PodManagementPolicy:                  types.StringNull(),
@@ -199,7 +198,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 	diags.Append(selectorDiags...)
 	out.Selector = selectors
 
-	template, d := flattenTemplate(ctx, spec.Template, baseline, filters, refresh)
+	template, d := flattenTemplate(ctx, spec.Template, baseline, refresh)
 	diags.Append(d...)
 	out.Template = []StatefulSetTemplateModel{template}
 
@@ -209,7 +208,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		if baseline != nil && i < len(baseline.VolumeClaimTemplate) {
 			prior = &baseline.VolumeClaimTemplate[i]
 		}
-		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior)
+		model, fd := flattenPersistentVolumeClaim(ctx, pvc, prior, refresh)
 		diags.Append(fd...)
 		out.VolumeClaimTemplate[i] = model
 	}
@@ -395,7 +394,7 @@ func expandMapToResourceListFromMap(ctx context.Context, m types.Map) (corev1.Re
 	return out, diags
 }
 
-func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, filters kubernetes.MetadataFilters, refresh bool) (StatefulSetTemplateModel, diag.Diagnostics) {
+func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *StatefulSetSpecModel, refresh bool) (StatefulSetTemplateModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := StatefulSetTemplateModel{}
 
@@ -403,9 +402,8 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	if baseline != nil && len(baseline.Template) > 0 {
 		priorMetadata = baseline.Template[0].Metadata
 	}
-	meta, d := common.FlattenNamespacedMetadata(ctx, in.ObjectMeta, priorMetadata, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	meta, d := flattenWorkloadTemplateMetadata(ctx, in.ObjectMeta, priorMetadata, refresh)
 	diags.Append(d...)
-	preserveEmbeddedMetadataNamespace(meta, priorMetadata, in.Namespace)
 	out.Metadata = meta
 
 	var baselineSpec types.List
@@ -423,7 +421,7 @@ func flattenTemplate(ctx context.Context, in corev1.PodTemplateSpec, baseline *S
 	return out, diags
 }
 
-func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel) (PersistentVolumeClaimModel, diag.Diagnostics) {
+func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolumeClaim, baseline *PersistentVolumeClaimModel, refresh bool) (PersistentVolumeClaimModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := PersistentVolumeClaimModel{}
 
@@ -433,6 +431,9 @@ func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolum
 	}
 	meta, d := flattenClaimTemplateMetadata(ctx, in.ObjectMeta, priorMetadata)
 	diags.Append(d...)
+	if !refresh {
+		common.KeepPlannedMetadataMaps(meta, priorMetadata)
+	}
 	preserveEmbeddedMetadataNamespace(meta, priorMetadata, in.Namespace)
 	out.Metadata = meta
 
@@ -521,8 +522,9 @@ func flattenClaimQuantities(ctx context.Context, in corev1.ResourceList, prior t
 	return statefulSetPreserveQuantityMap(current, prior)
 }
 
-// The API stores claim templates verbatim, so their metadata is read back
-// unfiltered, as SDKv2 did.
+// The API stores claim templates verbatim, so a read records their metadata
+// unfiltered, as SDKv2 did. A write records the planned maps instead, as for
+// the StatefulSet's own metadata.
 func flattenClaimTemplateMetadata(ctx context.Context, in metav1.ObjectMeta, prior []common.NamespacedMetadataModel) ([]common.NamespacedMetadataModel, diag.Diagnostics) {
 	meta, diags := common.FlattenNamespacedMetadata(ctx, in, nil, nil, nil)
 	var priorAnnotations, priorLabels types.Map
@@ -668,25 +670,30 @@ func upgradeContainersV0ToV1(rawState map[string]interface{}) map[string]interfa
 	return rawState
 }
 
+// UpgradeState accepts the SDKv2 schema versions 0 and 1.
 func (r *StatefulSetV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	var schemaResp resource.SchemaResponse
 	r.Schema(ctx, resource.SchemaRequest{}, &schemaResp)
 	targetSchema := schemaResp.Schema
-	return map[int64]resource.StateUpgrader{
-		0: {
+	upgrader := func(rewrite func(map[string]any) error) resource.StateUpgrader {
+		return resource.StateUpgrader{
 			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
 				resp.Diagnostics.Append(schemaResp.Diagnostics...)
 				if resp.Diagnostics.HasError() {
 					return
 				}
-				value, err := common.DecodeLegacyState(ctx, req.RawState, targetSchema, upgradeStatefulSetV0State)
+				value, err := common.DecodeLegacyState(ctx, req.RawState, targetSchema, rewrite)
 				if err != nil {
 					resp.Diagnostics.AddError("Unable to upgrade StatefulSet state", err.Error())
 					return
 				}
 				resp.State = tfsdk.State{Schema: targetSchema, Raw: value}
 			},
-		},
+		}
+	}
+	return map[int64]resource.StateUpgrader{
+		0: upgrader(upgradeStatefulSetV0State),
+		1: upgrader(nil),
 	}
 }
 
@@ -697,7 +704,7 @@ func (r *StatefulSetV1) MoveState(ctx context.Context) []resource.StateMover {
 		{
 			StateMover: func(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
 				if req.SourceTypeName != "kubernetes_stateful_set" ||
-					(req.SourceSchemaVersion != 0 && req.SourceSchemaVersion != schemaResp.Schema.Version) {
+					(req.SourceSchemaVersion != 0 && req.SourceSchemaVersion != 1) {
 					return
 				}
 				if req.SourceProviderAddress == "" || !hasProviderSuffix(req.SourceProviderAddress) {

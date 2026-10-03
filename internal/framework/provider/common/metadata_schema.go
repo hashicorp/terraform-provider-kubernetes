@@ -18,14 +18,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-const generateNameRequiresReplaceDescription = "Replaces the object when generate_name changes, except when SDKv2-written state holds an empty string for an unset value."
+const generateNameRequiresReplaceDescription = "Replaces the object when generate_name changes. An empty string and null both mean unset."
 
-// GenerateNameRequiresReplace permits normalization of SDKv2's unset value without refresh.
+// GenerateNameRequiresReplace treats "" and null as the same unset value, as
+// SDKv2 did, so normalising one to the other never replaces the object.
 func GenerateNameRequiresReplace() planmodifier.String {
 	return stringplanmodifier.RequiresReplaceIf(
 		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-			sdkv2UnsetBecomingNull := req.StateValue.Equal(types.StringValue("")) && req.PlanValue.IsNull()
-			resp.RequiresReplace = !sdkv2UnsetBecomingNull
+			resp.RequiresReplace = req.PlanValue.IsUnknown() || req.StateValue.ValueString() != req.PlanValue.ValueString()
 		},
 		generateNameRequiresReplaceDescription,
 		generateNameRequiresReplaceDescription,

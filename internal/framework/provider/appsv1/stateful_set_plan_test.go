@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Only SDKv2's ForceNew claim-template fields replace; requests, labels and
@@ -117,6 +119,32 @@ func TestStatefulSetVolumeClaimRequiresReplace(t *testing.T) {
 			}
 			if got := resp.Diagnostics.WarningsCount() > 0; got != tc.warning {
 				t.Errorf("warning = %t, want %t: %v", got, tc.warning, resp.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestFlattenClaimTemplateMetadataMaps(t *testing.T) {
+	ctx := context.Background()
+	live := corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{
+		Name: "data", Labels: map[string]string{"app": "a", "admission.example.com/injected": "true"},
+	}}
+	planned := types.MapValueMust(types.StringType, map[string]attr.Value{"app": types.StringValue("a")})
+	baseline := &PersistentVolumeClaimModel{Metadata: []common.NamespacedMetadataModel{{MetadataModel: common.MetadataModel{
+		MetadataBase: common.MetadataBase{Labels: planned, Annotations: types.MapNull(types.StringType)},
+	}}}}
+	for _, tc := range []struct {
+		name    string
+		refresh bool
+		labels  int
+	}{
+		{"write records the plan", false, 1},
+		{"read records live keys", true, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, diags := flattenPersistentVolumeClaim(ctx, live, baseline, tc.refresh)
+			if diags.HasError() || len(got.Metadata[0].Labels.Elements()) != tc.labels || !got.Metadata[0].Annotations.IsNull() {
+				t.Errorf("got %s, %s (%v)", got.Metadata[0].Labels, got.Metadata[0].Annotations, diags)
 			}
 		})
 	}

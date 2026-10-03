@@ -64,6 +64,7 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	}
 	// The Job exists now: keep it in state even if waiting for it fails.
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(out.Namespace, out.Name))...)
 	}
@@ -173,6 +174,7 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		return
 	}
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, plan, out, filters)...)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
 	if resp.Identity != nil {
 		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
 	}

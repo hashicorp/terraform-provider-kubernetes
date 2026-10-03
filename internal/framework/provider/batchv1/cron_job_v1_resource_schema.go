@@ -32,7 +32,7 @@ func (r *CronJobV1) Schema(ctx context.Context, req resource.SchemaRequest, resp
 
 func buildCronJobSchema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:     0,
+		Version:     1,
 		Description: "A CronJob creates Jobs on a time-based schedule.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

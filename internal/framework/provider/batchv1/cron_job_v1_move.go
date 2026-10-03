@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // The deprecated alias served batch/v1beta1: schema v1 differs from v1 CronJob
 // only by timezone; schema v0 additionally stored container resource maps as
-// singleton lists. The v1 resource itself has always used schema version 0.
+// singleton lists.
 func (r *CronJobV1) MoveState(ctx context.Context) []resource.StateMover {
 	var schemaResponse resource.SchemaResponse
 	r.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
@@ -55,6 +56,24 @@ func (r *CronJobV1) MoveState(ctx context.Context) []resource.StateMover {
 			}
 		},
 	}}
+}
+
+// UpgradeState accepts state of the SDKv2 resource, which used schema version 0.
+func (r *CronJobV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	var schemaResponse resource.SchemaResponse
+	r.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
+	return map[int64]resource.StateUpgrader{
+		0: {
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				value, err := common.DecodeLegacyState(ctx, req.RawState, schemaResponse.Schema, nil)
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to upgrade kubernetes_cron_job_v1 state", err.Error())
+					return
+				}
+				resp.State = tfsdk.State{Schema: schemaResponse.Schema, Raw: value}
+			},
+		},
+	}
 }
 
 func cronJobUpgradeContainerResources(spec map[string]interface{}) error {

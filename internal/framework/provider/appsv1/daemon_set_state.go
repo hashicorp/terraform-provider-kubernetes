@@ -113,25 +113,29 @@ func (d *DaemonSetV1) MoveState(ctx context.Context) []resource.StateMover {
 	}
 }
 
+// UpgradeState accepts the SDKv2 schema versions 0 and 1.
 func (d *DaemonSetV1) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	resourceSchema, schemaDiags := d.schemasForStateMoves(ctx)
-	upgrader := resource.StateUpgrader{
-		StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
-			if schemaDiags.HasError() {
-				resp.Diagnostics.Append(schemaDiags...)
-				return
-			}
-			value, err := common.DecodeLegacyState(ctx, req.RawState, resourceSchema, upgradeDaemonSetV0State(ctx))
-			if err != nil {
-				resp.Diagnostics.AddError("Unable to upgrade daemon set state", err.Error())
-				return
-			}
+	upgrader := func(rewrite func(map[string]any) error) resource.StateUpgrader {
+		return resource.StateUpgrader{
+			StateUpgrader: func(ctx context.Context, req resource.UpgradeStateRequest, resp *resource.UpgradeStateResponse) {
+				if schemaDiags.HasError() {
+					resp.Diagnostics.Append(schemaDiags...)
+					return
+				}
+				value, err := common.DecodeLegacyState(ctx, req.RawState, resourceSchema, rewrite)
+				if err != nil {
+					resp.Diagnostics.AddError("Unable to upgrade daemon set state", err.Error())
+					return
+				}
 
-			resp.State = tfsdk.State{Schema: resourceSchema, Raw: value}
-		},
+				resp.State = tfsdk.State{Schema: resourceSchema, Raw: value}
+			},
+		}
 	}
 	return map[int64]resource.StateUpgrader{
-		0: upgrader,
+		0: upgrader(upgradeDaemonSetV0State(ctx)),
+		1: upgrader(nil),
 	}
 }
 

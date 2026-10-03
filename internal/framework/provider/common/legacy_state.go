@@ -20,7 +20,8 @@ import (
 // resource, for UpgradeState and MoveState. Attributes the schema no longer
 // has, such as metadata.self_link, are dropped as SDKv2 dropped them. When
 // rewrite is set it is applied to the decoded JSON object first, to convert
-// an older schema version's shapes.
+// an older schema version's shapes. The result is passed through
+// NormalizeLegacyState.
 func DecodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, s schema.Schema, rewrite func(map[string]any) error) (tftypes.Value, error) {
 	if raw == nil || len(raw.JSON) == 0 {
 		return tftypes.Value{}, errors.New("the source state has no JSON data")
@@ -54,11 +55,28 @@ func DecodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, s schema.Sc
 	if value.IsNull() {
 		return tftypes.Value{}, errors.New("the source state is null")
 	}
-	return value, nil
+	return NormalizeLegacyState(value)
+}
+
+// NormalizeLegacyState replaces SDKv2's stored zero value for an unset
+// metadata generate_name ("") with null, at every metadata level, so that an
+// unchanged configuration plans no update before the first refresh.
+func NormalizeLegacyState(value tftypes.Value) (tftypes.Value, error) {
+	empty := tftypes.NewValue(tftypes.String, "")
+	return tftypes.Transform(value, func(at *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+		steps := at.Steps()
+		if len(steps) == 0 || steps[len(steps)-1] != tftypes.AttributeName("generate_name") || !v.Equal(empty) {
+			return v, nil
+		}
+		return tftypes.NewValue(tftypes.String, nil), nil
+	})
 }
 
 // LegacyStateName returns the namespace and name of decoded SDKv2 state from
-// its namespace/name ID, which must match its single metadata block.
+// its namespace/name ID and checks them against its single metadata block.
+// SDKv2 saved a failed create, such as a tainted generate_name object, before
+// reading the object back, so an empty metadata name or namespace is filled
+// from the ID. Two different non-empty values are an error.
 func LegacyStateName(values map[string]any) (string, string, error) {
 	id, _ := values["id"].(string)
 	namespace, name, ok := strings.Cut(id, "/")
@@ -69,9 +87,19 @@ func LegacyStateName(values map[string]any) (string, string, error) {
 	if len(list) != 1 {
 		return "", "", fmt.Errorf("the source state has %d metadata blocks, expected 1", len(list))
 	}
-	metadata, _ := list[0].(map[string]any)
-	if metadata["namespace"] != namespace || metadata["name"] != name {
-		return "", "", fmt.Errorf("the source state ID %q does not match its metadata namespace and name", id)
+	metadata, ok := list[0].(map[string]any)
+	if !ok {
+		return "", "", errors.New("the source state metadata is not an object")
+	}
+	for _, field := range [][2]string{{"namespace", namespace}, {"name", name}} {
+		key, want := field[0], field[1]
+		switch metadata[key] {
+		case nil, "":
+			metadata[key] = want
+		case want:
+		default:
+			return "", "", fmt.Errorf("the source state ID %q does not match its metadata %s %v", id, key, metadata[key])
+		}
 	}
 	return namespace, name, nil
 }

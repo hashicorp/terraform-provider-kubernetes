@@ -255,10 +255,6 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		_, err = conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{})
 		return err
 	})
-	if apierrors.IsNotFound(err) {
-		resp.State.RemoveResource(ctx)
-		return
-	}
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update StatefulSet", err.Error())
 		return
@@ -367,11 +363,14 @@ func (r *StatefulSetV1) flattenStateFromObject(ctx context.Context, filters kube
 	if diags.HasError() {
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags
 	}
+	if !refresh {
+		common.KeepPlannedMetadataMaps(metadata, baseline.Metadata)
+	}
 	var baselineSpec *StatefulSetSpecModel
 	if len(baseline.Spec) > 0 {
 		baselineSpec = &baseline.Spec[0]
 	}
-	spec, d := flattenStatefulSetSpec(ctx, obj.Spec, baselineSpec, filters, refresh)
+	spec, d := flattenStatefulSetSpec(ctx, obj.Spec, baselineSpec, refresh)
 	diags.Append(d...)
 	if diags.HasError() {
 		return StatefulSetV1Model{}, statefulSetIdentityModel{}, diags

@@ -7,7 +7,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batch "k8s.io/api/batch/v1"
@@ -221,6 +223,86 @@ func TestCronJobSpecOps(t *testing.T) {
 			want.JobTemplate.Spec.Template.Spec.PriorityClassName = "admission"
 			if got := ops[0].(*kubernetes.ReplaceOperation).Value; !sameJSON(got, want) {
 				t.Errorf("patched spec = %v", got)
+			}
+		})
+	}
+}
+
+func TestJobTemplateKeysReplace(t *testing.T) {
+	ctx := context.Background()
+	nulls := func(typ types.ObjectType) map[string]attr.Value {
+		out := map[string]attr.Value{}
+		for name, at := range typ.AttrTypes {
+			out[name], _ = at.ValueFromTerraform(ctx, tftypes.NewValue(at.TerraformType(ctx), nil))
+		}
+		return out
+	}
+	templateType := jobSpecType().AttrTypes["template"].(types.ListType)
+	templateObject := templateType.ElemType.(types.ObjectType)
+	metadataObject := templateObject.AttrTypes["metadata"].(types.ListType).ElemType.(types.ObjectType)
+	root := func(labels map[string]string) tftypes.Value {
+		metadata := nulls(metadataObject)
+		if labels != nil {
+			metadata["labels"], _ = types.MapValueFrom(ctx, types.StringType, labels)
+		}
+		template := nulls(templateObject)
+		template["metadata"] = types.ListValueMust(metadataObject, []attr.Value{types.ObjectValueMust(metadataObject.AttrTypes, metadata)})
+		value, err := types.ListValueMust(templateObject, []attr.Value{types.ObjectValueMust(templateObject.AttrTypes, template)}).ToTerraformValue(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		spec := tftypes.Object{AttributeTypes: map[string]tftypes.Type{"template": value.Type()}}
+		return tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{"spec": tftypes.List{ElementType: spec}}},
+			map[string]tftypes.Value{"spec": tftypes.NewValue(tftypes.List{ElementType: spec}, []tftypes.Value{
+				tftypes.NewValue(spec, map[string]tftypes.Value{"template": value}),
+			})})
+	}
+	app := map[string]string{"app": "a"}
+	injected := map[string]string{"app": "a", "admission.example.com/injected": "true"}
+	for _, tc := range []struct {
+		name          string
+		state, config map[string]string
+		owned, want   bool
+	}{
+		{"key only in state", injected, app, true, true},
+		{"key only in state of an unset map", map[string]string{"admission.example.com/injected": "true"}, nil, true, true},
+		{"key only in state not owned", injected, app, false, false},
+		{"key only in state of an unset map not owned", map[string]string{"admission.example.com/injected": "true"}, nil, false, false},
+		{"changed value", app, map[string]string{"app": "b"}, true, true},
+		{"changed value not owned", app, map[string]string{"app": "b"}, false, true},
+		{"added key not owned", app, injected, false, true},
+		{"generated label only in state", map[string]string{"app": "a", "job-name": "j"}, app, true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := root(tc.config)
+			got, diags := jobTemplateChanged(ctx, config, config, root(tc.state), func(*tftypes.AttributePath) bool { return false }, tc.owned)
+			if diags.HasError() || got != tc.want {
+				t.Errorf("got %t (%v), want %t", got, diags, tc.want)
+			}
+		})
+	}
+}
+
+func TestTemplateMap(t *testing.T) {
+	live := map[string]string{"app": "a", "admission.example.com/injected": "true", "job-name": "j"}
+	app := types.MapValueMust(types.StringType, map[string]attr.Value{"app": types.StringValue("a")})
+	overridden := types.MapValueMust(types.StringType, map[string]attr.Value{"app": types.StringValue("z")})
+	all := types.MapValueMust(types.StringType, map[string]attr.Value{
+		"app": types.StringValue("a"), "admission.example.com/injected": types.StringValue("true"),
+	})
+	for _, tc := range []struct {
+		name  string
+		prior types.Map
+		live  bool
+		want  types.Map
+	}{
+		{"unset map stays null", types.MapNull(types.StringType), false, types.MapNull(types.StringType)},
+		{"recorded map keeps its keys and values", overridden, false, overridden},
+		{"live read records every key", app, true, all},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := templateMap(live, tc.prior, tc.live, jobGeneratedLabels); !got.Equal(tc.want) {
+				t.Errorf("got %s, want %s", got, tc.want)
 			}
 		})
 	}

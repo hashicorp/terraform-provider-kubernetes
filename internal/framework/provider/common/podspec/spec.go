@@ -42,6 +42,8 @@ type Built struct {
 	// absentZero marks blocks that Kubernetes returns with one zero-valued
 	// element when sent without them, so a write keeps a planned empty list.
 	absentZero map[string]bool
+	// spelling keeps a prior numeric string that Kubernetes stores as a number.
+	spelling map[string]func(prior, current types.String) types.String
 }
 
 var built sync.Map // Options -> *Built
@@ -63,8 +65,10 @@ func build(o Options) *Built {
 		objectType: spec.NestedObject.CustomType,
 		computed:   map[string]bool{},
 		blocks:     map[string]bool{},
+		spelling:   map[string]func(prior, current types.String) types.String{},
 	}
 	podSpecComputedPaths(spec.NestedObject.Attributes, spec.NestedObject.Blocks, "spec", b.computed)
+	podSpecSpellingPaths(spec.NestedObject, "spec", b.spelling)
 	podSpecBlockPaths(spec.NestedObject, "spec", b.blocks)
 	b.zeroAbsent = podZeroAbsentBlocks(b)
 	b.absentZero = podAbsentZeroBlocks(b)
@@ -251,6 +255,22 @@ func podAttributeHasDefault(attribute schema.Attribute) bool {
 	return false
 }
 
+// podSpecSpellingPaths records the strings Kubernetes stores as numbers.
+func podSpecSpellingPaths(object schema.NestedBlockObject, prefix string, spelling map[string]func(prior, current types.String) types.String) {
+	for name, attribute := range object.Attributes {
+		if a, ok := attribute.(schema.StringAttribute); ok {
+			if keep := podSpelling(a.Validators); keep != nil {
+				spelling[prefix+"."+name] = keep
+			}
+		}
+	}
+	for name, block := range object.Blocks {
+		if nested, ok := block.(schema.ListNestedBlock); ok {
+			podSpecSpellingPaths(nested.NestedObject, prefix+"."+name, spelling)
+		}
+	}
+}
+
 func podSpecBlockPaths(object schema.NestedBlockObject, prefix string, blocks map[string]bool) {
 	for name, block := range object.Blocks {
 		key := prefix + "." + name
@@ -376,8 +396,12 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 				text = fmt.Sprint(rv.Interface())
 			}
 			result = types.StringValue(text)
-			if p, ok := prior.(types.String); ok && b.computed[key] && podKeepUnsetString(p, text, b.refresh) {
-				result = p
+			if p, ok := prior.(types.String); ok {
+				if b.computed[key] && podKeepUnsetString(p, text, b.refresh) {
+					result = p
+				} else if keep := b.spelling[key]; keep != nil {
+					result = keep(p, types.StringValue(text))
+				}
 			}
 		case typ.Equal(types.BoolType):
 			result = types.BoolValue(rv.IsValid() && rv.Bool())

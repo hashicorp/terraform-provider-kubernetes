@@ -121,7 +121,7 @@ func jobSelectorAttribute() schema.ListNestedAttribute {
 	return schema.ListNestedAttribute{
 		Description: "A label query over the pods owned by the job. Omit it to keep the selector Kubernetes generates; a configured list must contain exactly one object. Changes require replacement.",
 		Optional:    true, Computed: true,
-		Validators: []validator.List{listvalidator.SizeBetween(1, 1)},
+		Validators: []validator.List{common.NotEmptyList(), listvalidator.SizeAtMost(1)},
 		PlanModifiers: []planmodifier.List{
 			listplanmodifier.UseStateForUnknown(),
 			jobSelectorRequiresReplace{},

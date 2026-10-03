@@ -1,9 +1,9 @@
 ```release-note:breaking-change
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, pod template `image_pull_secrets` and `readiness_gate`, Deployment and DaemonSet `strategy` (including `rolling_update`), and StatefulSet `persistent_volume_claim_retention_policy` now use list-of-object assignment syntax, for example `resources = [{ ... }]`. See the apps/v1 Plugin Framework migration guide.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, pod template `image_pull_secrets` and `readiness_gate`, Deployment and DaemonSet `strategy` (including `rolling_update`), and StatefulSet `persistent_volume_claim_retention_policy` now use list-of-object assignment syntax, for example `resources = [{ ... }]`; an empty list is rejected, so omit them instead. See the apps/v1 Plugin Framework migration guide.
 ```
 
 ```release-note:breaking-change
-`resource/kubernetes_pod_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, `image_pull_secrets` and `readiness_gate` now use list-of-object assignment syntax, for example `resources = [{ ... }]`. See the Pod Plugin Framework migration guide.
+`resource/kubernetes_pod_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, `image_pull_secrets` and `readiness_gate` now use list-of-object assignment syntax, for example `resources = [{ ... }]`; an empty list is rejected, so omit them instead. See the Pod Plugin Framework migration guide.
 ```
 
 ```release-note:breaking-change
@@ -31,7 +31,15 @@
 ```
 
 ```release-note:bug
+`resource/kubernetes_pod_v1`: Replace the Pod when `active_deadline_seconds` is raised or removed, which Kubernetes rejects as an update. Setting or lowering it is still updated in place.
+```
+
+```release-note:bug
 `resource/kubernetes_pod_v1`: Keep several projections in one `projected` volume `sources` block without reporting a change on every plan.
+```
+
+```release-note:bug
+`resource/kubernetes_pod_v1`, `resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Keep the configured spelling of a number Kubernetes stores, such as `run_as_user = "01000"`, `max_surge = "01"` or `replicas = "01"`. Earlier versions recorded `"1000"` or `"1"` and planned the change again on every plan, which replaced a Pod or Job.
 ```
 
 ```release-note:bug

@@ -4,14 +4,19 @@
 package corev1_test
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 )
 
 func TestAccKubernetesPodV1_generatedNameLifecycle(t *testing.T) {
@@ -213,12 +218,26 @@ func testAccKubernetesPodV1ConfigGroupedProjection(name, imageName string) strin
 `, name, imageName)
 }
 
-// Kubernetes accepts only a few Pod spec updates. Those happen in place; any
-// other spec change, including fields SDKv2 left updatable, replaces the Pod.
+// Kubernetes accepts only a few Pod spec updates, such as setting or lowering
+// active_deadline_seconds. Those happen in place; any other spec change,
+// including fields SDKv2 left updatable, replaces the Pod.
 func TestAccKubernetesPodV1_specUpdateOrReplace(t *testing.T) {
-	var created, updated, replaced api.Pod
+	var previous, current api.Pod
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	resourceName := "kubernetes_pod_v1.test"
+	step := func(deadline int, mountPath string, action plancheck.ResourceActionType) resource.TestStep {
+		return resource.TestStep{
+			Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, deadline, mountPath),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, action)},
+			},
+			Check: resource.ComposeAggregateTestCheckFunc(
+				func(*terraform.State) error { previous = current; return nil },
+				testAccCheckKubernetesPodV1ActiveDeadline(resourceName, &current, deadline),
+				testAccCheckKubernetesPodForceNew(&previous, &current, action == plancheck.ResourceActionReplace),
+			),
+		}
+	}
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPodV1PreCheck(t) },
@@ -226,42 +245,48 @@ func TestAccKubernetesPodV1_specUpdateOrReplace(t *testing.T) {
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 3600, "/data"),
-				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &created),
+				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 0, "/data"),
+				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &current),
 			},
-			{
-				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 1800, "/data"),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists(resourceName, &updated),
-					testAccCheckKubernetesPodForceNew(&created, &updated, false),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.active_deadline_seconds", "1800"),
-				),
-			},
-			{
-				Config: testAccKubernetesPodV1ConfigSpecUpdate(name, busyboxImage, 1800, "/other"),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace)},
-				},
-				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesPodV1Exists(resourceName, &replaced),
-					testAccCheckKubernetesPodForceNew(&updated, &replaced, true),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.volume_mount.0.mount_path", "/other"),
-				),
-			},
+			step(3600, "/data", plancheck.ResourceActionUpdate),
+			step(1800, "/data", plancheck.ResourceActionUpdate),
+			step(3600, "/data", plancheck.ResourceActionReplace),
+			step(0, "/data", plancheck.ResourceActionReplace),
+			step(0, "/other", plancheck.ResourceActionReplace),
 		},
 	})
 }
 
+// testAccCheckKubernetesPodV1ActiveDeadline waits until the API serves the Pod
+// with the given deadline, so the next step plans against it.
+func testAccCheckKubernetesPodV1ActiveDeadline(resourceName string, pod *api.Pod, seconds int) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		var got int64
+		err := wait.PollUntilContextTimeout(context.Background(), time.Second, time.Minute, true, func(context.Context) (bool, error) {
+			if err := testAccCheckKubernetesPodV1Exists(resourceName, pod)(s); err != nil {
+				return false, err
+			}
+			got = ptr.Deref(pod.Spec.ActiveDeadlineSeconds, 0)
+			return got == int64(seconds), nil
+		})
+		if err != nil {
+			return fmt.Errorf("activeDeadlineSeconds = %d, want %d: %w", got, seconds, err)
+		}
+		return nil
+	}
+}
+
 func testAccKubernetesPodV1ConfigSpecUpdate(name, imageName string, deadline int, mountPath string) string {
+	activeDeadline := ""
+	if deadline != 0 {
+		activeDeadline = fmt.Sprintf("active_deadline_seconds = %d", deadline)
+	}
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = %q
   }
   spec {
-    active_deadline_seconds          = %d
+    %s
     termination_grace_period_seconds = 1
     security_context {
       supplemental_groups = []
@@ -281,7 +306,7 @@ func testAccKubernetesPodV1ConfigSpecUpdate(name, imageName string, deadline int
     }
   }
 }
-`, name, deadline, imageName, mountPath)
+`, name, activeDeadline, imageName, mountPath)
 }
 
 // 3.3.0 sent an explicit pod-level runAsNonRoot false. Removing the block can
@@ -326,6 +351,58 @@ func TestAccKubernetesPodV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesPodV1Exists(resourceName, &replaced),
 					testAccCheckKubernetesPodForceNew(&upgraded, &replaced, true),
+				),
+			},
+		},
+	})
+}
+
+// Kubernetes stores run_as_user as a number. A configured "01000" is kept as
+// spelled, and state that 3.3.0 recorded as "1000" for it plans no change.
+func TestAccKubernetesPodV1_numberSpelling(t *testing.T) {
+	var created, upgraded, replaced api.Pod
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	runAsUser := func(user string) string {
+		return testAccKubernetesPodV1ConfigSecurityContext(name, busyboxImage, fmt.Sprintf(`security_context {
+      run_as_user = %q
+    }`, user))
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPodV1PreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= 3.3.0"},
+				},
+				Config: runAsUser("01000"),
+				Check:  testAccCheckKubernetesPodV1Exists(resourceName, &created),
+				// 3.3.0 replaces the Pod on every plan for this spelling.
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   runAsUser("01000"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionNoop)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &upgraded),
+					testAccCheckKubernetesPodForceNew(&created, &upgraded, false),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProviderFactories,
+				Config:                   runAsUser("02000"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &replaced),
+					testAccCheckKubernetesPodForceNew(&upgraded, &replaced, true),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.run_as_user", "02000"),
 				),
 			},
 		},

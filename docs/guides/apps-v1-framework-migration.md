@@ -40,7 +40,7 @@ resources = [{
 }]
 ```
 
-Omit an optional argument, or use `null`, to leave its value computed. Use `resources = [{}]` for the previous `resources {}` form. Use `resources = [{ limits = {}, requests = {} }]` when explicitly configuring empty resource maps. A configured resources list must contain one object; `[]` is not a substitute for omission.
+Omit an optional argument, or use `null`, to leave its value computed. Use `resources = [{}]` for the previous `resources {}` form. Use `resources = [{ limits = {}, requests = {} }]` when explicitly configuring empty resource maps. A configured `resources`, `strategy`, `rolling_update` or `persistent_volume_claim_retention_policy` list must contain one object, and `image_pull_secrets` or `readiness_gate` at least one; an empty list `[]` is rejected, since it is not a substitute for omission.
 
 A Deployment rolling-update strategy becomes:
 
@@ -91,6 +91,8 @@ The first plan is normally empty. State written by earlier provider versions can
 A pod-level `security_context` block that sets only empty or `false` values, such as `security_context { run_as_non_root = false }`, is sent to Kubernetes as an empty security context; earlier versions sent `runAsNonRoot: false` for it. Kubernetes treats an unset `runAsNonRoot` as false, so the Pods run the same way.
 
 Kubernetes does not allow changing the volume claim templates of an existing StatefulSet. As in earlier versions, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned as an in-place update with a warning and is not sent: the StatefulSet and its PersistentVolumeClaims keep their values, and the next plan shows the change again. To apply it, replace the StatefulSet, for example with `terraform apply -replace`. Other claim template changes, such as `access_modes`, replace the StatefulSet.
+
+As in earlier versions, changing node affinity `match_fields` or the `secret_namespace` of an `azure_file` volume in the pod template replaces the workload, also when the new value is unknown until apply. Other values unknown until apply are updated in place, even when they could later hold one of those values, such as a new `node_selector_term` added by a `dynamic` block.
 
 ## Move from a deprecated resource type
 

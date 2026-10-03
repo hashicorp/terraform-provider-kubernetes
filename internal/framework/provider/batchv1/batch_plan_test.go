@@ -15,6 +15,7 @@ import (
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -305,5 +306,34 @@ func TestTemplateMap(t *testing.T) {
 				t.Errorf("got %s, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// Kubernetes drops empty selector values; a configured empty set is kept.
+func TestSelectorEmptyValues(t *testing.T) {
+	typ := jobSpecObjectType(true).AttrTypes["selector"].(types.ListType)
+	expressionType := typ.ElemType.(types.ObjectType).AttrTypes["match_expressions"].(types.ListType).ElemType.(types.ObjectType)
+	selector := func(values types.Set) types.List {
+		expression := types.ObjectValueMust(expressionType.AttrTypes, map[string]attr.Value{
+			"key": types.StringValue("app"), "operator": types.StringValue("Exists"), "values": values,
+		})
+		return types.ListValueMust(typ.ElemType, []attr.Value{types.ObjectValueMust(typ.ElemType.(types.ObjectType).AttrTypes, map[string]attr.Value{
+			"match_labels":      types.MapNull(types.StringType),
+			"match_expressions": types.ListValueMust(expressionType, []attr.Value{expression}),
+		})})
+	}
+	empty, null := types.SetValueMust(types.StringType, []attr.Value{}), types.SetNull(types.StringType)
+	live := &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "app", Operator: metav1.LabelSelectorOpExists}}}
+	for name, tc := range map[string]struct {
+		prior attr.Value
+		want  types.List
+	}{
+		"configured empty": {selector(empty), selector(empty)},
+		"unset":            {selector(null), selector(null)},
+		"no prior":         {types.ListNull(typ.ElemType), selector(null)},
+	} {
+		if got := flattenLabelSelector(live, tc.prior, typ, nil); !got.Equal(tc.want) {
+			t.Errorf("%s: got %s, want %s", name, got, tc.want)
+		}
 	}
 }

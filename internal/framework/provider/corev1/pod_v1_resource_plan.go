@@ -111,8 +111,12 @@ func (p *PodV1) livePod(ctx context.Context, id string) (*corev1.Pod, bool) {
 }
 
 // podV1ApplySpecPatch sets the spec fields podV1UpdatePatch can change.
+// Kubernetes lets active_deadline_seconds be set or lowered, never raised or removed.
 func podV1ApplySpecPatch(spec, planned *corev1.PodSpec) {
-	spec.ActiveDeadlineSeconds = planned.ActiveDeadlineSeconds
+	current, next := spec.ActiveDeadlineSeconds, planned.ActiveDeadlineSeconds
+	if current == nil || (next != nil && *next <= *current) {
+		spec.ActiveDeadlineSeconds = next
+	}
 }
 
 // podV1SpecRequiresReplacement compares two specs as the API sees them.

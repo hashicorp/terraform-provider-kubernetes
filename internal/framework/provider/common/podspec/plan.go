@@ -11,7 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	kquantity "k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -29,10 +31,7 @@ func (v podListStructureRequiresReplace) MarkdownDescription(ctx context.Context
 	return v.Description(ctx)
 }
 func (m podListStructureRequiresReplace) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
-	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.PlanValue.IsUnknown() {
-		return
-	}
-	if req.StateValue.IsUnknown() {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
 		return
 	}
 	if m.absentZero && len(req.StateValue.Elements()) == 0 && len(req.PlanValue.Elements()) == 1 && podZeroElement(req.ConfigValue) {
@@ -48,7 +47,8 @@ func (m podListStructureRequiresReplace) PlanModifyList(ctx context.Context, req
 		resp.PlanValue = types.ListValueMust(element.Type(ctx), []attr.Value{types.ObjectValueMust(element.AttributeTypes(ctx), attributes)})
 		return
 	}
-	resp.RequiresReplace = len(req.StateValue.Elements()) != len(req.PlanValue.Elements())
+	// As in SDKv2, a collection known only after apply may change its size.
+	resp.RequiresReplace = req.PlanValue.IsUnknown() || len(req.StateValue.Elements()) != len(req.PlanValue.Elements())
 }
 
 func podZeroElement(config types.List) bool {
@@ -160,6 +160,40 @@ func podPreserveQuantity(prior, current attr.Value) attr.Value {
 	}
 	value, _ := types.MapValue(types.StringType, entries)
 	return value
+}
+
+// podSpelling returns how to keep the spelling of a string Kubernetes stores
+// as a number, such as run_as_user "01000", or nil for other strings.
+func podSpelling(validators []validator.String) func(prior, current types.String) types.String {
+	for _, v := range validators {
+		switch v {
+		case podStringRule("nullable-int"):
+			return common.KeepIntSpelling
+		case podStringRule("port"):
+			return common.KeepIntOrStringSpelling
+		case podStringRule("mode"):
+			return common.KeepOctalSpelling
+		}
+	}
+	return nil
+}
+
+// As with quantities, respelling a number Kubernetes stores, such as "1000" as
+// "01000", plans the prior value instead of a change or a replacement.
+type podSpellingPlanModifier struct {
+	keep func(prior, current types.String) types.String
+}
+
+func (podSpellingPlanModifier) Description(context.Context) string {
+	return "preserves the spelling of an equal number"
+}
+func (m podSpellingPlanModifier) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (m podSpellingPlanModifier) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if !req.PlanValue.IsUnknown() {
+		resp.PlanValue = m.keep(req.StateValue, req.PlanValue)
+	}
 }
 
 // The API defaults an empty http_get path to "/", so the two are equivalent:
@@ -288,28 +322,35 @@ func podModifiersRequireReplacement[T any](modifiers []T) bool {
 	return false
 }
 
+// podAttributeRequiresReplacement reports whether an attribute is itself
+// ForceNew, regardless of its descendants.
+func podAttributeRequiresReplacement(attribute schema.Attribute) bool {
+	switch a := attribute.(type) {
+	case schema.StringAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.BoolAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.Int64Attribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.ListAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.MapAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.SetAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	case schema.ListNestedAttribute:
+		return podModifiersRequireReplacement(a.PlanModifiers)
+	}
+	return false
+}
+
 func podObjectRequiresStructuralReplacement(object schema.NestedBlockObject) bool {
 	for _, attribute := range object.Attributes {
-		var replace bool
-		switch a := attribute.(type) {
-		case schema.StringAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.BoolAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.Int64Attribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.ListAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.MapAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.SetAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers)
-		case schema.ListNestedAttribute:
-			replace = podModifiersRequireReplacement(a.PlanModifiers) ||
-				podObjectRequiresStructuralReplacement(schema.NestedBlockObject{Attributes: a.NestedObject.Attributes})
+		if podAttributeRequiresReplacement(attribute) {
+			return true
 		}
-
-		if replace {
+		if a, ok := attribute.(schema.ListNestedAttribute); ok &&
+			podObjectRequiresStructuralReplacement(schema.NestedBlockObject{Attributes: a.NestedObject.Attributes}) {
 			return true
 		}
 	}
@@ -354,19 +395,29 @@ func (m podListInheritedRequiresReplace) PlanModifyList(_ context.Context, req p
 	}
 }
 
+// As in SDKv2, an unknown value replaces only when it is itself ForceNew for
+// this owner; a dynamic block over an unknown collection is updated in place
+// even when its elements could hold values that force replacement.
 func podObjectHasImmutableValue(object schema.NestedBlockObject, value attr.Value) bool {
-	if value.IsNull() {
+	if value.IsNull() || value.IsUnknown() {
 		return false
-	}
-	if value.IsUnknown() {
-		return true
 	}
 	values := value.(types.Object).Attributes()
 	for name, attribute := range object.Attributes {
-		if podObjectRequiresStructuralReplacement(schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{name: attribute},
-		}) && podNonzeroValue(values[name]) {
+		if !podNonzeroValue(values[name]) {
+			continue
+		}
+		if podAttributeRequiresReplacement(attribute) {
 			return true
+		}
+		nested, ok := attribute.(schema.ListNestedAttribute)
+		if !ok || values[name].IsUnknown() {
+			continue
+		}
+		for _, element := range values[name].(types.List).Elements() {
+			if podObjectHasImmutableValue(schema.NestedBlockObject{Attributes: nested.NestedObject.Attributes}, element) {
+				return true
+			}
 		}
 	}
 	for name, block := range object.Blocks {
@@ -374,8 +425,11 @@ func podObjectHasImmutableValue(object schema.NestedBlockObject, value attr.Valu
 		if !ok || !podNonzeroValue(values[name]) {
 			continue
 		}
-		if podModifiersRequireReplacement(b.PlanModifiers) || values[name].IsUnknown() {
+		if podModifiersRequireReplacement(b.PlanModifiers) {
 			return true
+		}
+		if values[name].IsUnknown() {
+			continue
 		}
 		for _, nested := range values[name].(types.List).Elements() {
 			if podObjectHasImmutableValue(b.NestedObject, nested) {

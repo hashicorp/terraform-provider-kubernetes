@@ -197,8 +197,9 @@ func persistentVolumeClaimRetentionPolicyBlock() schema.ListNestedBlock {
 
 func persistentVolumeClaimRetentionPolicyAttribute() schema.ListNestedAttribute {
 	return schema.ListNestedAttribute{
-		Optional: true,
-		Computed: true,
+		Optional:   true,
+		Computed:   true,
+		Validators: []validator.List{common.NotEmptyList(), listvalidator.SizeAtMost(1)},
 		PlanModifiers: []planmodifier.List{
 			listplanmodifier.UseStateForUnknown(),
 		},

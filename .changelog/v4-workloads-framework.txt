@@ -15,11 +15,11 @@
 ```
 
 ```release-note:note
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: State written by earlier versions is upgraded so that unchanged metadata plans no update, also with `-refresh=false`. The state schema version increases, so once this version has written the state, earlier provider versions cannot read it.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: State written by earlier versions is upgraded so that unchanged metadata plans no update, also with `-refresh=false`. A one-time in-place update can still appear for explicitly empty values such as `labels = {}`; it changes only Terraform state. The state schema version increases, so once this version has written the state, earlier provider versions cannot read it.
 ```
 
 ```release-note:note
-`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Omitted optional values keep the empty or zero values earlier versions stored, so state written by them plans no change for an unchanged configuration. A one-time in-place update can still appear for explicitly empty values such as `labels = {}`; it changes only Terraform state.
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Omitted optional values keep the empty or zero values earlier versions stored, so state written by them plans no change for an unchanged configuration.
 ```
 
 ```release-note:note

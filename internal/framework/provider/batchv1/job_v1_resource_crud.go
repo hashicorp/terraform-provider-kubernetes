@@ -64,9 +64,7 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	// The Job exists now: keep it in state even if waiting for it fails.
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(out.Namespace, out.Name))...)
-	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(out.Namespace, out.Name))...)
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
 		return
 	}
@@ -86,6 +84,7 @@ func (r *JobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		resp.Diagnostics.AddError("Invalid Job ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(namespace, name))...)
 	clients, filters, diags := r.sdkv2Meta()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -110,9 +109,6 @@ func (r *JobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
-	}
 }
 
 func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -131,6 +127,7 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Job ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(namespace, name))...)
 	clients, filters, diags := r.sdkv2Meta()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -174,9 +171,6 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 	}
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, jobIdentity(namespace, name))...)
-	}
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
 		return
 	}
@@ -200,6 +194,7 @@ func (r *JobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Job ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(namespace, name))...)
 	clients, _, diags := r.sdkv2Meta()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

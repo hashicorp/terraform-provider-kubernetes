@@ -88,7 +88,7 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 
 	plan.ID = types.StringValue(kubernetes.BuildId(created.ObjectMeta))
 	resp.Diagnostics.Append(r.statefulSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, statefulSetIdentity(created.Namespace, created.Name))...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(created.Namespace, created.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -135,6 +135,7 @@ func (r *StatefulSetV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError("Error parsing resource ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(namespace, name))...)
 	obj, err := conn.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -184,6 +185,7 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.AddError("Error parsing resource ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(namespace, name))...)
 
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddAttributeError(path.Root("metadata"), "Invalid metadata", "Expected exactly one metadata block in state and plan")
@@ -254,7 +256,6 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	resp.Diagnostics.Append(r.statefulSetReadWriteResult(ctx, &resp.State, req.Plan, plan, conn, filters)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, statefulSetIdentity(namespace, name))...)
 }
 
 func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -288,6 +289,7 @@ func (r *StatefulSetV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		resp.Diagnostics.AddError("Error parsing resource ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(namespace, name))...)
 
 	err = conn.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {

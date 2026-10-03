@@ -62,9 +62,7 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 		return
 	}
 	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
-	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(out.Namespace, out.Name))...)
 }
 
 func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -78,6 +76,7 @@ func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *re
 		resp.Diagnostics.AddError("Invalid CronJob ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(namespace, name))...)
 	clients, filters, diagnostics := r.sdkv2Meta()
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -102,9 +101,6 @@ func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *re
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
-	}
 }
 
 func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -119,6 +115,7 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		resp.Diagnostics.AddError("Invalid CronJob ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(namespace, name))...)
 	clients, filters, diagnostics := r.sdkv2Meta()
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -180,9 +177,6 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		return
 	}
 	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
-	if resp.Identity != nil {
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, cronJobIdentity(out.Namespace, out.Name))...)
-	}
 }
 
 func (r *CronJobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -201,6 +195,7 @@ func (r *CronJobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp
 		resp.Diagnostics.AddError("Invalid CronJob ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(namespace, name))...)
 	clients, _, diagnostics := r.sdkv2Meta()
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {

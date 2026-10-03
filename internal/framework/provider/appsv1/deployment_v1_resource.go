@@ -151,6 +151,17 @@ func (d *DeploymentV1) UpgradeIdentity(ctx context.Context) map[int64]resource.I
 	return common.UpgradeNamespacedIdentity(deploymentKind, deploymentAPIVersion)
 }
 
+func deploymentIdentity(namespace, name string) common.NamespacedResourceIdentity {
+	return common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(deploymentAPIVersion),
+			Kind:       types.StringValue(deploymentKind),
+			Name:       types.StringValue(name),
+		},
+		Namespace: types.StringValue(namespace),
+	}
+}
+
 func isSDKv2SourceType(req resource.MoveStateRequest, expectedType string) bool {
 	return req.SourceTypeName == expectedType &&
 		(req.SourceSchemaVersion == 0 || req.SourceSchemaVersion == 1) &&

@@ -79,7 +79,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(created.Namespace, created.Name))...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(created.Namespace, created.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -113,7 +113,13 @@ func (d *DaemonSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	fresh, exists := d.readDaemonSetState(ctx, state, filters, conn, &resp.Diagnostics)
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid daemonset ID", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(namespace, name))...)
+	fresh, exists := d.readDaemonSetState(ctx, state, namespace, name, filters, conn, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -122,7 +128,6 @@ func (d *DaemonSetV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 	resp.Diagnostics.Append(setDaemonSetState(ctx, &resp.State, fresh)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(fresh.Metadata[0].Namespace.ValueString(), fresh.Metadata[0].Name.ValueString()))...)
 }
 
 func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -161,6 +166,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		resp.Diagnostics.AddError("Invalid daemonset ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(namespace, name))...)
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddError("Invalid daemonset metadata", "Expected exactly one metadata block in state and plan.")
 		return
@@ -228,7 +234,6 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, updated, filters)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, daemonSetIdentity(updated.Namespace, updated.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -274,6 +279,7 @@ func (d *DaemonSetV1) Delete(ctx context.Context, req resource.DeleteRequest, re
 		resp.Diagnostics.AddError("Invalid daemonset ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(namespace, name))...)
 	err = conn.AppsV1().DaemonSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		resp.Diagnostics.AddError("Error deleting daemonset", err.Error())
@@ -359,15 +365,11 @@ func (d *DaemonSetV1) daemonSetReadWriteResult(ctx context.Context, state *tfsdk
 func (d *DaemonSetV1) readDaemonSetState(
 	ctx context.Context,
 	prior DaemonSetV1Model,
+	namespace, name string,
 	filters kubernetes.MetadataFilters,
 	conn *k8sclient.Clientset,
 	diags *diag.Diagnostics,
 ) (DaemonSetV1Model, bool) {
-	namespace, name, err := kubernetes.IdParts(prior.ID.ValueString())
-	if err != nil {
-		diags.AddError("Invalid daemonset ID", err.Error())
-		return DaemonSetV1Model{}, false
-	}
 	current, err := conn.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return DaemonSetV1Model{}, false

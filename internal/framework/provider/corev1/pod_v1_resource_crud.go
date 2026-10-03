@@ -70,7 +70,7 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 
 	// Save the returned identity before waiting can fail.
 	resp.Diagnostics.Append(podV1WriteResult(ctx, &resp.State, req.Plan, plan, pod)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, podV1Identity(pod.Namespace, pod.Name))...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(pod.Namespace, pod.Name))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -117,6 +117,7 @@ func (p *PodV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		resp.Diagnostics.AddError("Invalid Pod ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(namespace, name))...)
 	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
@@ -144,7 +145,6 @@ func (p *PodV1) Read(ctx context.Context, req resource.ReadRequest, resp *resour
 		state.TargetState = types.ListValueMust(types.StringType, nil)
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, podV1Identity(namespace, name))...)
 }
 
 func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -161,6 +161,7 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Pod ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(namespace, name))...)
 	priorMetadata, diags := common.ExpandNamespacedMetadata(ctx, state.Metadata)
 	resp.Diagnostics.Append(diags...)
 	plannedMetadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
@@ -210,7 +211,6 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 	}
 
 	resp.Diagnostics.Append(podV1WriteResult(ctx, &resp.State, req.Plan, plan, pod)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, podV1Identity(namespace, name))...)
 }
 
 func (p *PodV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -233,6 +233,7 @@ func (p *PodV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *re
 		resp.Diagnostics.AddError("Invalid Pod ID", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(namespace, name))...)
 	conn, err := clients.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("Kubernetes client error", err.Error())

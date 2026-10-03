@@ -121,14 +121,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), kubernetes.BuildId(out.ObjectMeta))...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(deploymentAPIVersion),
-			Kind:       types.StringValue(deploymentKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(out.Namespace, out.Name))...)
 	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -169,6 +162,7 @@ func (d *DeploymentV1) Read(ctx context.Context, req resource.ReadRequest, resp 
 		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
 	out, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -186,14 +180,6 @@ func (d *DeploymentV1) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &refreshed)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(deploymentAPIVersion),
-			Kind:       types.StringValue(deploymentKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
 }
 
 func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -232,6 +218,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
 
 	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
 		resp.Diagnostics.AddError("Invalid deployment metadata", "Expected exactly one metadata block in state and plan.")
@@ -304,18 +291,6 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(deploymentAPIVersion),
-			Kind:       types.StringValue(deploymentKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -362,6 +337,7 @@ func (d *DeploymentV1) Delete(ctx context.Context, req resource.DeleteRequest, r
 		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
 		return
 	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
 	deleteTimeout, dTimeout := state.Timeouts.Delete(ctx, defaultDeleteTimeout)
 	resp.Diagnostics.Append(dTimeout...)
 	if resp.Diagnostics.HasError() {

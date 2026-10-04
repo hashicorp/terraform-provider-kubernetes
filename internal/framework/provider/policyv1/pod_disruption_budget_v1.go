@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	_ resource.Resource                = (*PodDisruptionBudgetV1)(nil)
-	_ resource.ResourceWithConfigure   = (*PodDisruptionBudgetV1)(nil)
-	_ resource.ResourceWithImportState = (*PodDisruptionBudgetV1)(nil)
+	_ resource.Resource                 = (*PodDisruptionBudgetV1)(nil)
+	_ resource.ResourceWithConfigure    = (*PodDisruptionBudgetV1)(nil)
+	_ resource.ResourceWithImportState  = (*PodDisruptionBudgetV1)(nil)
+	_ resource.ResourceWithUpgradeState = (*PodDisruptionBudgetV1)(nil)
 )
 
 type PodDisruptionBudgetV1 struct {

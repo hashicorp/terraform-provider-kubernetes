@@ -42,21 +42,24 @@ Read-Only:
 <a id="nestedblock--spec"></a>
 ### Nested Schema for `spec`
 
+Required:
+
+- `selector` (Attributes) Label query over pods whose evictions are managed by the disruption budget. A null selector will match no pods, while an empty ({}) selector will select all pods within the namespace. An empty object selects all pods in the namespace. (see [below for nested schema](#nestedatt--spec--selector))
+
 Optional:
 
 - `max_unavailable` (String) An eviction is allowed if at most "maxUnavailable" pods selected by "selector" are unavailable after the eviction, i.e. even in absence of the evicted pod. For example, one can prevent all voluntary evictions by specifying 0. This is a mutually exclusive setting with "minAvailable".
 - `min_available` (String) An eviction is allowed if at least "minAvailable" pods selected by "selector" will still be available after the eviction, i.e. even in the absence of the evicted pod.  So for example you can prevent all voluntary evictions by specifying "100%".
-- `selector` (Block List) Label query over pods whose evictions are managed by the disruption budget. A null selector will match no pods, while an empty ({}) selector will select all pods within the namespace. Exactly one selector block is required. (see [below for nested schema](#nestedblock--spec--selector))
 
-<a id="nestedblock--spec--selector"></a>
+<a id="nestedatt--spec--selector"></a>
 ### Nested Schema for `spec.selector`
 
 Optional:
 
-- `match_expressions` (Block List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedblock--spec--selector--match_expressions))
+- `match_expressions` (Attributes List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedatt--spec--selector--match_expressions))
 - `match_labels` (Map of String) A map of label keys and values. The requirements are ANDed.
 
-<a id="nestedblock--spec--selector--match_expressions"></a>
+<a id="nestedatt--spec--selector--match_expressions"></a>
 ### Nested Schema for `spec.selector.match_expressions`
 
 Optional:
@@ -79,7 +82,7 @@ resource "kubernetes_pod_disruption_budget_v1" "demo" {
   }
   spec {
     max_unavailable = "20%"
-    selector {
+    selector = {
       match_labels = {
         test = "MyExampleApp"
       }
@@ -98,22 +101,139 @@ terraform import kubernetes_pod_disruption_budget_v1.demo default/demo
 
 ## Upgrading the provider
 
-This resource uses Plugin Framework. Existing `kubernetes_pod_disruption_budget_v1`
-configurations and state do not require a resource rename, a `moved` block, or
-re-import. The resource schema version and `namespace/name` ID format are unchanged.
+`spec.selector` is now a required object. Change `selector { ... }` to
+`selector = { ... }`. Its repeated expressions become a list of objects:
+
+```terraform
+# Before
+spec {
+  min_available = "1"
+  selector {
+    match_labels = { app = "example" }
+    match_expressions {
+      key      = "tier"
+      operator = "In"
+      values   = ["api", "backend"]
+    }
+  }
+}
+
+# After
+spec {
+  min_available = "1"
+  selector = {
+    match_labels = { app = "example" }
+    match_expressions = [{
+      key      = "tier"
+      operator = "In"
+      values   = ["api", "backend"]
+    }]
+  }
+}
+```
+
+`metadata` and `spec` remain blocks. `match_expressions` remains an ordered list;
+`values` remains a set. Replace a dynamic selector block with an object expression,
+and repeated dynamic expression blocks with a list expression such as
+`match_expressions = [for item in var.requirements : item]`.
+
+Remove only the selector's `[0]` from references, outputs and lifecycle paths:
+
+| Before | After |
+| --- | --- |
+| `spec[0].selector[0].match_labels` | `spec[0].selector.match_labels` |
+| `spec[0].selector[0].match_expressions[0].values` | `spec[0].selector.match_expressions[0].values` |
+| `ignore_changes = [spec[0].selector[0].match_labels]` | `ignore_changes = [spec[0].selector.match_labels]` |
+
+### Modules and conditional values
+
+A module can accept a non-null selector object with optional children:
+
+```terraform
+variable "selector" {
+  type = object({
+    match_labels = optional(map(string))
+    match_expressions = optional(list(object({
+      key      = string
+      operator = string
+      values   = optional(set(string))
+    })))
+  })
+  nullable = false
+}
+
+resource "kubernetes_pod_disruption_budget_v1" "example" {
+  metadata {
+    name = "example"
+  }
+  spec {
+    min_available = "1"
+    selector      = var.selector
+  }
+}
+```
+
+Use `null` for omitted children, for example
+`match_labels = var.include_labels ? var.labels : null`. The selector itself is
+required and cannot be `null`. `selector = {}` is present and selects **all pods
+in the namespace** under `policy/v1`. Preserve that meaning when replacing
+conditional or dynamic blocks; do not substitute `{}` for an absent selector.
+
+Terraform JSON configurations also use an object for the selector:
+
+```json
+{
+  "resource": {
+    "kubernetes_pod_disruption_budget_v1": {
+      "example": {
+        "metadata": [{ "name": "example" }],
+        "spec": [{
+          "min_available": "1",
+          "selector": {
+            "match_labels": { "app": "example" },
+            "match_expressions": [{
+              "key": "tier",
+              "operator": "In",
+              "values": ["api", "backend"]
+            }]
+          }
+        }]
+      }
+    }
+  }
+}
+```
+
+### Existing state and resource addresses
+
+The provider upgrades schema version 0 state directly to version 1. After the HCL
+edits above, existing `kubernetes_pod_disruption_budget_v1` resources retain their
+`namespace/name` IDs and Kubernetes objects. A same-type provider upgrade needs
+no resource rename, `moved` block or re-import. A same-type address rename can
+still use a normal `moved` block.
 
 Changes to `spec`, including its selector, continue to replace the resource.
-Changes to metadata labels and annotations are applied in place.
+Changes to metadata labels and annotations are applied in place. Existing
+configurations with both `metadata.name` and `metadata.generate_name` remain
+valid; a warning explains that Kubernetes uses the explicit name.
 
 When upgrading SDKv2-written state, an unset `metadata.generate_name` can change
-from `""` to `null` during refresh. Explicitly configured empty metadata maps,
-`selector.match_labels = {}`, or expression `values = []` can produce a one-time
-in-place plan that normalizes legacy `null` state to the configured empty collection.
-These are state-only changes: applying them does not modify or recreate the PDB.
-The next plan is empty. Outputs that expose these fields will reflect the new
-null/empty representation.
+from `""` to `null` during refresh. An omitted `match_expressions` attribute can
+normalize from the old empty block list `[]` to `null`. Explicitly configured
+empty metadata maps, `selector.match_labels = {}`, or expression `values = []`
+can normalize legacy `null` to the configured empty collection. Conversely,
+omitted maps and expression values can normalize legacy empty collections to
+`null`, including state saved after an SDKv2 no-op apply. These may produce
+a one-time in-place plan. Applying these state-only changes does not modify or
+recreate the PDB; the next plan is empty. Outputs exposing these values reflect
+the new representation.
+
+Malformed legacy state with a missing, null, empty-list or multiple-element
+selector is rejected instead of guessing its meaning. Restore a valid state
+backup, or verify the existing Kubernetes object and re-import it by
+`namespace/name` before planning again.
 
 The deprecated `kubernetes_pod_disruption_budget` resource uses `policy/v1beta1`;
 it is not a same-API alias and is not supported as a cross-type `moved` source.
-In particular, an empty selector matches no pods in `policy/v1beta1`, but all
-pods in the namespace in `policy/v1`.
+An empty selector matches no pods in `policy/v1beta1`, but all pods in the
+namespace in `policy/v1`.

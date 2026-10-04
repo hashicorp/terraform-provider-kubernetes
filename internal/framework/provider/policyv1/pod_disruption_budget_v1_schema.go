@@ -33,6 +33,7 @@ func (r *PodDisruptionBudgetV1) Schema(_ context.Context, _ resource.SchemaReque
 		}
 	}
 	resp.Schema = schema.Schema{
+		Version:     1,
 		Description: "A Pod Disruption Budget limits the number of pods of a replicated application that are down simultaneously from voluntary disruptions. For example, a quorum-based application would like to ensure that the number of replicas running is never brought below the number needed for a quorum. A web front end might want to ensure that the number of replicas serving load never falls below a certain percentage of the total.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -52,41 +53,37 @@ func (r *PodDisruptionBudgetV1) Schema(_ context.Context, _ resource.SchemaReque
 					Attributes: map[string]schema.Attribute{
 						"min_available":   threshold(specDocs["minAvailable"]),
 						"max_unavailable": threshold(specDocs["maxUnavailable"]),
-					},
-					Blocks: map[string]schema.Block{
-						"selector": schema.ListNestedBlock{
-							Description: specDocs["selector"] + " Exactly one selector block is required.",
-							Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeAtLeast(1), listvalidator.SizeAtMost(1)},
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"match_labels": schema.MapAttribute{
-										Description: "A map of label keys and values. The requirements are ANDed.",
-										Optional:    true,
-										ElementType: types.StringType,
-									},
+
+						"selector": schema.SingleNestedAttribute{
+							Description: specDocs["selector"] + " An empty object selects all pods in the namespace.",
+							Required:    true,
+							Attributes: map[string]schema.Attribute{
+								"match_labels": schema.MapAttribute{
+									Description: "A map of label keys and values. The requirements are ANDed.",
+									Optional:    true,
+									ElementType: types.StringType,
 								},
-								Blocks: map[string]schema.Block{
-									"match_expressions": schema.ListNestedBlock{
-										Description: "A list of label selector requirements. The requirements are ANDed.",
-										NestedObject: schema.NestedBlockObject{
-											Attributes: map[string]schema.Attribute{
-												"key": schema.StringAttribute{
-													Description: "The label key that the selector applies to.",
-													Optional:    true,
-													Computed:    true,
-													Default:     stringdefault.StaticString(""),
-												},
-												"operator": schema.StringAttribute{
-													Description: "A key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.",
-													Optional:    true,
-													Computed:    true,
-													Default:     stringdefault.StaticString(""),
-												},
-												"values": schema.SetAttribute{
-													Description: "An array of string values. Non-empty for In and NotIn; empty for Exists and DoesNotExist.",
-													Optional:    true,
-													ElementType: types.StringType,
-												},
+								"match_expressions": schema.ListNestedAttribute{
+									Description: "A list of label selector requirements. The requirements are ANDed.",
+									Optional:    true,
+									NestedObject: schema.NestedAttributeObject{
+										Attributes: map[string]schema.Attribute{
+											"key": schema.StringAttribute{
+												Description: "The label key that the selector applies to.",
+												Optional:    true,
+												Computed:    true,
+												Default:     stringdefault.StaticString(""),
+											},
+											"operator": schema.StringAttribute{
+												Description: "A key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.",
+												Optional:    true,
+												Computed:    true,
+												Default:     stringdefault.StaticString(""),
+											},
+											"values": schema.SetAttribute{
+												Description: "An array of string values. Non-empty for In and NotIn; empty for Exists and DoesNotExist.",
+												Optional:    true,
+												ElementType: types.StringType,
 											},
 										},
 									},

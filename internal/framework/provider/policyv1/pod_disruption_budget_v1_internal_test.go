@@ -79,9 +79,9 @@ func pdbTestModel() podDisruptionBudgetV1Model {
 		}},
 		Spec: []podDisruptionBudgetSpecModel{{
 			MinAvailable: types.StringValue("1"), MaxUnavailable: types.StringValue(""),
-			Selector: []pdbLabelSelectorModel{{
-				MatchLabels: types.MapNull(types.StringType), MatchExpressions: []pdbLabelRequirementModel{},
-			}},
+			Selector: &pdbLabelSelectorModel{
+				MatchLabels: types.MapNull(types.StringType), MatchExpressions: nil,
+			},
 		}},
 	}
 }
@@ -146,7 +146,7 @@ func pdbTestProtocolPlan(t *testing.T, before, after podDisruptionBudgetV1Model)
 
 func TestPDBSchemaContract(t *testing.T) {
 	s := pdbTestSchema(t)
-	if s.Version != 0 || len(s.Blocks) != 2 || len(s.Attributes) != 1 {
+	if s.Version != 1 || len(s.Blocks) != 2 || len(s.Attributes) != 1 {
 		t.Fatalf("unexpected schema surface: %#v", s)
 	}
 	r := NewPodDisruptionBudgetV1()
@@ -168,8 +168,14 @@ func TestPDBSchemaContract(t *testing.T) {
 			t.Fatalf("%s lost its legacy empty-string default", name)
 		}
 	}
-	selector := spec.NestedObject.Blocks["selector"].(schema.ListNestedBlock)
-	expressions := selector.NestedObject.Blocks["match_expressions"].(schema.ListNestedBlock)
+	selector := spec.NestedObject.Attributes["selector"].(schema.SingleNestedAttribute)
+	if !selector.Required || selector.Optional || selector.Computed || len(spec.NestedObject.Blocks) != 0 {
+		t.Fatal("selector must be a required object, with spec retained as a block")
+	}
+	expressions := selector.Attributes["match_expressions"].(schema.ListNestedAttribute)
+	if !expressions.Optional || expressions.Required || expressions.Computed {
+		t.Fatal("expressions must remain an optional list")
+	}
 	if _, ok := expressions.NestedObject.Attributes["values"].(schema.SetAttribute); !ok {
 		t.Fatal("expression values must remain a set")
 	}
@@ -214,15 +220,12 @@ func TestPDBProtocolValidation(t *testing.T) {
 		{"missing-spec", func(m *podDisruptionBudgetV1Model) { m.Spec = nil }, true},
 		{"empty-spec", func(m *podDisruptionBudgetV1Model) { m.Spec = []podDisruptionBudgetSpecModel{} }, true},
 		{"missing-selector", func(m *podDisruptionBudgetV1Model) { m.Spec[0].Selector = nil }, true},
-		{"multiple-selectors", func(m *podDisruptionBudgetV1Model) {
-			m.Spec[0].Selector = append(m.Spec[0].Selector, m.Spec[0].Selector[0])
-		}, true},
 		{"invalid-threshold", func(m *podDisruptionBudgetV1Model) { m.Spec[0].MinAvailable = types.StringValue("101%") }, true},
 		{"unknown-threshold", func(m *podDisruptionBudgetV1Model) { m.Spec[0].MinAvailable = types.StringUnknown() }, false},
 		{"neither-threshold", func(m *podDisruptionBudgetV1Model) { m.Spec[0].MinAvailable = types.StringNull() }, false},
 		{"both-thresholds", func(m *podDisruptionBudgetV1Model) { m.Spec[0].MaxUnavailable = types.StringValue("1") }, false},
 		{"expression-legacy-zero", func(m *podDisruptionBudgetV1Model) {
-			m.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{{Key: types.StringNull(), Operator: types.StringNull(), Values: types.SetNull(types.StringType)}}
+			m.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{{Key: types.StringNull(), Operator: types.StringNull(), Values: types.SetNull(types.StringType)}}
 		}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -246,6 +249,34 @@ func TestPDBProtocolValidation(t *testing.T) {
 	}
 }
 
+func TestPDBProtocolNameAndGenerateName(t *testing.T) {
+	// SDKv2's namespaced metadata accepted both; the API uses name. Preserve
+	// that configuration during migration and warn without making it invalid.
+	model := pdbTestModel()
+	model.Metadata[0].GenerateName = types.StringValue("budget-")
+	server := providerserver.NewProtocol6(pdbProtocolProvider{})()
+	response, err := server.ValidateResourceConfig(context.Background(), &tfprotov6.ValidateResourceConfigRequest{
+		TypeName: "kubernetes_pod_disruption_budget_v1",
+		Config:   pdbTestDynamic(t, pdbTestState(t, pdbTestConfig(model))),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pdbProtocolNoErrors(t, response.Diagnostics)
+	var warnings int
+	for _, d := range response.Diagnostics {
+		if d.Severity == tfprotov6.DiagnosticSeverityWarning {
+			warnings++
+		}
+	}
+	if warnings != 1 {
+		t.Fatalf("expected one warning for ignored generate_name, got %d", warnings)
+	}
+	if plan := pdbTestProtocolPlan(t, model, model); len(plan.RequiresReplace) != 0 {
+		t.Fatalf("unchanged name and generate_name caused replacement: %v", plan.RequiresReplace)
+	}
+}
+
 func TestPDBProtocolSpecReplacement(t *testing.T) {
 	expression := func(key string, values types.Set) pdbLabelRequirementModel {
 		return pdbLabelRequirementModel{Key: types.StringValue(key), Operator: types.StringValue("In"), Values: values}
@@ -263,75 +294,75 @@ func TestPDBProtocolSpecReplacement(t *testing.T) {
 	}{
 		{"unchanged", func(a, b *podDisruptionBudgetV1Model) {}, false},
 		{"empty-labels-added", func(a, b *podDisruptionBudgetV1Model) {
-			b.Spec[0].Selector[0].MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			b.Spec[0].Selector.MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{})
 		}, false},
 		{"empty-labels-removed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			a.Spec[0].Selector.MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{})
 		}, false},
-		{"labels-added", func(a, b *podDisruptionBudgetV1Model) { b.Spec[0].Selector[0].MatchLabels = labels }, true},
-		{"labels-removed", func(a, b *podDisruptionBudgetV1Model) { a.Spec[0].Selector[0].MatchLabels = labels }, true},
+		{"labels-added", func(a, b *podDisruptionBudgetV1Model) { b.Spec[0].Selector.MatchLabels = labels }, true},
+		{"labels-removed", func(a, b *podDisruptionBudgetV1Model) { a.Spec[0].Selector.MatchLabels = labels }, true},
 		{"label-value-changed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchLabels = labels
-			b.Spec[0].Selector[0].MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{"app": types.StringValue("changed")})
+			a.Spec[0].Selector.MatchLabels = labels
+			b.Spec[0].Selector.MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{"app": types.StringValue("changed")})
 		}, true},
 		{"threshold-changed", func(a, b *podDisruptionBudgetV1Model) { b.Spec[0].MinAvailable = types.StringValue("2") }, true},
 		{"threshold-removed", func(a, b *podDisruptionBudgetV1Model) { b.Spec[0].MinAvailable = types.StringNull() }, true},
 		{"legacy-threshold-default", func(a, b *podDisruptionBudgetV1Model) { b.Spec[0].MaxUnavailable = types.StringNull() }, false},
 		{"expressions-added", func(a, b *podDisruptionBudgetV1Model) {
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
 		}, true},
 		{"expressions-removed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
 		}, true},
 		{"expression-inserted-between", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("other", set("y"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("new", set("z")), expression("other", set("y"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("other", set("y"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("new", set("z")), expression("other", set("y"))}
 		}, true},
 		{"expression-removed-between", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("old", set("z")), expression("other", set("y"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("other", set("y"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("old", set("z")), expression("other", set("y"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("other", set("y"))}
 		}, true},
 		{"expressions-reordered", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("other", set("y"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("other", set("y")), expression("app", set("x"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x")), expression("other", set("y"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("other", set("y")), expression("app", set("x"))}
 		}, true},
 		{"expression-key-changed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("other", set("x"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("other", set("x"))}
 		}, true},
 		{"expression-operator-changed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
-			b.Spec[0].Selector[0].MatchExpressions[0].Operator = types.StringValue("NotIn")
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			b.Spec[0].Selector.MatchExpressions[0].Operator = types.StringValue("NotIn")
 		}, true},
 		{"expression-values-changed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("y"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("y"))}
 		}, true},
 		{"expression-values-added", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
 		}, true},
 		{"expression-values-reordered", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x", "y"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("y", "x"))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x", "y"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("y", "x"))}
 		}, false},
 		{"expression-values-empty-added", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetValueMust(types.StringType, []attr.Value{}))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetValueMust(types.StringType, []attr.Value{}))}
 		}, false},
 		{"expression-values-empty-removed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetValueMust(types.StringType, []attr.Value{}))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetValueMust(types.StringType, []attr.Value{}))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
 		}, false},
 		{"expression-values-removed", func(a, b *podDisruptionBudgetV1Model) {
-			a.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
-			b.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
+			a.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", set("x"))}
+			b.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{expression("app", types.SetNull(types.StringType))}
 		}, true},
 		{"metadata-only", func(a, b *podDisruptionBudgetV1Model) { b.Metadata[0].Labels = labels }, false},
 		{"unknown-threshold", func(a, b *podDisruptionBudgetV1Model) { b.Spec[0].MinAvailable = types.StringUnknown() }, true},
 		{"unknown-labels", func(a, b *podDisruptionBudgetV1Model) {
-			b.Spec[0].Selector[0].MatchLabels = types.MapUnknown(types.StringType)
+			b.Spec[0].Selector.MatchLabels = types.MapUnknown(types.StringType)
 		}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -347,10 +378,10 @@ func TestPDBProtocolSpecReplacement(t *testing.T) {
 
 func TestPDBProtocolDefaults(t *testing.T) {
 	before, after := pdbTestModel(), pdbTestModel()
-	before.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{{
+	before.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{{
 		Key: types.StringValue(""), Operator: types.StringValue(""), Values: types.SetNull(types.StringType),
 	}}
-	after.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{{
+	after.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{{
 		Key: types.StringNull(), Operator: types.StringNull(), Values: types.SetNull(types.StringType),
 	}}
 	after.Spec[0].MaxUnavailable = types.StringNull()
@@ -367,8 +398,8 @@ func TestPDBProtocolDefaults(t *testing.T) {
 	state := tfsdk.State{Schema: s, Raw: raw}
 	pdbNoErrors(t, state.Get(context.Background(), &planned))
 	for _, value := range []types.String{
-		planned.Spec[0].MaxUnavailable, planned.Spec[0].Selector[0].MatchExpressions[0].Key,
-		planned.Spec[0].Selector[0].MatchExpressions[0].Operator,
+		planned.Spec[0].MaxUnavailable, planned.Spec[0].Selector.MatchExpressions[0].Key,
+		planned.Spec[0].Selector.MatchExpressions[0].Operator,
 	} {
 		if !value.Equal(types.StringValue("")) {
 			t.Fatalf("legacy default must be known empty, got %s", value)
@@ -383,14 +414,20 @@ func TestPDBUnknownBlocks(t *testing.T) {
 		path.Root("metadata"),
 		path.Root("spec"),
 		path.Root("spec").AtListIndex(0).AtName("selector"),
-		path.Root("spec").AtListIndex(0).AtName("selector").AtListIndex(0).AtName("match_expressions"),
+		path.Root("spec").AtListIndex(0).AtName("selector").AtName("match_expressions"),
 	} {
 		t.Run(attributePath.String(), func(t *testing.T) {
 			state := pdbTestState(t, pdbTestConfig(pdbTestModel()))
 			typ, d := s.TypeAtPath(ctx, attributePath)
 			pdbNoErrors(t, d)
-			listType := typ.(types.ListType)
-			pdbNoErrors(t, state.SetAttribute(ctx, attributePath, types.ListUnknown(listType.ElemType)))
+			switch typ := typ.(type) {
+			case types.ListType:
+				pdbNoErrors(t, state.SetAttribute(ctx, attributePath, types.ListUnknown(typ.ElemType)))
+			case types.ObjectType:
+				pdbNoErrors(t, state.SetAttribute(ctx, attributePath, types.ObjectUnknown(typ.AttrTypes)))
+			default:
+				t.Fatalf("unexpected type %T", typ)
+			}
 			server := providerserver.NewProtocol6(pdbProtocolProvider{})()
 			validation, err := server.ValidateResourceConfig(ctx, &tfprotov6.ValidateResourceConfigRequest{
 				TypeName: "kubernetes_pod_disruption_budget_v1", Config: pdbTestDynamic(t, state),
@@ -414,7 +451,7 @@ func TestPDBModelBoundaries(t *testing.T) {
 	for _, empty := range []bool{false, true} {
 		model := pdbTestModel()
 		if empty {
-			model.Spec[0].Selector[0].MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			model.Spec[0].Selector.MatchLabels = types.MapValueMust(types.StringType, map[string]attr.Value{})
 		}
 		spec, d := expandPodDisruptionBudgetSpec(ctx, model.Spec)
 		pdbNoErrors(t, d)
@@ -423,7 +460,7 @@ func TestPDBModelBoundaries(t *testing.T) {
 		}
 		flattened, d := flattenPodDisruptionBudgetSpec(ctx, spec, model.Spec)
 		pdbNoErrors(t, d)
-		if !flattened[0].Selector[0].MatchLabels.Equal(model.Spec[0].Selector[0].MatchLabels) {
+		if !flattened[0].Selector.MatchLabels.Equal(model.Spec[0].Selector.MatchLabels) {
 			t.Fatal("lost map null/empty distinction")
 		}
 	}
@@ -444,16 +481,27 @@ func TestPDBModelBoundaries(t *testing.T) {
 	if !d.HasError() {
 		t.Fatal("empty spec accepted")
 	}
+	model = pdbTestModel()
+	model.Spec[0].Selector = nil
+	_, d = expandPodDisruptionBudgetSpec(ctx, model.Spec)
+	if !d.HasError() {
+		t.Fatal("null selector must not be expanded to the all-pods selector")
+	}
+	missing, d := flattenPodDisruptionBudgetSpec(ctx, policy.PodDisruptionBudgetSpec{}, nil)
+	pdbNoErrors(t, d)
+	if missing[0].Selector != nil {
+		t.Fatal("API null selector must remain null during import and refresh")
+	}
 	for _, value := range []types.Set{types.SetNull(types.StringType), types.SetValueMust(types.StringType, []attr.Value{})} {
 		model = pdbTestModel()
-		model.Spec[0].Selector[0].MatchExpressions = []pdbLabelRequirementModel{{
+		model.Spec[0].Selector.MatchExpressions = []pdbLabelRequirementModel{{
 			Key: types.StringValue("app"), Operator: types.StringValue("Exists"), Values: value,
 		}}
 		spec, d := expandPodDisruptionBudgetSpec(ctx, model.Spec)
 		pdbNoErrors(t, d)
 		flattened, d := flattenPodDisruptionBudgetSpec(ctx, spec, model.Spec)
 		pdbNoErrors(t, d)
-		if !flattened[0].Selector[0].MatchExpressions[0].Values.Equal(value) {
+		if !flattened[0].Selector.MatchExpressions[0].Values.Equal(value) {
 			t.Fatal("lost expression set null/empty distinction")
 		}
 	}

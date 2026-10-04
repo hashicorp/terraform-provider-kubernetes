@@ -22,9 +22,9 @@ type podDisruptionBudgetV1Model struct {
 }
 
 type podDisruptionBudgetSpecModel struct {
-	MinAvailable   types.String            `tfsdk:"min_available"`
-	MaxUnavailable types.String            `tfsdk:"max_unavailable"`
-	Selector       []pdbLabelSelectorModel `tfsdk:"selector"`
+	MinAvailable   types.String           `tfsdk:"min_available"`
+	MaxUnavailable types.String           `tfsdk:"max_unavailable"`
+	Selector       *pdbLabelSelectorModel `tfsdk:"selector"`
 }
 
 type pdbLabelSelectorModel struct {
@@ -41,8 +41,8 @@ type pdbLabelRequirementModel struct {
 func expandPodDisruptionBudgetSpec(ctx context.Context, in []podDisruptionBudgetSpecModel) (policy.PodDisruptionBudgetSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var out policy.PodDisruptionBudgetSpec
-	if len(in) != 1 || len(in[0].Selector) != 1 {
-		diags.AddError("Invalid pod disruption budget spec", "Exactly one spec block and one selector block are required.")
+	if len(in) != 1 || in[0].Selector == nil {
+		diags.AddError("Invalid pod disruption budget spec", "Exactly one spec block and a non-null selector object are required.")
 		return out, diags
 	}
 	expandThreshold := func(value types.String) *intstr.IntOrString {
@@ -62,7 +62,7 @@ func expandPodDisruptionBudgetSpec(ctx context.Context, in []podDisruptionBudget
 	}
 	out.MinAvailable = expandThreshold(in[0].MinAvailable)
 	out.MaxUnavailable = expandThreshold(in[0].MaxUnavailable)
-	selector := in[0].Selector[0]
+	selector := in[0].Selector
 	// An empty policy/v1 selector matches all pods; it must not become nil.
 	out.Selector = &metav1.LabelSelector{}
 	diags.Append(selector.MatchLabels.ElementsAs(ctx, &out.Selector.MatchLabels, false)...)
@@ -89,14 +89,18 @@ func flattenPodDisruptionBudgetSpec(ctx context.Context, in policy.PodDisruption
 	out := podDisruptionBudgetSpecModel{
 		MinAvailable:   flattenPDBThreshold(in.MinAvailable, old.MinAvailable),
 		MaxUnavailable: flattenPDBThreshold(in.MaxUnavailable, old.MaxUnavailable),
-		Selector:       []pdbLabelSelectorModel{},
+		Selector:       nil,
 	}
 	if in.Selector != nil {
 		var previous pdbLabelSelectorModel
-		if len(old.Selector) > 0 {
-			previous = old.Selector[0]
+		if old.Selector != nil {
+			previous = *old.Selector
 		}
-		selector := pdbLabelSelectorModel{MatchExpressions: []pdbLabelRequirementModel{}}
+		selector := pdbLabelSelectorModel{}
+		// Preserve an explicitly empty expression list; omitted attributes stay null.
+		if previous.MatchExpressions != nil {
+			selector.MatchExpressions = []pdbLabelRequirementModel{}
+		}
 		selector.MatchLabels = types.MapNull(types.StringType)
 		if len(in.Selector.MatchLabels) > 0 || !previous.MatchLabels.IsNull() {
 			labels := in.Selector.MatchLabels
@@ -126,7 +130,7 @@ func flattenPodDisruptionBudgetSpec(ctx context.Context, in policy.PodDisruption
 				Key: types.StringValue(expression.Key), Operator: types.StringValue(string(expression.Operator)), Values: values,
 			})
 		}
-		out.Selector = []pdbLabelSelectorModel{selector}
+		out.Selector = &selector
 	}
 	return []podDisruptionBudgetSpecModel{out}, diags
 }

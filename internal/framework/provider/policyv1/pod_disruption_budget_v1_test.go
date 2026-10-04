@@ -70,10 +70,9 @@ func TestAccKubernetesPodDisruptionBudgetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.max_unavailable", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.min_available", ""),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.foo", "bar"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_expressions.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_labels.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_labels.foo", "bar"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_expressions.#", "0"),
 				),
 			},
 			{
@@ -100,14 +99,13 @@ func TestAccKubernetesPodDisruptionBudgetV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.max_unavailable", ""),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.min_available", "75%"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_labels.%", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_expressions.0.key", "name"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_expressions.0.operator", "In"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_expressions.0.values.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_expressions.0.values.1", "foo"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.0.match_expressions.0.values.0", "apps")),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_expressions.0.values.1", "foo"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.match_expressions.0.values.0", "apps")),
 			},
 		},
 	})
@@ -194,7 +192,7 @@ func testAccKubernetesPodDisruptionBudgetV1Config_maxUnavailable(name string) st
 
   spec {
     max_unavailable = 1
-    selector {
+    selector = {
       match_labels = {
         foo = "bar"
       }
@@ -224,12 +222,12 @@ func testAccKubernetesPodDisruptionBudgetV1Config_minAvailable(name string) stri
 
   spec {
     min_available = "75%%"
-    selector {
-      match_expressions {
+    selector = {
+      match_expressions = [{
         key      = "name"
         operator = "In"
         values   = ["foo", "apps"]
-      }
+      }]
     }
   }
 }
@@ -243,7 +241,7 @@ func TestAccPodDisruptionBudgetV1_Upgrade(t *testing.T) {
 		for _, variant := range []string{
 			"minimal", "full", "zero", "zero_percent", "min_integer", "max_percent",
 			"empty_threshold", "empty_selector", "empty_match_labels", "exists",
-			"empty_values", "empty_metadata", "generated", "unset_thresholds", "empty_thresholds",
+			"empty_values", "empty_metadata", "generated", "unset_thresholds", "empty_thresholds", "both_names",
 		} {
 			t.Run(version+"/"+variant, func(t *testing.T) {
 				p := kubernetes.Provider()
@@ -260,7 +258,7 @@ func TestAccPodDisruptionBudgetV1_Upgrade(t *testing.T) {
 							ExternalProviders: map[string]resource.ExternalProvider{
 								"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: version},
 							},
-							Config: config,
+							Config: pdbLegacyConfig(name, variant),
 							Check:  pdbCheckRemote(p, &before, true),
 							ConfigStateChecks: []statecheck.StateCheck{
 								pdbStateCheck{snapshot: &snapshot},
@@ -562,7 +560,8 @@ func TestAccPodDisruptionBudgetV1_DriftAndDisappears(t *testing.T) {
 
 func TestAccPodDisruptionBudgetV1_AddressMove(t *testing.T) {
 	p := kubernetes.Provider()
-	config := pdbConfig("tf-pdb-"+acctest.RandString(10), "full")
+	name := "tf-pdb-" + acctest.RandString(10)
+	config := pdbConfig(name, "full")
 	moved := strings.ReplaceAll(config, `"kubernetes_pod_disruption_budget_v1" "test"`, `"kubernetes_pod_disruption_budget_v1" "renamed"`)
 	moved = strings.ReplaceAll(moved, "kubernetes_pod_disruption_budget_v1.test", "kubernetes_pod_disruption_budget_v1.renamed")
 	moved += `
@@ -577,7 +576,12 @@ moved {
 		PreCheck:     func() { pdbPreCheck(t, p) },
 		CheckDestroy: testAccCheckKubernetesPodDisruptionBudgetV1Destroy(p),
 		Steps: []resource.TestStep{
-			{ProtoV6ProviderFactories: pdbFactories(nil), Config: config, Check: pdbCheckRemote(p, &before, true)},
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "3.2.1"},
+				},
+				Config: pdbLegacyConfig(name, "full"), Check: pdbCheckRemote(p, &before, true),
+			},
 			{
 				ProtoV6ProviderFactories: pdbFactories(&writes),
 				Config:                   moved,
@@ -757,8 +761,8 @@ func TestPodDisruptionBudgetV1MuxRegistration(t *testing.T) {
 		}
 	}
 	s, ok := response.ResourceSchemas["kubernetes_pod_disruption_budget_v1"]
-	if !ok || s.Version != 0 {
-		t.Fatal("mux is missing PDB schema version zero")
+	if !ok || s.Version != 1 {
+		t.Fatal("mux is missing PDB schema version one")
 	}
 	for _, name := range []string{"kubernetes_namespace", "kubernetes_namespace_v1", "kubernetes_manifest", "kubernetes_pod_disruption_budget"} {
 		if response.ResourceSchemas[name] == nil {
@@ -779,7 +783,7 @@ func TestPodDisruptionBudgetV1UpgradePlanGuard(t *testing.T) {
 				}},
 				"spec": []any{map[string]any{
 					"min_available": "", "max_unavailable": "1",
-					"selector": []any{map[string]any{"match_labels": nil, "match_expressions": []any{}}},
+					"selector": map[string]any{"match_labels": nil, "match_expressions": []any{}},
 				}},
 			}
 			raw, err := json.Marshal(before)
@@ -790,8 +794,10 @@ func TestPodDisruptionBudgetV1UpgradePlanGuard(t *testing.T) {
 			if err := json.Unmarshal(raw, &after); err != nil {
 				t.Fatal(err)
 			}
-			if err := pdbNormalizeEmpty(after, pdbNormalizationPaths("empty_match_labels")[0]); err != nil {
-				t.Fatal(err)
+			for _, path := range pdbNormalizationPaths("empty_match_labels") {
+				if err := pdbNormalizeEmpty(after, path); err != nil {
+					t.Fatal(err)
+				}
 			}
 			metadata := after["metadata"].([]any)[0].(map[string]any)
 			delete(metadata, "generation")
@@ -810,7 +816,7 @@ func TestPodDisruptionBudgetV1UpgradePlanGuard(t *testing.T) {
 			case "threshold":
 				spec["max_unavailable"] = "2"
 			case "selector":
-				spec["selector"].([]any)[0].(map[string]any)["match_labels"] = map[string]any{"new": "value"}
+				spec["selector"].(map[string]any)["match_labels"] = map[string]any{"new": "value"}
 			case "metadata":
 				metadata["labels"] = map[string]any{"new": "value"}
 			case "output":
@@ -829,6 +835,14 @@ func TestPodDisruptionBudgetV1UpgradePlanGuard(t *testing.T) {
 	}
 }
 
+// Keep the released-provider step on its original block syntax.
+func pdbLegacyConfig(name, variant string) string {
+	config := pdbConfig(name, variant)
+	config = strings.ReplaceAll(config, "selector = {", "selector {")
+	config = strings.ReplaceAll(config, "match_expressions = [{", "match_expressions {")
+	return strings.ReplaceAll(config, "      }]", "      }")
+}
+
 func pdbConfig(name, variant string) string {
 	metadata := fmt.Sprintf("name = %q", name)
 	threshold := `max_unavailable = "1"`
@@ -844,6 +858,8 @@ func pdbConfig(name, variant string) string {
 		if variant == "generated" {
 			metadata = strings.Replace(metadata, "name =", "generate_name =", 1)
 		}
+	case "both_names":
+		metadata += "\n    generate_name = \"budget-\""
 	case "zero":
 		threshold = `min_available = "0"`
 	case "zero_percent":
@@ -864,10 +880,10 @@ func pdbConfig(name, variant string) string {
 		selector = "match_labels = {}"
 	case "exists", "empty_values":
 		selector = `
-      match_expressions {
+      match_expressions = [{
         key      = "tier"
         operator = "Exists"
-      }
+      }]
 `
 		if variant == "empty_values" {
 			selector = strings.Replace(selector, `operator = "Exists"`, "operator = \"Exists\"\n        values = []", 1)
@@ -882,7 +898,7 @@ func pdbConfig(name, variant string) string {
   }
   spec {
     %s
-    selector {
+    selector = {
       %s
     }
   }
@@ -905,11 +921,11 @@ func pdbThresholdOutput(threshold string) string {
 
 func pdbExpression() string {
 	return `
-      match_expressions {
+      match_expressions = [{
         key      = "tier"
         operator = "In"
         values   = ["backend", "api"]
-      }
+      }]
 `
 }
 
@@ -1022,7 +1038,11 @@ func (c pdbStateCheck) CheckState(_ context.Context, req statecheck.CheckStateRe
 			found = r
 		}
 	}
-	if found == nil || found.SchemaVersion != 0 || len(found.IdentityValues) != 0 || found.IdentitySchemaVersion != nil {
+	wantVersion := uint64(0)
+	if c.compare {
+		wantVersion = 1
+	}
+	if found == nil || found.SchemaVersion != wantVersion || len(found.IdentityValues) != 0 || found.IdentitySchemaVersion != nil {
 		resp.Error = fmt.Errorf("PDB absent or schema/identity contract changed: %#v", found)
 		return
 	}
@@ -1050,6 +1070,16 @@ func (c pdbStateCheck) CheckState(_ context.Context, req statecheck.CheckStateRe
 	delete(fields, "resource_version")
 	if fields["generate_name"] == "" {
 		fields["generate_name"] = nil
+	}
+	if !c.compare {
+		// Compare the approved selector shape change separately from its values.
+		spec := values["spec"].([]any)[0].(map[string]any)
+		selectors, ok := spec["selector"].([]any)
+		if !ok || len(selectors) != 1 {
+			resp.Error = fmt.Errorf("invalid released selector state")
+			return
+		}
+		spec["selector"] = selectors[0]
 	}
 	got := pdbStateSnapshot{values, req.State.Values.Outputs, found.ProviderName}
 	if !c.compare {
@@ -1083,16 +1113,21 @@ func (c pdbStateCheck) CheckState(_ context.Context, req statecheck.CheckStateRe
 }
 
 func pdbNormalizationPaths(variant string) [][]any {
+	var paths [][]any
 	switch variant {
 	case "empty_metadata":
-		return [][]any{{"metadata", 0, "annotations"}, {"metadata", 0, "labels"}}
+		paths = [][]any{{"metadata", 0, "annotations"}, {"metadata", 0, "labels"}}
 	case "empty_match_labels":
-		return [][]any{{"spec", 0, "selector", 0, "match_labels"}}
+		paths = [][]any{{"spec", 0, "selector", "match_labels"}}
 	case "empty_values":
-		return [][]any{{"spec", 0, "selector", 0, "match_expressions", 0, "values"}}
-	default:
-		return nil
+		paths = [][]any{{"spec", 0, "selector", "match_expressions", 0, "values"}}
 	}
+	switch variant {
+	case "full", "generated", "exists", "empty_values":
+	default:
+		paths = append(paths, []any{"spec", 0, "selector", "match_expressions"})
+	}
+	return paths
 }
 
 func pdbNormalizeEmpty(root map[string]any, path []any) error {
@@ -1119,6 +1154,14 @@ func pdbNormalizeEmpty(root map[string]any, path []any) error {
 			return fmt.Errorf("missing normalization field %v", path)
 		}
 		if i == len(path)-1 {
+			if key == "match_expressions" {
+				list, ok := value.([]any)
+				if !ok || len(list) != 0 {
+					return fmt.Errorf("expected legacy empty expressions at %v, got %#v", path, value)
+				}
+				object[key] = nil
+				return nil
+			}
 			if value != nil {
 				return fmt.Errorf("expected legacy null at %v, got %#v", path, value)
 			}

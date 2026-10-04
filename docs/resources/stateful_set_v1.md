@@ -2640,10 +2640,12 @@ resource "kubernetes_stateful_set_v1" "prometheus" {
 
 ## Import
 
-kubernetes_stateful_set_v1 can be imported using its namespace and name, e.g.
+StatefulSets can be imported using the namespace and name, separated by `/`:
 
+```shell
+terraform import kubernetes_stateful_set_v1.example default/terraform-example
 ```
-$ terraform import kubernetes_stateful_set_v1.example default/terraform-example
-```
+
+`wait_for_rollout` is not stored in Kubernetes. If the imported value differs from the configuration, the next plan shows an in-place update that changes only state.
 
 To move from the deprecated `kubernetes_stateful_set` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

@@ -5,8 +5,6 @@ description: |-
   A Deployment ensures that a specified number of pod “replicas” are running at any one time. In other words, a Deployment makes sure that a pod or homogeneous set of pods are always up and available. If there are too many pods, it will kill some. If there are too few, the Deployment will start more.
 ---
 
-{{- /* Render this page with `make docs-framework`; plain tfplugindocs omits block item counts. */}}
-
 # {{ .Name }}
 
 {{ .Description }}
@@ -21,10 +19,12 @@ description: |-
 
 ## Import
 
-Deployment can be imported using the namespace and name, e.g.
+Deployments can be imported using the namespace and name, separated by `/`:
 
+```shell
+terraform import kubernetes_deployment_v1.example default/terraform-example
 ```
-$ terraform import kubernetes_deployment_v1.example default/terraform-example
-```
+
+`wait_for_rollout` is not stored in Kubernetes. If the imported value differs from the configuration, the next plan shows an in-place update that changes only state.
 
 To move from the deprecated `kubernetes_deployment` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

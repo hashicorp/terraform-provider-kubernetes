@@ -2429,10 +2429,12 @@ resource "kubernetes_deployment_v1" "example" {
 
 ## Import
 
-Deployment can be imported using the namespace and name, e.g.
+Deployments can be imported using the namespace and name, separated by `/`:
 
+```shell
+terraform import kubernetes_deployment_v1.example default/terraform-example
 ```
-$ terraform import kubernetes_deployment_v1.example default/terraform-example
-```
+
+`wait_for_rollout` is not stored in Kubernetes. If the imported value differs from the configuration, the next plan shows an in-place update that changes only state.
 
 To move from the deprecated `kubernetes_deployment` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

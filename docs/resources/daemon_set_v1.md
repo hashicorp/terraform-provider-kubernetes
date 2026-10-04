@@ -2429,10 +2429,12 @@ resource "kubernetes_daemon_set_v1" "example" {
 
 ## Import
 
-DaemonSet can be imported using the namespace and name, e.g.
+DaemonSets can be imported using the namespace and name, separated by `/`:
 
+```shell
+terraform import kubernetes_daemon_set_v1.example default/terraform-example
 ```
-$ terraform import kubernetes_daemon_set_v1.example default/terraform-example
-```
+
+`wait_for_rollout` is not stored in Kubernetes. If the imported value differs from the configuration, the next plan shows an in-place update that changes only state.
 
 To move from the deprecated `kubernetes_daemonset` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

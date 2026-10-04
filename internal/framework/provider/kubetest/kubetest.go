@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -198,6 +199,13 @@ func isKind(t *testing.T) bool {
 
 func isEks(t *testing.T) bool {
 	t.Helper()
+	// Clusters that use EKS access entries, such as EKS Auto Mode, have no aws-auth
+	// ConfigMap, but their nodes carry eks.amazonaws.com labels.
+	for key := range firstNode(t).Labels {
+		if strings.HasPrefix(key, "eks.amazonaws.com/") {
+			return true
+		}
+	}
 	conn, err := Clientset()
 	if err != nil {
 		t.Fatal(err)

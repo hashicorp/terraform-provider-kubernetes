@@ -1,5 +1,5 @@
 ```release-note:breaking-change
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, Deployment and DaemonSet `strategy` and its `rolling_update`, StatefulSet `persistent_volume_claim_retention_policy` and the Job `selector` change from blocks to object arguments, for example `resources = { ... }`, so references and `ignore_changes` paths drop their `[0]`. Pod spec `image_pull_secrets` and `readiness_gate` and the Job `selector.match_expressions` become lists of objects. See the v4 upgrade guide.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, Deployment and DaemonSet `strategy` and its `rolling_update`, StatefulSet `persistent_volume_claim_retention_policy` and Job and CronJob `selector` change from blocks to object arguments, for example `resources = { ... }`, so references and `ignore_changes` paths drop their `[0]`. Pod spec `image_pull_secrets` and `readiness_gate` and Job and CronJob `selector.match_expressions` become lists of objects. See the v4 upgrade guide.
 ```
 
 ```release-note:breaking-change
@@ -11,7 +11,7 @@
 ```
 
 ```release-note:bug
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: A pod `security_context` block that sets only empty values, such as `supplemental_groups = []`, no longer plans a change on every run; as in earlier versions, it is sent as an empty security context.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: A pod `security_context` block that sets only empty values, such as `supplemental_groups = []`, no longer plans a change on every run.
 ```
 
 ```release-note:note
@@ -31,15 +31,15 @@
 ```
 
 ```release-note:note
-`resource/kubernetes_stateful_set_v1`: As in earlier versions, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned in place but not applied, because Kubernetes does not allow it. The plan now warns about it; replace the StatefulSet to apply such a change.
+`resource/kubernetes_stateful_set_v1`: Warn during planning when changes to the `requests`, labels or annotations of a `volume_claim_template` cannot be applied to the existing StatefulSet. Replace the StatefulSet to apply such a change.
 ```
 
 ```release-note:bug
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Keep the configured spelling of a number or quantity Kubernetes stores, such as `run_as_user = "01000"`, `replicas = "01"` or `cpu = "0.5"`, instead of planning a change, or replacing a Pod or Job, on every plan.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Keep the configured spelling of numeric strings, such as `run_as_user = "01000"` or `replicas = "01"`, to avoid repeated planned changes or Pod and Job replacements for equivalent values.
 ```
 
 ```release-note:bug
-`resource/kubernetes_pod_v1`: Replace the Pod when a spec field that Kubernetes cannot update changes, such as a volume, volume mount, probe or affinity, or when `active_deadline_seconds` is raised or removed. Earlier versions reported success without changing the Pod, or failed to apply.
+`resource/kubernetes_pod_v1`: Replace the Pod when `active_deadline_seconds` is increased or removed, instead of attempting an update that Kubernetes rejects.
 ```
 
 ```release-note:bug
@@ -47,7 +47,7 @@
 ```
 
 ```release-note:bug
-`resource/kubernetes_pod_v1`: Keep a configured toleration of a built-in taint, such as `node.kubernetes.io/not-ready` with `toleration_seconds`, instead of replacing the Pod on every plan.
+`resource/kubernetes_pod_v1`: Keep a configured toleration of a built-in taint, such as `node.kubernetes.io/not-ready` with `toleration_seconds`, instead of replacing the Pod on every plan. A Pod whose state 3.x last wrote is replaced once more.
 ```
 
 ```release-note:bug
@@ -56,8 +56,4 @@
 
 ```release-note:bug
 `resource/kubernetes_job_v1`: Apply changes to `ttl_seconds_after_finished` and `max_failed_indexes` to the Job.
-```
-
-```release-note:bug
-`resource/kubernetes_job_v1`: Replace the Job when its pod template or `pod_failure_policy` changes, since Kubernetes does not allow updating them. Labels the Job controller adds to the pod template are ignored.
 ```

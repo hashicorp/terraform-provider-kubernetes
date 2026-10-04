@@ -45,7 +45,7 @@ When upgrading from 2.x, also follow the [v3 upgrade guide](v3-upgrade-guide.md)
     ```
 
 4. **Install the provider.** Run `terraform init -upgrade`. Recreate saved plans after upgrading the provider and configuration.
-5. **Review the plan.** Run `terraform validate` and `terraform plan`. A syntax-only change must not replace or update a workload in Kubernetes. A one-time in-place update that changes only Terraform state is expected in some cases (see [Behavior changes](#behavior-changes)). Investigate any replacement before applying.
+5. **Review the plan.** Run `terraform validate` and `terraform plan`. A syntax-only change must not replace or update a workload in Kubernetes. A one-time in-place update that changes only Terraform state is expected in some cases (see [Behavior changes](#behavior-changes)). Investigate any replacement before applying. Run this first plan without `-target`: until a resource's state has been upgraded, a targeted plan warns `Failed to decode resource from state` for the resources it skips.
 6. **Apply and confirm.** Apply the reviewed plan, then run `terraform plan` again and confirm that it is empty.
 
 Test the upgrade in a non-production workspace first, and repeat these steps for each workspace.
@@ -67,7 +67,7 @@ For each object argument, change `name { ... }` to `name = { ... }`. Omit the ar
 
 In `.tf.json` configuration, use the object form `"resources": { ... }`; the array form `"resources": [{ ... }]` is rejected.
 
-The repeated `image_pull_secrets` and `readiness_gate` arguments still require a nonempty list when configured. Omit them or use `null` instead of `[]`. `match_expressions = []` is allowed.
+The repeated `image_pull_secrets` and `readiness_gate` arguments require a nonempty list when configured. Omit them or use `null` instead of `[]`. `match_expressions = []` is allowed.
 
 The object fields also change shape in state. Update references, `ignore_changes` child paths and module types as described in [References and module interfaces](#references-and-module-interfaces).
 
@@ -190,6 +190,8 @@ output "cpu_limit" {
 ```
 
 Apply the same change to selected `strategy`, `rolling_update`, retention-policy and JobSpec `selector` references. For example, `spec[0].strategy[0].rolling_update[0].max_surge` becomes `spec[0].strategy.rolling_update.max_surge`. Deployment, DaemonSet and StatefulSet selectors retain their `[0]` because they remain blocks.
+
+Terraform reports stale references a few at a time, so fixing them one error at a time can take several rounds. Instead, search the configuration and its modules for each converted name followed by `[0]` or `.0.`, such as `resources[0]` and `strategy.0.`.
 
 Child paths in `lifecycle.ignore_changes` need the same edit. For a Deployment, this 3.x path:
 
@@ -364,7 +366,7 @@ selector = {
 }
 ```
 
-Leave the selector omitted when Kubernetes should generate it; keep the existing `manual_selector` setting.
+Leave the selector omitted when Kubernetes should generate it; keep the existing `manual_selector` setting. State records a generated selector as an object whose fields are `null`, where 3.x recorded an empty list, so a reference to `spec[0].selector` is not `null` even when the selector is not configured.
 
 ### kubernetes_cron_job_v1
 
@@ -392,7 +394,7 @@ moved {
 
 Keep all other values unchanged, and do not keep both resource blocks for the same object. A move converts the Terraform address and stored value shapes without recreating the Kubernetes object; review the plan and investigate any replacement before applying.
 
-- `kubernetes_cron_job` manages `batch/v1beta1` CronJobs, which Kubernetes 1.25 and later no longer serve. Make sure the CronJob is available through `batch/v1` before moving it.
+- `kubernetes_cron_job` manages `batch/v1beta1` CronJobs, which Kubernetes 1.25 and later no longer serve. Make sure the CronJob is available through `batch/v1` before moving it. On those Kubernetes versions, a 3.x plan cannot read such a CronJob and plans to create it, so the empty-plan check in the [upgrade checklist](#upgrade-checklist) cannot pass for it; moving it to `kubernetes_cron_job_v1` resolves that plan.
 - Provider 1.x stored `false` for an omitted `automount_service_account_token`, whose default has been `true` since 2.0. Kubernetes cannot change it on an existing Pod or Job, so a Pod or Job whose state was last written by 1.x plans a replacement. Set `automount_service_account_token = false` to keep the object. Likewise, provider versions before 2.21.0 sent and stored `0` for an omitted Job `backoff_limit`, whose default is now `6`; set `backoff_limit = 0` to keep such a Job unchanged.
 
 ## Behavior changes
@@ -411,7 +413,3 @@ Keep all other values unchanged, and do not keep both resource blocks for the sa
 - **StatefulSet volume claim templates.** Kubernetes does not allow changing the claim templates of an existing StatefulSet. As in 3.x, a change to the `requests`, labels or annotations of a `volume_claim_template` is planned in place but not applied, and the next plan shows it again; the plan now warns about it. To apply such a change, replace the StatefulSet, for example with `terraform apply -replace=<address>`. Adding or removing a claim template, or changing its `access_modes` or `limits`, replaces the StatefulSet.
 - **Zero-valued pod security context.** A pod-level `security_context` block that sets only empty values, such as `supplemental_groups = []`, no longer plans a change on every run, and is sent as an empty security context as in 3.x. An explicit `run_as_non_root = false` is sent as `runAsNonRoot: false`, as in 3.x, which Pod Security admission rejects in a `restricted` namespace; adding or removing it in a block that sets nothing else plans no change, while removing the whole block from a Pod or Job that holds `runAsNonRoot: false` replaces it.
 - **`name` with `generate_name`.** Setting both is accepted as in 3.x but now gives a warning, since Kubernetes ignores `generate_name` when `name` is set.
-
-## Performance
-
-The six resources use more CPU per operation than their Plugin SDKv2 versions did; most of the overhead is in the Plugin Framework itself. On a real cluster, API requests usually dominate the run time, so the difference is most noticeable in large workspaces.

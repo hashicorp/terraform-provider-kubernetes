@@ -2342,7 +2342,7 @@ resource "kubernetes_pod_v1" "test" {
 }
 ```
 
-terraform version of the [pods/pod-with-node-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-node-affinity.yaml) example.
+Terraform version of the [pods/pod-with-node-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-node-affinity.yaml) example.
 
 ```terraform
 resource "kubernetes_pod_v1" "with_node_affinity" {
@@ -2385,7 +2385,7 @@ resource "kubernetes_pod_v1" "with_node_affinity" {
 }
 ```
 
-terraform version of the [pods/pod-with-pod-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-pod-affinity.yaml) example.
+Terraform version of the [pods/pod-with-pod-affinity.yaml](https://raw.githubusercontent.com/kubernetes/website/master/content/en/examples/pods/pod-with-pod-affinity.yaml) example.
 
 ```terraform
 resource "kubernetes_pod_v1" "with_pod_affinity" {
@@ -2438,10 +2438,10 @@ resource "kubernetes_pod_v1" "with_pod_affinity" {
 
 ## Import
 
-Pod can be imported using the namespace and name, e.g.
+Pods can be imported using the namespace and name, separated by `/`:
 
-```
-$ terraform import kubernetes_pod_v1.example default/terraform-example
+```shell
+terraform import kubernetes_pod_v1.example default/terraform-example
 ```
 
 To move from the deprecated `kubernetes_pod` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

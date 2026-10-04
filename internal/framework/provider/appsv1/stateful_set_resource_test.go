@@ -148,7 +148,9 @@ func TestAccKubernetesStatefulSetV1_basic(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
+				// Status updates while the volume claim binds can change the resource version after apply.
 				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
 					"wait_for_rollout",
 					"spec.0.update_strategy.#",
 					"spec.0.update_strategy.0.%",

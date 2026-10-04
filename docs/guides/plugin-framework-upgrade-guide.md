@@ -76,3 +76,38 @@ Run `terraform plan` to verify the move and review any in-place changes describe
 ## Data source: kubernetes_all_namespaces
 
 Behavior is unchanged; no configuration updates are required.
+
+## Version 4: Networking
+
+These resources intentionally adopt object arguments for singular nested objects.
+This is a version 4 configuration change; Plugin Framework does not require every
+singleton block to become an object. Apply the syntax changes only to the paths
+listed in the resource guides. Workload selectors, such as Deployment selectors,
+retain their existing block syntax.
+
+| Resource | Blocks that become objects | Repeated blocks that become object lists |
+| --- | --- | --- |
+| [Ingress](../resources/ingress_v1.md) | `spec.default_backend`, `spec.rule[*].http`, path `backend`, and each backend's `resource`, `service`, and `service.port` | `spec.rule[*].http.path` |
+| [IngressClass](../resources/ingress_class_v1.md) | `spec.parameters` | None |
+| [NetworkPolicy](../resources/network_policy_v1.md) | `spec.pod_selector`, each ingress/egress peer's `pod_selector`, `namespace_selector`, and `ip_block` | Each selector's `match_expressions` |
+
+Use `field = { ... }` for objects and `field = [{ ... }]` for repeated objects.
+Replace affected `dynamic` blocks with object expressions or list comprehensions.
+Remove `[0]` only for converted objects in references and `ignore_changes` paths;
+keep indexes for `metadata`, `spec`, rules, paths, and other retained lists.
+Update module variables from `list(object(...))` to `object(...)` for the singular
+values. The linked resource guides include conditional and Terraform JSON examples.
+Preserve the difference between an omitted selector and an empty selector: an empty
+selector can select every pod or namespace.
+
+Existing versioned resources upgrade at the same address. IngressClass and
+NetworkPolicy support moves from their same-API deprecated aliases with Terraform
+1.8 or later. The beta `kubernetes_ingress` resource is not a supported move source.
+
+An omitted `match_expressions` can produce a one-time `[]` to `null` update after
+upgrading. Explicit empty label maps or expression values can normalize legacy
+`null` to an empty collection. These updates change state without writing to
+Kubernetes or replacing the resource; the next plan should be empty.
+
+State schema versions increase from 0 to 1. Provider 3.x cannot read the upgraded
+state. Back up state and recreate saved plans when upgrading.

@@ -16,6 +16,110 @@ description: |-
 
 {{tffile "examples/resources/network_policy_v1/example_1.tf"}}
 
+## Migration to Plugin Framework
+
+`kubernetes_network_policy_v1` is implemented using the Terraform Plugin Framework. Apply the object syntax changes below before upgrading. The resource type and Kubernetes object identity are retained.
+
+### Object configuration and state upgrade
+
+The resource now uses state schema version 1 and upgrades existing version 0
+state automatically. Identity schema version 1 is unchanged. Existing
+`kubernetes_network_policy_v1` resources need no `moved` block or re-import.
+
+Keep `metadata`, `spec`, `ingress`, `egress`, `from`, `to`, and `ports` as blocks.
+Change these fields from singleton blocks to object arguments:
+
+- Required `spec[0].pod_selector`.
+- `spec[0].ingress[*].from[*].ip_block`, `namespace_selector`, and `pod_selector`.
+- `spec[0].egress[*].to[*].ip_block`, `namespace_selector`, and `pod_selector`.
+
+Every selector's repeated `match_expressions` blocks become a list of objects.
+For example, replace `pod_selector { match_expressions { ... } }` with:
+
+```terraform
+pod_selector = {
+  match_expressions = [{
+    key      = "app"
+    operator = "In"
+    values   = ["frontend", "api"]
+  }]
+}
+```
+
+Preserve empty selectors deliberately: `pod_selector = {}` at the root selects
+all pods in the policy's namespace. An omitted or null peer `namespace_selector`
+is absent; `namespace_selector = {}` is present and selects all namespaces.
+Changing omission into `{}` can broaden access. Keep absent optional selectors
+and IP blocks omitted or null; retain present empty selectors as `{}`.
+
+Remove indexes only for the converted objects in references and lifecycle paths.
+For example, `spec[0].ingress[0].from[0].namespace_selector[0].match_labels`
+becomes `spec[0].ingress[0].from[0].namespace_selector.match_labels`.
+Use the new path in `ignore_changes` too. The `spec`, ingress/egress rule, peer,
+and `match_expressions` lists retain their indexes.
+
+Replace dynamic optional selector blocks with object expressions, preserving
+whether the selector was absent. An optional module input can be declared as:
+
+```terraform
+variable "peer_namespace_selector" {
+  type = object({
+    match_labels = optional(map(string))
+    match_expressions = optional(list(object({
+      key      = string
+      operator = string
+      values   = optional(set(string))
+    })))
+  })
+  default = null
+}
+
+# Inside a from or to block:
+# namespace_selector = var.peer_namespace_selector
+# Or: namespace_selector = var.all_namespaces ? {} : null
+```
+
+Terraform JSON uses objects such as `"pod_selector": {"match_labels":
+{"app": "frontend"}}` and `"namespace_selector": {}`. Expression lists stay
+arrays: `"match_expressions": [{"key": "app", "operator": "Exists"}]`.
+The converter rejects multiple historical elements in each singleton selector
+or IP block and preserves every actual rule, peer, port, and expression.
+
+Before upgrading, confirm that the current configuration has an empty plan. Review the plan after upgrading; do not apply unexpected replacement or specification changes.
+
+The first upgrade can normalize these empty values in Terraform state:
+
+- `metadata.labels = {}` and `metadata.annotations = {}` can change from `null` to `{}`.
+- `match_labels = {}` can change from `null` to `{}` at these selector paths:
+  - `spec.pod_selector`
+  - `spec.ingress[*].from[*].namespace_selector`
+  - `spec.ingress[*].from[*].pod_selector`
+  - `spec.egress[*].to[*].namespace_selector`
+  - `spec.egress[*].to[*].pod_selector`
+- At each selector path above, `match_expressions[*].values = []` can change from `null` to `[]` only for the `Exists` and `DoesNotExist` operators.
+- An omitted `match_expressions` argument can change from the old empty block list `[]` to `null`.
+
+These changes can appear as a one-time in-place update. Applying them updates Terraform state, preserves the policy and its UID, and leaves the next plan empty.
+
+After create or update, state retains known planned specification values. Changes made by admission webhooks appear as drift on the next refresh.
+
+### Migration from `kubernetes_network_policy`
+
+The deprecated alias remains on SDKv2. With Terraform 1.8 or later, replace the old resource block's type with `kubernetes_network_policy_v1`, apply the object syntax changes above while keeping the same settings, update references, and add:
+
+```terraform
+moved {
+  from = kubernetes_network_policy.example
+  to   = kubernetes_network_policy_v1.example
+}
+```
+
+Do not keep both resource declarations for the same Kubernetes object.
+
+### Resource identity
+
+With Terraform 1.12 or later, resource identity contains `api_version` (`networking.k8s.io/v1`), `kind` (`NetworkPolicy`), `name`, and `namespace`. The existing namespace/name import identifier is unchanged.
+
 ## Import
 
 Network policies can be imported using their identifier consisting of `<namespace-name>/<network-policy-name>`, e.g.:

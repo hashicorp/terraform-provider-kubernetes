@@ -1,0 +1,42 @@
+name: Networking Terraform Core Tests
+
+on:
+  pull_request:
+    paths:
+      - 'internal/framework/provider/networkingv1/**'
+      - 'internal/framework/provider/common/**'
+      - 'internal/framework/provider/provider.go'
+      - 'internal/mux/**'
+      - 'kubernetes/provider.go'
+      - 'kubernetes/networking_v1_provider_test.go'
+      - 'kubernetes/*ingress*v1*test.go'
+      - 'kubernetes/*network_policy*v1*test.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'GNUmakefile'
+      - '.github/workflows/networking_core_tests.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  networking_core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - name: Set up Go
+        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: go.mod
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+      - name: Run networking unit and protocol tests
+        run: env -u TF_ACC go test ./internal/framework/provider/networkingv1 ./internal/framework/provider/common -count=1 -timeout=30s
+      - name: Run local migration tests
+        run: make networking-core-test

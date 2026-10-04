@@ -1,0 +1,19 @@
+```release-note:enhancement
+`resource/kubernetes_ingress_v1`, `resource/kubernetes_ingress_class_v1`, `resource/kubernetes_network_policy_v1`: Migrate managed resources to Plugin Framework while retaining their resource types and resource identity. Historical schema version 0 state upgrades directly to version 1. Add Terraform 1.8+ moved-block support from the deprecated ingress class and network policy aliases. The incompatible v1beta1 `kubernetes_ingress` alias does not support this move.
+```
+
+```release-note:note
+`resource/kubernetes_ingress_v1`, `resource/kubernetes_ingress_class_v1`, `resource/kubernetes_network_policy_v1`: Explicitly empty selector label maps and expression values can require a one-time state-only update from null to an empty collection. Omitted `match_expressions` arguments can normalize from an empty list to null. These updates preserve the Kubernetes policy. After create or update, state retains known planned specification values; admission changes appear as drift on the next refresh.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_ingress_v1`, `resource/kubernetes_ingress_class_v1`, `resource/kubernetes_network_policy_v1`: Selected singleton backends, HTTP rules, parameters, selectors, and IP blocks now use object arguments (`field = { ... }`) instead of blocks. Ingress HTTP paths and selector match expressions remain repeated values and now use list-of-object arguments. Update only the converted object indexes in references and lifecycle paths. Metadata/spec and other repeated blocks retain their syntax. IngressClass state containing multiple historical parameters blocks is rejected; consolidate to the one active parameters object and refresh with the previous provider before upgrading. Follow each resource's migration guide and preserve absent versus empty selectors.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_ingress_v1`, `resource/kubernetes_ingress_class_v1`, `resource/kubernetes_network_policy_v1`: State schema version increases from 0 to 1. Provider 3.x cannot read state saved with the new schema. Back up state before upgrading.
+```
+
+```release-note:note
+`resource/kubernetes_ingress_v1`, `resource/kubernetes_ingress_class_v1`, `resource/kubernetes_network_policy_v1`: Updates patch configured fields while preserving unrelated fields managed by other clients. Existing versioned resources retain their addresses and do not need a moved block or re-import.
+```

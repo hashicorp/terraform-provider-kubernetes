@@ -84,6 +84,11 @@ testfuncs: fmtcheck
 frameworkacc:
 	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
 
+# Released-provider migrations use only localhost fixtures and need Terraform.
+# Keep their download and runtime budget separate from the default unit suite.
+networking-core-test:
+	env -u TF_ACC KUBE_NETWORKING_CORE_TEST=1 go test ./internal/framework/provider/networkingv1 -count=1 -timeout=10m -run '^TestNetworkingV1Core(IngressUpgrade|IngressClassUpgrade|NetworkPolicyUpgrade|IngressClassAliasMove|NetworkPolicyAliasMove)$$/full$$' $(TESTARGS)
+
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package. For example,"; \
@@ -180,4 +185,4 @@ docs-lint-fix: tools
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
 	@terrafmt fmt ./docs --pattern '*.markdown'
 
-.PHONY: build test testacc frameworkacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry
+.PHONY: build test testacc frameworkacc networking-core-test tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry

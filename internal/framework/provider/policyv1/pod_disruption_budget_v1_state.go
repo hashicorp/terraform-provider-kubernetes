@@ -4,6 +4,7 @@
 package policyv1
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -36,9 +37,9 @@ func (r *PodDisruptionBudgetV1) UpgradeState(context.Context) map[int64]resource
 	}
 }
 
-// Only spec[0].selector changes shape. RawMessage preserves all other values,
-// including numbers and explicit null/empty maps, lists and sets. Accepting an
-// object makes the conversion idempotent without accepting malformed lists.
+// Convert the selector shape and the unset generate_name representation that
+// Read writes. RawMessage preserves other values, including explicit empty
+// collections. Accepting an object makes the conversion idempotent.
 func upgradePDBSelectorState(data []byte) ([]byte, error) {
 	var state map[string]json.RawMessage
 	if err := json.Unmarshal(data, &state); err != nil {
@@ -68,6 +69,17 @@ func upgradePDBSelectorState(data []byte) ([]byte, error) {
 	state["spec"], err = json.Marshal(specs)
 	if err != nil {
 		return nil, err
+	}
+	var metadata []map[string]json.RawMessage
+	if err := json.Unmarshal(state["metadata"], &metadata); err != nil {
+		return nil, err
+	}
+	if len(metadata) == 1 && bytes.Equal(bytes.TrimSpace(metadata[0]["generate_name"]), []byte(`""`)) {
+		metadata[0]["generate_name"] = json.RawMessage(`null`)
+		state["metadata"], err = json.Marshal(metadata)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return json.Marshal(state)
 }

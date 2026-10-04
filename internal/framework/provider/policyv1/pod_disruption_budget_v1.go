@@ -75,7 +75,7 @@ func (r *PodDisruptionBudgetV1) client() (policyclient.PolicyV1Interface, kubern
 		diags.AddError("Kubernetes client error", err.Error())
 		return nil, nil, diags
 	}
-	if conn == nil || conn.PolicyV1() == nil {
+	if conn == nil {
 		diags.AddError("Kubernetes client error", "The Kubernetes policy/v1 client is unavailable.")
 		return nil, nil, diags
 	}

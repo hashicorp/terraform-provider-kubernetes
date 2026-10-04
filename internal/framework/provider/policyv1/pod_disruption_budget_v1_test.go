@@ -237,7 +237,7 @@ func testAccKubernetesPodDisruptionBudgetV1Config_minAvailable(name string) stri
 const pdbAddress = "kubernetes_pod_disruption_budget_v1.test"
 
 func TestAccPodDisruptionBudgetV1_Upgrade(t *testing.T) {
-	for _, version := range []string{"3.2.1", "2.37.1"} {
+	for _, version := range []string{"3.3.0", "2.37.1"} {
 		for _, variant := range []string{
 			"minimal", "full", "zero", "zero_percent", "min_integer", "max_percent",
 			"empty_threshold", "empty_selector", "empty_match_labels", "exists",
@@ -490,9 +490,10 @@ func TestAccPodDisruptionBudgetV1_DriftAndDisappears(t *testing.T) {
 			config := pdbConfig("tf-pdb-"+acctest.RandString(10), "full")
 			var before policy.PodDisruptionBudget
 			expectedAction := plancheck.ResourceActionUpdate
-			if action == "spec" {
+			switch action {
+			case "spec":
 				expectedAction = plancheck.ResourceActionDestroyBeforeCreate
-			} else if action == "delete" {
+			case "delete":
 				expectedAction = plancheck.ResourceActionCreate
 			}
 			resource.ParallelTest(t, resource.TestCase{
@@ -578,7 +579,7 @@ moved {
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "3.2.1"},
+					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "3.3.0"},
 				},
 				Config: pdbLegacyConfig(name, "full"), Check: pdbCheckRemote(p, &before, true),
 			},

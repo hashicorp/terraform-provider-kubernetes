@@ -1,7 +1,11 @@
 ```release-note:breaking-change
-resource/kubernetes_pod_disruption_budget_v1: Change `spec.selector` to a required object (`selector = { ... }`) and `match_expressions` to a list of objects. Remove the selector's `[0]` from references and lifecycle paths. Existing schema version 0 state upgrades automatically without recreating the PDB. See the resource upgrade guide for module, conditional and Terraform JSON examples.
+`resource/kubernetes_pod_disruption_budget_v1`: Change `spec.selector` to a required object (`selector = { ... }`) and `match_expressions` to a list of objects. Remove the selector's `[0]` from references and lifecycle paths. Existing schema version 0 state upgrades automatically without recreating the PDB. See the resource upgrade guide for module, conditional and Terraform JSON examples.
 ```
 
 ```release-note:enhancement
-resource/kubernetes_pod_disruption_budget_v1: Migrate to Plugin Framework while retaining resource IDs and spec replacement behavior. Legacy empty selector and metadata collections may need a one-time state-only update without changing the Kubernetes object.
+`resource/kubernetes_pod_disruption_budget_v1`: Migrate to Plugin Framework while retaining resource IDs and spec replacement behavior. Legacy empty selector and metadata collections may need a one-time state-only update without changing the Kubernetes object.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_pod_disruption_budget_v1`: State schema version increases from 0 to 1. Provider 3.x cannot read state saved with the new schema. Back up state before upgrading.
 ```

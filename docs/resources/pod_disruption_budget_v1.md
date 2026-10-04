@@ -44,7 +44,7 @@ Read-Only:
 
 Required:
 
-- `selector` (Attributes) Label query over pods whose evictions are managed by the disruption budget. A null selector will match no pods, while an empty ({}) selector will select all pods within the namespace. An empty object selects all pods in the namespace. (see [below for nested schema](#nestedatt--spec--selector))
+- `selector` (Attributes) Label query over pods whose evictions are managed by the disruption budget. A null selector will match no pods, while an empty ({}) selector will select all pods within the namespace. (see [below for nested schema](#nestedatt--spec--selector))
 
 Optional:
 
@@ -218,7 +218,7 @@ configurations with both `metadata.name` and `metadata.generate_name` remain
 valid; a warning explains that Kubernetes uses the explicit name.
 
 When upgrading SDKv2-written state, an unset `metadata.generate_name` can change
-from `""` to `null` during refresh. An omitted `match_expressions` attribute can
+from `""` to `null` when state is upgraded. An omitted `match_expressions` attribute can
 normalize from the old empty block list `[]` to `null`. Explicitly configured
 empty metadata maps, `selector.match_labels = {}`, or expression `values = []`
 can normalize legacy `null` to the configured empty collection. Conversely,

@@ -55,7 +55,7 @@ func (r *PodDisruptionBudgetV1) Schema(_ context.Context, _ resource.SchemaReque
 						"max_unavailable": threshold(specDocs["maxUnavailable"]),
 
 						"selector": schema.SingleNestedAttribute{
-							Description: specDocs["selector"] + " An empty object selects all pods in the namespace.",
+							Description: specDocs["selector"],
 							Required:    true,
 							Attributes: map[string]schema.Attribute{
 								"match_labels": schema.MapAttribute{

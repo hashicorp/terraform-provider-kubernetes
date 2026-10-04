@@ -64,7 +64,7 @@ Optional:
 - `publish_not_ready_addresses` (Boolean) When set to true, indicates that DNS implementations must publish the `notReadyAddresses` of subsets for the Endpoints associated with the Service. The default value is `false`. The primary use case for setting this field is to use a StatefulSet's Headless Service to propagate `SRV` records for its Pods without respect to their readiness for purpose of peer discovery.
 - `selector` (Map of String) Route service traffic to pods with label keys and values matching this selector. Only applies to types `ClusterIP`, `NodePort`, and `LoadBalancer`. Omitting a previously nonempty selector clears it; an omitted null or empty selector retains its stored representation. More info: https://kubernetes.io/docs/concepts/services-networking/service/
 - `session_affinity` (String) Used to maintain session affinity. Supports `ClientIP` and `None`. Defaults to `None`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
-- `session_affinity_config` (Attributes List) Contains the configurations of session affinity. Use list-of-object argument syntax, for example `session_affinity_config = [{ client_ip = [{ timeout_seconds = 300 }] }]`. Omit or set to null to retain provider-computed values, or use `[{}]` to request defaults. An explicit empty list is invalid when `session_affinity` is `ClientIP`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-ipvs (see [below for nested schema](#nestedatt--spec--session_affinity_config))
+- `session_affinity_config` (Attributes) Contains the session affinity configuration. Use object argument syntax, for example `session_affinity_config = { client_ip = { timeout_seconds = 300 } }`. Omit or set to null to retain provider-computed values, or use `{}` to request defaults. (see [below for nested schema](#nestedatt--spec--session_affinity_config))
 - `type` (String) Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
 
 <a id="nestedblock--spec--port"></a>
@@ -88,14 +88,14 @@ Optional:
 
 Optional:
 
-- `client_ip` (Attributes List) Contains the configurations of Client IP based session affinity. Use list-of-object argument syntax, for example `client_ip = [{ timeout_seconds = 300 }]`. Omit or set to null to retain provider-computed values, or use `[{}]` to request defaults. An explicit empty list is invalid when `session_affinity` is `ClientIP`. (see [below for nested schema](#nestedatt--spec--session_affinity_config--client_ip))
+- `client_ip` (Attributes) Client IP session affinity configuration. Omit or set to null to retain provider-computed values, or use `{}` to request defaults. (see [below for nested schema](#nestedatt--spec--session_affinity_config--client_ip))
 
 <a id="nestedatt--spec--session_affinity_config--client_ip"></a>
 ### Nested Schema for `spec.session_affinity_config.client_ip`
 
 Optional:
 
-- `timeout_seconds` (Number) Specifies the seconds of `ClientIP` type session sticky time. The value must be > 0 and <= 86400 (for 1 day) if `ServiceAffinity` == `ClientIP`. When omitted or removed, an existing provider-computed timeout is retained. Kubernetes defaults new ClientIP configurations to 10800 seconds.
+- `timeout_seconds` (Number) Specifies the seconds of ClientIP session sticky time, from 1 to 86400. When omitted or removed, an existing provider-computed timeout is retained. Kubernetes defaults new ClientIP configurations to 10800 seconds.
 
 
 
@@ -148,6 +148,9 @@ resource "kubernetes_service_v1" "example" {
       app = kubernetes_pod.example.metadata.0.labels.app
     }
     session_affinity = "ClientIP"
+    session_affinity_config = {
+      client_ip = { timeout_seconds = 300 }
+    }
     port {
       port        = 8080
       target_port = 80
@@ -241,12 +244,12 @@ output "load_balancer_info" {
 
 ## Framework migration: session affinity syntax
 
-The `metadata`, `spec`, and `port` blocks keep their existing syntax. If you
-configure `session_affinity_config`, use list-of-object assignment for it and
-its nested `client_ip`. This allows omitted values to remain API-computed without
-changing the stored list shape.
+The `metadata`, `spec`, and `port` blocks keep their existing syntax. Change only
+`session_affinity_config` and its nested `client_ip` from blocks to object arguments.
+Both objects are optional and computed. State upgrades preserve the Service ID,
+UID, network allocations, and existing timeout.
 
-Before:
+Before, in the released SDK provider:
 
 ```terraform
 session_affinity_config {
@@ -259,20 +262,70 @@ session_affinity_config {
 After, inside the same `spec` block:
 
 ```terraform
-session_affinity_config = [{
-  client_ip = [{
+session_affinity_config = {
+  client_ip = {
     timeout_seconds = 300
-  }]
-}]
+  }
+}
 ```
 
-An empty `session_affinity_config {}` becomes `session_affinity_config = [{}]`.
-If the configuration omitted session affinity configuration entirely, keep it
-omitted. The syntax change must not alter the Service's affinity settings.
+When `session_affinity = "None"`, omit `session_affinity_config` or set it to `null`.
+Kubernetes clears affinity configuration in this mode; a configured `{}` causes
+repeated differences after refresh, as it did with an empty block in the SDK provider.
 
-With `session_affinity = "ClientIP"`, do not use `[]` for either
-`session_affinity_config` or `client_ip`: Kubernetes requires a populated
-configuration. Use omission, `null`, or `[{}]` for API-computed values.
+An empty `session_affinity_config {}` becomes `session_affinity_config = {}`.
+An empty `client_ip {}` becomes `client_ip = {}`. Omitted blocks stay omitted;
+`null` also permits provider-computed values. `{}` preserves a present object
+with computed children. Kubernetes defaults a new ClientIP timeout to 10800
+seconds. Removing a configured timeout retains the existing computed timeout.
+Historical missing, null, and empty singleton lists become null; present objects
+retain their child values. The provider upgrades schema versions 0 and 1 directly
+to version 2. No manual state editing is needed.
+
+Update references and `ignore_changes` paths by removing only the affinity indexes:
+
+```terraform
+# Before:
+# kubernetes_service_v1.example.spec[0].session_affinity_config[0].client_ip[0].timeout_seconds
+# After:
+output "affinity_timeout" {
+  value = try(kubernetes_service_v1.example.spec[0].session_affinity_config.client_ip.timeout_seconds, null)
+}
+
+# Inside the resource, if this timeout is intentionally managed elsewhere:
+lifecycle {
+  ignore_changes = [spec[0].session_affinity_config.client_ip.timeout_seconds]
+}
+```
+
+Replace any dynamic affinity blocks with conditional object expressions:
+
+```terraform
+session_affinity_config = var.enable_affinity ? {
+  client_ip = { timeout_seconds = 300 }
+} : null
+```
+
+Module variables must also use objects instead of singleton lists:
+
+```terraform
+variable "affinity" {
+  type = object({
+    client_ip = optional(object({
+      timeout_seconds = optional(number)
+    }))
+  })
+  default = null
+}
+
+# Inside spec:
+# session_affinity_config = var.affinity
+```
+
+In Terraform JSON configuration, use `"session_affinity_config":
+{"client_ip": {"timeout_seconds": 300}}`; remove the two singleton arrays only.
+An absent affinity configuration is `null`, while `{}` requests a present object
+with computed children. `[]` is no longer a valid value for either object.
 
 ### Empty collections and automatic ports
 

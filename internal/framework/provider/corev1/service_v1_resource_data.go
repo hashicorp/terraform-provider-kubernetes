@@ -76,26 +76,25 @@ func expandServicePort(in ServiceV1PortModel) corev1.ServicePort {
 	return out
 }
 
-func expandServiceAffinity(ctx context.Context, in types.List, diags diag.Diagnostics) (*corev1.SessionAffinityConfig, diag.Diagnostics) {
-	if in.IsNull() || in.IsUnknown() || len(in.Elements()) == 0 {
+func expandServiceAffinity(ctx context.Context, in types.Object, diags diag.Diagnostics) (*corev1.SessionAffinityConfig, diag.Diagnostics) {
+	if in.IsNull() || in.IsUnknown() {
 		return nil, diags
 	}
-	var models []ServiceV1SessionAffinityConfigModel
-	diags.Append(in.ElementsAs(ctx, &models, false)...)
-	if diags.HasError() || len(models) != 1 {
+	var model ServiceV1SessionAffinityConfigModel
+	diags.Append(in.As(ctx, &model, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
 		return nil, diags
 	}
 	out := &corev1.SessionAffinityConfig{}
-	clientIP := models[0].ClientIP
-	if !clientIP.IsNull() && !clientIP.IsUnknown() && len(clientIP.Elements()) > 0 {
-		var clients []ServiceV1ClientIPModel
-		diags.Append(clientIP.ElementsAs(ctx, &clients, false)...)
-		if diags.HasError() || len(clients) != 1 {
+	if !model.ClientIP.IsNull() && !model.ClientIP.IsUnknown() {
+		var client ServiceV1ClientIPModel
+		diags.Append(model.ClientIP.As(ctx, &client, basetypes.ObjectAsOptions{})...)
+		if diags.HasError() {
 			return nil, diags
 		}
 		out.ClientIP = &corev1.ClientIPConfig{}
-		if !clients[0].TimeoutSeconds.IsNull() && !clients[0].TimeoutSeconds.IsUnknown() {
-			out.ClientIP.TimeoutSeconds = ptr.To(int32(clients[0].TimeoutSeconds.ValueInt64()))
+		if !client.TimeoutSeconds.IsNull() && !client.TimeoutSeconds.IsUnknown() {
+			out.ClientIP.TimeoutSeconds = ptr.To(int32(client.TimeoutSeconds.ValueInt64()))
 		}
 	}
 	return out, diags
@@ -229,7 +228,7 @@ func flattenServiceSpec(ctx context.Context, in corev1.ServiceSpec, prior Servic
 	if applying {
 		resolved, d := serviceResolveAffinityValue(ctx, prior.SessionAffinityConfig, affinity)
 		diags.Append(d...)
-		out.SessionAffinityConfig = resolved.(types.List)
+		out.SessionAffinityConfig = resolved.(types.Object)
 	}
 	return out, diags
 }
@@ -271,20 +270,22 @@ func serviceStringSet(ctx context.Context, values []string, prior types.Set, app
 	return out
 }
 
-func flattenServiceAffinity(ctx context.Context, in *corev1.SessionAffinityConfig) (types.List, diag.Diagnostics) {
+func flattenServiceAffinity(ctx context.Context, in *corev1.SessionAffinityConfig) (types.Object, diag.Diagnostics) {
 	if in == nil {
-		return types.ListValue(serviceSessionAffinityConfigType, []attr.Value{})
+		return types.ObjectNull(serviceSessionAffinityConfigType.AttrTypes), nil
 	}
-	clients := []ServiceV1ClientIPModel{}
+	client := types.ObjectNull(serviceClientIPType.AttrTypes)
+	var diags diag.Diagnostics
 	if in.ClientIP != nil {
 		timeout := types.Int64Null()
 		if in.ClientIP.TimeoutSeconds != nil {
 			timeout = types.Int64Value(int64(*in.ClientIP.TimeoutSeconds))
 		}
-		clients = append(clients, ServiceV1ClientIPModel{TimeoutSeconds: timeout})
+		var d diag.Diagnostics
+		client, d = types.ObjectValueFrom(ctx, serviceClientIPType.AttrTypes, ServiceV1ClientIPModel{TimeoutSeconds: timeout})
+		diags.Append(d...)
 	}
-	list, diags := types.ListValueFrom(ctx, serviceClientIPType, clients)
-	out, d := types.ListValueFrom(ctx, serviceSessionAffinityConfigType, []ServiceV1SessionAffinityConfigModel{{ClientIP: list}})
+	out, d := types.ObjectValueFrom(ctx, serviceSessionAffinityConfigType.AttrTypes, ServiceV1SessionAffinityConfigModel{ClientIP: client})
 	diags.Append(d...)
 	return out, diags
 }
@@ -295,25 +296,6 @@ func serviceResolveAffinityValue(ctx context.Context, planned, actual attr.Value
 		return actual, nil
 	}
 	switch planned := planned.(type) {
-	case types.List:
-		actual, ok := actual.(types.List)
-		if !ok || actual.IsNull() || actual.IsUnknown() {
-			return planned, nil
-		}
-		elements := planned.Elements()
-		var diags diag.Diagnostics
-		for i, element := range elements {
-			api := types.ObjectNull(element.(types.Object).AttributeTypes(ctx))
-			if i < len(actual.Elements()) {
-				api = actual.Elements()[i].(types.Object)
-			}
-			value, d := serviceResolveAffinityValue(ctx, element, api)
-			diags.Append(d...)
-			elements[i] = value
-		}
-		out, d := types.ListValue(planned.ElementType(ctx), elements)
-		diags.Append(d...)
-		return out, diags
 	case types.Object:
 		actual, ok := actual.(types.Object)
 		if !ok {
@@ -343,8 +325,8 @@ func serviceResolveAffinityValue(ctx context.Context, planned, actual attr.Value
 }
 
 func serviceNullValue(ctx context.Context, t attr.Type) (attr.Value, diag.Diagnostics) {
-	if list, ok := t.(basetypes.ListType); ok {
-		return types.ListValue(list.ElemType, []attr.Value{})
+	if object, ok := t.(basetypes.ObjectType); ok {
+		return types.ObjectNull(object.AttrTypes), nil
 	}
 	if t.Equal(types.Int64Type) {
 		return types.Int64Null(), nil

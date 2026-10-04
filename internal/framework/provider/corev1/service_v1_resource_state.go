@@ -4,8 +4,10 @@
 package corev1
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -45,25 +47,25 @@ type sdkv2ServiceMetadataV1 struct {
 }
 
 type sdkv2ServiceSpecV1 struct {
-	AllocateLoadBalancerNodePorts *bool                    `json:"allocate_load_balancer_node_ports"`
-	ClusterIP                     *string                  `json:"cluster_ip"`
-	ClusterIPs                    []string                 `json:"cluster_ips"`
-	ExternalIPs                   []string                 `json:"external_ips"`
-	ExternalName                  *string                  `json:"external_name"`
-	ExternalTrafficPolicy         *string                  `json:"external_traffic_policy"`
-	IPFamilies                    []string                 `json:"ip_families"`
-	IPFamilyPolicy                *string                  `json:"ip_family_policy"`
-	InternalTrafficPolicy         *string                  `json:"internal_traffic_policy"`
-	LoadBalancerClass             *string                  `json:"load_balancer_class"`
-	LoadBalancerIP                *string                  `json:"load_balancer_ip"`
-	LoadBalancerSourceRanges      []string                 `json:"load_balancer_source_ranges"`
-	Ports                         []sdkv2ServicePortV1     `json:"port"`
-	PublishNotReadyAddresses      *bool                    `json:"publish_not_ready_addresses"`
-	Selector                      map[string]string        `json:"selector"`
-	SessionAffinity               *string                  `json:"session_affinity"`
-	SessionAffinityConfig         []sdkv2ServiceAffinityV1 `json:"session_affinity_config"`
-	Type                          *string                  `json:"type"`
-	HealthCheckNodePort           *int64                   `json:"health_check_node_port"`
+	AllocateLoadBalancerNodePorts *bool                `json:"allocate_load_balancer_node_ports"`
+	ClusterIP                     *string              `json:"cluster_ip"`
+	ClusterIPs                    []string             `json:"cluster_ips"`
+	ExternalIPs                   []string             `json:"external_ips"`
+	ExternalName                  *string              `json:"external_name"`
+	ExternalTrafficPolicy         *string              `json:"external_traffic_policy"`
+	IPFamilies                    []string             `json:"ip_families"`
+	IPFamilyPolicy                *string              `json:"ip_family_policy"`
+	InternalTrafficPolicy         *string              `json:"internal_traffic_policy"`
+	LoadBalancerClass             *string              `json:"load_balancer_class"`
+	LoadBalancerIP                *string              `json:"load_balancer_ip"`
+	LoadBalancerSourceRanges      []string             `json:"load_balancer_source_ranges"`
+	Ports                         []sdkv2ServicePortV1 `json:"port"`
+	PublishNotReadyAddresses      *bool                `json:"publish_not_ready_addresses"`
+	Selector                      map[string]string    `json:"selector"`
+	SessionAffinity               *string              `json:"session_affinity"`
+	SessionAffinityConfig         json.RawMessage      `json:"session_affinity_config"`
+	Type                          *string              `json:"type"`
+	HealthCheckNodePort           *int64               `json:"health_check_node_port"`
 }
 
 type sdkv2ServicePortV1 struct {
@@ -73,14 +75,6 @@ type sdkv2ServicePortV1 struct {
 	Port        int64   `json:"port"`
 	Protocol    *string `json:"protocol"`
 	TargetPort  *string `json:"target_port"`
-}
-
-type sdkv2ServiceAffinityV1 struct {
-	ClientIP []sdkv2ServiceClientIPV1 `json:"client_ip"`
-}
-
-type sdkv2ServiceClientIPV1 struct {
-	TimeoutSeconds *int64 `json:"timeout_seconds"`
 }
 
 type sdkv2ServiceStatusV1 struct {
@@ -243,24 +237,7 @@ func serviceStateSpec(ctx context.Context, in sdkv2ServiceSpecV1) (ServiceV1Spec
 			NodePort: types.Int64PointerValue(port.NodePort), TargetPort: types.StringPointerValue(port.TargetPort),
 		}
 	}
-	if len(in.SessionAffinityConfig) > 1 {
-		diags.AddError("Invalid service state", "session_affinity_config must contain at most one element.")
-		return out, diags
-	}
-	affinity := make([]ServiceV1SessionAffinityConfigModel, len(in.SessionAffinityConfig))
-	for i, entry := range in.SessionAffinityConfig {
-		if len(entry.ClientIP) > 1 {
-			diags.AddError("Invalid service state", "client_ip must contain at most one element.")
-			return out, diags
-		}
-		clientIPs := make([]ServiceV1ClientIPModel, len(entry.ClientIP))
-		for j, client := range entry.ClientIP {
-			clientIPs[j] = ServiceV1ClientIPModel{TimeoutSeconds: types.Int64PointerValue(client.TimeoutSeconds)}
-		}
-		affinity[i].ClientIP, d = types.ListValueFrom(ctx, serviceClientIPType, clientIPs)
-		diags.Append(d...)
-	}
-	out.SessionAffinityConfig, d = types.ListValueFrom(ctx, serviceSessionAffinityConfigType, affinity)
+	out.SessionAffinityConfig, d = serviceStoredAffinity(in.SessionAffinityConfig)
 	diags.Append(d...)
 	return out, diags
 }
@@ -309,6 +286,70 @@ func serviceStoredStatus(in []sdkv2ServiceStatusV1) (types.List, diag.Diagnostic
 		statuses[i] = object
 	}
 	out, d := types.ListValue(serviceStatusType, statuses)
+	diags.Append(d...)
+	return out, diags
+}
+
+// serviceStoredSingleton accepts historical singleton lists and the current object
+// shape so conversion is idempotent. Only the two affinity paths use it.
+func serviceStoredSingleton(raw json.RawMessage, name string) (map[string]json.RawMessage, error) {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
+		return nil, nil
+	}
+	if raw[0] == '[' {
+		var list []json.RawMessage
+		if err := json.Unmarshal(raw, &list); err != nil {
+			return nil, err
+		}
+		if len(list) == 0 {
+			return nil, nil
+		}
+		if len(list) != 1 {
+			return nil, fmt.Errorf("%s must contain at most one element", name)
+		}
+		raw = bytes.TrimSpace(list[0])
+	}
+	if len(raw) == 0 || raw[0] != '{' {
+		return nil, fmt.Errorf("%s must be an object or a singleton list of objects", name)
+	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &object); err != nil {
+		return nil, err
+	}
+	return object, nil
+}
+
+func serviceStoredAffinity(raw json.RawMessage) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	absent := types.ObjectNull(serviceSessionAffinityConfigType.AttrTypes)
+	affinity, err := serviceStoredSingleton(raw, "session_affinity_config")
+	if err != nil {
+		diags.AddError("Invalid service state", err.Error())
+		return absent, diags
+	}
+	if affinity == nil {
+		return absent, diags
+	}
+	client, err := serviceStoredSingleton(affinity["client_ip"], "client_ip")
+	if err != nil {
+		diags.AddError("Invalid service state", err.Error())
+		return absent, diags
+	}
+	clientValue := types.ObjectNull(serviceClientIPType.AttrTypes)
+	if client != nil {
+		var timeout *int64
+		if raw := client["timeout_seconds"]; len(raw) != 0 {
+			if err := json.Unmarshal(raw, &timeout); err != nil {
+				diags.AddError("Invalid service state", err.Error())
+				return absent, diags
+			}
+		}
+		var d diag.Diagnostics
+		clientValue, d = types.ObjectValue(serviceClientIPType.AttrTypes, map[string]attr.Value{"timeout_seconds": types.Int64PointerValue(timeout)})
+		diags.Append(d...)
+	}
+	out, d := types.ObjectValue(serviceSessionAffinityConfigType.AttrTypes, map[string]attr.Value{"client_ip": clientValue})
 	diags.Append(d...)
 	return out, diags
 }

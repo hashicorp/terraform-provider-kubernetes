@@ -136,7 +136,7 @@ func serviceMarkClearOutputsUnknown(ctx context.Context, configured map[string]m
 			"ip_families":             types.ListUnknown(types.StringType),
 			"ip_family_policy":        types.StringUnknown(),
 			"health_check_node_port":  types.Int64Unknown(),
-			"session_affinity_config": types.ListUnknown(serviceSessionAffinityConfigType),
+			"session_affinity_config": types.ObjectUnknown(serviceSessionAffinityConfigType.AttrTypes),
 		},
 	}
 	for _, parent := range []string{"metadata", "spec"} {
@@ -154,7 +154,7 @@ func serviceMarkClearOutputsUnknown(ctx context.Context, configured map[string]m
 	if !known {
 		return
 	}
-	serviceMarkAffinityClearOutputsUnknown(ctx, spec["session_affinity_config"].(types.List), resp)
+	serviceMarkAffinityClearOutputsUnknown(ctx, spec["session_affinity_config"].(types.Object), resp)
 	configuredPorts := spec["port"].(types.List)
 	if configuredPorts.IsNull() || configuredPorts.IsUnknown() {
 		return
@@ -179,27 +179,24 @@ func serviceMarkClearOutputsUnknown(ctx context.Context, configured map[string]m
 	}
 }
 
-func serviceMarkAffinityClearOutputsUnknown(ctx context.Context, config types.List, resp *resource.ModifyPlanResponse) {
-	configObject, configKnown := servicePlanningObject(config)
-	if !configKnown {
+func serviceMarkAffinityClearOutputsUnknown(ctx context.Context, config types.Object, resp *resource.ModifyPlanResponse) {
+	if config.IsNull() || config.IsUnknown() {
 		return
 	}
 	p := path.Root("spec").AtListIndex(0).AtName("session_affinity_config")
-	var plan types.List
+	var plan types.Object
 	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, p, &plan)...)
-	planObject, planKnown := servicePlanningObject(plan)
-	if resp.Diagnostics.HasError() || !planKnown {
+	if resp.Diagnostics.HasError() || plan.IsNull() || plan.IsUnknown() {
 		return
 	}
-	client := configObject["client_ip"].(types.List)
-	clientPath := p.AtListIndex(0).AtName("client_ip")
+	client := config.Attributes()["client_ip"].(types.Object)
+	clientPath := p.AtName("client_ip")
 	if client.IsNull() {
-		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, clientPath, types.ListUnknown(serviceClientIPType))...)
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, clientPath, types.ObjectUnknown(serviceClientIPType.AttrTypes))...)
 		return
 	}
-	clientObject, clientKnown := servicePlanningObject(client)
-	_, plannedClientKnown := servicePlanningObject(planObject["client_ip"].(types.List))
-	if clientKnown && plannedClientKnown && clientObject["timeout_seconds"].IsNull() {
-		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, clientPath.AtListIndex(0).AtName("timeout_seconds"), types.Int64Unknown())...)
+	plannedClient := plan.Attributes()["client_ip"].(types.Object)
+	if !client.IsUnknown() && !plannedClient.IsNull() && !plannedClient.IsUnknown() && client.Attributes()["timeout_seconds"].IsNull() {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, clientPath.AtName("timeout_seconds"), types.Int64Unknown())...)
 	}
 }

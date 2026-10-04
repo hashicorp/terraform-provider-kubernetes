@@ -114,6 +114,13 @@ func (r *ServiceV1) Read(ctx context.Context, req resource.ReadRequest, resp *re
 		resp.Diagnostics.AddError("Invalid service ID", err.Error())
 		return
 	}
+	// Legacy state may have no identity yet, including when the first Read is 404.
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, serviceIdentity(namespace, name))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 	clients, filters, d := r.sdkv2Meta()
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {

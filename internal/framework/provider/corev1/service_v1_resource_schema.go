@@ -27,7 +27,7 @@ import (
 
 func (r *ServiceV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Version:     1,
+		Version:     2,
 		Description: "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -184,31 +184,21 @@ func serviceSpecSchema() schema.ListNestedBlock {
 					Default:     stringdefault.StaticString("None"),
 					Validators:  []validator.String{stringvalidator.OneOf("ClientIP", "None")},
 				},
-				// This is the explicitly approved HCL change. Nested attributes
-				// preserve computed child ownership while retaining list state types.
-				"session_affinity_config": schema.ListNestedAttribute{
-					Description: "Contains the configurations of session affinity. Use list-of-object argument syntax, for example `session_affinity_config = [{ client_ip = [{ timeout_seconds = 300 }] }]`. Omit or set to null to retain provider-computed values, or use `[{}]` to request defaults. An explicit empty list is invalid when `session_affinity` is `ClientIP`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-ipvs",
+				"session_affinity_config": schema.SingleNestedAttribute{
+					Description: "Contains the session affinity configuration. Use object argument syntax, for example `session_affinity_config = { client_ip = { timeout_seconds = 300 } }`. Omit or set to null to retain provider-computed values, or use `{}` to request defaults.",
 					Optional:    true,
 					Computed:    true,
-					Validators:  []validator.List{listvalidator.SizeAtMost(1)},
-					NestedObject: schema.NestedAttributeObject{
-						Attributes: map[string]schema.Attribute{
-							"client_ip": schema.ListNestedAttribute{
-								Description: "Contains the configurations of Client IP based session affinity. Use list-of-object argument syntax, for example `client_ip = [{ timeout_seconds = 300 }]`. Omit or set to null to retain provider-computed values, or use `[{}]` to request defaults. An explicit empty list is invalid when `session_affinity` is `ClientIP`.",
-								Optional:    true,
-								Computed:    true,
-								Validators:  []validator.List{listvalidator.SizeAtMost(1)},
-								NestedObject: schema.NestedAttributeObject{
-									Attributes: map[string]schema.Attribute{
-										"timeout_seconds": schema.Int64Attribute{
-											Description: "Specifies the seconds of `ClientIP` type session sticky time. The value must be > 0 and <= 86400 (for 1 day) if `ServiceAffinity` == `ClientIP`. When omitted or removed, an existing provider-computed timeout is retained. Kubernetes defaults new ClientIP configurations to 10800 seconds.",
-											Optional:    true,
-											Computed:    true,
-											Validators: []validator.Int64{
-												int64validator.Between(1, 86400),
-											},
-										},
-									},
+					Attributes: map[string]schema.Attribute{
+						"client_ip": schema.SingleNestedAttribute{
+							Description: "Client IP session affinity configuration. Omit or set to null to retain provider-computed values, or use `{}` to request defaults.",
+							Optional:    true,
+							Computed:    true,
+							Attributes: map[string]schema.Attribute{
+								"timeout_seconds": schema.Int64Attribute{
+									Description: "Specifies the seconds of ClientIP session sticky time, from 1 to 86400. When omitted or removed, an existing provider-computed timeout is retained. Kubernetes defaults new ClientIP configurations to 10800 seconds.",
+									Optional:    true,
+									Computed:    true,
+									Validators:  []validator.Int64{int64validator.Between(1, 86400)},
 								},
 							},
 						},

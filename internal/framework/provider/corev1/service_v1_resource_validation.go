@@ -30,11 +30,7 @@ func (r *ServiceV1) ValidateConfig(ctx context.Context, req resource.ValidateCon
 			spec["ip_families"].(types.List),
 			path.Root("spec").AtListIndex(i),
 		)...)
-		resp.Diagnostics.Append(validateServiceAffinityCollections(
-			spec["session_affinity"].(types.String),
-			spec["session_affinity_config"].(types.List),
-			path.Root("spec").AtListIndex(i).AtName("session_affinity_config"),
-		)...)
+
 		ports := spec["port"].(types.List)
 		if ports.IsNull() || ports.IsUnknown() {
 			continue
@@ -59,7 +55,7 @@ func (r *ServiceV1) ValidateConfig(ctx context.Context, req resource.ValidateCon
 
 func validateServiceWritePlan(spec ServiceV1SpecModel) diag.Diagnostics {
 	p := path.Root("spec").AtListIndex(0)
-	diags := validateServiceAffinityCollections(spec.SessionAffinity, spec.SessionAffinityConfig, p.AtName("session_affinity_config"))
+	var diags diag.Diagnostics
 	diags.Append(validateServiceIPAllocations(spec.Type, spec.ClusterIPs, spec.IPFamilies, p)...)
 	for i, port := range spec.Ports {
 		diags.Append(validateServiceNodePortAllocation(spec.Type, spec.AllocateLoadBalancerNodePorts, port.NodePort, p.AtName("port").AtListIndex(i).AtName("node_port"))...)
@@ -115,31 +111,6 @@ func validateServiceNodePortAllocation(serviceType types.String, allocate types.
 	if autoAllocate {
 		diags.AddAttributeError(p, "Invalid zero node_port",
 			"When the Service automatically allocates node ports (type NodePort, or LoadBalancer with allocate_load_balancer_node_ports enabled), omit node_port or set it to null instead of 0. Kubernetes replaces zero with an assigned port, which cannot be represented as the configured zero value. Remove node_port = 0 from the configuration to use automatic allocation.")
-	}
-	return diags
-}
-
-func validateServiceAffinityCollections(affinity types.String, config types.List, p path.Path) diag.Diagnostics {
-	var diags diag.Diagnostics
-	if affinity.IsUnknown() || affinity.ValueString() != "ClientIP" || config.IsNull() || config.IsUnknown() {
-		return diags
-	}
-	// ClientIP always receives an API-populated configuration. A known empty
-	// collection cannot be populated without violating the configured value.
-	if len(config.Elements()) == 0 {
-		diags.AddAttributeError(p, "Empty ClientIP configuration",
-			"When session_affinity is ClientIP, omit session_affinity_config or set it to null to retain provider-computed values. Use [{}] to request defaults, or configure one object with explicit values. An empty list cannot represent the API-generated configuration.")
-		return diags
-	}
-	for i, value := range config.Elements() {
-		if value.IsNull() || value.IsUnknown() {
-			continue
-		}
-		clientIP := value.(types.Object).Attributes()["client_ip"].(types.List)
-		if !clientIP.IsNull() && !clientIP.IsUnknown() && len(clientIP.Elements()) == 0 {
-			diags.AddAttributeError(p.AtListIndex(i).AtName("client_ip"), "Empty ClientIP configuration",
-				"When session_affinity is ClientIP, omit client_ip or set it to null to retain provider-computed values. Use [{}] to request defaults, or configure one object with explicit values. An empty list cannot represent the API-generated configuration.")
-		}
 	}
 	return diags
 }

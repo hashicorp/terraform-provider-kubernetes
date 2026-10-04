@@ -36,7 +36,7 @@ type ServiceV1SpecModel struct {
 	PublishNotReadyAddresses      types.Bool           `tfsdk:"publish_not_ready_addresses"`
 	Selector                      types.Map            `tfsdk:"selector"`
 	SessionAffinity               types.String         `tfsdk:"session_affinity"`
-	SessionAffinityConfig         types.List           `tfsdk:"session_affinity_config"`
+	SessionAffinityConfig         types.Object         `tfsdk:"session_affinity_config"`
 	Type                          types.String         `tfsdk:"type"`
 	HealthCheckNodePort           types.Int64          `tfsdk:"health_check_node_port"`
 }
@@ -51,7 +51,7 @@ type ServiceV1PortModel struct {
 }
 
 type ServiceV1SessionAffinityConfigModel struct {
-	ClientIP types.List `tfsdk:"client_ip"`
+	ClientIP types.Object `tfsdk:"client_ip"`
 }
 
 type ServiceV1ClientIPModel struct {
@@ -63,7 +63,7 @@ var serviceClientIPType = types.ObjectType{AttrTypes: map[string]attr.Type{
 }}
 
 var serviceSessionAffinityConfigType = types.ObjectType{AttrTypes: map[string]attr.Type{
-	"client_ip": types.ListType{ElemType: serviceClientIPType},
+	"client_ip": serviceClientIPType,
 }}
 
 var serviceIngressType = types.ObjectType{AttrTypes: map[string]attr.Type{

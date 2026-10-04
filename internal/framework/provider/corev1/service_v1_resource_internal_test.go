@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -24,139 +23,14 @@ import (
 // Configuration validation and expansion unit tests.
 
 func TestServiceAffinityValidateConfig(t *testing.T) {
-	affinityPath := path.Root("spec").AtListIndex(0).AtName("session_affinity_config")
-	clientPath := affinityPath.AtListIndex(0).AtName("client_ip")
-	clientConfig := func(client any) []any {
-		return []any{map[string]any{"client_ip": client}}
-	}
-	for _, tc := range []struct {
-		name      string
-		affinity  any
-		config    any
-		omit      bool
-		errorPath *path.Path
-	}{
-		{name: "ClientIP empty outer list", affinity: "ClientIP", config: []any{}, errorPath: &affinityPath},
-		{name: "ClientIP empty client list", affinity: "ClientIP", config: clientConfig([]any{}), errorPath: &clientPath},
-		{name: "ClientIP omitted outer", affinity: "ClientIP", omit: true},
-		{name: "ClientIP null outer", affinity: "ClientIP"},
-		{name: "ClientIP default outer object", affinity: "ClientIP", config: []any{map[string]any{}}},
-		{name: "ClientIP null client list", affinity: "ClientIP", config: clientConfig(nil)},
-		{name: "ClientIP default client object", affinity: "ClientIP", config: clientConfig([]any{map[string]any{}})},
-		{name: "ClientIP explicit timeout", affinity: "ClientIP", config: clientConfig([]any{map[string]any{"timeout_seconds": 300}})},
-		{name: "None empty outer list", affinity: "None", config: []any{}},
-		{name: "None empty client list", affinity: "None", config: clientConfig([]any{})},
-		{name: "unknown affinity with empty outer", affinity: tftypes.UnknownValue, config: []any{}},
-		{name: "unknown affinity with empty client", affinity: tftypes.UnknownValue, config: clientConfig([]any{})},
-		{name: "null affinity defers", config: []any{}},
-		{name: "unknown outer list", affinity: "ClientIP", config: tftypes.UnknownValue},
-		{name: "unknown outer object", affinity: "ClientIP", config: []any{tftypes.UnknownValue}},
-		{name: "unknown client list", affinity: "ClientIP", config: clientConfig(tftypes.UnknownValue)},
-		{name: "unknown client object", affinity: "ClientIP", config: clientConfig([]any{tftypes.UnknownValue})},
-		{name: "unknown timeout", affinity: "ClientIP", config: clientConfig([]any{map[string]any{"timeout_seconds": tftypes.UnknownValue}})},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			spec := map[string]any{"session_affinity": tc.affinity}
-			if !tc.omit {
-				spec["session_affinity_config"] = tc.config
-			}
-			config := serviceAffinityValidationConfig(t, []any{spec})
-			var response resource.ValidateConfigResponse
-			(&ServiceV1{}).ValidateConfig(context.Background(), resource.ValidateConfigRequest{Config: config}, &response)
-			serviceAffinityCheckDiagnostics(t, response.Diagnostics, tc.errorPath)
-		})
-	}
-	for _, tc := range []struct {
-		name string
-		spec any
-	}{
-		{"unknown spec list", tftypes.UnknownValue},
-		{"unknown spec object", []any{tftypes.UnknownValue}},
-		{"null spec list", nil},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			config := serviceAffinityValidationConfig(t, tc.spec)
-			var response resource.ValidateConfigResponse
-			(&ServiceV1{}).ValidateConfig(context.Background(), resource.ValidateConfigRequest{Config: config}, &response)
-			serviceAffinityCheckDiagnostics(t, response.Diagnostics, nil)
-		})
-	}
-}
-
-func TestServiceAffinityLateKnownEmpty(t *testing.T) {
-	affinityPath := path.Root("spec").AtListIndex(0).AtName("session_affinity_config")
-	clientPath := affinityPath.AtListIndex(0).AtName("client_ip")
-	for _, tc := range []struct {
-		name          string
-		before, after map[string]any
-		errorPath     path.Path
-	}{
-		{
-			name:      "outer list resolves empty",
-			before:    map[string]any{"session_affinity": "ClientIP", "session_affinity_config": tftypes.UnknownValue},
-			after:     map[string]any{"session_affinity": "ClientIP", "session_affinity_config": []any{}},
-			errorPath: affinityPath,
-		},
-		{
-			name:      "client list resolves empty",
-			before:    map[string]any{"session_affinity": "ClientIP", "session_affinity_config": []any{map[string]any{"client_ip": tftypes.UnknownValue}}},
-			after:     map[string]any{"session_affinity": "ClientIP", "session_affinity_config": []any{map[string]any{"client_ip": []any{}}}},
-			errorPath: clientPath,
-		},
-		{
-			name:      "affinity resolves ClientIP with empty outer",
-			before:    map[string]any{"session_affinity": tftypes.UnknownValue, "session_affinity_config": []any{}},
-			after:     map[string]any{"session_affinity": "ClientIP", "session_affinity_config": []any{}},
-			errorPath: affinityPath,
-		},
-		{
-			name:      "affinity resolves ClientIP with empty client",
-			before:    map[string]any{"session_affinity": tftypes.UnknownValue, "session_affinity_config": []any{map[string]any{"client_ip": []any{}}}},
-			after:     map[string]any{"session_affinity": "ClientIP", "session_affinity_config": []any{map[string]any{"client_ip": []any{}}}},
-			errorPath: clientPath,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
-			r := &ServiceV1{SDKv2Meta: func() any {
-				t.Error("invalid affinity reached provider client configuration")
-				return nil
-			}}
-			var validation resource.ValidateConfigResponse
-			r.ValidateConfig(ctx, resource.ValidateConfigRequest{
-				Config: serviceAffinityValidationConfig(t, []any{tc.before}),
-			}, &validation)
-			serviceAffinityCheckDiagnostics(t, validation.Diagnostics, nil)
-
-			resolved := serviceAffinityValidationConfig(t, []any{tc.after})
-			plan := tfsdk.Plan{Schema: resolved.Schema, Raw: resolved.Raw}
-			t.Run("Create", func(t *testing.T) {
-				response := resource.CreateResponse{State: tfsdk.State{Schema: resolved.Schema}}
-				r.Create(ctx, resource.CreateRequest{Plan: plan}, &response)
-				serviceAffinityCheckDiagnostics(t, response.Diagnostics, &tc.errorPath)
-				if !response.State.Raw.IsNull() {
-					t.Fatal("rejected create produced resource state")
-				}
+	for _, config := range []any{nil, tftypes.UnknownValue, map[string]any{}, map[string]any{"client_ip": nil}, map[string]any{"client_ip": tftypes.UnknownValue}, map[string]any{"client_ip": map[string]any{}}, map[string]any{"client_ip": map[string]any{"timeout_seconds": tftypes.UnknownValue}}, map[string]any{"client_ip": map[string]any{"timeout_seconds": 300}}} {
+		for _, affinity := range []any{nil, "None", "ClientIP", tftypes.UnknownValue} {
+			t.Run(fmt.Sprintf("%v/%v", affinity, config), func(t *testing.T) {
+				var response resource.ValidateConfigResponse
+				(&ServiceV1{}).ValidateConfig(context.Background(), resource.ValidateConfigRequest{Config: serviceAffinityValidationConfig(t, []any{map[string]any{"session_affinity": affinity, "session_affinity_config": config}})}, &response)
+				serviceAffinityCheckDiagnostics(t, response.Diagnostics)
 			})
-			t.Run("Update", func(t *testing.T) {
-				prior := serviceAffinityValidationConfig(t, []any{map[string]any{
-					"session_affinity": "ClientIP",
-					"session_affinity_config": []any{map[string]any{
-						"client_ip": []any{map[string]any{"timeout_seconds": 300}},
-					}},
-				}})
-				state := tfsdk.State{Schema: prior.Schema, Raw: prior.Raw}
-				if diagnostics := state.SetAttribute(ctx, path.Root("id"), "default/affinity-validation"); diagnostics.HasError() {
-					t.Fatal(diagnostics)
-				}
-				response := resource.UpdateResponse{State: state}
-				r.Update(ctx, resource.UpdateRequest{Plan: plan, State: state}, &response)
-				serviceAffinityCheckDiagnostics(t, response.Diagnostics, &tc.errorPath)
-				if !response.State.Raw.Equal(state.Raw) {
-					t.Fatal("rejected update changed prior resource state")
-				}
-			})
-		})
+		}
 	}
 }
 
@@ -169,10 +43,12 @@ func TestServiceAffinityExpandDefaults(t *testing.T) {
 		wantTimeout int32
 	}{
 		{name: "omitted config"},
-		{name: "default config", config: []any{map[string]any{}}, wantConfig: true},
-		{name: "default client", config: []any{map[string]any{"client_ip": []any{map[string]any{}}}}, wantConfig: true, wantClient: true},
-		{name: "unknown timeout", config: []any{map[string]any{"client_ip": []any{map[string]any{"timeout_seconds": tftypes.UnknownValue}}}}, wantConfig: true, wantClient: true},
-		{name: "explicit timeout", config: []any{map[string]any{"client_ip": []any{map[string]any{"timeout_seconds": 300}}}}, wantConfig: true, wantClient: true, wantTimeout: 300},
+		{name: "unknown config", config: tftypes.UnknownValue},
+		{name: "unknown client", config: map[string]any{"client_ip": tftypes.UnknownValue}, wantConfig: true},
+		{name: "default config", config: map[string]any{}, wantConfig: true},
+		{name: "default client", config: map[string]any{"client_ip": map[string]any{}}, wantConfig: true, wantClient: true},
+		{name: "unknown timeout", config: map[string]any{"client_ip": map[string]any{"timeout_seconds": tftypes.UnknownValue}}, wantConfig: true, wantClient: true},
+		{name: "explicit timeout", config: map[string]any{"client_ip": map[string]any{"timeout_seconds": 300}}, wantConfig: true, wantClient: true, wantTimeout: 300},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -184,7 +60,7 @@ func TestServiceAffinityExpandDefaults(t *testing.T) {
 				t.Fatal(diagnostics)
 			}
 			expanded, diagnostics := expandServiceSpec(ctx, model.Spec[0])
-			serviceAffinityCheckDiagnostics(t, diagnostics, nil)
+			serviceAffinityCheckDiagnostics(t, diagnostics)
 			affinity := expanded.SessionAffinityConfig
 			if (affinity != nil) != tc.wantConfig {
 				t.Fatalf("config = %#v, want present %t", affinity, tc.wantConfig)
@@ -253,29 +129,10 @@ func serviceAffinityValidationValue(t *testing.T, typ tftypes.Type, value any) t
 	}
 }
 
-func serviceAffinityCheckDiagnostics(t *testing.T, diagnostics diag.Diagnostics, expectedPath *path.Path) {
+func serviceAffinityCheckDiagnostics(t *testing.T, diagnostics diag.Diagnostics) {
 	t.Helper()
-	if expectedPath == nil {
-		if len(diagnostics) != 0 {
-			t.Fatalf("unexpected diagnostics: %v", diagnostics)
-		}
-		return
-	}
-	if len(diagnostics) != 1 || diagnostics[0].Severity() != diag.SeverityError {
-		t.Fatalf("expected one affinity error at %s, got: %v", expectedPath, diagnostics)
-	}
-	diagnostic := diagnostics[0]
-	if diagnostic.Summary() != "Empty ClientIP configuration" {
-		t.Fatalf("unexpected diagnostic: %s: %s", diagnostic.Summary(), diagnostic.Detail())
-	}
-	withPath, ok := diagnostic.(diag.DiagnosticWithPath)
-	if !ok || !withPath.Path().Equal(*expectedPath) {
-		t.Fatalf("expected diagnostic at %s, got: %v", expectedPath, diagnostic)
-	}
-	for _, guidance := range []string{"omit", "null", "[{}]"} {
-		if !strings.Contains(diagnostic.Detail(), guidance) {
-			t.Errorf("diagnostic lacks %q remediation: %s", guidance, diagnostic.Detail())
-		}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %v", diagnostics)
 	}
 }
 
@@ -479,5 +336,85 @@ func TestServiceClusterIPExternalTrafficPolicyTransition(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestServiceStoredAffinityConversion(t *testing.T) {
+	for _, tc := range []struct{ source, current string }{
+		{`null`, `null`}, {`[]`, `null`}, {`{}`, `{}`}, {`[{}]`, `{}`},
+		{`[{"client_ip":[]}]`, `{"client_ip":null}`},
+		{`[{"client_ip":[{}]}]`, `{"client_ip":{}}`},
+		{`[{"client_ip":[{"timeout_seconds":null}]}]`, `{"client_ip":{"timeout_seconds":null}}`},
+		{`[{"client_ip":[{"timeout_seconds":300}]}]`, `{"client_ip":{"timeout_seconds":300}}`},
+	} {
+		t.Run(tc.source, func(t *testing.T) {
+			converted, diagnostics := serviceStoredAffinity([]byte(tc.source))
+			if diagnostics.HasError() {
+				t.Fatal(diagnostics)
+			}
+			current, diagnostics := serviceStoredAffinity([]byte(tc.current))
+			if diagnostics.HasError() {
+				t.Fatal(diagnostics)
+			}
+			if !converted.Equal(current) {
+				t.Fatalf("historical/current state mismatch: %s != %s", converted, current)
+			}
+			expanded, diagnostics := expandServiceAffinity(context.Background(), converted, nil)
+			if diagnostics.HasError() {
+				t.Fatal(diagnostics)
+			}
+			flattened, diagnostics := flattenServiceAffinity(context.Background(), expanded)
+			if diagnostics.HasError() {
+				t.Fatal(diagnostics)
+			}
+			if !flattened.Equal(converted) {
+				t.Fatalf("Read conversion does not converge: %s != %s", converted, flattened)
+			}
+		})
+	}
+	for _, malformed := range []string{`[{},{}]`, `[null]`, `[1]`, `1`, `"invalid"`, `{"client_ip":[{},{}]}`, `{"client_ip":[null]}`, `{"client_ip":true}`, `{"client_ip":{"timeout_seconds":"300"}}`} {
+		t.Run(malformed, func(t *testing.T) {
+			_, diagnostics := serviceStoredAffinity([]byte(malformed))
+			if !diagnostics.HasError() {
+				t.Fatal("malformed historical singleton accepted")
+			}
+		})
+	}
+}
+
+func TestServiceAffinityResolveComputedObjects(t *testing.T) {
+	ctx := context.Background()
+	actual, d := serviceStoredAffinity([]byte(`{"client_ip":{"timeout_seconds":10800}}`))
+	if d.HasError() {
+		t.Fatal(d)
+	}
+	configured, d := serviceStoredAffinity([]byte(`{"client_ip":{"timeout_seconds":300}}`))
+	if d.HasError() {
+		t.Fatal(d)
+	}
+	for _, tc := range []struct {
+		name       string
+		plan, want types.Object
+	}{
+		{"omitted parent", types.ObjectNull(serviceSessionAffinityConfigType.AttrTypes), actual},
+		{"unknown parent", types.ObjectUnknown(serviceSessionAffinityConfigType.AttrTypes), actual},
+		{"omitted child", types.ObjectValueMust(serviceSessionAffinityConfigType.AttrTypes, map[string]attr.Value{"client_ip": types.ObjectNull(serviceClientIPType.AttrTypes)}), actual},
+		{"unknown child", types.ObjectValueMust(serviceSessionAffinityConfigType.AttrTypes, map[string]attr.Value{"client_ip": types.ObjectUnknown(serviceClientIPType.AttrTypes)}), actual},
+		{"unknown timeout", types.ObjectValueMust(serviceSessionAffinityConfigType.AttrTypes, map[string]attr.Value{"client_ip": types.ObjectValueMust(serviceClientIPType.AttrTypes, map[string]attr.Value{"timeout_seconds": types.Int64Unknown()})}), actual},
+		{"known timeout", configured, configured},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, d := serviceResolveAffinityValue(ctx, tc.plan, actual)
+			if d.HasError() || !got.Equal(tc.want) {
+				t.Fatalf("resolved=%s want=%s diagnostics=%v", got, tc.want, d)
+			}
+		})
+	}
+	// A missing API object must still resolve unknown nested objects to typed null.
+	planned := types.ObjectValueMust(serviceSessionAffinityConfigType.AttrTypes, map[string]attr.Value{"client_ip": types.ObjectUnknown(serviceClientIPType.AttrTypes)})
+	got, d := serviceResolveAffinityValue(ctx, planned, types.ObjectNull(serviceSessionAffinityConfigType.AttrTypes))
+	want := types.ObjectValueMust(serviceSessionAffinityConfigType.AttrTypes, map[string]attr.Value{"client_ip": types.ObjectNull(serviceClientIPType.AttrTypes)})
+	if d.HasError() || !got.Equal(want) {
+		t.Fatalf("missing API object resolved=%s diagnostics=%v", got, d)
 	}
 }

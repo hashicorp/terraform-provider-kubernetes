@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -588,7 +587,7 @@ func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "ClientIP"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds", "300"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity_config.client_ip.timeout_seconds", "300"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "NodePort"),
 					testAccCheckServiceV1Ports(&conf, []coreapi.ServicePort{
 						{
@@ -641,7 +640,7 @@ func TestAccKubernetesServiceV1_nodePort(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.selector.App", "MyApp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity", "ClientIP"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds", "300"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.session_affinity_config.client_ip.timeout_seconds", "300"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.type", "ClusterIP"),
 				),
 			},
@@ -1444,11 +1443,11 @@ func testAccKubernetesServiceV1Config_nodePort(name string) string {
     }
 
     session_affinity = "ClientIP"
-    session_affinity_config = [{
-      client_ip = [{
+    session_affinity_config = {
+      client_ip = {
         timeout_seconds = 300
-      }]
-    }]
+      }
+    }
 
     port {
       name         = "first"
@@ -1486,11 +1485,11 @@ func testAccKubernetesServiceV1Config_nodePort_toClusterIP(name string) string {
     }
 
     session_affinity = "ClientIP"
-    session_affinity_config = [{
-      client_ip = [{
+    session_affinity_config = {
+      client_ip = {
         timeout_seconds = 300
-      }]
-    }]
+      }
+    }
 
     port {
       name        = "first"
@@ -1796,7 +1795,7 @@ func TestAccKubernetesServiceV1_clientIPDefault(t *testing.T) {
 		}
 		if affinity == "ClientIP" {
 			step.Check = resource.ComposeAggregateTestCheckFunc(step.Check,
-				resource.TestCheckResourceAttr(address, "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds", "10800"))
+				resource.TestCheckResourceAttr(address, "spec.0.session_affinity_config.client_ip.timeout_seconds", "10800"))
 		}
 		steps = append(steps, step)
 	}
@@ -2204,7 +2203,7 @@ func TestAccKubernetesServiceV1_migration(t *testing.T) {
 }
 
 // The registry release must receive its original block HCL. Only the Framework
-// target uses the approved session_affinity_config/client_ip list assignments.
+// target uses the approved session_affinity_config/client_ip object assignments.
 // The same complete-state, API-spec and pre-apply no-op assertions still apply.
 func TestAccKubernetesServiceV1_migrationClientIP(t *testing.T) {
 	for _, sourceType := range []string{"kubernetes_service", "kubernetes_service_v1"} {
@@ -2313,11 +2312,11 @@ moved {
 	})
 }
 
-const serviceFrameworkAffinityConfig = `    session_affinity_config = [{
-      client_ip = [{
+const serviceFrameworkAffinityConfig = `    session_affinity_config = {
+      client_ip = {
         timeout_seconds = 300
-      }]
-    }]`
+      }
+    }`
 
 const serviceSDKAffinityBlock = `    session_affinity_config {
       client_ip {
@@ -2510,6 +2509,10 @@ func (snapshot *serviceMigrationSnapshot) stateCheck(address string, capture, pr
 					resp.Error = err
 					return
 				}
+				if err := serviceExpectedAffinityObjects(copy.AttributeValues); err != nil {
+					resp.Error = err
+					return
+				}
 				snapshot.values, snapshot.identity, snapshot.provider = copy.AttributeValues, copy.IdentityValues, copy.ProviderName
 				if preIdentity && len(snapshot.identity) != 0 {
 					resp.Error = fmt.Errorf("pre-identity release unexpectedly wrote identity: %v", snapshot.identity)
@@ -2523,8 +2526,8 @@ func (snapshot *serviceMigrationSnapshot) stateCheck(address string, capture, pr
 				resp.Error = fmt.Errorf("missing complete released-provider state snapshot")
 				return
 			}
-			if actual.SchemaVersion != 1 {
-				resp.Error = fmt.Errorf("local Service schema version = %d, want Framework version 1", actual.SchemaVersion)
+			if actual.SchemaVersion != 2 {
+				resp.Error = fmt.Errorf("local Service schema version = %d, want Framework version 2", actual.SchemaVersion)
 				return
 			}
 			if !reflect.DeepEqual(snapshot.values, actual.AttributeValues) {
@@ -2582,12 +2585,49 @@ func TestServiceMigrationNoOpPlanGuard(t *testing.T) {
 	}
 }
 
+// Normalize only the approved historical list-to-object paths in the expected
+// snapshot. Every other stored attribute and every identity field remains exact.
+func serviceExpectedAffinityObjects(values map[string]interface{}) error {
+	specs, _ := values["spec"].([]interface{})
+	for _, raw := range specs {
+		spec, ok := raw.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid snapshot spec")
+		}
+		for _, field := range []string{"session_affinity_config", "client_ip"} {
+			value, exists := spec[field]
+			if !exists {
+				break
+			}
+			if list, ok := value.([]interface{}); ok {
+				switch len(list) {
+				case 0:
+					value = nil
+				case 1:
+					value = list[0]
+				default:
+					return fmt.Errorf("invalid snapshot %s cardinality", field)
+				}
+				spec[field] = value
+			}
+			if value == nil {
+				break
+			}
+			spec, ok = value.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("invalid snapshot %s object", field)
+			}
+		}
+	}
+	return nil
+}
+
 func TestServiceMigrationCompleteStateSnapshot(t *testing.T) {
 	const address = "kubernetes_service_v1.test"
 	makeState := func() *tfjson.State {
 		return &tfjson.State{Values: &tfjson.StateValues{RootModule: &tfjson.StateModule{
 			Resources: []*tfjson.StateResource{{
-				Address: address, ProviderName: serviceRegistryProviderSource, SchemaVersion: 1,
+				Address: address, ProviderName: serviceRegistryProviderSource, SchemaVersion: 2,
 				AttributeValues: map[string]interface{}{
 					"id": "default/test",
 					"spec": []interface{}{map[string]interface{}{
@@ -3266,8 +3306,8 @@ func TestServiceFrameworkRegistration(t *testing.T) {
 	if schema.Diagnostics.HasError() {
 		t.Fatal(schema.Diagnostics)
 	}
-	if schema.Schema.Version != 1 {
-		t.Fatalf("Service schema version = %d, want existing version 1", schema.Schema.Version)
+	if schema.Schema.Version != 2 {
+		t.Fatalf("Service schema version = %d, want version 2", schema.Schema.Version)
 	}
 
 	server, err := mux.MuxServer(ctx, "test")
@@ -3287,9 +3327,10 @@ func TestServiceFrameworkRegistration(t *testing.T) {
 	if legacy == nil || migrated == nil {
 		t.Fatal("production mux must expose both Service resource types")
 	}
-	if !legacy.ValueType().Equal(migrated.ValueType()) {
-		t.Errorf("migration changes the persisted Service type\nSDK: %s\nFramework: %s", legacy.ValueType(), migrated.ValueType())
+	if legacy.Version != 1 || migrated.Version != 2 {
+		t.Fatalf("legacy/current schema versions = %d/%d", legacy.Version, migrated.Version)
 	}
+
 }
 
 func TestServiceUnknownConfiguration(t *testing.T) {
@@ -3609,7 +3650,7 @@ func serviceCheckConvertedState(t *testing.T, state tfsdk.State, version int64) 
 	if version == 1 {
 		var timeout types.Int64
 		timeoutPath := path.Root("spec").AtListIndex(0).AtName("session_affinity_config").
-			AtListIndex(0).AtName("client_ip").AtListIndex(0).AtName("timeout_seconds")
+			AtName("client_ip").AtName("timeout_seconds")
 		if diags := state.GetAttribute(ctx, timeoutPath, &timeout); diags.HasError() {
 			t.Fatal(diags)
 		}
@@ -3691,6 +3732,11 @@ func serviceCLIMigration(t *testing.T, version string, variant serviceCLIVariant
 
 func serviceCLIMigrationWithConfig(t *testing.T, version string, variant serviceCLIVariant, alias bool, transform func(string) string, migrationChecks ...plancheck.PlanCheck) {
 	t.Helper()
+	serviceCLIMigrationWithOptions(t, version, variant, alias, transform, false, false, migrationChecks...)
+}
+
+func serviceCLIMigrationWithOptions(t *testing.T, version string, variant serviceCLIVariant, alias bool, transform func(string) string, noRefresh, repeatSDKApply bool, migrationChecks ...plancheck.PlanCheck) {
+	t.Helper()
 	workspaces := serviceCLIEnvironment(t)
 	api := newServiceCLIAPI(t)
 	legacy := serviceCLIConfig(api, variant, "kubernetes_service_v1", "test")
@@ -3734,21 +3780,32 @@ moved {
 	if len(migrationChecks) != 0 {
 		checks.PreApply = migrationChecks
 	}
-	resource.Test(t, resource.TestCase{
-		IsUnitTest:   true,
-		CheckDestroy: api.checkDestroy,
-		ErrorCheck:   api.errorCheck,
+	options := &resource.AdditionalCLIOptions{}
+	if noRefresh {
+		checks.PreApply = append(checks.PreApply, serviceCLINoRefreshPlan{api: api})
+	}
+	testCase := resource.TestCase{
+		AdditionalCLIOptions: options,
+		IsUnitTest:           true,
+		CheckDestroy:         api.checkDestroy,
+		ErrorCheck:           api.errorCheck,
 		Steps: []resource.TestStep{
 			initial,
 			{
-				PreConfig:                func() { api.setPhase("migration", true) },
+				PreConfig: func() {
+					options.Plan.NoRefresh = noRefresh
+					api.setPhase("migration", true)
+				},
 				ProtoV6ProviderFactories: serviceCLIProtoV6ProviderFactories,
 				Config:                   current,
 				ConfigPlanChecks:         checks,
 				Check:                    api.check(address, &baseline, true),
 			},
 			{
-				PreConfig:                func() { api.setPhase("follow-up", true) },
+				PreConfig: func() {
+					options.Plan.NoRefresh = false
+					api.setPhase("follow-up", true)
+				},
 				ProtoV6ProviderFactories: serviceCLIProtoV6ProviderFactories,
 				Config:                   current,
 				ConfigPlanChecks:         serviceCLISettled(address, "", "no-op"),
@@ -3760,7 +3817,48 @@ moved {
 				Config:                   current, Destroy: true,
 			},
 		},
-	})
+	}
+	if repeatSDKApply {
+		repeated := initial
+		repeated.PreConfig = func() { api.setPhase("sdk-second-apply", true) }
+		repeated.ConfigPlanChecks = serviceCLISettled(oldAddress, "", "no-op")
+		repeated.Check = api.checkVersion(oldAddress, &baseline, true, version)
+		testCase.Steps = append(testCase.Steps[:1], append([]resource.TestStep{repeated}, testCase.Steps[1:]...)...)
+	}
+	resource.Test(t, testCase)
+}
+
+// The migration plan must stand on upgraded stored state. A following normal
+// refresh also proves that the converted state agrees with the API response.
+func TestServiceCLI_UpgradeWithoutRefresh(t *testing.T) {
+	for _, variant := range serviceCLIVariants() {
+		if variant.name != "cluster-ip-omitted" && variant.name != "client-ip-timeout" {
+			continue
+		}
+		for _, alias := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/alias-%t", variant.name, alias), func(t *testing.T) {
+				serviceCLIMigrationWithOptions(t, "3.2.1", variant, alias, nil, true, false)
+			})
+		}
+		if variant.name == "cluster-ip-omitted" {
+			t.Run("after-second-sdk-apply", func(t *testing.T) {
+				serviceCLIMigrationWithOptions(t, "3.2.1", variant, false, nil, true, true)
+			})
+		}
+	}
+}
+
+type serviceCLINoRefreshPlan struct{ api *serviceCLIAPI }
+
+func (check serviceCLINoRefreshPlan) CheckPlan(_ context.Context, _ plancheck.CheckPlanRequest, resp *plancheck.CheckPlanResponse) {
+	check.api.mu.Lock()
+	defer check.api.mu.Unlock()
+	for request, count := range check.api.calls["migration"] {
+		if request != "GET /version" && count != 0 {
+			resp.Error = fmt.Errorf("migration plan refreshed the Service: %d %s", count, request)
+			return
+		}
+	}
 }
 
 func TestServiceCLI_UpgradeFrom321(t *testing.T) {
@@ -4862,10 +4960,10 @@ func serviceCLIAffinityAssignments(t *testing.T, config string) string {
 				}
 				for _, clientIP := range affinity.Body().Blocks() {
 					if clientIP.Type() == "client_ip" {
-						serviceCLIBlockToObjectList(affinity.Body(), clientIP)
+						serviceCLIBlockToObject(affinity.Body(), clientIP)
 					}
 				}
-				serviceCLIBlockToObjectList(spec.Body(), affinity)
+				serviceCLIBlockToObject(spec.Body(), affinity)
 				changed = true
 			}
 		}
@@ -4876,15 +4974,13 @@ func serviceCLIAffinityAssignments(t *testing.T, config string) string {
 	return string(hclwrite.Format(file.Bytes()))
 }
 
-func serviceCLIBlockToObjectList(parent *hclwrite.Body, block *hclwrite.Block) {
+func serviceCLIBlockToObject(parent *hclwrite.Body, block *hclwrite.Block) {
 	tokens := hclwrite.Tokens{
-		&hclwrite.Token{Type: hclsyntax.TokenOBrack, Bytes: []byte("[")},
 		&hclwrite.Token{Type: hclsyntax.TokenOBrace, Bytes: []byte("{")},
 	}
 	tokens = append(tokens, block.Body().BuildTokens(nil)...)
 	tokens = append(tokens,
 		&hclwrite.Token{Type: hclsyntax.TokenCBrace, Bytes: []byte("}")},
-		&hclwrite.Token{Type: hclsyntax.TokenCBrack, Bytes: []byte("]")},
 	)
 	parent.RemoveBlock(block)
 	parent.SetAttributeRaw(block.Type(), tokens)
@@ -4975,7 +5071,7 @@ func TestServiceCLI_AffinityModeChangeClearsConfig(t *testing.T) {
 	config := func(variant serviceCLIVariant) string {
 		return serviceCLIAffinityAssignments(t, serviceCLIConfig(api, variant, "kubernetes_service_v1", "test")) + `
 output "affinity_config_count" {
-  value = length(kubernetes_service_v1.test.spec[0].session_affinity_config)
+  value = kubernetes_service_v1.test.spec[0].session_affinity_config == null ? 0 : 1
 }
 `
 	}
@@ -4988,7 +5084,7 @@ output "affinity_config_count" {
 	cleared := resource.ComposeTestCheckFunc(
 		api.check("kubernetes_service_v1.test", &baseline, false),
 		resource.TestCheckResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity", "None"),
-		resource.TestCheckResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity_config.#", "0"),
+		resource.TestCheckNoResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity_config.client_ip.timeout_seconds"),
 		func(_ *terraform.State) error {
 			api.mu.Lock()
 			defer api.mu.Unlock()
@@ -5018,7 +5114,7 @@ output "affinity_config_count" {
 	defaulted := resource.ComposeTestCheckFunc(
 		api.check("kubernetes_service_v1.test", &baseline, false),
 		resource.TestCheckResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity", "ClientIP"),
-		resource.TestCheckResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds", "10800"),
+		resource.TestCheckResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity_config.client_ip.timeout_seconds", "10800"),
 		func(_ *terraform.State) error {
 			api.mu.Lock()
 			defer api.mu.Unlock()
@@ -5163,7 +5259,7 @@ func TestServiceCLI_EmptyClientIPCollectionsRejected(t *testing.T) {
 		config string
 	}{
 		{name: "outer", config: "[]"},
-		{name: "client-ip", config: "[{ client_ip = [] }]"},
+		{name: "client-ip", config: "{ client_ip = [] }"},
 	} {
 		for _, operation := range []string{"create", "update"} {
 			t.Run(invalid.name+"/"+operation, func(t *testing.T) {
@@ -5175,10 +5271,10 @@ func TestServiceCLI_EmptyClientIPCollectionsRejected(t *testing.T) {
 						ports:  "port { port = 80 }",
 					}, "kubernetes_service_v1", "test")
 				}
-				current := config("[{ client_ip = [{ timeout_seconds = 300 }] }]")
+				current := config("{ client_ip = { timeout_seconds = 300 } }")
 				rejected := config(invalid.config)
 				if operation == "create" {
-					serviceCLIRejectAndRecover(t, api, rejected, current, "Empty ClientIP configuration")
+					serviceCLIRejectAndRecover(t, api, rejected, current, "object required")
 					return
 				}
 
@@ -5192,12 +5288,12 @@ func TestServiceCLI_EmptyClientIPCollectionsRejected(t *testing.T) {
 							Config: current,
 							Check: resource.ComposeTestCheckFunc(
 								api.check("kubernetes_service_v1.test", &baseline, false),
-								resource.TestCheckResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds", "300"),
+								resource.TestCheckResourceAttr("kubernetes_service_v1.test", "spec.0.session_affinity_config.client_ip.timeout_seconds", "300"),
 							),
 						},
 						{
 							PreConfig: func() { api.setPhase("invalid-config", true) },
-							Config:    rejected, ExpectError: regexp.MustCompile("Empty ClientIP configuration"),
+							Config:    rejected, ExpectError: regexp.MustCompile("object required"),
 						},
 						{
 							PreConfig: func() { api.setPhase("migration", true) },
@@ -5217,11 +5313,11 @@ func TestServiceCLI_EmptyClientIPCollectionsRejected(t *testing.T) {
 	}
 }
 
-func TestServiceCLI_NoneEmptyAffinityCollection(t *testing.T) {
+func TestServiceCLI_NoneNullAffinityObject(t *testing.T) {
 	serviceCLIEnvironment(t)
 	api := newServiceCLIAPI(t)
 	config := serviceCLIConfig(api, serviceCLIVariant{
-		fields: "session_affinity = \"None\"\nsession_affinity_config = []",
+		fields: "session_affinity = \"None\"\nsession_affinity_config = null",
 		ports:  "port { port = 80 }",
 	}, "kubernetes_service_v1", "test")
 	serviceCLICreateAndNoWritePlan(t, api, config)
@@ -5704,14 +5800,47 @@ func TestServiceCLI_RepeatedSDKApplyPreservesOmittedCollections(t *testing.T) {
 	var baseline *coreapi.Service
 	var stored []byte
 	stateSnapshot := serviceCLIStateCheckFunc(func(req statecheck.CheckStateRequest) error {
-		current, err := json.Marshal(req.State.Values)
+		raw, err := json.Marshal(req.State.Values)
 		if err != nil {
 			return err
 		}
 		if stored == nil {
-			stored = current
-		} else if !bytes.Equal(stored, current) {
-			return fmt.Errorf("migration changed complete SDK state/output values:\nbefore=%s\nafter=%s", stored, current)
+			var expected tfjson.StateValues
+			decoder := json.NewDecoder(bytes.NewReader(raw))
+			decoder.UseNumber()
+			if err := decoder.Decode(&expected); err != nil {
+				return err
+			}
+			for _, r := range expected.RootModule.Resources {
+				if r.Type != "kubernetes_service_v1" {
+					continue
+				}
+				if r.SchemaVersion != 1 {
+					return fmt.Errorf("baseline schema = %d, want 1", r.SchemaVersion)
+				}
+				r.SchemaVersion = 2
+				if err := serviceExpectedAffinityObjects(r.AttributeValues); err != nil {
+					return err
+				}
+				// The absent object has no sensitivity descendants in schema 2.
+				var sensitivity map[string]interface{}
+				if err := json.Unmarshal(r.SensitiveValues, &sensitivity); err != nil {
+					return err
+				}
+				for _, spec := range sensitivity["spec"].([]interface{}) {
+					delete(spec.(map[string]interface{}), "session_affinity_config")
+				}
+				r.SensitiveValues, err = json.Marshal(sensitivity)
+				if err != nil {
+					return err
+				}
+
+			}
+			stored, err = json.Marshal(expected)
+			return err
+		}
+		if !bytes.Equal(stored, raw) {
+			return fmt.Errorf("migration changed state beyond the affinity object conversion:\nexpected=%s\nactual=%s", stored, raw)
 		}
 		return nil
 	})
@@ -6512,16 +6641,11 @@ func serviceCLIEnvironment(t *testing.T) string {
 	if os.Getenv("TF_KUBERNETES_SERVICE_CLI_TESTS") != "1" {
 		t.Skip("Service CLI integration tests require TF_KUBERNETES_SERVICE_CLI_TESTS=1; select TestServiceCLI with -timeout=30m")
 	}
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("cannot locate Service CLI test source directory")
-	}
-	// Short repository-local paths avoid both system temp directories and the
-	// macOS Unix socket path limit in Terraform's provider reattachment.
-	t.Setenv("TMPDIR", filepath.Clean(filepath.Join(filepath.Dir(file), "../../../..")))
+	// A short temp path keeps provider reattachment sockets within macOS's limit,
+	// including when the checkout itself is a deeply nested worktree.
+	t.Setenv("TMPDIR", "/tmp")
 	dir := t.TempDir()
 	t.Setenv("TF_ACC_TEMP_DIR", dir)
-	t.Setenv("HOME", dir)
 	t.Setenv("CHECKPOINT_DISABLE", "1")
 	t.Setenv("TF_IN_AUTOMATION", "1")
 	t.Setenv("TF_ACC", "")
@@ -6802,8 +6926,11 @@ func (api *serviceCLIAPI) checkVersionOutput(address string, baseline **coreapi.
 			}
 		}
 		if object.Spec.SessionAffinity == coreapi.ServiceAffinityClientIP {
-			attrs["spec.0.session_affinity_config.0.client_ip.0.timeout_seconds"] =
-				strconv.Itoa(int(*object.Spec.SessionAffinityConfig.ClientIP.TimeoutSeconds))
+			key := "spec.0.session_affinity_config.client_ip.timeout_seconds"
+			if _, exists := state.RootModule().Resources[address].Primary.Attributes[key]; !exists {
+				key = "spec.0.session_affinity_config.0.client_ip.0.timeout_seconds"
+			}
+			attrs[key] = strconv.Itoa(int(*object.Spec.SessionAffinityConfig.ClientIP.TimeoutSeconds))
 		}
 		for key, expected := range attrs {
 			if err := resource.TestCheckResourceAttr(address, key, expected)(state); err != nil {

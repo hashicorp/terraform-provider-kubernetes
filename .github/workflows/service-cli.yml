@@ -1,0 +1,35 @@
+name: Service CLI migration tests
+
+on:
+  pull_request:
+    paths:
+      - 'internal/framework/provider/corev1/service_v1*'
+      - 'internal/framework/provider/common/**'
+      - 'internal/framework/provider/provider.go'
+      - 'internal/mux/**'
+      - 'kubernetes/*service*'
+      - 'kubernetes/provider.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'GNUmakefile'
+      - '.github/workflows/service-cli.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  service_cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        with:
+          go-version-file: go.mod
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.13.0
+          terraform_wrapper: false
+      - name: Run Service migration tests against the loopback API
+        run: make test-service-cli

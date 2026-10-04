@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	gversion "github.com/hashicorp/go-version"
@@ -33,7 +34,10 @@ const (
 var (
 	testAccProvider          *schema.Provider
 	testAccExternalProviders map[string]resource.ExternalProvider
-	testAccProviderFactories = map[string]func() (*schema.Provider, error){
+	// TestAccMuxProviderFactories is initialized by the external test package, which
+	// can import the production mux without introducing a kubernetes import cycle.
+	TestAccMuxProviderFactories map[string]func() (tfprotov6.ProviderServer, error)
+	testAccProviderFactories    = map[string]func() (*schema.Provider, error){
 		"kubernetes": func() (*schema.Provider, error) {
 			return Provider(), nil
 		},

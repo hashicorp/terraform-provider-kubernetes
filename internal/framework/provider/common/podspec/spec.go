@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strconv"
@@ -107,7 +108,7 @@ func (b *Built) ExpandSpec(ctx context.Context, value types.List, config *tfsdk.
 		return corev1.PodSpec{}, diagnostics
 	}
 	podUnsetZeroBlocks(raw.([]interface{}), value, configured)
-	result, err := kubernetes.ExpandPodSpecForFramework(raw.([]interface{}))
+	result, err := expandSDKPodSpec(raw.([]interface{}))
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Expand Pod Template Specification", err.Error())
 		return corev1.PodSpec{}, diagnostics
@@ -123,7 +124,7 @@ func (b *Built) FlattenSpec(ctx context.Context, spec corev1.PodSpec, baseline t
 	if !b.template {
 		spec.Tolerations = podKeptTolerations(spec.Tolerations, baseline)
 	}
-	raw, err := kubernetes.FlattenPodSpecForFramework(spec)
+	raw, err := flattenSDKPodSpec(spec)
 	if err != nil {
 		diagnostics.AddAttributeError(at, "Unable to Flatten Pod Template Specification", err.Error())
 		return types.ListNull(b.objectType), diagnostics
@@ -605,8 +606,66 @@ func podAbsentZeroBlocks(b *Built) map[string]bool {
 	return result
 }
 
+// expandSDKPodSpec expands a pod spec through the SDKv2 expander, which expects
+// container resources as a one-element list rather than an object. It copies
+// the affected containers so the caller's value is not changed.
+func expandSDKPodSpec(spec []interface{}) (*corev1.PodSpec, error) {
+	adapted := make([]interface{}, len(spec))
+	for i, entry := range spec {
+		object, ok := entry.(map[string]interface{})
+		if !ok {
+			adapted[i] = entry
+			continue
+		}
+		object = maps.Clone(object)
+		for _, name := range []string{"container", "init_container"} {
+			containers, ok := object[name].([]interface{})
+			if !ok {
+				continue
+			}
+			converted := make([]interface{}, len(containers))
+			for j, entry := range containers {
+				container, ok := entry.(map[string]interface{})
+				if !ok {
+					converted[j] = entry
+					continue
+				}
+				container = maps.Clone(container)
+				if resources, ok := container["resources"].(map[string]interface{}); ok {
+					container["resources"] = []interface{}{resources}
+				}
+				converted[j] = container
+			}
+			object[name] = converted
+		}
+		adapted[i] = object
+	}
+	return kubernetes.ExpandPodSpec(adapted)
+}
+
+// flattenSDKPodSpec flattens a pod spec through the SDKv2 flattener and turns
+// its one-element container resources lists into objects.
+func flattenSDKPodSpec(spec corev1.PodSpec) ([]interface{}, error) {
+	flat, err := kubernetes.FlattenPodSpec(spec)
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range flat {
+		object := entry.(map[string]interface{})
+		for _, name := range []string{"container", "init_container"} {
+			containers, _ := object[name].([]interface{})
+			for _, entry := range containers {
+				container := entry.(map[string]interface{})
+				// The SDK flattener always returns one resource-requirements object.
+				container["resources"] = container["resources"].([]interface{})[0]
+			}
+		}
+	}
+	return flat, nil
+}
+
 func podRoundTrip(b *Built, element interface{}) (interface{}, bool) {
-	spec, err := kubernetes.ExpandPodSpecForFramework([]interface{}{element})
+	spec, err := expandSDKPodSpec([]interface{}{element})
 	if err != nil {
 		return nil, false
 	}
@@ -614,7 +673,7 @@ func podRoundTrip(b *Built, element interface{}) (interface{}, bool) {
 	if data, err := json.Marshal(spec); err != nil || json.Unmarshal(data, &echo) != nil {
 		return nil, false
 	}
-	flat, err := kubernetes.FlattenPodSpecForFramework(echo)
+	flat, err := flattenSDKPodSpec(echo)
 	return flat, err == nil
 }
 

@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 )
@@ -60,7 +59,7 @@ func preserveProjectedSourceGroups(ctx context.Context, spec corev1.PodSpec, bas
 		if diagnostics.HasError() {
 			continue
 		}
-		expanded, err := kubernetes.ExpandPodSpecForFramework([]interface{}{
+		expanded, err := expandSDKPodSpec([]interface{}{
 			map[string]interface{}{"volume": []interface{}{
 				map[string]interface{}{"projected": []interface{}{
 					map[string]interface{}{"sources": rawSources},

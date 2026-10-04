@@ -86,7 +86,7 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	if plan.WaitForRollout.ValueBool() {
-		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDaemonSetPodsForFramework(ctx, conn, created.Namespace, created.Name))
+		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDaemonSetPodsFunc(ctx, conn, created.Namespace, created.Name))
 		if err != nil {
 			resp.Diagnostics.AddError("Error waiting for daemonset rollout", err.Error())
 			return
@@ -240,7 +240,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	if plan.WaitForRollout.ValueBool() {
-		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDaemonSetPodsForFramework(ctx, conn, namespace, name))
+		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDaemonSetPodsFunc(ctx, conn, namespace, name))
 		if err != nil {
 			resp.Diagnostics.AddError("Error waiting for daemonset rollout", err.Error())
 			return

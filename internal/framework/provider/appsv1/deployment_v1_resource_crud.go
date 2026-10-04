@@ -131,7 +131,7 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	if !plan.WaitForRollout.ValueBool() {
 		return
 	}
-	err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDeploymentReplicasForFramework(ctx, conn, out.Namespace, out.Name))
+	err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDeploymentReplicasFunc(ctx, conn, out.Namespace, out.Name))
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error waiting for deployment rollout",
@@ -298,7 +298,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	if plan.WaitForRollout.ValueBool() {
-		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDeploymentReplicasForFramework(ctx, conn, out.Namespace, out.Name))
+		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDeploymentReplicasFunc(ctx, conn, out.Namespace, out.Name))
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error waiting for deployment rollout",

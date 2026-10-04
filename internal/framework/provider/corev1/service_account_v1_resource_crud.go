@@ -161,6 +161,14 @@ func serviceAccountRead(ctx context.Context, req resource.ReadRequest, resp *res
 		resp.Diagnostics.AddError("Invalid service account identifier", err.Error())
 		return
 	}
+	// Pre-identity SDK state needs identity even when this first refresh finds
+	// the object missing: Framework validates identity after RemoveResource.
+	if resp.Identity != nil && resp.Identity.Raw.IsFullyNull() {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, serviceAccountIdentity(metav1.ObjectMeta{Namespace: namespace, Name: name}))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 	conn, filters, diags := serviceAccountClient(callback)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

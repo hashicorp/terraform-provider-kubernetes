@@ -7,9 +7,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -161,4 +164,63 @@ func generateNamePlanModifier(t *testing.T) planmodifier.String {
 		t.Fatalf("generate_name has %d plan modifiers, want 1", len(attr.PlanModifiers))
 	}
 	return attr.PlanModifiers[0]
+}
+
+// Namespaced metadata only warns when name and generate_name are both set,
+// since SDKv2 accepted it there; cluster-scoped metadata still rejects it.
+func TestMetadataNameAndGenerateName(t *testing.T) {
+	ctx := context.Background()
+	str := func(v *string) tftypes.Value {
+		if v == nil {
+			return tftypes.NewValue(tftypes.String, nil)
+		}
+		return tftypes.NewValue(tftypes.String, *v)
+	}
+	ptr := func(s string) *string { return &s }
+	for _, tc := range []struct {
+		name               string
+		nameValue, genName *string
+		namespaced         [2]int // errors, warnings
+		clusterScoped      [2]int
+	}{
+		{"name and generate_name", ptr("x"), ptr("p-"), [2]int{0, 1}, [2]int{2, 0}},
+		{"name and empty generate_name", ptr("x"), ptr(""), [2]int{1, 0}, [2]int{3, 0}},
+		{"name only", ptr("x"), nil, [2]int{0, 0}, [2]int{0, 0}},
+		{"empty generate_name only", nil, ptr(""), [2]int{1, 0}, [2]int{1, 0}},
+	} {
+		for _, scope := range []struct {
+			name  string
+			block schema.ListNestedBlock
+			want  [2]int
+		}{
+			{"namespaced", NamespacedMetadataSchema("pod", true), tc.namespaced},
+			{"cluster-scoped", MetadataSchema("namespace", true), tc.clusterScoped},
+		} {
+			s := schema.Schema{Blocks: map[string]schema.Block{"metadata": scope.block}}
+			objectType := s.Type().TerraformType(ctx).(tftypes.Object).AttributeTypes["metadata"].(tftypes.List).ElementType.(tftypes.Object)
+			values := map[string]tftypes.Value{}
+			for k, typ := range objectType.AttributeTypes {
+				values[k] = tftypes.NewValue(typ, nil)
+			}
+			values["name"], values["generate_name"] = str(tc.nameValue), str(tc.genName)
+			config := tfsdk.Config{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), map[string]tftypes.Value{
+				"metadata": tftypes.NewValue(tftypes.List{ElementType: objectType}, []tftypes.Value{tftypes.NewValue(objectType, values)}),
+			})}
+
+			var diags diag.Diagnostics
+			for _, attribute := range []string{"name", "generate_name"} {
+				p := path.Root("metadata").AtListIndex(0).AtName(attribute)
+				var value types.String
+				diags.Append(config.GetAttribute(ctx, p, &value)...)
+				for _, v := range scope.block.NestedObject.Attributes[attribute].(schema.StringAttribute).Validators {
+					resp := &validator.StringResponse{}
+					v.ValidateString(ctx, validator.StringRequest{Path: p, PathExpression: p.Expression(), ConfigValue: value, Config: config}, resp)
+					diags.Append(resp.Diagnostics...)
+				}
+			}
+			if got := [2]int{diags.ErrorsCount(), diags.WarningsCount()}; got != scope.want {
+				t.Errorf("%s, %s: errors and warnings = %v, want %v: %v", scope.name, tc.name, got, scope.want, diags)
+			}
+		}
+	}
 }

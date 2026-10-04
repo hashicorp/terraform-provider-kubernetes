@@ -24,13 +24,14 @@ const generateNameRequiresReplaceDescription = "Replaces the object when generat
 // generatableName adds generate_name and its conflict with name; match the SDKv2 flag.
 // Decode into MetadataModel when true, MetadataBase when false.
 func MetadataSchema(objectName string, generatableName bool) schema.ListNestedBlock {
-	return metadataBlock(objectName, metadataAttributes(objectName, generatableName))
+	return metadataBlock(objectName, metadataAttributes(objectName, generatableName, false))
 }
 
 // NamespacedMetadataSchema mirrors SDKv2 namespacedMetadataSchema, including the namespace default.
 // NamespacedMetadataModel matches the true variant; the false variant needs a model without GenerateName.
+// SDKv2 never enforced the name and generate_name conflict here, so setting both is only a warning.
 func NamespacedMetadataSchema(objectName string, generatableName bool) schema.ListNestedBlock {
-	attributes := metadataAttributes(objectName, generatableName)
+	attributes := metadataAttributes(objectName, generatableName, true)
 
 	// Framework defaults require Computed. No namespace validator, matching SDKv2.
 	attributes["namespace"] = schema.StringAttribute{
@@ -47,16 +48,24 @@ func NamespacedMetadataSchema(objectName string, generatableName bool) schema.Li
 }
 
 // metadataAttributes shares SDKv2 metadataFields and the optional generate_name variant.
-func metadataAttributes(objectName string, generatableName bool) map[string]schema.Attribute {
+func metadataAttributes(objectName string, generatableName, namespaced bool) map[string]schema.Attribute {
 	// ConflictsWith comes before the syntax validator so an error names the conflict
 	// rather than complaining about a value the user is about to remove.
 	nameValidators := []validator.String{}
-	if generatableName {
+	generateNameValidators := []validator.String{}
+	switch {
+	case generatableName && namespaced:
+		generateNameValidators = append(generateNameValidators, generateNameIgnoredValidator{})
+	case generatableName:
 		nameValidators = append(nameValidators, stringvalidator.ConflictsWith(
 			path.MatchRelative().AtParent().AtName("generate_name"),
 		))
+		generateNameValidators = append(generateNameValidators, stringvalidator.ConflictsWith(
+			path.MatchRelative().AtParent().AtName("name"),
+		))
 	}
 	nameValidators = append(nameValidators, DNSSubdomainNameValidator())
+	generateNameValidators = append(generateNameValidators, DNSLabelPrefixValidator())
 
 	attributes := map[string]schema.Attribute{
 		"annotations": schema.MapAttribute{
@@ -118,16 +127,37 @@ func metadataAttributes(objectName string, generatableName bool) map[string]sche
 					generateNameRequiresReplaceDescription,
 				),
 			},
-			Validators: []validator.String{
-				stringvalidator.ConflictsWith(
-					path.MatchRelative().AtParent().AtName("name"),
-				),
-				DNSLabelPrefixValidator(),
-			},
+			Validators: generateNameValidators,
 		}
 	}
 
 	return attributes
+}
+
+// generateNameIgnoredValidator warns when name is also set, since Kubernetes then
+// ignores generate_name.
+type generateNameIgnoredValidator struct{}
+
+func (v generateNameIgnoredValidator) Description(ctx context.Context) string {
+	return v.MarkdownDescription(ctx)
+}
+
+func (generateNameIgnoredValidator) MarkdownDescription(context.Context) string {
+	return "warns that generate_name is ignored when name is set"
+}
+
+func (generateNameIgnoredValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || req.ConfigValue.ValueString() == "" {
+		return
+	}
+	var name types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("name"), &name)...)
+	if name.IsNull() || name.IsUnknown() || name.ValueString() == "" {
+		return
+	}
+	resp.Diagnostics.AddAttributeWarning(req.Path, "generate_name is ignored when name is set",
+		fmt.Sprintf("Kubernetes ignores generate_name when name is set. Remove generate_name from the configuration, "+
+			"and add %s to lifecycle ignore_changes so that the existing object is not replaced.", req.Path))
 }
 
 // metadataBlock wraps a set of metadata attributes in the list block shape SDKv2 produced.

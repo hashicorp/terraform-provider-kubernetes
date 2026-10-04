@@ -51,7 +51,7 @@ func (r *IngressV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *
 
 func ingressSpecSchema() schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		Description: networking.Ingress{}.SwaggerDoc()["spec"],
+		Description: networking.Ingress{}.SwaggerDoc()["spec"] + " Exactly one spec block is required.",
 		Validators: []validator.List{
 			listvalidator.IsRequired(),
 			listvalidator.SizeBetween(1, 1),

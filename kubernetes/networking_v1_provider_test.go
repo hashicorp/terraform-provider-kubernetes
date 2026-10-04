@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-mux/tf5to6server"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -62,11 +63,11 @@ func TestNetworkingV1SDKSchemaAndIdentityEquivalence(t *testing.T) {
 			if oldSchema == nil || newSchema == nil {
 				t.Fatal("resource schema missing")
 			}
-			if oldSchema.Version != 0 || newSchema.Version != oldSchema.Version {
+			if oldSchema.Version != 0 || newSchema.Version != 1 {
 				t.Fatalf("schema version changed: SDKv2=%d Framework=%d", oldSchema.Version, newSchema.Version)
 			}
-			if !oldSchema.ValueType().Equal(newSchema.ValueType()) {
-				t.Fatalf("state type changed:\nSDKv2: %s\nFramework: %s", oldSchema.ValueType(), newSchema.ValueType())
+			if expected := networkingObjectStateType(t, name, oldSchema.ValueType()); !expected.Equal(newSchema.ValueType()) {
+				t.Fatalf("state changed beyond the selected singleton conversions:\nexpected: %s\nFramework: %s", expected, newSchema.ValueType())
 			}
 			oldIdentity, newIdentity := oldIdentities.IdentitySchemas[name], newIdentities.IdentitySchemas[name]
 			if oldIdentity == nil || newIdentity == nil {
@@ -98,4 +99,64 @@ func TestNetworkingV1SDKSchemaAndIdentityEquivalence(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Compare every SDK field after applying only the explicitly selected object paths.
+func networkingObjectStateType(t *testing.T, resource string, sdk tftypes.Type) tftypes.Type {
+	t.Helper()
+	objects := map[string]bool{}
+	switch resource {
+	case "kubernetes_ingress_v1":
+		objects["spec.*.rule.*.http"] = true
+		for _, base := range []string{"spec.*.default_backend", "spec.*.rule.*.http.path.*.backend"} {
+			for _, suffix := range []string{"", ".resource", ".service", ".service.port"} {
+				objects[base+suffix] = true
+			}
+		}
+	case "kubernetes_ingress_class_v1":
+		objects["spec.*.parameters"] = true
+	case "kubernetes_network_policy_v1":
+		objects["spec.*.pod_selector"] = true
+		for _, peer := range []string{"spec.*.ingress.*.from.*", "spec.*.egress.*.to.*"} {
+			for _, field := range []string{"ip_block", "namespace_selector", "pod_selector"} {
+				objects[peer+"."+field] = true
+			}
+		}
+	default:
+		t.Fatalf("unexpected resource %s", resource)
+	}
+	var convert func(tftypes.Type, string) tftypes.Type
+	convert = func(typ tftypes.Type, at string) tftypes.Type {
+		if objects[at] {
+			list, ok := typ.(tftypes.List)
+			if !ok {
+				t.Fatalf("SDK singleton %s is %T, want list", at, typ)
+			}
+			typ = list.ElementType
+			delete(objects, at)
+		}
+		switch typ := typ.(type) {
+		case tftypes.Object:
+			fields := make(map[string]tftypes.Type, len(typ.AttributeTypes))
+			for name, child := range typ.AttributeTypes {
+				next := name
+				if at != "" {
+					next = at + "." + name
+				}
+				fields[name] = convert(child, next)
+			}
+			return tftypes.Object{AttributeTypes: fields}
+		case tftypes.List:
+			return tftypes.List{ElementType: convert(typ.ElementType, at+".*")}
+		case tftypes.Set:
+			return tftypes.Set{ElementType: convert(typ.ElementType, at+".*")}
+		default:
+			return typ
+		}
+	}
+	result := convert(sdk, "")
+	if len(objects) != 0 {
+		t.Fatalf("unvisited singleton paths: %v", objects)
+	}
+	return result
 }

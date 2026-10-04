@@ -15,7 +15,7 @@ Ingress is a collection of rules that allow inbound connections to reach the end
 ### Optional
 
 - `metadata` (Block List) Standard ingress's metadata. Exactly one metadata block is required. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
-- `spec` (Block List) spec is the desired state of the Ingress. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status (see [below for nested schema](#nestedblock--spec))
+- `spec` (Block List) spec is the desired state of the Ingress. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status Exactly one spec block is required. (see [below for nested schema](#nestedblock--spec))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_load_balancer` (Boolean) Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.
 

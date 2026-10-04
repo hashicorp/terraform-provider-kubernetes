@@ -52,7 +52,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const networkingV1SDKRelease = "3.2.1"
+const networkingV1SDKRelease = "3.3.0"
 
 var networkingV1Factories = map[string]func() (tfprotov6.ProviderServer, error){
 	"kubernetes": func() (tfprotov6.ProviderServer, error) {
@@ -1049,9 +1049,10 @@ func TestNetworkingV1MigrationConfigurations(t *testing.T) {
 	networkingNoProtocolErrors(t, schemas.Diagnostics)
 	for _, resourceType := range networkingV1Types {
 		variants := []string{"minimal", "full", "empty"}
-		if resourceType == "kubernetes_ingress_class_v1" {
+		switch resourceType {
+		case "kubernetes_ingress_class_v1":
 			variants = append(variants, "remove_scalars", "remove_parameters")
-		} else if resourceType == "kubernetes_network_policy_v1" {
+		case "kubernetes_network_policy_v1":
 			variants = append(variants, "selector_empty", "selector_maps_empty", "selector_values_empty", "selector_maps_omitted", "selector_values_omitted", "selector_except_omitted")
 		}
 		for _, variant := range variants {
@@ -1393,6 +1394,7 @@ func TestAccNetworkingV1_IngressClassUpgradeThenRemoveParameters(t *testing.T) {
 	name := networkingTestName("remove")
 	p := kubernetes.Provider()
 	full := networkingV1Config(resourceType, name, "full")
+	fullSDK := networkingV1SDKConfig(resourceType, name, "full")
 	scalarsRemoved := networkingV1Config(resourceType, name, "remove_scalars")
 	parametersRemoved := networkingV1Config(resourceType, name, "remove_parameters")
 	var before networkingRemoteSnapshot
@@ -1418,13 +1420,13 @@ func TestAccNetworkingV1_IngressClassUpgradeThenRemoveParameters(t *testing.T) {
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: networkingV1SDKRelease},
 				},
-				Config: full,
+				Config: fullSDK,
 			},
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: networkingV1SDKRelease},
 				},
-				Config: full,
+				Config: fullSDK,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
@@ -2082,7 +2084,8 @@ func networkingV1SDKConfig(resourceType, name, variant string) string {
       }
     }
 `
-		if variant == "full" {
+		switch variant {
+		case "full":
 			spec += `
     ingress_class_name = "networking-migration"
     rule {
@@ -2125,7 +2128,7 @@ func networkingV1SDKConfig(resourceType, name, variant string) string {
     delete = "5m"
   }
 `
-		} else if variant == "empty" {
+		case "empty":
 			spec += `
     tls {
       hosts       = []
@@ -2136,7 +2139,8 @@ func networkingV1SDKConfig(resourceType, name, variant string) string {
 		}
 	case "kubernetes_ingress_class_v1":
 		spec = "\n    controller = \"example.com/networking-migration\"\n"
-		if variant == "full" {
+		switch variant {
+		case "full":
 			spec += fmt.Sprintf(`
     parameters {
       api_group = "example.com"
@@ -2146,7 +2150,7 @@ func networkingV1SDKConfig(resourceType, name, variant string) string {
       namespace = %q
     }
 `, networkingTestNamespace())
-		} else if variant == "empty" {
+		case "empty":
 			spec += `
     parameters {
       api_group = ""
@@ -2155,7 +2159,7 @@ func networkingV1SDKConfig(resourceType, name, variant string) string {
       namespace = ""
     }
 `
-		} else if variant == "remove_scalars" {
+		case "remove_scalars":
 			spec += `
     parameters {
       kind  = "ConfigMap"

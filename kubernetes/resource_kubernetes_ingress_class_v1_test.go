@@ -38,7 +38,7 @@ func TestAccKubernetesIngressClassV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "0"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.parameters.%"),
 				),
 			},
 			{
@@ -49,7 +49,7 @@ func TestAccKubernetesIngressClassV1_basic(t *testing.T) {
 					"metadata.0.resource_version",
 					"metadata.0.uid",
 					"metadata.0.generation",
-					"spec.0.parameters.0.scope",
+					"spec.0.parameters.scope",
 				},
 			},
 		},
@@ -109,9 +109,9 @@ func TestAccKubernetesIngressClassV1_parameters(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.kind", "IngressParameters"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.name", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.parameters.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.kind", "IngressParameters"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.name", rName),
 				),
 			},
 			{
@@ -122,7 +122,7 @@ func TestAccKubernetesIngressClassV1_parameters(t *testing.T) {
 					"metadata.0.resource_version",
 					"metadata.0.uid",
 					"metadata.0.generation",
-					"spec.0.parameters.0.scope",
+					"spec.0.parameters.scope",
 				},
 			},
 			{
@@ -133,9 +133,9 @@ func TestAccKubernetesIngressClassV1_parameters(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.kind", "IngressParameters"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.name", rNameUpdated),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.parameters.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.kind", "IngressParameters"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.name", rNameUpdated),
 				),
 			},
 		},
@@ -161,10 +161,10 @@ func TestAccKubernetesIngressClassV1_parameters_apiGroup(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.kind", "IngressParameters"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.name", rName),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.api_group", rName),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.parameters.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.kind", "IngressParameters"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.name", rName),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.api_group", rName),
 				),
 			},
 			{
@@ -175,7 +175,7 @@ func TestAccKubernetesIngressClassV1_parameters_apiGroup(t *testing.T) {
 					"metadata.0.resource_version",
 					"metadata.0.uid",
 					"metadata.0.generation",
-					"spec.0.parameters.0.scope",
+					"spec.0.parameters.scope",
 				},
 			},
 			{
@@ -186,10 +186,10 @@ func TestAccKubernetesIngressClassV1_parameters_apiGroup(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.controller", "example.com/ingress-controller"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.kind", "IngressParameters"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.name", rNameUpdated),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.0.api_group", rNameUpdated),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.parameters.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.kind", "IngressParameters"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.name", rNameUpdated),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.parameters.api_group", rNameUpdated),
 				),
 			},
 		},
@@ -263,7 +263,7 @@ func testAccKubernetesIngressClassV1ConfigParameters(name, paramName string) str
   }
   spec {
     controller = "example.com/ingress-controller"
-    parameters {
+    parameters = {
       kind = "IngressParameters"
       name = %[2]q
     }
@@ -279,7 +279,7 @@ func testAccKubernetesIngressClassV1ConfigParametersApiGroup(name, paramName str
   }
   spec {
     controller = "example.com/ingress-controller"
-    parameters {
+    parameters = {
       api_group = %[2]q
       kind      = "IngressParameters"
       name      = %[2]q

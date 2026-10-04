@@ -44,7 +44,7 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "0"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
@@ -72,7 +72,7 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
@@ -89,13 +89,13 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.key", "name"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.1", "webfront"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.0", "api"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "http"),
@@ -103,9 +103,9 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.port", "8125"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.0.match_labels.name", "default"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.0.namespace_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.match_labels.name", "default"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.%"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
 				),
@@ -121,22 +121,22 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.key", "name"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.1", "webfront"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.0", "api"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "8126"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.protocol", "TCP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.end_port", "9000"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.0.match_labels.name", "default"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.0.namespace_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.match_labels.name", "default"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.%"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.port", "10000"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.protocol", "TCP"),
@@ -156,14 +156,14 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.key", "name"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_labels.%", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.1", "webfront"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.0", "api"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "http"),
@@ -171,10 +171,10 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.port", "8125"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.0.match_expressions.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.0.match_labels.%", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.0.namespace_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.match_expressions.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.match_labels.%", "0"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.%"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
 				),
@@ -190,9 +190,9 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_labels.%", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "http"),
@@ -200,10 +200,10 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.port", "8125"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.0.match_expressions.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.0.match_labels.%", "0"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.0.namespace_selector.%"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.match_expressions.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.match_labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
 				),
@@ -219,13 +219,13 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.key", "name"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.1", "webfront"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.0", "api"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "http"),
@@ -233,16 +233,16 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.port", "statsd"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.cidr", "10.0.0.0/8"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.0", "10.0.0.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.1", "10.0.1.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.ip_block.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.namespace_selector.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.0.match_labels.app", "myapp"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.0.ip_block.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.1", "10.0.1.0/24"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.%"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.1.ip_block.%"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.1.namespace_selector.%"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.1.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.match_labels.app", "myapp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
 				),
@@ -258,13 +258,13 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.key", "name"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.1", "webfront"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.0", "api"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "http"),
@@ -272,27 +272,27 @@ func TestAccKubernetesNetworkPolicyV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.port", "statsd"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.cidr", "10.0.0.0/8"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.0", "10.0.0.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.1", "10.0.1.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.ip_block.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.namespace_selector.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.0.match_labels.app", "myapp"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.0.ip_block.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.1", "10.0.1.0/24"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.%"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.1.ip_block.%"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.1.namespace_selector.%"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.1.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.match_labels.app", "myapp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.port", "statsd"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.cidr", "10.0.0.0/8"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.except.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.except.0", "10.0.0.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.except.1", "10.0.1.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.egress.0.to.0.ip_block.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.except.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.except.1", "10.0.1.0/24"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.egress.0.to.0.pod_selector.%"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.1", "Egress"),
@@ -323,13 +323,13 @@ func TestAccKubernetesNetworkPolicyV1_withEgressAtCreation(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.key", "name"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.operator", "In"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.1", "webfront"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.0.match_expressions.0.values.0", "api"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.key", "name"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.operator", "In"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.1", "webfront"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.pod_selector.match_expressions.0.values.0", "api"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.0.port", "http"),
@@ -337,27 +337,27 @@ func TestAccKubernetesNetworkPolicyV1_withEgressAtCreation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.port", "statsd"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.ports.1.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.cidr", "10.0.0.0/8"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.0", "10.0.0.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.0.except.1", "10.0.1.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.ip_block.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.namespace_selector.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.0.match_labels.app", "myapp"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.0.ip_block.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.0.ip_block.except.1", "10.0.1.0/24"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.0.pod_selector.%"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.1.ip_block.%"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.ingress.0.from.1.namespace_selector.%"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.ingress.0.from.1.pod_selector.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.ingress.0.from.1.pod_selector.match_labels.app", "myapp"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.port", "statsd"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.ports.0.protocol", "UDP"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.cidr", "10.0.0.0/8"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.except.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.except.0", "10.0.0.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.0.except.1", "10.0.1.0/24"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.pod_selector.#", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.egress.0.to.0.ip_block.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.cidr", "10.0.0.0/8"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.except.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.except.0", "10.0.0.0/24"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.egress.0.to.0.ip_block.except.1", "10.0.1.0/24"),
+					resource.TestCheckNoResourceAttr(resourceName, "spec.0.egress.0.to.0.pod_selector.%"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.0", "Ingress"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.policy_types.1", "Egress"),
@@ -475,7 +475,7 @@ func testAccKubernetesNetworkPolicyV1Config_basic(name string) string {
   }
 
   spec {
-    pod_selector {}
+    pod_selector = {}
 
     policy_types = ["Ingress"]
   }
@@ -502,8 +502,9 @@ func testAccKubernetesNetworkPolicyV1Config_metaModified(name string) string {
   }
 
   spec {
-    pod_selector {}
-    ingress {}
+    pod_selector = {}
+    ingress {
+    }
     policy_types = ["Ingress"]
   }
 }
@@ -518,12 +519,14 @@ func testAccKubernetesNetworkPolicyV1Config_specModified(name string) string {
   }
 
   spec {
-    pod_selector {
-      match_expressions {
-        key      = "name"
-        operator = "In"
-        values   = ["webfront", "api"]
-      }
+    pod_selector = {
+      match_expressions = [
+        {
+          key      = "name"
+          operator = "In"
+          values   = ["webfront", "api"]
+        },
+      ]
     }
 
     ingress {
@@ -536,7 +539,7 @@ func testAccKubernetesNetworkPolicyV1Config_specModified(name string) string {
       }
 
       from {
-        namespace_selector {
+        namespace_selector = {
           match_labels = {
             name = "default"
           }
@@ -558,12 +561,14 @@ func testAccKubernetesNetworkPolicyV1Config_endPorts(name string) string {
   }
 
   spec {
-    pod_selector {
-      match_expressions {
-        key      = "name"
-        operator = "In"
-        values   = ["webfront", "api"]
-      }
+    pod_selector = {
+      match_expressions = [
+        {
+          key      = "name"
+          operator = "In"
+          values   = ["webfront", "api"]
+        },
+      ]
     }
 
     ingress {
@@ -574,7 +579,7 @@ func testAccKubernetesNetworkPolicyV1Config_endPorts(name string) string {
       }
 
       from {
-        namespace_selector {
+        namespace_selector = {
           match_labels = {
             name = "default"
           }
@@ -602,12 +607,14 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_allow_all_namespaces(na
   }
 
   spec {
-    pod_selector {
-      match_expressions {
-        key      = "name"
-        operator = "In"
-        values   = ["webfront", "api"]
-      }
+    pod_selector = {
+      match_expressions = [
+        {
+          key      = "name"
+          operator = "In"
+          values   = ["webfront", "api"]
+        },
+      ]
     }
 
     ingress {
@@ -621,7 +628,7 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_allow_all_namespaces(na
       }
 
       from {
-        namespace_selector {}
+        namespace_selector = {}
       }
     }
     policy_types = ["Ingress"]
@@ -638,7 +645,7 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_deny_other_namespaces(n
   }
 
   spec {
-    pod_selector {}
+    pod_selector = {}
 
     ingress {
       ports {
@@ -651,7 +658,7 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_deny_other_namespaces(n
       }
 
       from {
-        pod_selector {}
+        pod_selector = {}
       }
     }
 
@@ -669,12 +676,14 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_pod_selector(name strin
   }
 
   spec {
-    pod_selector {
-      match_expressions {
-        key      = "name"
-        operator = "In"
-        values   = ["webfront", "api"]
-      }
+    pod_selector = {
+      match_expressions = [
+        {
+          key      = "name"
+          operator = "In"
+          values   = ["webfront", "api"]
+        },
+      ]
     }
 
     ingress {
@@ -687,7 +696,7 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_pod_selector(name strin
         protocol = "UDP"
       }
       from {
-        ip_block {
+        ip_block = {
           cidr = "10.0.0.0/8"
           except = [
             "10.0.0.0/24",
@@ -696,7 +705,7 @@ func testAccKubernetesNetworkPolicyV1Config_specModified_pod_selector(name strin
         }
       }
       from {
-        pod_selector {
+        pod_selector = {
           match_labels = {
             app = "myapp"
           }
@@ -718,12 +727,14 @@ func testAccKubernetesNetworkPolicyV1Config_withEgress(name string) string {
   }
 
   spec {
-    pod_selector {
-      match_expressions {
-        key      = "name"
-        operator = "In"
-        values   = ["webfront", "api"]
-      }
+    pod_selector = {
+      match_expressions = [
+        {
+          key      = "name"
+          operator = "In"
+          values   = ["webfront", "api"]
+        },
+      ]
     }
 
     ingress {
@@ -736,7 +747,7 @@ func testAccKubernetesNetworkPolicyV1Config_withEgress(name string) string {
         protocol = "UDP"
       }
       from {
-        ip_block {
+        ip_block = {
           cidr = "10.0.0.0/8"
           except = [
             "10.0.0.0/24",
@@ -745,7 +756,7 @@ func testAccKubernetesNetworkPolicyV1Config_withEgress(name string) string {
         }
       }
       from {
-        pod_selector {
+        pod_selector = {
           match_labels = {
             app = "myapp"
           }
@@ -759,7 +770,7 @@ func testAccKubernetesNetworkPolicyV1Config_withEgress(name string) string {
         protocol = "UDP"
       }
       to {
-        ip_block {
+        ip_block = {
           cidr = "10.0.0.0/8"
           except = [
             "10.0.0.0/24",

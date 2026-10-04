@@ -1,0 +1,11 @@
+```release-note:enhancement
+`resource/kubernetes_service_account_v1`: Support `moved` blocks from the deprecated `kubernetes_service_account` resource without recreating the ServiceAccount. Cross-type moves require Terraform 1.8 or later.
+```
+
+```release-note:enhancement
+`resource/kubernetes_default_service_account_v1`: Support `moved` blocks from the deprecated `kubernetes_default_service_account` resource without recreating or re-adopting the default ServiceAccount. Cross-type moves require Terraform 1.8 or later.
+```
+
+```release-note:note
+`resource/kubernetes_service_account_v1`, `resource/kubernetes_default_service_account_v1`: Migrate to Plugin Framework. Existing versioned resources upgrade at the same address without a `moved` block or re-import.
+```

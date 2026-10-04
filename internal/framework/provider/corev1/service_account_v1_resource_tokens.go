@@ -87,7 +87,7 @@ func serviceAccountDiscoverDefaultSecret(ctx context.Context, conn *clientset.Cl
 		}
 		secret, err := conn.CoreV1().Secrets(account.Namespace).Get(ctx, reference.Name, metav1.GetOptions{})
 		if err != nil {
-			diags.AddError("Error reading service account token", fmt.Sprintf("Unable to fetch secret %s/%s: %s", account.Namespace, reference.Name, err))
+			diags.AddWarning("Unable to discover default service account token", fmt.Sprintf("Unable to fetch secret %s/%s: %s", account.Namespace, reference.Name, err))
 			return "", diags
 		}
 		if secret.Type == corev1.SecretTypeServiceAccountToken &&
@@ -97,10 +97,10 @@ func serviceAccountDiscoverDefaultSecret(ctx context.Context, conn *clientset.Cl
 		}
 	}
 	switch len(matches) {
-	case 0:
-		diags.AddWarning("Unable to find any service accounts tokens which could have been the default one.", "")
 	case 1:
 		return matches[0], diags
+	case 0:
+		// Token Secrets are not created automatically on modern Kubernetes clusters.
 	default:
 		diags.AddWarning("Unable to discover default secret name.", "There is more than one service account token associated to the service account.")
 	}

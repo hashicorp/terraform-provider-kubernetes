@@ -814,7 +814,7 @@ func testAccKubernetesSecretV1Config_immutable(name string, immutable bool, data
 }
 
 func testAccKubernetesSecretV1Config_service_account_token(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     name = "%s"
   }
@@ -823,7 +823,7 @@ func testAccKubernetesSecretV1Config_service_account_token(name string) string {
 resource "kubernetes_secret_v1" "test" {
   metadata {
     annotations = {
-      "kubernetes.io/service-account.name" = kubernetes_service_account_v1.test.metadata[0].name
+      "kubernetes.io/service-account.name" = kubernetes_service_account.test.metadata[0].name
     }
     name = "%s-token"
   }

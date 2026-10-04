@@ -1141,7 +1141,7 @@ func TestAccKubernetesPodV1_config_with_automount_service_account_token(t *testi
 			{
 				Config: testAccKubernetesPodV1ConfigWithAutomountServiceAccountToken(saName, podName, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesServiceAccountV1Exists("kubernetes_service_account_v1.test", &confSA),
+					testAccCheckKubernetesServiceAccountV1Exists("kubernetes_service_account.test", &confSA),
 					testAccCheckKubernetesPodV1Exists(resourceName, &confPod),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.automount_service_account_token", "true"),
 				),
@@ -2941,7 +2941,7 @@ func testAccKubernetesPodV1ConfigEnvUpdate(podName, imageName, val string) strin
 }
 
 func testAccKubernetesPodV1ConfigWithAutomountServiceAccountToken(saName string, podName string, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     name = "%s"
   }
@@ -2957,7 +2957,7 @@ resource "kubernetes_pod_v1" "test" {
   }
 
   spec {
-    service_account_name            = kubernetes_service_account_v1.test.metadata.0.name
+    service_account_name            = kubernetes_service_account.test.metadata.0.name
     automount_service_account_token = true
 
     container {
@@ -3251,7 +3251,7 @@ func testAccKubernetesPodV1ConfigWithVolume(name, imageName, serviceAccount stri
   storage_provisioner = "k8s.io/minikube-hostpath"
 }
 
-resource "kubernetes_service_account_v1" "test" {
+resource "kubernetes_service_account" "test" {
   metadata {
     name = "test"
   }
@@ -3409,7 +3409,7 @@ variable "scheduler_cluster_version" {
   default = ""
 }
 
-resource "kubernetes_service_account_v1" "scheduler" {
+resource "kubernetes_service_account" "scheduler" {
   metadata {
     name      = var.scheduler_name
     namespace = var.namespace
@@ -3495,7 +3495,7 @@ resource "kubernetes_pod_v1" "scheduler" {
   }
 
   spec {
-    service_account_name = kubernetes_service_account_v1.scheduler.metadata.0.name
+    service_account_name = kubernetes_service_account.scheduler.metadata.0.name
     container {
       name = var.scheduler_name
       command = [

@@ -76,3 +76,15 @@ Run `terraform plan` to verify the move and review any in-place changes describe
 ## Data source: kubernetes_all_namespaces
 
 Behavior is unchanged; no configuration updates are required.
+
+## Version 4: ServiceAccount
+
+`kubernetes_service_account_v1` and `kubernetes_default_service_account_v1` retain
+block syntax and existing resource addresses. No configuration rewrite or re-import
+is needed. See the [ServiceAccount](../resources/service_account_v1.md) and
+[default ServiceAccount](../resources/default_service_account_v1.md) migration notes
+for moves from the deprecated types and empty metadata collections.
+
+Import does not require access to legacy token Secrets. If a referenced Secret
+cannot be read, import succeeds with a warning and an empty `default_secret_name`.
+Accounts without token Secrets import without a token-discovery warning.

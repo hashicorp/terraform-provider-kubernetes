@@ -147,7 +147,7 @@ func serviceSpecSchema() schema.ListNestedBlock {
 					Default:     stringdefault.StaticString(""),
 					PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplaceIf(
 						func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-							resp.RequiresReplace = !(req.StateValue.ValueString() == "" && req.PlanValue.IsNull())
+							resp.RequiresReplace = req.StateValue.ValueString() != "" || !req.PlanValue.IsNull()
 						}, "Replace when the load balancer class changes.", "Replace when the load balancer class changes.",
 					)},
 				},

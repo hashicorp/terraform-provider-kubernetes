@@ -1,7 +1,15 @@
 ```release-note:enhancement
-resource/kubernetes_service_v1: Support Terraform `moved` blocks from the deprecated `kubernetes_service` resource without recreating the Kubernetes Service. Cross-type moves require Terraform 1.8 or later.
+`resource/kubernetes_service_v1`: Support Terraform `moved` blocks from the deprecated `kubernetes_service` resource without recreating the Kubernetes Service. Cross-type moves require Terraform 1.8 or later.
 ```
 
 ```release-note:breaking-change
-resource/kubernetes_service_v1: `session_affinity_config` and its nested `client_ip` now use object assignment syntax instead of blocks. Update references and lifecycle paths by removing the two affinity `[0]` indexes. Existing state is upgraded automatically, preserving the Service identity, networking, and affinity timeout. API-allocation markers (`node_port = 0` when allocation is enabled, empty/zero `target_port`, and empty `cluster_ips`/`ip_families` for non-ExternalName Services) are rejected; omit these arguments or use `null` instead. Explicit empty maps and sets may normalize SDK `null` state to empty collections without changing the Service. See the resource's Framework migration documentation before upgrading.
+`resource/kubernetes_service_v1`: `session_affinity_config` and its nested `client_ip` now use object assignment syntax instead of blocks. Update references and lifecycle paths by removing the two affinity `[0]` indexes. Existing state is upgraded automatically, preserving the Service identity, networking, and affinity timeout. API-allocation markers (`node_port = 0` when allocation is enabled, empty/zero `target_port`, and empty `cluster_ips`/`ip_families` for non-ExternalName Services) are rejected; omit these arguments or use `null` instead. Explicit empty maps and sets may normalize SDK `null` state to empty collections without changing the Service. See the resource's Framework migration documentation before upgrading.
+```
+
+```release-note:note
+`resource/kubernetes_service_v1`: Existing versioned resources upgrade to Plugin Framework at the same address without a moved block or re-import.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_service_v1`: State schema version increases to 2. Provider 3.x cannot read state saved with the new schema. Back up state before upgrading.
 ```

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 type serviceCollectionPlanningRule struct {
@@ -79,14 +80,15 @@ func (r *ServiceV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanReque
 			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p.AtListIndex(0).AtName(rule.name), desired)...)
 		}
 	}
-	if resp.Diagnostics.HasError() || !clearing {
+	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Framework marks computed values unknown before resource plan modification.
-	// A clear introduced here can be the only real change, so its API results
-	// must not remain pinned to the pre-PATCH resource version or status.
-	serviceMarkClearOutputsUnknown(ctx, configured, resp)
+	if clearing {
+		// A clear introduced here can be the only change. Its API results
+		// must not retain the pre-PATCH resource version or status.
+		serviceMarkClearOutputsUnknown(ctx, configured, resp)
+	}
+	servicePreserveUnchangedSpec(ctx, req, resp)
 }
 
 func servicePlanningObject(list types.List) (map[string]attr.Value, bool) {
@@ -198,5 +200,60 @@ func serviceMarkAffinityClearOutputsUnknown(ctx context.Context, config types.Ob
 	plannedClient := plan.Attributes()["client_ip"].(types.Object)
 	if !client.IsUnknown() && !plannedClient.IsNull() && !plannedClient.IsUnknown() && client.Attributes()["timeout_seconds"].IsNull() {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, clientPath.AtName("timeout_seconds"), types.Int64Unknown())...)
+	}
+}
+
+// Metadata-only edits preserve Service allocations. Spec edits, unknown inputs,
+// and replacements must allow Kubernetes to choose new values.
+func servicePreserveUnchangedSpec(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() || resp.Diagnostics.HasError() {
+		return
+	}
+	for _, name := range []string{"name", "namespace", "generate_name"} {
+		p := path.Root("metadata").AtListIndex(0).AtName(name)
+		var prior, planned types.String
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, p, &prior)...)
+		resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, p, &planned)...)
+		if resp.Diagnostics.HasError() || planned.IsUnknown() || !planned.Equal(prior) {
+			return
+		}
+	}
+	p := path.Root("spec")
+	var config, prior, planned types.List
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, p, &config)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, p, &prior)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, p, &planned)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if _, known := servicePlanningObject(planned); !known {
+		return
+	}
+	configuredValue, err := config.ToTerraformValue(ctx)
+	if err != nil || !configuredValue.IsFullyKnown() {
+		return
+	}
+	priorValue, err := prior.ToTerraformValue(ctx)
+	if err != nil || !priorValue.IsFullyKnown() {
+		return
+	}
+	plannedValue, err := planned.ToTerraformValue(ctx)
+	if err != nil {
+		return
+	}
+	candidate, err := tftypes.Transform(plannedValue, func(at *tftypes.AttributePath, value tftypes.Value) (tftypes.Value, error) {
+		if value.IsKnown() {
+			return value, nil
+		}
+		old, _, err := tftypes.WalkAttributePath(priorValue, at)
+		if err != nil {
+			return value, nil
+		}
+		return old.(tftypes.Value), nil
+	})
+	// Restore only when every known spec value, including port order and
+	// collection removals, still matches. Leave status and metadata computed.
+	if err == nil && candidate.Equal(priorValue) {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, prior)...)
 	}
 }

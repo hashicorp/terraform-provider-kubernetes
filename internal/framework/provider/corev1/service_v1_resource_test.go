@@ -30,12 +30,15 @@ import (
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	sdkterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -4644,8 +4647,9 @@ data "kubernetes_service_v1" "readback" {
 }
 resource "kubernetes_service_v1" "dependent" {
   metadata {
-    name      = "service-dependent"
-    namespace = "default"
+    name        = "service-dependent"
+    namespace   = "default"
+    annotations = { service_ip = kubernetes_service_v1.test.spec[0].cluster_ip }
   }
   wait_for_load_balancer = false
   spec {
@@ -4657,6 +4661,7 @@ output "readback_ip" {
   value = data.kubernetes_service_v1.readback.spec[0].cluster_ip
 }
 `
+	updated := strings.Replace(config, `labels = { app = "service-cli" }`, `labels = { app = "updated" }`, 1)
 	var baseline *coreapi.Service
 	check := resource.ComposeTestCheckFunc(
 		api.check("kubernetes_service_v1.test", &baseline, false),
@@ -4668,8 +4673,15 @@ output "readback_ip" {
 		CheckDestroy: api.checkDestroy, ErrorCheck: api.errorCheck,
 		Steps: []resource.TestStep{
 			{Config: config, Check: check},
-			{PreConfig: func() { api.setPhase("follow-up", true) }, Config: config, Check: check},
-			{PreConfig: func() { api.setPhase("cleanup", false) }, Config: config, Destroy: true},
+			{
+				PreConfig: func() { api.setPhase("metadata-update", false) }, Config: updated, Check: check,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectResourceAction("kubernetes_service_v1.test", plancheck.ResourceActionUpdate),
+					plancheck.ExpectResourceAction("kubernetes_service_v1.dependent", plancheck.ResourceActionNoop),
+				}},
+			},
+			{PreConfig: func() { api.setPhase("follow-up", true) }, Config: updated, Check: check},
+			{PreConfig: func() { api.setPhase("cleanup", false) }, Config: updated, Destroy: true},
 		},
 	})
 }
@@ -7359,7 +7371,8 @@ func (api *serviceCLIAPI) defaultAndValidate(object, old *coreapi.Service) error
 	if spec.SessionAffinity == "" {
 		spec.SessionAffinity = coreapi.ServiceAffinityNone
 	}
-	if spec.SessionAffinity == coreapi.ServiceAffinityClientIP {
+	switch spec.SessionAffinity {
+	case coreapi.ServiceAffinityClientIP:
 		if spec.SessionAffinityConfig == nil {
 			spec.SessionAffinityConfig = &coreapi.SessionAffinityConfig{}
 		}
@@ -7373,9 +7386,9 @@ func (api *serviceCLIAPI) defaultAndValidate(object, old *coreapi.Service) error
 		if timeout <= 0 || timeout > 86400 {
 			return fmt.Errorf("ClientIP affinity timeout must be 1..86400")
 		}
-	} else if spec.SessionAffinity == coreapi.ServiceAffinityNone {
+	case coreapi.ServiceAffinityNone:
 		spec.SessionAffinityConfig = nil
-	} else {
+	default:
 		return fmt.Errorf("invalid sessionAffinity %q", spec.SessionAffinity)
 	}
 	// Kubernetes' Service update strategy clears now-inapplicable allocations
@@ -7688,5 +7701,392 @@ func TestServiceCLIAPI_ExternalIPsTypeTransition(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func serviceProtocolDiagnostics(t *testing.T, diagnostics []*tfprotov6.Diagnostic) {
+	t.Helper()
+	for _, d := range diagnostics {
+		if d.Severity == tfprotov6.DiagnosticSeverityError {
+			t.Fatalf("%s: %s", d.Summary, d.Detail)
+		}
+	}
+}
+
+func TestServiceSingletonSchema(t *testing.T) {
+	var response fwresource.SchemaResponse
+	serviceRegisteredFrameworkResource(t).Schema(context.Background(), fwresource.SchemaRequest{}, &response)
+	if response.Schema.Version != 2 {
+		t.Fatalf("schema version = %d, want 2", response.Schema.Version)
+	}
+	spec := response.Schema.Blocks["spec"].(schema.ListNestedBlock)
+	affinity, ok := spec.NestedObject.Attributes["session_affinity_config"].(schema.SingleNestedAttribute)
+	if !ok || !affinity.Optional || !affinity.Computed {
+		t.Fatal("affinity must be an Optional+Computed single object")
+	}
+	client, ok := affinity.Attributes["client_ip"].(schema.SingleNestedAttribute)
+	if !ok || !client.Optional || !client.Computed {
+		t.Fatal("client_ip must be an Optional+Computed single object")
+	}
+}
+
+func TestServiceReadLegacyNullIdentityNotFound(t *testing.T) {
+	ctx := context.Background()
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/api/v1/namespaces/apps/services/svc-abc" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		http.Error(w, `{"kind":"Status","apiVersion":"v1","status":"Failure","reason":"NotFound","code":404}`, 404)
+	}))
+	defer api.Close()
+	sdk := kubernetes.Provider()
+	if diagnostics := sdk.Configure(ctx, sdkterraform.NewResourceConfigRaw(map[string]interface{}{"host": api.URL})); diagnostics.HasError() {
+		t.Fatal(diagnostics)
+	}
+	server := providerserver.NewProtocol6(provider.New("test", sdk.Meta))()
+	schemas, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceProtocolDiagnostics(t, schemas.Diagnostics)
+	configType := schemas.Provider.ValueType().(tftypes.Object)
+	configValues := map[string]tftypes.Value{}
+	for name, typ := range configType.AttributeTypes {
+		configValues[name] = tftypes.NewValue(typ, nil)
+	}
+	config, err := tfprotov6.NewDynamicValue(configType, tftypes.NewValue(configType, configValues))
+	if err != nil {
+		t.Fatal(err)
+	}
+	configured, err := server.ConfigureProvider(ctx, &tfprotov6.ConfigureProviderRequest{Config: &config})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceProtocolDiagnostics(t, configured.Diagnostics)
+	upgraded, err := server.UpgradeResourceState(ctx, &tfprotov6.UpgradeResourceStateRequest{TypeName: "kubernetes_service_v1", Version: 0, RawState: serviceStoredFixture(t, 0)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceProtocolDiagnostics(t, upgraded.Diagnostics)
+	read, err := server.ReadResource(ctx, &tfprotov6.ReadResourceRequest{TypeName: "kubernetes_service_v1", CurrentState: upgraded.UpgradedState})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceProtocolDiagnostics(t, read.Diagnostics)
+	state, err := read.NewState.Unmarshal(schemas.ResourceSchemas["kubernetes_service_v1"].ValueType())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.IsNull() {
+		t.Fatal("404 retained resource state")
+	}
+	if read.NewIdentity == nil {
+		t.Fatal("404 lost identity")
+	}
+}
+
+// These requests deliberately skip ConfigureProvider and ReadResource: upgrading
+// stored state must be sufficient to plan safely while the API is unavailable.
+func TestServiceSingletonUpgradeAndMoveWithoutRead(t *testing.T) {
+	ctx := context.Background()
+	for _, version := range []int64{0, 1} {
+		for _, move := range []bool{false, true} {
+			for _, affinity := range []string{`null`, `[]`, `[{}]`, `[{"client_ip":[]}]`, `[{"client_ip":[{}]}]`, `[{"client_ip":[{"timeout_seconds":300}]}]`} {
+				t.Run(fmt.Sprintf("v%d/move-%t/%s", version, move, affinity), func(t *testing.T) {
+					server := providerserver.NewProtocol6(provider.New("test", nil))()
+					schemas, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					serviceProtocolDiagnostics(t, schemas.Diagnostics)
+					typ := schemas.ResourceSchemas["kubernetes_service_v1"].ValueType()
+					fixture := serviceStoredFixture(t, version)
+					var stored map[string]any
+					if err := json.Unmarshal(fixture.JSON, &stored); err != nil {
+						t.Fatal(err)
+					}
+					stored["metadata"].([]any)[0].(map[string]any)["generate_name"] = ""
+					spec := stored["spec"].([]any)[0].(map[string]any)
+
+					spec["session_affinity_config"] = json.RawMessage(affinity)
+					fixture.JSON, err = json.Marshal(stored)
+					if err != nil {
+						t.Fatal(err)
+					}
+					var dynamic *tfprotov6.DynamicValue
+					if move {
+						result, err := server.MoveResourceState(ctx, &tfprotov6.MoveResourceStateRequest{SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes", SourceTypeName: "kubernetes_service", SourceSchemaVersion: version, SourceState: fixture, TargetTypeName: "kubernetes_service_v1"})
+						if err != nil {
+							t.Fatal(err)
+						}
+						serviceProtocolDiagnostics(t, result.Diagnostics)
+						dynamic = result.TargetState
+						if result.TargetIdentity == nil {
+							t.Fatal("move omitted identity")
+						}
+					} else {
+						result, err := server.UpgradeResourceState(ctx, &tfprotov6.UpgradeResourceStateRequest{TypeName: "kubernetes_service_v1", Version: version, RawState: fixture})
+						if err != nil {
+							t.Fatal(err)
+						}
+						serviceProtocolDiagnostics(t, result.Diagnostics)
+						dynamic = result.UpgradedState
+					}
+					if dynamic == nil {
+						t.Fatal("conversion omitted state")
+					}
+					prior, err := dynamic.Unmarshal(typ)
+					if err != nil {
+						t.Fatal(err)
+					}
+					var schemaResponse fwresource.SchemaResponse
+					serviceRegisteredFrameworkResource(t).Schema(ctx, fwresource.SchemaRequest{}, &schemaResponse)
+					current := tfsdk.State{Schema: schemaResponse.Schema, Raw: prior}
+					for _, tc := range []struct {
+						name    string
+						change  path.Path
+						value   any
+						replace bool
+					}{
+						{name: "unchanged"},
+						{name: "omitted-affinity"},
+						{name: "metadata-only", change: path.Root("metadata").AtListIndex(0).AtName("labels"), value: map[string]string{"app": "changed"}},
+						{name: "immutable-name", change: path.Root("metadata").AtListIndex(0).AtName("name"), value: "changed", replace: true},
+						{name: "immutable-cluster-ip", change: path.Root("spec").AtListIndex(0).AtName("cluster_ip"), value: "10.96.0.99", replace: true},
+						{name: "immutable-class", change: path.Root("spec").AtListIndex(0).AtName("load_balancer_class"), value: "example.com/other", replace: true},
+					} {
+						t.Run(tc.name, func(t *testing.T) {
+							// Core merges prior values into Optional+Computed fields. The legacy
+							// empty generate_name is tested against omitted configuration.
+							config := tfsdk.State{Schema: current.Schema, Raw: prior}
+							proposed := tfsdk.State{Schema: current.Schema, Raw: prior}
+							emptyName := path.Root("metadata").AtListIndex(0).AtName("generate_name")
+							if d := config.SetAttribute(ctx, emptyName, types.StringNull()); d.HasError() {
+								t.Fatal(d)
+							}
+							if d := proposed.SetAttribute(ctx, emptyName, types.StringNull()); d.HasError() {
+								t.Fatal(d)
+							}
+							config.Raw, err = tftypes.Transform(config.Raw, func(p *tftypes.AttributePath, v tftypes.Value) (tftypes.Value, error) {
+								steps := p.Steps()
+								computed := len(steps) == 1 && (steps[0] == tftypes.AttributeName("id") || steps[0] == tftypes.AttributeName("status"))
+								if len(steps) == 3 && steps[0] == tftypes.AttributeName("metadata") {
+									computed = steps[2] == tftypes.AttributeName("uid") || steps[2] == tftypes.AttributeName("generation") || steps[2] == tftypes.AttributeName("resource_version")
+								}
+								if computed {
+									return tftypes.NewValue(v.Type(), nil), nil
+								}
+								return v, nil
+							})
+							if err != nil {
+								t.Fatal(err)
+							}
+
+							if tc.name == "omitted-affinity" {
+								var affinity types.Object
+								at := path.Root("spec").AtListIndex(0).AtName("session_affinity_config")
+								if d := current.GetAttribute(ctx, at, &affinity); d.HasError() {
+									t.Fatal(d)
+								}
+								if d := config.SetAttribute(ctx, at, types.ObjectNull(affinity.AttributeTypes(ctx))); d.HasError() {
+									t.Fatal(d)
+								}
+							}
+
+							if tc.value != nil {
+								if d := config.SetAttribute(ctx, tc.change, tc.value); d.HasError() {
+									t.Fatal(d)
+								}
+								if d := proposed.SetAttribute(ctx, tc.change, tc.value); d.HasError() {
+									t.Fatal(d)
+								}
+							}
+							cfg, err := tfprotov6.NewDynamicValue(typ, config.Raw)
+							if err != nil {
+								t.Fatal(err)
+							}
+							proposal, err := tfprotov6.NewDynamicValue(typ, proposed.Raw)
+							if err != nil {
+								t.Fatal(err)
+							}
+							planned, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{TypeName: "kubernetes_service_v1", PriorState: dynamic, Config: &cfg, ProposedNewState: &proposal})
+							if err != nil {
+								t.Fatal(err)
+							}
+							serviceProtocolDiagnostics(t, planned.Diagnostics)
+							if (len(planned.RequiresReplace) != 0) != tc.replace {
+								t.Fatalf("replacement paths = %v, want replacement %t", planned.RequiresReplace, tc.replace)
+							}
+							if tc.replace {
+								parent, field := "metadata", "name"
+								if tc.name == "immutable-cluster-ip" {
+									parent, field = "spec", "cluster_ip"
+								}
+								if tc.name == "immutable-class" {
+									parent, field = "spec", "load_balancer_class"
+								}
+								want := tftypes.NewAttributePath().WithAttributeName(parent).WithElementKeyInt(0).WithAttributeName(field)
+								if len(planned.RequiresReplace) != 1 || !planned.RequiresReplace[0].Equal(want) {
+									t.Fatalf("replacement paths = %v, want %s", planned.RequiresReplace, want)
+								}
+							}
+							if tc.name == "unchanged" || tc.name == "omitted-affinity" {
+								got, err := planned.PlannedState.Unmarshal(typ)
+								if err != nil {
+									t.Fatal(err)
+								}
+								if !got.Equal(prior) {
+									t.Fatalf("unchanged plan differs from upgraded state:\n%s\n%s", prior, got)
+								}
+							}
+						})
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestServiceNameAndGenerateNameConfiguration(t *testing.T) {
+	ctx := context.Background()
+	server, err := mux.MuxServer(ctx, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	schemas, err := server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"kubernetes_service", "kubernetes_service_v1"} {
+		t.Run(name, func(t *testing.T) {
+			typ := schemas.ResourceSchemas[name].ValueType()
+			raw := &tfprotov6.RawState{JSON: []byte(`{"metadata":[{"name":"named","namespace":"default","generate_name":"prefix-"}],"spec":[{"port":[{"port":80}]}]}`)}
+			value, err := raw.Unmarshal(typ)
+			if err != nil {
+				t.Fatal(err)
+			}
+			config, err := tfprotov6.NewDynamicValue(typ, value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := server.ValidateResourceConfig(ctx, &tfprotov6.ValidateResourceConfigRequest{TypeName: name, Config: &config})
+			if err != nil {
+				t.Fatal(err)
+			}
+			serviceProtocolDiagnostics(t, result.Diagnostics)
+		})
+	}
+}
+
+func TestServiceMetadataUpdateKeepsAllocations(t *testing.T) {
+	ctx := context.Background()
+	server := providerserver.NewProtocol6(provider.New("test", nil))()
+	var schemaResponse fwresource.SchemaResponse
+	serviceRegisteredFrameworkResource(t).Schema(ctx, fwresource.SchemaRequest{}, &schemaResponse)
+	typ := schemaResponse.Schema.Type().TerraformType(ctx)
+	upgraded, err := server.UpgradeResourceState(ctx, &tfprotov6.UpgradeResourceStateRequest{TypeName: "kubernetes_service_v1", Version: 1, RawState: serviceStoredFixture(t, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceProtocolDiagnostics(t, upgraded.Diagnostics)
+	prior, err := upgraded.UpgradedState.Unmarshal(typ)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := tfsdk.State{Schema: schemaResponse.Schema, Raw: prior}
+	valueAt := func(state tfsdk.State, at path.Path) tftypes.Value {
+		t.Helper()
+		p := tftypes.NewAttributePath()
+		for _, step := range at.Steps() {
+			switch step := step.(type) {
+			case path.PathStepAttributeName:
+				p = p.WithAttributeName(string(step))
+			case path.PathStepElementKeyInt:
+				p = p.WithElementKeyInt(int(step))
+			default:
+				t.Fatalf("unsupported test path: %s", at)
+			}
+		}
+		value, _, err := tftypes.WalkAttributePath(state.Raw, p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return value.(tftypes.Value)
+	}
+	spec := path.Root("spec").AtListIndex(0)
+	metadata := path.Root("metadata").AtListIndex(0)
+	outputs := []path.Path{spec.AtName("cluster_ip"), spec.AtName("cluster_ips"), spec.AtName("ip_families"), spec.AtName("ip_family_policy"), spec.AtName("internal_traffic_policy"), spec.AtName("external_traffic_policy"), spec.AtName("health_check_node_port"), spec.AtName("session_affinity_config"), spec.AtName("port").AtListIndex(0).AtName("node_port")}
+	for _, tc := range []struct {
+		name  string
+		at    path.Path
+		value any
+		known bool
+	}{
+		{"labels", metadata.AtName("labels"), map[string]string{"app": "changed"}, true},
+		{"remove-labels", metadata.AtName("labels"), types.MapNull(types.StringType), true},
+		{"replace-name", metadata.AtName("name"), "other", false},
+		{"change-type", spec.AtName("type"), "NodePort", false},
+		{"change-port", spec.AtName("port").AtListIndex(0).AtName("port"), int64(81), false},
+		{"remove-selector", spec.AtName("selector"), types.MapNull(types.StringType), false},
+		{"unknown-selector", spec.AtName("selector"), types.MapUnknown(types.StringType), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config, proposed := base, base
+			for _, at := range append(outputs, metadata.AtName("uid"), metadata.AtName("generation"), metadata.AtName("resource_version"), path.Root("id"), path.Root("status")) {
+				attributeType, diagnostics := config.Schema.TypeAtPath(ctx, at)
+				if diagnostics.HasError() {
+					t.Fatal(diagnostics)
+				}
+				null, err := attributeType.ValueFromTerraform(ctx, tftypes.NewValue(attributeType.TerraformType(ctx), nil))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if d := config.SetAttribute(ctx, at, null); d.HasError() {
+					t.Fatal(d)
+				}
+			}
+			if d := config.SetAttribute(ctx, tc.at, tc.value); d.HasError() {
+				t.Fatal(d)
+			}
+			if d := proposed.SetAttribute(ctx, tc.at, tc.value); d.HasError() {
+				t.Fatal(d)
+			}
+			dynamic := func(value tftypes.Value) *tfprotov6.DynamicValue {
+				result, err := tfprotov6.NewDynamicValue(typ, value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return &result
+			}
+			response, err := server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{TypeName: "kubernetes_service_v1", PriorState: upgraded.UpgradedState, Config: dynamic(config.Raw), ProposedNewState: dynamic(proposed.Raw)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			serviceProtocolDiagnostics(t, response.Diagnostics)
+			raw, err := response.PlannedState.Unmarshal(typ)
+			if err != nil {
+				t.Fatal(err)
+			}
+			planned := tfsdk.State{Schema: base.Schema, Raw: raw}
+			for _, at := range outputs {
+				before, after := valueAt(base, at), valueAt(planned, at)
+				if tc.known && !after.Equal(before) {
+					t.Errorf("%s = %s, want retained %s", at, after, before)
+				}
+			}
+			var clusterIP types.String
+			if d := planned.GetAttribute(ctx, spec.AtName("cluster_ip"), &clusterIP); d.HasError() {
+				t.Fatal(d)
+			}
+			if !tc.known && !clusterIP.IsUnknown() {
+				t.Errorf("changed inputs pinned cluster_ip: %s", clusterIP)
+			}
+			for _, at := range []path.Path{metadata.AtName("resource_version"), metadata.AtName("generation"), path.Root("status")} {
+				value := valueAt(planned, at)
+				if value.IsKnown() {
+					t.Errorf("write result %s must remain unknown: %s", at, value)
+				}
+			}
+		})
 	}
 }

@@ -26,15 +26,15 @@ func ingressExpandSpec(ctx context.Context, in []IngressV1SpecModel) (networking
 		value := spec.IngressClassName.ValueString()
 		out.IngressClassName = &value
 	}
-	if len(spec.DefaultBackend) > 0 {
+	if spec.DefaultBackend != nil {
 		out.DefaultBackend = ingressExpandBackend(spec.DefaultBackend, &diags)
 	}
 	for _, rule := range spec.Rule {
 		ingressKnown(&diags, "rule.host", rule.Host)
 		r := networking.IngressRule{Host: rule.Host.ValueString()}
-		if len(rule.HTTP) > 0 {
+		if rule.HTTP != nil {
 			r.HTTP = &networking.HTTPIngressRuleValue{}
-			for _, p := range rule.HTTP[0].Path {
+			for _, p := range rule.HTTP.Path {
 				ingressKnown(&diags, "path.path", p.Path)
 				ingressKnown(&diags, "path.path_type", p.PathType)
 				pathType := networking.PathType(p.PathType.ValueString())
@@ -58,13 +58,13 @@ func ingressExpandSpec(ctx context.Context, in []IngressV1SpecModel) (networking
 	return out, diags
 }
 
-func ingressExpandBackend(in []IngressV1BackendModel, diags *diag.Diagnostics) *networking.IngressBackend {
+func ingressExpandBackend(in *IngressV1BackendModel, diags *diag.Diagnostics) *networking.IngressBackend {
 	out := &networking.IngressBackend{}
-	if len(in) == 0 {
+	if in == nil {
 		return out
 	}
-	if len(in[0].Resource) > 0 {
-		r := in[0].Resource[0]
+	if in.Resource != nil {
+		r := in.Resource
 		ingressKnown(diags, "resource.api_group", r.APIGroup)
 		ingressKnown(diags, "resource.kind", r.Kind)
 		ingressKnown(diags, "resource.name", r.Name)
@@ -73,18 +73,18 @@ func ingressExpandBackend(in []IngressV1BackendModel, diags *diag.Diagnostics) *
 			APIGroup: &group, Kind: r.Kind.ValueString(), Name: r.Name.ValueString(),
 		}
 	}
-	if len(in[0].Service) > 0 {
-		s := in[0].Service[0]
+	if in.Service != nil {
+		s := in.Service
 		ingressKnown(diags, "service.name", s.Name)
 		out.Service = &networking.IngressServiceBackend{Name: s.Name.ValueString()}
-		if len(s.Port) != 1 {
-			diags.AddError("Invalid ingress backend", "Exactly one port block is required for a service backend.")
+		if s.Port == nil {
+			diags.AddError("Invalid ingress backend", "A port object is required for a service backend.")
 			return out
 		}
-		ingressKnown(diags, "port.name", s.Port[0].Name)
-		ingressKnown(diags, "port.number", s.Port[0].Number)
-		out.Service.Port.Name = s.Port[0].Name.ValueString()
-		out.Service.Port.Number = int32(s.Port[0].Number.ValueInt64())
+		ingressKnown(diags, "port.name", s.Port.Name)
+		ingressKnown(diags, "port.number", s.Port.Number)
+		out.Service.Port.Name = s.Port.Name.ValueString()
+		out.Service.Port.Number = int32(s.Port.Number.ValueInt64())
 	}
 	return out
 }
@@ -99,7 +99,7 @@ func ingressFlattenSpec(ctx context.Context, in networking.IngressSpec, prior []
 	var diags diag.Diagnostics
 	out := IngressV1SpecModel{
 		IngressClassName: types.StringValue(""),
-		DefaultBackend:   []IngressV1BackendModel{},
+		DefaultBackend:   nil,
 		Rule:             []IngressV1RuleModel{},
 		TLS:              []IngressV1TLSModel{},
 	}
@@ -110,7 +110,7 @@ func ingressFlattenSpec(ctx context.Context, in networking.IngressSpec, prior []
 		out.DefaultBackend = ingressFlattenBackend(in.DefaultBackend)
 	}
 	for _, rule := range in.Rules {
-		r := IngressV1RuleModel{Host: types.StringValue(rule.Host), HTTP: []IngressV1HTTPModel{}}
+		r := IngressV1RuleModel{Host: types.StringValue(rule.Host), HTTP: nil}
 		if rule.HTTP != nil {
 			h := IngressV1HTTPModel{Path: []IngressV1PathModel{}}
 			for _, p := range rule.HTTP.Paths {
@@ -123,7 +123,7 @@ func ingressFlattenSpec(ctx context.Context, in networking.IngressSpec, prior []
 					Backend: ingressFlattenBackend(&p.Backend),
 				})
 			}
-			r.HTTP = append(r.HTTP, h)
+			r.HTTP = &h
 		}
 		out.Rule = append(out.Rule, r)
 	}
@@ -144,33 +144,33 @@ func ingressFlattenSpec(ctx context.Context, in networking.IngressSpec, prior []
 	return []IngressV1SpecModel{out}, diags
 }
 
-func ingressFlattenBackend(in *networking.IngressBackend) []IngressV1BackendModel {
+func ingressFlattenBackend(in *networking.IngressBackend) *IngressV1BackendModel {
 	if in == nil {
-		return []IngressV1BackendModel{}
+		return nil
 	}
 	out := IngressV1BackendModel{
-		Resource: []IngressV1ResourceBackendModel{},
-		Service:  []IngressV1ServiceBackendModel{},
+		Resource: nil,
+		Service:  nil,
 	}
 	if in.Resource != nil {
 		group := ""
 		if in.Resource.APIGroup != nil {
 			group = *in.Resource.APIGroup
 		}
-		out.Resource = append(out.Resource, IngressV1ResourceBackendModel{
+		out.Resource = &IngressV1ResourceBackendModel{
 			APIGroup: types.StringValue(group), Kind: types.StringValue(in.Resource.Kind),
 			Name: types.StringValue(in.Resource.Name),
-		})
+		}
 	}
 	if in.Service != nil {
-		out.Service = append(out.Service, IngressV1ServiceBackendModel{
+		out.Service = &IngressV1ServiceBackendModel{
 			Name: types.StringValue(in.Service.Name),
-			Port: []IngressV1PortModel{{
+			Port: &IngressV1PortModel{
 				Name: types.StringValue(in.Service.Port.Name), Number: types.Int64Value(int64(in.Service.Port.Number)),
-			}},
-		})
+			},
+		}
 	}
-	return []IngressV1BackendModel{out}
+	return &out
 }
 
 func ingressFlattenStatus(ctx context.Context, in networking.IngressLoadBalancerStatus) (types.List, diag.Diagnostics) {

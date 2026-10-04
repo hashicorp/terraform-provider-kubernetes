@@ -22,18 +22,24 @@ func (r *IngressClassV1) Schema(_ context.Context, _ resource.SchemaRequest, res
 	specDoc := networking.IngressClassSpec{}.SwaggerDoc()
 	parametersDoc := networking.IngressClassParametersReference{}.SwaggerDoc()
 	resp.Schema = schema.Schema{
+		Version:     1,
 		Description: "Ingresses can be implemented by different controllers, often with different configuration. Each Ingress should specify a class, a reference to an IngressClass resource that contains additional configuration including the name of the controller that should implement the class.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"metadata": networkingMetadataSchema("ingress_class_v1", false),
 			"spec": schema.ListNestedBlock{
 				Description: "Specification of the IngressClass. Exactly one spec block is required.",
-				Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeBetween(1, 1)},
+				Validators: []validator.List{
+					listvalidator.IsRequired(),
+					listvalidator.SizeBetween(1, 1),
+				},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"controller": schema.StringAttribute{
@@ -42,38 +48,37 @@ func (r *IngressClassV1) Schema(_ context.Context, _ resource.SchemaRequest, res
 							Computed:    true,
 							Default:     stringdefault.StaticString(""),
 						},
-					},
-					Blocks: map[string]schema.Block{
-						"parameters": schema.ListNestedBlock{
+						"parameters": schema.SingleNestedAttribute{
 							Description: specDoc["parameters"],
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"api_group": schema.StringAttribute{
-										Description: parametersDoc["apiGroup"],
-										Optional:    true,
-										Computed:    true,
-										Default:     stringdefault.StaticString(""),
+							Optional:    true,
+							Attributes: map[string]schema.Attribute{
+								"api_group": schema.StringAttribute{
+									Description: parametersDoc["apiGroup"],
+									Optional:    true,
+									Computed:    true,
+									Default:     stringdefault.StaticString(""),
+								},
+								"kind": schema.StringAttribute{
+									Description: parametersDoc["kind"],
+									Required:    true,
+								},
+								"name": schema.StringAttribute{
+									Description: parametersDoc["name"],
+									Required:    true,
+								},
+								"scope": schema.StringAttribute{
+									Description: parametersDoc["scope"],
+									Optional:    true,
+									Computed:    true,
+									Validators: []validator.String{
+										stringvalidator.OneOf("Cluster", "Namespace"),
 									},
-									"kind": schema.StringAttribute{
-										Description: parametersDoc["kind"],
-										Required:    true,
-									},
-									"name": schema.StringAttribute{
-										Description: parametersDoc["name"],
-										Required:    true,
-									},
-									"scope": schema.StringAttribute{
-										Description: parametersDoc["scope"],
-										Optional:    true,
-										Computed:    true,
-										Validators:  []validator.String{stringvalidator.OneOf("Cluster", "Namespace")},
-									},
-									"namespace": schema.StringAttribute{
-										Description: parametersDoc["namespace"],
-										Optional:    true,
-										Computed:    true,
-										Default:     stringdefault.StaticString(""),
-									},
+								},
+								"namespace": schema.StringAttribute{
+									Description: parametersDoc["namespace"],
+									Optional:    true,
+									Computed:    true,
+									Default:     stringdefault.StaticString(""),
 								},
 							},
 						},

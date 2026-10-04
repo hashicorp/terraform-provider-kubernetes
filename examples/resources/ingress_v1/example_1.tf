@@ -4,42 +4,35 @@ resource "kubernetes_ingress_v1" "example_ingress" {
   }
 
   spec {
-    default_backend {
-      service {
+    default_backend = {
+      service = {
         name = "myapp-1"
-        port {
-          number = 8080
-        }
+        port = { number = 8080 }
       }
     }
 
     rule {
-      http {
-        path {
-          backend {
-            service {
-              name = "myapp-1"
-              port {
-                number = 8080
+      http = {
+        path = [
+          {
+            path = "/app1/*"
+            backend = {
+              service = {
+                name = "myapp-1"
+                port = { number = 8080 }
               }
             }
-          }
-
-          path = "/app1/*"
-        }
-
-        path {
-          backend {
-            service {
-              name = "myapp-2"
-              port {
-                number = 8080
+          },
+          {
+            path = "/app2/*"
+            backend = {
+              service = {
+                name = "myapp-2"
+                port = { number = 8080 }
               }
             }
-          }
-
-          path = "/app2/*"
-        }
+          },
+        ]
       }
     }
 

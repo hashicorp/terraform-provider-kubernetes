@@ -22,12 +22,14 @@ import (
 func (r *NetworkPolicyV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	specDoc := networking.NetworkPolicySpec{}.SwaggerDoc()
 	resp.Schema = schema.Schema{
-		Version:     0,
+		Version:     1,
 		Description: "Kubernetes supports network policies to specify how groups of pods are allowed to communicate with each other and with other network endpoints. NetworkPolicy resources use labels to select pods and define rules which specify what traffic is allowed to the selected pods. Read more about network policies at https://kubernetes.io/docs/concepts/services-networking/network-policies/",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -41,24 +43,30 @@ func (r *NetworkPolicyV1) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Description: specDoc["policyTypes"],
 							Required:    true,
 							ElementType: types.StringType,
-							Validators:  []validator.List{listvalidator.SizeBetween(1, 2)},
+							Validators: []validator.List{
+								listvalidator.SizeBetween(1, 2),
+							},
 						},
+						"pod_selector": networkPolicySelectorBlock(specDoc["podSelector"], true),
 					},
 					Blocks: map[string]schema.Block{
-						"pod_selector": networkPolicySelectorBlock(specDoc["podSelector"], true),
 						"ingress": schema.ListNestedBlock{
 							Description: specDoc["ingress"],
-							NestedObject: schema.NestedBlockObject{Blocks: map[string]schema.Block{
-								"ports": networkPolicyPortsBlock(networking.NetworkPolicyIngressRule{}.SwaggerDoc()["ports"]),
-								"from":  networkPolicyPeersBlock(networking.NetworkPolicyIngressRule{}.SwaggerDoc()["from"]),
-							}},
+							NestedObject: schema.NestedBlockObject{
+								Blocks: map[string]schema.Block{
+									"ports": networkPolicyPortsBlock(networking.NetworkPolicyIngressRule{}.SwaggerDoc()["ports"]),
+									"from":  networkPolicyPeersBlock(networking.NetworkPolicyIngressRule{}.SwaggerDoc()["from"]),
+								},
+							},
 						},
 						"egress": schema.ListNestedBlock{
 							Description: specDoc["egress"],
-							NestedObject: schema.NestedBlockObject{Blocks: map[string]schema.Block{
-								"ports": networkPolicyPortsBlock(networking.NetworkPolicyEgressRule{}.SwaggerDoc()["ports"]),
-								"to":    networkPolicyPeersBlock(networking.NetworkPolicyEgressRule{}.SwaggerDoc()["to"]),
-							}},
+							NestedObject: schema.NestedBlockObject{
+								Blocks: map[string]schema.Block{
+									"ports": networkPolicyPortsBlock(networking.NetworkPolicyEgressRule{}.SwaggerDoc()["ports"]),
+									"to":    networkPolicyPeersBlock(networking.NetworkPolicyEgressRule{}.SwaggerDoc()["to"]),
+								},
+							},
 						},
 					},
 				},
@@ -69,9 +77,14 @@ func (r *NetworkPolicyV1) Schema(_ context.Context, _ resource.SchemaRequest, re
 
 func networkPolicyOneBlock(required bool) []validator.List {
 	if required {
-		return []validator.List{listvalidator.IsRequired(), listvalidator.SizeBetween(1, 1)}
+		return []validator.List{
+			listvalidator.IsRequired(),
+			listvalidator.SizeBetween(1, 1),
+		}
 	}
-	return []validator.List{listvalidator.SizeAtMost(1)}
+	return []validator.List{
+		listvalidator.SizeAtMost(1),
+	}
 }
 
 // SDKv2 writes zero values for omitted optional scalars, even without a Default.
@@ -88,21 +101,23 @@ func networkPolicyPortsBlock(description string) schema.ListNestedBlock {
 	doc := networking.NetworkPolicyPort{}.SwaggerDoc()
 	return schema.ListNestedBlock{
 		Description: description,
-		NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-			"port": networkPolicyOptionalString(doc["port"]),
-			"end_port": schema.Int64Attribute{
-				Description: doc["endPort"],
-				Optional:    true,
-				Computed:    true,
-				Default:     int64default.StaticInt64(0),
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"port": networkPolicyOptionalString(doc["port"]),
+				"end_port": schema.Int64Attribute{
+					Description: doc["endPort"],
+					Optional:    true,
+					Computed:    true,
+					Default:     int64default.StaticInt64(0),
+				},
+				"protocol": schema.StringAttribute{
+					Description: doc["protocol"],
+					Optional:    true,
+					Computed:    true,
+					Default:     stringdefault.StaticString("TCP"),
+				},
 			},
-			"protocol": schema.StringAttribute{
-				Description: doc["protocol"],
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("TCP"),
-			},
-		}},
+		},
 	}
 }
 
@@ -110,49 +125,51 @@ func networkPolicyPeersBlock(description string) schema.ListNestedBlock {
 	doc := networking.NetworkPolicyPeer{}.SwaggerDoc()
 	return schema.ListNestedBlock{
 		Description: description,
-		NestedObject: schema.NestedBlockObject{Blocks: map[string]schema.Block{
-			"ip_block": schema.ListNestedBlock{
-				Description: doc["ipBlock"],
-				Validators:  networkPolicyOneBlock(false),
-				NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-					"cidr": networkPolicyOptionalString(networking.IPBlock{}.SwaggerDoc()["cidr"]),
-					"except": schema.ListAttribute{
-						Description: networking.IPBlock{}.SwaggerDoc()["except"],
-						Optional:    true,
-						Computed:    true,
-						ElementType: types.StringType,
-						PlanModifiers: []planmodifier.List{
-							networkingEmptyCollectionPlanModifier{},
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"ip_block": schema.SingleNestedAttribute{
+					Description: doc["ipBlock"],
+					Optional:    true,
+					Attributes: map[string]schema.Attribute{
+						"cidr": networkPolicyOptionalString(networking.IPBlock{}.SwaggerDoc()["cidr"]),
+						"except": schema.ListAttribute{
+							Description: networking.IPBlock{}.SwaggerDoc()["except"],
+							Optional:    true,
+							Computed:    true,
+							ElementType: types.StringType,
+							PlanModifiers: []planmodifier.List{
+								networkingEmptyCollectionPlanModifier{},
+							},
 						},
 					},
-				}},
+				},
+				"namespace_selector": networkPolicySelectorBlock(doc["namespaceSelector"], false),
+				"pod_selector":       networkPolicySelectorBlock(doc["podSelector"], false),
 			},
-			"namespace_selector": networkPolicySelectorBlock(doc["namespaceSelector"], false),
-			"pod_selector":       networkPolicySelectorBlock(doc["podSelector"], false),
-		}},
+		},
 	}
 }
 
-func networkPolicySelectorBlock(description string, required bool) schema.ListNestedBlock {
-	return schema.ListNestedBlock{
+func networkPolicySelectorBlock(description string, required bool) schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
 		Description: description,
-		Validators:  networkPolicyOneBlock(required),
-		NestedObject: schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{
-				"match_labels": schema.MapAttribute{
-					Description: "A map of {key,value} pairs. The requirements are ANDed.",
-					Optional:    true,
-					Computed:    true,
-					ElementType: types.StringType,
-					PlanModifiers: []planmodifier.Map{
-						networkingEmptyCollectionPlanModifier{},
-					},
+		Required:    required,
+		Optional:    !required,
+		Attributes: map[string]schema.Attribute{
+			"match_labels": schema.MapAttribute{
+				Description: "A map of {key,value} pairs. The requirements are ANDed.",
+				Optional:    true,
+				Computed:    true,
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					networkingEmptyCollectionPlanModifier{},
 				},
 			},
-			Blocks: map[string]schema.Block{
-				"match_expressions": schema.ListNestedBlock{
-					Description: "A list of label selector requirements. The requirements are ANDed.",
-					NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+			"match_expressions": schema.ListNestedAttribute{
+				Description: "A list of label selector requirements. The requirements are ANDed.",
+				Optional:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
 						"key":      networkPolicyOptionalString("The label key that the selector applies to."),
 						"operator": networkPolicyOptionalString("A key's relationship to a set of values. Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`."),
 						"values": schema.SetAttribute{
@@ -164,7 +181,7 @@ func networkPolicySelectorBlock(description string, required bool) schema.ListNe
 								networkingEmptyCollectionPlanModifier{},
 							},
 						},
-					}},
+					},
 				},
 			},
 		},

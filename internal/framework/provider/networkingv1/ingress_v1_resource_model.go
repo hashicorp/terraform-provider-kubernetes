@@ -19,15 +19,15 @@ type IngressV1Model struct {
 }
 
 type IngressV1SpecModel struct {
-	IngressClassName types.String            `tfsdk:"ingress_class_name"`
-	DefaultBackend   []IngressV1BackendModel `tfsdk:"default_backend"`
-	Rule             []IngressV1RuleModel    `tfsdk:"rule"`
-	TLS              []IngressV1TLSModel     `tfsdk:"tls"`
+	IngressClassName types.String           `tfsdk:"ingress_class_name"`
+	DefaultBackend   *IngressV1BackendModel `tfsdk:"default_backend"`
+	Rule             []IngressV1RuleModel   `tfsdk:"rule"`
+	TLS              []IngressV1TLSModel    `tfsdk:"tls"`
 }
 
 type IngressV1BackendModel struct {
-	Resource []IngressV1ResourceBackendModel `tfsdk:"resource"`
-	Service  []IngressV1ServiceBackendModel  `tfsdk:"service"`
+	Resource *IngressV1ResourceBackendModel `tfsdk:"resource"`
+	Service  *IngressV1ServiceBackendModel  `tfsdk:"service"`
 }
 
 type IngressV1ResourceBackendModel struct {
@@ -37,8 +37,8 @@ type IngressV1ResourceBackendModel struct {
 }
 
 type IngressV1ServiceBackendModel struct {
-	Name types.String         `tfsdk:"name"`
-	Port []IngressV1PortModel `tfsdk:"port"`
+	Name types.String        `tfsdk:"name"`
+	Port *IngressV1PortModel `tfsdk:"port"`
 }
 
 type IngressV1PortModel struct {
@@ -47,8 +47,8 @@ type IngressV1PortModel struct {
 }
 
 type IngressV1RuleModel struct {
-	Host types.String         `tfsdk:"host"`
-	HTTP []IngressV1HTTPModel `tfsdk:"http"`
+	Host types.String        `tfsdk:"host"`
+	HTTP *IngressV1HTTPModel `tfsdk:"http"`
 }
 
 type IngressV1HTTPModel struct {
@@ -56,9 +56,9 @@ type IngressV1HTTPModel struct {
 }
 
 type IngressV1PathModel struct {
-	Path     types.String            `tfsdk:"path"`
-	PathType types.String            `tfsdk:"path_type"`
-	Backend  []IngressV1BackendModel `tfsdk:"backend"`
+	Path     types.String           `tfsdk:"path"`
+	PathType types.String           `tfsdk:"path_type"`
+	Backend  *IngressV1BackendModel `tfsdk:"backend"`
 }
 
 type IngressV1TLSModel struct {

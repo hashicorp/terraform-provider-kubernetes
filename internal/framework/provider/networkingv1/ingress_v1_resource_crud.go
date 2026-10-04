@@ -98,6 +98,12 @@ func (r *IngressV1) Read(ctx context.Context, req resource.ReadRequest, resp *re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, ingressIdentity(namespace, name))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 	out, err := conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)

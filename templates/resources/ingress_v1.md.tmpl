@@ -21,7 +21,77 @@ description: |-
 
 ## Migration to Plugin Framework
 
-`kubernetes_ingress_v1` is implemented using the Terraform Plugin Framework. The resource type, configuration syntax, state schema version (0), and identity schema version (1) are unchanged. Existing `kubernetes_ingress_v1` state does not require a `moved` block or re-import.
+`kubernetes_ingress_v1` is implemented using the Terraform Plugin Framework. Apply the object syntax changes below before upgrading. The resource type and Kubernetes object identity are retained.
+
+### Object configuration and state upgrade
+
+The resource now uses state schema version 1 and upgrades existing version 0
+state automatically. Identity schema version 1 is unchanged. Existing
+`kubernetes_ingress_v1` resources need no `moved` block or re-import.
+
+Keep `metadata`, `spec`, `rule`, `tls`, and `timeouts` as blocks. Change these
+single objects to `name = { ... }` arguments:
+
+- `spec[0].default_backend`, and its `resource`, `service`, and `service.port`.
+- `spec[0].rule[*].http`, and every `http.path[*].backend` with its `resource`,
+  `service`, and `service.port`.
+
+The repeated paths inside `http` now use a list of objects, `path = [{ ... }]`.
+Keep all path elements and their order. For example, replace the released
+`http { path { backend { service { ... } } } }` nesting with:
+
+```terraform
+rule {
+  http = {
+    path = [{
+      path      = "/app"
+      path_type = "Prefix"
+      backend = {
+        service = {
+          name = "app"
+          port = { number = 80 }
+        }
+      }
+    }]
+  }
+}
+```
+
+In references and lifecycle paths, remove indexes only for converted objects.
+For example, `spec[0].rule[0].http[0].path[0].backend[0].service[0].port[0].number`
+becomes `spec[0].rule[0].http.path[0].backend.service.port.number`.
+An `ignore_changes` entry uses this same new path. Keep the `spec`, `rule`, and
+`path` indexes because those values still contain lists.
+
+Replace dynamic singleton blocks with conditional objects. For example:
+
+```terraform
+default_backend = var.enable_default_backend ? {
+  service = { name = "app", port = { number = 80 } }
+} : null
+```
+
+Module input types must use `object(...)` for these fields and `list(object(...))`
+for `http.path`. For a service backend, an optional input can be declared as:
+
+```terraform
+variable "default_backend" {
+  type = object({
+    service = optional(object({
+      name = string
+      port = object({ number = optional(number), name = optional(string) })
+    }))
+  })
+  default = null
+}
+```
+
+Terraform JSON configuration uses objects for these fields, for example
+`"default_backend": {"service": {"name": "app", "port": {"number": 80}}}`.
+The `http.path` value remains an array. Omitted optional objects stay omitted
+or `null`; do not add empty objects or new backends merely to change syntax.
+The converter preserves configured ports and backend alternatives and rejects
+historical singleton lists containing more than one element.
 
 Before upgrading, confirm that the current configuration has an empty plan. Review the plan after upgrading; do not apply unexpected replacement or specification changes.
 

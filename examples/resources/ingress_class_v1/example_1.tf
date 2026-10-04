@@ -5,7 +5,7 @@ resource "kubernetes_ingress_class_v1" "example" {
 
   spec {
     controller = "example.com/ingress-controller"
-    parameters {
+    parameters = {
       api_group = "k8s.example.com"
       kind      = "IngressParameters"
       name      = "external-lb"

@@ -63,11 +63,7 @@ func (r *NetworkPolicyV1) Create(ctx context.Context, req resource.CreateRequest
 		resp.Diagnostics.AddError("Error reading created network policy", err.Error())
 		return
 	}
-	plan.Spec, d = networkPolicyFlattenSpec(ctx, out.Spec, plan.Spec)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// Preserve the planned spec; Read exposes admission changes as drift.
 	resp.Diagnostics.Append(networkPolicyWriteState(ctx, &resp.State, resp.Identity, &plan, out.ObjectMeta)...)
 }
 
@@ -88,6 +84,12 @@ func (r *NetworkPolicyV1) Read(ctx context.Context, req resource.ReadRequest, re
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, networkPolicyIdentity(namespace, name))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 	out, err := client.NetworkingV1().NetworkPolicies(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -200,11 +202,7 @@ func (r *NetworkPolicyV1) Update(ctx context.Context, req resource.UpdateRequest
 			return
 		}
 	}
-	plan.Spec, d = networkPolicyFlattenSpec(ctx, out.Spec, plan.Spec)
-	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// Preserve the planned spec; Read exposes admission changes as drift.
 	resp.Diagnostics.Append(networkPolicyWriteState(ctx, &resp.State, resp.Identity, &plan, out.ObjectMeta)...)
 }
 

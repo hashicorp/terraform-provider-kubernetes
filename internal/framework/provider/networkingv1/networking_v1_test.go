@@ -37,8 +37,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	frameworknetworking "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/networkingv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	"github.com/zclconf/go-cty/cty"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 	networking "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,11 +71,23 @@ var networkingV1Types = []string{
 // These cases cover the actual mux and a persisted SDK refresh. The resource
 // unit tests cover individual omitted/empty collection upgrade permutations.
 func TestNetworkingV1CoreIngressClassUpgrade(t *testing.T) {
-	networkingCoreUpgrade(t, "kubernetes_ingress_class_v1", []string{"minimal", "full"})
+	networkingCoreUpgrade(t, "kubernetes_ingress_class_v1", []string{"minimal", "full"}, false)
 }
 
 func TestNetworkingV1CoreNetworkPolicyUpgrade(t *testing.T) {
-	networkingCoreUpgrade(t, "kubernetes_network_policy_v1", []string{"full"})
+	networkingCoreUpgrade(t, "kubernetes_network_policy_v1", []string{"full"}, false)
+}
+
+func TestNetworkingV1CoreIngressUpgrade(t *testing.T) {
+	networkingCoreUpgrade(t, "kubernetes_ingress_v1", []string{"full"}, false)
+}
+
+func TestNetworkingV1CoreIngressClassAliasMove(t *testing.T) {
+	networkingCoreUpgrade(t, "kubernetes_ingress_class_v1", []string{"full"}, true)
+}
+
+func TestNetworkingV1CoreNetworkPolicyAliasMove(t *testing.T) {
+	networkingCoreUpgrade(t, "kubernetes_network_policy_v1", []string{"full"}, true)
 }
 
 type networkingCoreObject interface {
@@ -81,19 +95,20 @@ type networkingCoreObject interface {
 	metav1.Object
 }
 
-func networkingCoreUpgrade(t *testing.T, resourceType string, variants []string) {
+func networkingCoreUpgrade(t *testing.T, resourceType string, variants []string, move bool) {
 	t.Helper()
 	if os.Getenv("KUBE_NETWORKING_CORE_TEST") != "1" {
 		t.Skip("set KUBE_NETWORKING_CORE_TEST=1 for the local fake-API Terraform Core upgrade test")
 	}
+	providerMirror := os.Getenv("TF_NETWORKING_TEST_PROVIDER_MIRROR")
 	terraformPath, err := exec.LookPath("terraform")
 	if err != nil {
 		t.Skip("Terraform CLI is required for the local fake-API upgrade test")
 	}
 	for _, variant := range variants {
 		t.Run(variant, func(t *testing.T) {
-			// Keep plugin Unix socket paths below macOS's limit while retaining
-			// every temporary file inside this repository.
+			// Keep test configurations together in the checkout. Plugin sockets
+			// use the system temporary directory to fit macOS's path limit.
 			privateDir, err := filepath.Abs(filepath.Join("../../../..", ".nc-"+acctest.RandString(6)))
 			if err != nil {
 				t.Fatal(err)
@@ -113,14 +128,17 @@ func networkingCoreUpgrade(t *testing.T, resourceType string, variants []string)
 					t.Setenv(key, "")
 				}
 			}
-			t.Setenv("HOME", privateDir)
-			t.Setenv("TMPDIR", privateDir)
+			t.Setenv("TMPDIR", os.TempDir())
 			t.Setenv("TF_ACC_TEMP_DIR", privateDir)
 			t.Setenv("TF_ACC_TERRAFORM_PATH", terraformPath)
 			t.Setenv("TF_IN_AUTOMATION", "1")
 			t.Setenv("CHECKPOINT_DISABLE", "1")
 			cliConfig := filepath.Join(privateDir, "terraform.rc")
-			if err := os.WriteFile(cliConfig, []byte("disable_checkpoint = true\nprovider_installation {\n  direct {}\n}\n"), 0600); err != nil {
+			installation := "disable_checkpoint = true\nprovider_installation {\n  direct {}\n}\n"
+			if providerMirror != "" {
+				installation = fmt.Sprintf("disable_checkpoint = true\nprovider_installation {\n filesystem_mirror {\n path = %q\n }\n}\n", providerMirror)
+			}
+			if err := os.WriteFile(cliConfig, []byte(installation), 0600); err != nil {
 				t.Fatal(err)
 			}
 			t.Setenv("TF_CLI_CONFIG_FILE", cliConfig)
@@ -133,10 +151,13 @@ func networkingCoreUpgrade(t *testing.T, resourceType string, variants []string)
 			var mu sync.Mutex
 			var object networkingCoreObject
 			basePath := "/apis/networking.k8s.io/v1/ingressclasses"
+			if resourceType == "kubernetes_ingress_v1" {
+				basePath = "/apis/networking.k8s.io/v1/namespaces/default/ingresses"
+			}
 			if resourceType == "kubernetes_network_policy_v1" {
 				basePath = "/apis/networking.k8s.io/v1/namespaces/default/networkpolicies"
 			}
-			creates, deletes := 0, 0
+			creates, deletes, reads := 0, 0, 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				mu.Lock()
 				defer mu.Unlock()
@@ -164,6 +185,9 @@ func networkingCoreUpgrade(t *testing.T, resourceType string, variants []string)
 						return
 					}
 					var created networkingCoreObject = &networking.IngressClass{}
+					if resourceType == "kubernetes_ingress_v1" {
+						created = &networking.Ingress{}
+					}
 					if resourceType == "kubernetes_network_policy_v1" {
 						created = &networking.NetworkPolicy{}
 					}
@@ -186,6 +210,7 @@ func networkingCoreUpgrade(t *testing.T, resourceType string, variants []string)
 					}
 					object = created
 				case http.MethodGet:
+					reads++
 					if object == nil {
 						notFound()
 						return
@@ -241,13 +266,30 @@ provider "kubernetes" {
   host        = %q
   config_path = %q
 }
-`, server.URL, kubeConfig) + networkingV1Config(resourceType, name, variant)
+`, server.URL, kubeConfig) + networkingV1SDKConfig(resourceType, name, variant)
+			targetConfig := frameworknetworking.NetworkingTargetTestConfig(config)
+			sourceType := resourceType
+			if move {
+				sourceType = strings.TrimSuffix(resourceType, "_v1")
+				config = strings.ReplaceAll(config, resourceType, sourceType)
+				targetConfig += fmt.Sprintf("\nmoved {\n from = %s.test\n to = %s.test\n}\n", sourceType, resourceType)
+			}
 			var remote networkingRemoteSnapshot
 			var state networkingStateSnapshot
 			var writes networkingWriteTracker
 			factories := networkingObservedFactories(&writes)
+			cliOptions := &resource.AdditionalCLIOptions{}
+			var importIgnore []string
+			if resourceType == "kubernetes_ingress_v1" {
+				// This is a client-side wait option, never returned by Kubernetes.
+				// TestNetworkingV1IngressWaitFlagPlan separately checks its config.
+				importIgnore = []string{"wait_for_load_balancer"}
+			}
+			readsBeforeMigration := 0
+			readCount := func() int { mu.Lock(); defer mu.Unlock(); return reads }
 			resource.Test(t, resource.TestCase{
-				IsUnitTest: true,
+				IsUnitTest:           true,
+				AdditionalCLIOptions: cliOptions,
 				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 					tfversion.SkipBelow(tfversion.Version1_12_0),
 				},
@@ -259,7 +301,7 @@ provider "kubernetes" {
 						},
 						Config: config,
 						ConfigStateChecks: []statecheck.StateCheck{
-							networkingCaptureState{address: resourceType + ".test", snapshot: &state, report: t, reportStage: "created"},
+							networkingCaptureState{address: sourceType + ".test", snapshot: &state, report: t, reportStage: "created"},
 						},
 					},
 					{
@@ -270,16 +312,17 @@ provider "kubernetes" {
 						ConfigPlanChecks: resource.ConfigPlanChecks{
 							PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 						},
-						Check: networkingCheckRemote(checkProvider, resourceType, name, &remote, true),
+						Check: networkingCheckRemote(checkProvider, sourceType, name, &remote, true),
 						ConfigStateChecks: []statecheck.StateCheck{
-							networkingCaptureState{address: resourceType + ".test", snapshot: &state, report: t, reportStage: "refreshed"},
+							networkingCaptureState{address: sourceType + ".test", snapshot: &state, report: t, reportStage: "refreshed"},
 						},
 					},
 					{
+						PreConfig:                func() { cliOptions.Plan.NoRefresh = true; readsBeforeMigration = readCount() },
 						ProtoV6ProviderFactories: factories,
-						Config:                   config,
+						Config:                   targetConfig,
 						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan(), networkingCorePlanReport{t: t}},
+							PreApply: []plancheck.PlanCheck{networkingCoreUpgradePlan{address: resourceType + ".test"}, networkingCorePlanReport{t: t}, networkingCoreNoRefreshCheck{readCount: readCount, before: &readsBeforeMigration}},
 						},
 						Check: networkingCheckRemote(checkProvider, resourceType, name, &remote, false),
 						ConfigStateChecks: []statecheck.StateCheck{
@@ -288,8 +331,9 @@ provider "kubernetes" {
 						},
 					},
 					{
+						PreConfig:                func() { cliOptions.Plan.NoRefresh = false },
 						ProtoV6ProviderFactories: factories,
-						Config:                   config,
+						Config:                   targetConfig,
 						ConfigPlanChecks: resource.ConfigPlanChecks{
 							PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 						},
@@ -304,6 +348,7 @@ provider "kubernetes" {
 						ProtoV6ProviderFactories: factories,
 						ImportState:              true,
 						ImportStateVerify:        true,
+						ImportStateVerifyIgnore:  importIgnore,
 					},
 				},
 			})
@@ -313,6 +358,96 @@ provider "kubernetes" {
 
 type networkingCorePlanReport struct {
 	t *testing.T
+}
+
+type networkingCoreNoRefreshCheck struct {
+	readCount func() int
+	before    *int
+}
+
+// An omitted match_expressions block used [] in SDK state. Its optional list
+// attribute now uses null. Selector objects themselves must remain present.
+func networkingOmittedExpressionValues(values map[string]interface{}) map[string]interface{} {
+	return frameworknetworking.NetworkingOmittedTestExpressions(values)
+}
+
+type networkingCoreUpgradePlan struct{ address string }
+
+func (c networkingCoreUpgradePlan) CheckPlan(ctx context.Context, req plancheck.CheckPlanRequest, resp *plancheck.CheckPlanResponse) {
+	if !strings.HasPrefix(c.address, "kubernetes_network_policy_v1.") {
+		plancheck.ExpectEmptyPlan().CheckPlan(ctx, req, resp)
+		return
+	}
+	if req.Plan == nil || len(req.Plan.ResourceChanges) != 1 || len(req.Plan.ResourceDrift) != 0 {
+		resp.Error = fmt.Errorf("expected one NetworkPolicy and no refresh drift")
+		return
+	}
+	change := req.Plan.ResourceChanges[0]
+	if change.Address != c.address || change.Change == nil || len(change.Change.ReplacePaths) != 0 {
+		resp.Error = fmt.Errorf("unexpected address or replacement: %#v", change)
+		return
+	}
+	before, ok := change.Change.Before.(map[string]interface{})
+	if !ok {
+		resp.Error = fmt.Errorf("missing previous NetworkPolicy")
+		return
+	}
+	expected := networkingOmittedExpressionValues(before)
+	normalizing := !reflect.DeepEqual(before, expected)
+	if normalizing && !reflect.DeepEqual(change.Change.Actions, tfjson.Actions{tfjson.ActionUpdate}) || !normalizing && !change.Change.Actions.NoOp() {
+		resp.Error = fmt.Errorf("unexpected action for omitted expression normalization: %v", change.Change.Actions)
+		return
+	}
+	if err := networkingMetadataUnknowns(change.Change.AfterUnknown, "", normalizing, c.address, expected, change.Change.After); err != nil {
+		resp.Error = err
+		return
+	}
+	if diff := cmp.Diff(expected, change.Change.After); diff != "" {
+		resp.Error = fmt.Errorf("plan changed more than omitted expression lists (-allowed +actual):\n%s", diff)
+	}
+}
+
+func TestNetworkingV1OmittedExpressionsPlanBoundary(t *testing.T) {
+	const address = "kubernetes_network_policy_v1.test"
+	for _, name := range []string{"normalization", "converged", "selector-removed", "labels-changed", "replacement", "configured-expression-removed"} {
+		t.Run(name, func(t *testing.T) {
+			before := map[string]interface{}{
+				"id": "default/test", "metadata": []interface{}{map[string]interface{}{"uid": "same-uid"}},
+				"spec": []interface{}{map[string]interface{}{"pod_selector": map[string]interface{}{
+					"match_expressions": []interface{}{}, "match_labels": map[string]interface{}{"app": "dns"},
+				}}},
+			}
+			after := networkingOmittedExpressionValues(before)
+			change := &tfjson.Change{Actions: tfjson.Actions{tfjson.ActionUpdate}, Before: before, After: after}
+			selector := after["spec"].([]interface{})[0].(map[string]interface{})["pod_selector"].(map[string]interface{})
+			switch name {
+			case "converged":
+				change.Before, change.Actions = networkingCloneValue(after), tfjson.Actions{tfjson.ActionNoop}
+			case "selector-removed":
+				after["spec"].([]interface{})[0].(map[string]interface{})["pod_selector"] = nil
+			case "labels-changed":
+				selector["match_labels"] = map[string]interface{}{"app": "other"}
+			case "replacement":
+				change.Actions = tfjson.Actions{tfjson.ActionDelete, tfjson.ActionCreate}
+			case "configured-expression-removed":
+				before["spec"].([]interface{})[0].(map[string]interface{})["pod_selector"].(map[string]interface{})["match_expressions"] = []interface{}{map[string]interface{}{"key": "enabled", "operator": "Exists"}}
+			}
+			var response plancheck.CheckPlanResponse
+			networkingCoreUpgradePlan{address: address}.CheckPlan(context.Background(), plancheck.CheckPlanRequest{
+				Plan: &tfjson.Plan{ResourceChanges: []*tfjson.ResourceChange{{Address: address, Change: change}}},
+			}, &response)
+			wantError := name != "normalization" && name != "converged"
+			if (response.Error != nil) != wantError {
+				t.Fatalf("error=%v, want error=%t", response.Error, wantError)
+			}
+		})
+	}
+}
+
+func (c networkingCoreNoRefreshCheck) CheckPlan(_ context.Context, _ plancheck.CheckPlanRequest, resp *plancheck.CheckPlanResponse) {
+	if got := c.readCount(); got != *c.before {
+		resp.Error = fmt.Errorf("no-refresh migration made %d unexpected API reads", got-*c.before)
+	}
 }
 
 type networkingEmptyMetadataPlan struct {
@@ -361,6 +496,9 @@ func (c networkingEmptyMetadataPlan) CheckPlan(_ context.Context, req plancheck.
 		resp.Error = err
 		return
 	}
+	if c.policyVariant != "" {
+		expected = networkingOmittedExpressionValues(expected)
+	}
 	normalizing := !reflect.DeepEqual(expected, before)
 	if normalizing {
 		if !reflect.DeepEqual(found.Change.Actions, tfjson.Actions{tfjson.ActionUpdate}) {
@@ -389,7 +527,7 @@ func networkingMetadataUnknowns(value interface{}, path string, normalizing bool
 		}
 		allowed := path == "metadata[0].generation" || path == "metadata[0].resource_version" ||
 			(strings.HasPrefix(address, "kubernetes_ingress_v1.") && (path == "spec[0].ingress_class_name" || path == "status")) ||
-			(strings.HasPrefix(address, "kubernetes_ingress_class_v1.") && path == "spec[0].parameters[0].scope")
+			(strings.HasPrefix(address, "kubernetes_ingress_class_v1.") && path == "spec[0].parameters.scope")
 		if !normalizing || !allowed {
 			return fmt.Errorf("unexpected planned unknown at %s", path)
 		}
@@ -489,11 +627,11 @@ func networkingEmptyPolicySelectorValues(values map[string]interface{}, variant 
 	}
 	expected := networkingCloneValue(values).(map[string]interface{})
 	paths := [][]interface{}{
-		{"spec", 0, "pod_selector", 0},
-		{"spec", 0, "ingress", 0, "from", 0, "namespace_selector", 0},
-		{"spec", 0, "ingress", 0, "from", 0, "pod_selector", 0},
-		{"spec", 0, "egress", 0, "to", 0, "namespace_selector", 0},
-		{"spec", 0, "egress", 0, "to", 0, "pod_selector", 0},
+		{"spec", 0, "pod_selector"},
+		{"spec", 0, "ingress", 0, "from", 0, "namespace_selector"},
+		{"spec", 0, "ingress", 0, "from", 0, "pod_selector"},
+		{"spec", 0, "egress", 0, "to", 0, "namespace_selector"},
+		{"spec", 0, "egress", 0, "to", 0, "pod_selector"},
 	}
 	if variant == "empty" {
 		paths = paths[:1]
@@ -560,7 +698,7 @@ func TestNetworkingV1EmptyPolicySelectorsPlanBoundary(t *testing.T) {
 	const address = "kubernetes_network_policy_v1.test"
 	for _, variant := range []string{"empty", "selector_maps_empty", "selector_values_empty"} {
 		t.Run(variant, func(t *testing.T) {
-			selector := map[string]interface{}{"match_labels": nil, "match_expressions": nil}
+			selector := map[string]interface{}{"match_labels": nil, "match_expressions": []interface{}{}}
 			if variant != "selector_maps_empty" {
 				expressions := []interface{}{
 					map[string]interface{}{"key": "absent", "operator": "DoesNotExist", "values": nil},
@@ -587,6 +725,7 @@ func TestNetworkingV1EmptyPolicySelectorsPlanBoundary(t *testing.T) {
 					"egress":       []interface{}{map[string]interface{}{"to": []interface{}{networkingCloneValue(peer)}}},
 				}},
 			}
+			before = frameworknetworking.NetworkingTargetTestValues(before)
 			expected, err := networkingEmptyMetadataValues(before)
 			if err == nil {
 				expected, err = networkingEmptyPolicySelectorValues(expected, variant)
@@ -594,6 +733,7 @@ func TestNetworkingV1EmptyPolicySelectorsPlanBoundary(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			expected = networkingOmittedExpressionValues(expected)
 			for _, test := range []string{"allowed", "replacement", "unrelated_spec", "unapproved_collection", "omitted_fixture"} {
 				t.Run(test, func(t *testing.T) {
 					after := networkingCloneValue(expected).(map[string]interface{})
@@ -607,9 +747,9 @@ func TestNetworkingV1EmptyPolicySelectorsPlanBoundary(t *testing.T) {
 						spec["policy_types"] = []interface{}{"Ingress"}
 					case "unapproved_collection":
 						if variant == "selector_maps_empty" {
-							spec["pod_selector"].([]interface{})[0].(map[string]interface{})["match_expressions"] = []interface{}{}
+							spec["pod_selector"].(map[string]interface{})["match_expressions"] = []interface{}{}
 						} else {
-							spec["egress"].([]interface{})[0].(map[string]interface{})["to"].([]interface{})[0].(map[string]interface{})["pod_selector"].([]interface{})[0].(map[string]interface{})["match_labels"] = map[string]interface{}{}
+							spec["egress"].([]interface{})[0].(map[string]interface{})["to"].([]interface{})[0].(map[string]interface{})["pod_selector"].(map[string]interface{})["match_labels"] = map[string]interface{}{}
 						}
 					case "omitted_fixture":
 						check.policyVariant = "selector_maps_omitted"
@@ -673,9 +813,9 @@ func TestNetworkingV1EmptyMetadataPlanBoundary(t *testing.T) {
 		}},
 		{name: "computed_scope_unknown", mutate: func(plan *tfjson.Plan) {
 			change := plan.ResourceChanges[0].Change
-			change.Before.(map[string]interface{})["spec"].([]interface{})[0].(map[string]interface{})["parameters"] = []interface{}{map[string]interface{}{"name": "example", "scope": "Cluster"}}
-			change.After.(map[string]interface{})["spec"].([]interface{})[0].(map[string]interface{})["parameters"] = []interface{}{map[string]interface{}{"name": "example"}}
-			change.AfterUnknown = map[string]interface{}{"spec": []interface{}{map[string]interface{}{"parameters": []interface{}{map[string]interface{}{"scope": true}}}}}
+			change.Before.(map[string]interface{})["spec"].([]interface{})[0].(map[string]interface{})["parameters"] = map[string]interface{}{"name": "example", "scope": "Cluster"}
+			change.After.(map[string]interface{})["spec"].([]interface{})[0].(map[string]interface{})["parameters"] = map[string]interface{}{"name": "example"}
+			change.AfterUnknown = map[string]interface{}{"spec": []interface{}{map[string]interface{}{"parameters": map[string]interface{}{"scope": true}}}}
 		}},
 		{name: "known_value_marked_unknown", fail: true, mutate: func(plan *tfjson.Plan) {
 			plan.ResourceChanges[0].Change.AfterUnknown = map[string]interface{}{"metadata": []interface{}{map[string]interface{}{"generation": true}}}
@@ -767,7 +907,7 @@ func TestNetworkingV1EmptyMetadataStateBoundary(t *testing.T) {
 	}
 	snapshot := networkingStateSnapshot{values: before, providerName: "registry.terraform.io/hashicorp/kubernetes"}
 	current := &tfjson.StateResource{
-		Address: "kubernetes_ingress_class_v1.test", AttributeValues: after, ProviderName: snapshot.providerName,
+		Address: "kubernetes_ingress_class_v1.test", AttributeValues: after, ProviderName: snapshot.providerName, SchemaVersion: 1,
 	}
 	request := statecheck.CheckStateRequest{State: &tfjson.State{Values: &tfjson.StateValues{
 		RootModule: &tfjson.StateModule{Resources: []*tfjson.StateResource{current}},
@@ -857,7 +997,7 @@ func TestNetworkingV1MuxRegistration(t *testing.T) {
 				t.Fatal("managed v1 type is still registered on SDKv2")
 			}
 			got := schemas.ResourceSchemas[name]
-			if got == nil || got.Version != 0 {
+			if got == nil || got.Version != 1 {
 				t.Fatalf("missing resource or changed schema version: %#v", got)
 			}
 			identity := identities.IdentitySchemas[name]
@@ -1087,7 +1227,7 @@ policy_types = ["Ingress"]`, false},
 		{"pod selector missing", "kubernetes_network_policy_v1", `policy_types = ["Ingress"]`, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			config := networkingDecodeConfiguration(t, schemas.ResourceSchemas[tc.resourceType], fmt.Sprintf(`
+			legacy := fmt.Sprintf(`
 resource %q "test" {
   metadata {
     name = "tf-networking-offline"
@@ -1096,7 +1236,7 @@ resource %q "test" {
     %s
   }
 }
-`, tc.resourceType, tc.spec))
+`, tc.resourceType, tc.spec)
 			for _, provider := range []struct {
 				name, resourceType string
 				server             tfprotov6.ProviderServer
@@ -1104,6 +1244,15 @@ resource %q "test" {
 				{"SDKv2", strings.TrimSuffix(tc.resourceType, "_v1"), sdk},
 				{"mux", tc.resourceType, actual},
 			} {
+				providerSchemas, err := provider.server.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				configText := legacy
+				if provider.name == "mux" {
+					configText = frameworknetworking.NetworkingTargetTestConfig(legacy)
+				}
+				config := networkingDecodeConfiguration(t, providerSchemas.ResourceSchemas[provider.resourceType], configText)
 				response, err := provider.server.ValidateResourceConfig(ctx, &tfprotov6.ValidateResourceConfigRequest{
 					TypeName: provider.resourceType, Config: config,
 				})
@@ -1159,6 +1308,25 @@ func networkingDecodeConfiguration(t *testing.T, resourceSchema *tfprotov6.Schem
 	return &dynamic
 }
 
+func networkingOptionalObjectFields(typ cty.Type) cty.Type {
+	switch {
+	case typ.IsObjectType():
+		fields := typ.AttributeTypes()
+		names := make([]string, 0, len(fields))
+		for name, field := range fields {
+			fields[name] = networkingOptionalObjectFields(field)
+			names = append(names, name)
+		}
+		return cty.ObjectWithOptionalAttrs(fields, names)
+	case typ.IsListType():
+		return cty.List(networkingOptionalObjectFields(typ.ElementType()))
+	case typ.IsSetType():
+		return cty.Set(networkingOptionalObjectFields(typ.ElementType()))
+	default:
+		return typ
+	}
+}
+
 func networkingDecodeSpec(t *testing.T, block *tfprotov6.SchemaBlock) hcldec.ObjectSpec {
 	t.Helper()
 	spec := hcldec.ObjectSpec{}
@@ -1172,7 +1340,7 @@ func networkingDecodeSpec(t *testing.T, block *tfprotov6.SchemaBlock) hcldec.Obj
 			t.Fatal(err)
 		}
 		// Leave required-value checks to the real provider validation RPC.
-		spec[attribute.Name] = &hcldec.AttrSpec{Name: attribute.Name, Type: valueType}
+		spec[attribute.Name] = &hcldec.AttrSpec{Name: attribute.Name, Type: networkingOptionalObjectFields(valueType)}
 	}
 	for _, nested := range block.BlockTypes {
 		child := networkingDecodeSpec(t, nested.Block)
@@ -1412,11 +1580,11 @@ func testAccNetworkingV1Migration(t *testing.T, resourceType, variant string, mo
 	name := networkingTestName("upgrade")
 	checkProvider := kubernetes.Provider()
 	config := networkingV1Config(resourceType, name, variant)
-	sourceType, sourceConfig, targetConfig := resourceType, config, config
+	sourceType, sourceConfig, targetConfig := resourceType, networkingV1SDKConfig(resourceType, name, variant), config
 	var versionChecks []tfversion.TerraformVersionCheck
 	if move {
 		sourceType = strings.TrimSuffix(resourceType, "_v1")
-		sourceConfig = strings.ReplaceAll(config, resourceType, sourceType)
+		sourceConfig = strings.ReplaceAll(sourceConfig, resourceType, sourceType)
 		targetConfig += fmt.Sprintf(`
 moved {
   from = %s.test
@@ -1429,7 +1597,7 @@ moved {
 	var state networkingStateSnapshot
 	var writes networkingWriteTracker
 	factories := networkingObservedFactories(&writes)
-	upgradeCheck := plancheck.ExpectEmptyPlan()
+	upgradeCheck := plancheck.PlanCheck(networkingCoreUpgradePlan{address: resourceType + ".test"})
 	emptyMetadata := variant == "empty" || variant == "selector_maps_empty" || variant == "selector_values_empty"
 	policyVariant := ""
 	if resourceType == "kubernetes_network_policy_v1" && emptyMetadata {
@@ -1617,7 +1785,11 @@ func (c networkingCaptureState) CheckState(_ context.Context, req statecheck.Che
 		resp.Error = fmt.Errorf("resource %s is missing", c.address)
 		return
 	}
-	if found.SchemaVersion != 0 {
+	expectedVersion := uint64(0)
+	if c.compare {
+		expectedVersion = 1
+	}
+	if found.SchemaVersion != expectedVersion {
 		resp.Error = fmt.Errorf("resource schema version changed to %d", found.SchemaVersion)
 		return
 	}
@@ -1641,7 +1813,10 @@ func (c networkingCaptureState) CheckState(_ context.Context, req statecheck.Che
 		}
 		return
 	}
-	expected := c.snapshot.values
+	expected := frameworknetworking.NetworkingTargetTestValues(c.snapshot.values)
+	if strings.HasPrefix(c.address, "kubernetes_network_policy_v1.") {
+		expected = networkingOmittedExpressionValues(expected)
+	}
 	if c.emptyMetadata {
 		var err error
 		expected, err = networkingEmptyMetadataValues(expected)
@@ -1875,6 +2050,10 @@ func networkingDelete(p *schema.Provider, resourceType, name string) error {
 }
 
 func networkingV1Config(resourceType, name, variant string) string {
+	return frameworknetworking.NetworkingTargetTestConfig(networkingV1SDKConfig(resourceType, name, variant))
+}
+
+func networkingV1SDKConfig(resourceType, name, variant string) string {
 	metadata := ""
 	if variant == "full" || variant == "remove_scalars" || variant == "remove_parameters" {
 		metadata = `

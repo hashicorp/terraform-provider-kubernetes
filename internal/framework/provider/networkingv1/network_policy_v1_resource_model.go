@@ -15,10 +15,10 @@ type NetworkPolicyV1Model struct {
 }
 
 type networkPolicySpecModel struct {
-	PodSelector []networkPolicySelectorModel `tfsdk:"pod_selector"`
-	Ingress     []networkPolicyIngressModel  `tfsdk:"ingress"`
-	Egress      []networkPolicyEgressModel   `tfsdk:"egress"`
-	PolicyTypes types.List                   `tfsdk:"policy_types"`
+	PodSelector *networkPolicySelectorModel `tfsdk:"pod_selector"`
+	Ingress     []networkPolicyIngressModel `tfsdk:"ingress"`
+	Egress      []networkPolicyEgressModel  `tfsdk:"egress"`
+	PolicyTypes types.List                  `tfsdk:"policy_types"`
 }
 
 type networkPolicyIngressModel struct {
@@ -38,9 +38,9 @@ type networkPolicyPortModel struct {
 }
 
 type networkPolicyPeerModel struct {
-	IPBlock           []networkPolicyIPBlockModel  `tfsdk:"ip_block"`
-	NamespaceSelector []networkPolicySelectorModel `tfsdk:"namespace_selector"`
-	PodSelector       []networkPolicySelectorModel `tfsdk:"pod_selector"`
+	IPBlock           *networkPolicyIPBlockModel  `tfsdk:"ip_block"`
+	NamespaceSelector *networkPolicySelectorModel `tfsdk:"namespace_selector"`
+	PodSelector       *networkPolicySelectorModel `tfsdk:"pod_selector"`
 }
 
 type networkPolicyIPBlockModel struct {

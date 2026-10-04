@@ -16,8 +16,8 @@ type IngressClassV1Model struct {
 }
 
 type IngressClassV1SpecModel struct {
-	Controller types.String                    `tfsdk:"controller"`
-	Parameters []IngressClassV1ParametersModel `tfsdk:"parameters"`
+	Controller types.String                   `tfsdk:"controller"`
+	Parameters *IngressClassV1ParametersModel `tfsdk:"parameters"`
 }
 
 type IngressClassV1ParametersModel struct {
@@ -30,10 +30,10 @@ type IngressClassV1ParametersModel struct {
 
 func expandIngressClassSpec(model IngressClassV1SpecModel) networking.IngressClassSpec {
 	spec := networking.IngressClassSpec{Controller: model.Controller.ValueString()}
-	if len(model.Parameters) == 0 {
+	if model.Parameters == nil {
 		return spec
 	}
-	p := model.Parameters[0]
+	p := model.Parameters
 	spec.Parameters = &networking.IngressClassParametersReference{
 		Kind: p.Kind.ValueString(),
 		Name: p.Name.ValueString(),
@@ -56,7 +56,7 @@ func expandIngressClassSpec(model IngressClassV1SpecModel) networking.IngressCla
 func flattenIngressClassSpec(spec networking.IngressClassSpec) []IngressClassV1SpecModel {
 	model := IngressClassV1SpecModel{
 		Controller: types.StringValue(spec.Controller),
-		Parameters: []IngressClassV1ParametersModel{},
+		Parameters: nil,
 	}
 	if spec.Parameters != nil {
 		p := spec.Parameters
@@ -76,7 +76,7 @@ func flattenIngressClassSpec(spec networking.IngressClassSpec) []IngressClassV1S
 		if p.Namespace != nil {
 			parameters.Namespace = types.StringValue(*p.Namespace)
 		}
-		model.Parameters = append(model.Parameters, parameters)
+		model.Parameters = &parameters
 	}
 	return []IngressClassV1SpecModel{model}
 }

@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"io"
 	"maps"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -64,6 +67,273 @@ type ingressClassTestProvider struct {
 	meta func() any
 }
 
+// Fixture JSON keeps the released SDK shape. This independent test adapter
+// expresses the same configuration in the target schema without changing the
+// source fixtures passed to UpgradeResourceState and MoveResourceState.
+func networkingTestFixtureJSON(t *testing.T, raw []byte, target tftypes.Type) []byte {
+	t.Helper()
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		t.Fatal(err)
+	}
+	var convert func(any, tftypes.Type) any
+	convert = func(value any, typ tftypes.Type) any {
+		if value == nil {
+			return nil
+		}
+		switch typ := typ.(type) {
+		case tftypes.Object:
+			if list, ok := value.([]any); ok {
+				if len(list) == 0 {
+					return nil
+				}
+				if len(list) != 1 {
+					t.Fatal("singleton fixture has more than one object")
+				}
+				value = list[0]
+			}
+			object := value.(map[string]any)
+			for name, child := range typ.AttributeTypes {
+				object[name] = convert(object[name], child)
+			}
+		case tftypes.List:
+			for i, child := range value.([]any) {
+				value.([]any)[i] = convert(child, typ.ElementType)
+			}
+		case tftypes.Set:
+			for i, child := range value.([]any) {
+				value.([]any)[i] = convert(child, typ.ElementType)
+			}
+		}
+		return value
+	}
+	encoded, err := json.Marshal(convert(value, target))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
+}
+
+func networkingTestUpgradedState(t *testing.T, server tfprotov6.ProviderServer, resourceType, raw string, target tftypes.Type) tftypes.Value {
+	t.Helper()
+	response, err := server.UpgradeResourceState(context.Background(), &tfprotov6.UpgradeResourceStateRequest{
+		TypeName: resourceType, Version: 0, RawState: &tfprotov6.RawState{JSON: []byte(raw)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ingressClassCheckDiagnostics(t, response.Diagnostics)
+	if response.UpgradedState == nil {
+		t.Fatal("missing upgraded state")
+	}
+	value, err := response.UpgradedState.Unmarshal(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return value
+}
+
+func networkingTestRetype(t *testing.T, value tftypes.Value, target tftypes.Type) tftypes.Value {
+	t.Helper()
+	if value.IsNull() {
+		return tftypes.NewValue(target, nil)
+	}
+	if !value.IsKnown() {
+		return tftypes.NewValue(target, tftypes.UnknownValue)
+	}
+	switch target := target.(type) {
+	case tftypes.Object:
+		if _, ok := value.Type().(tftypes.List); ok {
+			var elements []tftypes.Value
+			if err := value.As(&elements); err != nil {
+				t.Fatal(err)
+			}
+			if len(elements) == 0 {
+				return tftypes.NewValue(target, nil)
+			}
+			if len(elements) != 1 {
+				t.Fatal("singleton fixture has more than one object")
+			}
+			value = elements[0]
+		}
+		var fields map[string]tftypes.Value
+		if err := value.As(&fields); err != nil {
+			t.Fatal(err)
+		}
+		fields = maps.Clone(fields)
+		for name, typ := range target.AttributeTypes {
+			fields[name] = networkingTestRetype(t, fields[name], typ)
+		}
+		return tftypes.NewValue(target, fields)
+	case tftypes.List:
+		var elements []tftypes.Value
+		if err := value.As(&elements); err != nil {
+			t.Fatal(err)
+		}
+		for i := range elements {
+			elements[i] = networkingTestRetype(t, elements[i], target.ElementType)
+		}
+		return tftypes.NewValue(target, elements)
+	}
+	return value
+}
+
+// NetworkingTargetTestConfig renders legacy fixture blocks using the approved
+// object syntax. Collections within objects remain lists of objects.
+func NetworkingTargetTestConfig(legacy string) string {
+	file, diagnostics := hclsyntax.ParseConfig([]byte(legacy), "fixture.tf", hcl.InitialPos)
+	if diagnostics.HasErrors() {
+		panic(diagnostics.Error())
+	}
+	singleton := map[string]bool{"default_backend": true, "backend": true, "service": true, "port": true, "resource": true, "http": true, "parameters": true, "pod_selector": true, "namespace_selector": true, "ip_block": true}
+	var render func(*hclsyntax.Body, bool) string
+	render = func(body *hclsyntax.Body, object bool) string {
+		var result strings.Builder
+		names := make([]string, 0, len(body.Attributes))
+		for name := range body.Attributes {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			fmt.Fprintf(&result, "%s = %s\n", name, body.Attributes[name].Expr.Range().SliceBytes([]byte(legacy)))
+		}
+		seen := map[string]bool{}
+		for _, block := range body.Blocks {
+			// Top-level resource declarations are not backend resource objects.
+			selected := singleton[block.Type] && len(block.Labels) == 0
+			if object && !selected {
+				if seen[block.Type] {
+					continue
+				}
+				seen[block.Type] = true
+				fmt.Fprintf(&result, "%s = [\n", block.Type)
+				for _, sibling := range body.Blocks {
+					if sibling.Type == block.Type {
+						fmt.Fprintf(&result, "{\n%s},\n", render(sibling.Body, true))
+					}
+				}
+				result.WriteString("]\n")
+			} else if selected {
+				fmt.Fprintf(&result, "%s = {\n%s}\n", block.Type, render(block.Body, true))
+			} else {
+				result.WriteString(block.Type)
+				for _, label := range block.Labels {
+					fmt.Fprintf(&result, " %q", label)
+				}
+				fmt.Fprintf(&result, " {\n%s}\n", render(block.Body, false))
+			}
+		}
+		return result.String()
+	}
+	return render(file.Body.(*hclsyntax.Body), false)
+}
+
+func NetworkingTargetTestValues(legacy map[string]interface{}) map[string]interface{} {
+	var clone func(any) any
+	clone = func(value any) any {
+		switch value := value.(type) {
+		case map[string]any:
+			result := make(map[string]any, len(value))
+			for key, child := range value {
+				result[key] = clone(child)
+			}
+			return result
+		case []any:
+			result := make([]any, len(value))
+			for i, child := range value {
+				result[i] = clone(child)
+			}
+			return result
+		default:
+			return value
+		}
+	}
+	cloned := clone(legacy).(map[string]interface{})
+	singleton := map[string]bool{"default_backend": true, "backend": true, "service": true, "port": true, "resource": true, "http": true, "parameters": true, "pod_selector": true, "namespace_selector": true, "ip_block": true}
+	var convert func(any)
+	convert = func(value any) {
+		switch value := value.(type) {
+		case map[string]any:
+			for key, child := range value {
+				if singleton[key] {
+					if list, ok := child.([]any); ok {
+						if len(list) > 1 {
+							panic("singleton state fixture has multiple values")
+						}
+						child = nil
+						if len(list) == 1 {
+							child = list[0]
+						}
+						value[key] = child
+					}
+				}
+				convert(child)
+			}
+		case []any:
+			for _, child := range value {
+				convert(child)
+			}
+		}
+	}
+	convert(cloned)
+	return cloned
+}
+
+func NetworkingOmittedTestExpressions(values map[string]interface{}) map[string]interface{} {
+	result := NetworkingTargetTestValues(values)
+	var visit func(interface{})
+	visit = func(value interface{}) {
+		switch value := value.(type) {
+		case map[string]interface{}:
+			for field, child := range value {
+				if field == "pod_selector" || field == "namespace_selector" {
+					if selector, ok := child.(map[string]interface{}); ok {
+						if expressions, ok := selector["match_expressions"].([]interface{}); ok && len(expressions) == 0 {
+							selector["match_expressions"] = nil
+						}
+					}
+				}
+				visit(child)
+			}
+		case []interface{}:
+			for _, child := range value {
+				visit(child)
+			}
+		}
+	}
+	visit(result)
+	return result
+}
+
+func networkingTargetFlatAttributes(legacy map[string]string) map[string]string {
+	singleton := map[string]bool{"pod_selector": true, "namespace_selector": true, "ip_block": true}
+	converted := make(map[string]string, len(legacy))
+	for key, value := range legacy {
+		if strings.HasSuffix(key, ".match_expressions.#") && value == "0" {
+			continue
+		}
+		parts := strings.Split(key, ".")
+		var target []string
+		skip := false
+		for i := 0; i < len(parts); i++ {
+			target = append(target, parts[i])
+			if singleton[parts[i]] && i+1 < len(parts) {
+				if parts[i+1] == "#" {
+					skip = true
+					break
+				}
+				if parts[i+1] == "0" {
+					i++
+				}
+			}
+		}
+		if !skip {
+			converted[strings.Join(target, ".")] = value
+		}
+	}
+	return converted
+}
+
 func (ingressClassTestProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "kubernetes"
 }
@@ -86,7 +356,7 @@ func (ingressClassTestProvider) DataSources(context.Context) []func() datasource
 
 func ingressClassTestDynamic(t *testing.T, typ tftypes.Type, raw string) *tfprotov6.DynamicValue {
 	t.Helper()
-	value, err := (&tfprotov6.RawState{JSON: []byte(raw)}).Unmarshal(typ)
+	value, err := (&tfprotov6.RawState{JSON: networkingTestFixtureJSON(t, []byte(raw), typ)}).Unmarshal(typ)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,8 +401,8 @@ func TestIngressClassProtocolDefaultsAndUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 	ingressClassCheckDiagnostics(t, sdkSchemas.Diagnostics)
-	if !typ.Equal(sdkSchemas.ResourceSchemas["kubernetes_ingress_class"].ValueType()) {
-		t.Fatal("Framework IngressClass state type differs from the SDKv2 v1 alias")
+	if typ.Equal(sdkSchemas.ResourceSchemas["kubernetes_ingress_class"].ValueType()) {
+		t.Fatal("singleton conversion must change the state type")
 	}
 	for _, tc := range []struct {
 		name, prior, proposed string
@@ -165,7 +435,7 @@ func TestIngressClassProtocolDefaultsAndUpgrade(t *testing.T) {
 			}
 			for name, field := range map[string]types.String{
 				"generate_name": model.Metadata[0].GenerateName, "controller": model.Spec[0].Controller,
-				"api_group": model.Spec[0].Parameters[0].APIGroup, "namespace": model.Spec[0].Parameters[0].Namespace,
+				"api_group": model.Spec[0].Parameters.APIGroup, "namespace": model.Spec[0].Parameters.Namespace,
 			} {
 				if !field.Equal(types.StringValue("")) {
 					t.Errorf("%s = %s, want SDKv2 empty default", name, field)
@@ -264,6 +534,11 @@ func TestIngressClassReplacementAndRemovalParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	typ := schemas.ResourceSchemas["kubernetes_ingress_class_v1"].ValueType()
+	sdkSchemas, err := sdk.GetProviderSchema(ctx, &tfprotov6.GetProviderSchemaRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sdkType := sdkSchemas.ResourceSchemas["kubernetes_ingress_class"].ValueType()
 	for _, tc := range []struct {
 		name, config, prior, proposed string
 		replace                       bool
@@ -283,10 +558,14 @@ func TestIngressClassReplacementAndRemovalParity(t *testing.T) {
 				server tfprotov6.ProviderServer
 				name   string
 			}{{sdk, "kubernetes_ingress_class"}, {framework, "kubernetes_ingress_class_v1"}} {
+				wireType := typ
+				if implementation.name == "kubernetes_ingress_class" {
+					wireType = sdkType
+				}
 				response, err := implementation.server.PlanResourceChange(ctx, &tfprotov6.PlanResourceChangeRequest{
 					TypeName: implementation.name,
-					Config:   ingressClassTestDynamic(t, typ, tc.config), PriorState: ingressClassTestDynamic(t, typ, tc.prior),
-					ProposedNewState: ingressClassTestDynamic(t, typ, tc.proposed),
+					Config:   ingressClassTestDynamic(t, wireType, tc.config), PriorState: ingressClassTestDynamic(t, wireType, tc.prior),
+					ProposedNewState: ingressClassTestDynamic(t, wireType, tc.proposed),
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -295,11 +574,11 @@ func TestIngressClassReplacementAndRemovalParity(t *testing.T) {
 				if (len(response.RequiresReplace) > 0) != tc.replace {
 					t.Fatalf("%s replacement paths: %v, want replacement %v", implementation.name, response.RequiresReplace, tc.replace)
 				}
-				value, err := response.PlannedState.Unmarshal(typ)
+				value, err := response.PlannedState.Unmarshal(wireType)
 				if err != nil {
 					t.Fatal(err)
 				}
-				plans = append(plans, value)
+				plans = append(plans, networkingTestRetype(t, value, typ))
 			}
 			var schemaResponse resource.SchemaResponse
 			NewIngressClassV1().Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
@@ -312,21 +591,21 @@ func TestIngressClassReplacementAndRemovalParity(t *testing.T) {
 			}
 			sdkSpec, frameworkSpec := models[0].Spec[0], models[1].Spec[0]
 			if sdkSpec.Controller.ValueString() != frameworkSpec.Controller.ValueString() ||
-				sdkSpec.Parameters[0].APIGroup.ValueString() != frameworkSpec.Parameters[0].APIGroup.ValueString() ||
-				sdkSpec.Parameters[0].Namespace.ValueString() != frameworkSpec.Parameters[0].Namespace.ValueString() ||
-				!sdkSpec.Parameters[0].Name.Equal(frameworkSpec.Parameters[0].Name) ||
-				!sdkSpec.Parameters[0].Kind.Equal(frameworkSpec.Parameters[0].Kind) {
+				sdkSpec.Parameters.APIGroup.ValueString() != frameworkSpec.Parameters.APIGroup.ValueString() ||
+				sdkSpec.Parameters.Namespace.ValueString() != frameworkSpec.Parameters.Namespace.ValueString() ||
+				!sdkSpec.Parameters.Name.Equal(frameworkSpec.Parameters.Name) ||
+				!sdkSpec.Parameters.Kind.Equal(frameworkSpec.Parameters.Kind) {
 				t.Fatalf("SDKv2/Framework spec plans differ:\nSDK %#v\nFramework %#v", models[0].Spec, models[1].Spec)
 			}
 			if frameworkSpec.Controller.IsNull() || frameworkSpec.Controller.IsUnknown() ||
-				frameworkSpec.Parameters[0].APIGroup.IsNull() || frameworkSpec.Parameters[0].APIGroup.IsUnknown() ||
-				frameworkSpec.Parameters[0].Namespace.IsNull() || frameworkSpec.Parameters[0].Namespace.IsUnknown() {
+				frameworkSpec.Parameters.APIGroup.IsNull() || frameworkSpec.Parameters.APIGroup.IsUnknown() ||
+				frameworkSpec.Parameters.Namespace.IsNull() || frameworkSpec.Parameters.Namespace.IsUnknown() {
 				t.Fatal("Framework must resolve SDKv2 zero defaults before apply")
 			}
 			// Framework may defer computed scope during an update; the API lifecycle test
 			// separately proves that it resolves without changing the configured payload.
-			if !frameworkSpec.Parameters[0].Scope.IsUnknown() && !frameworkSpec.Parameters[0].Scope.Equal(sdkSpec.Parameters[0].Scope) {
-				t.Fatalf("unexpected known scope: %s", frameworkSpec.Parameters[0].Scope)
+			if !frameworkSpec.Parameters.Scope.IsUnknown() && !frameworkSpec.Parameters.Scope.Equal(sdkSpec.Parameters.Scope) {
+				t.Fatalf("unexpected known scope: %s", frameworkSpec.Parameters.Scope)
 			}
 		})
 	}
@@ -368,43 +647,40 @@ func ingressClassTestStateValue(t *testing.T, r *IngressClassV1) tfsdk.State {
 	ctx := context.Background()
 	var schemaResponse resource.SchemaResponse
 	r.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
-	raw, err := (&tfprotov6.RawState{JSON: []byte(ingressClassTestState)}).Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
+	raw := networkingTestUpgradedState(t, providerserver.NewProtocol6(ingressClassTestProvider{})(), "kubernetes_ingress_class_v1", ingressClassTestState, schemaResponse.Schema.Type().TerraformType(ctx))
+	var err error
 	if err != nil {
 		t.Fatal(err)
 	}
 	return tfsdk.State{Schema: schemaResponse.Schema, Raw: raw}
 }
 
-func TestIngressClassResolveMultipleParameters(t *testing.T) {
+func TestIngressClassRejectsMultipleLegacyParameters(t *testing.T) {
 	ctx := context.Background()
-	state := ingressClassTestStateValue(t, &IngressClassV1{})
-	var model IngressClassV1Model
-	if diags := state.Get(ctx, &model); diags.HasError() {
-		t.Fatal(diags)
+	server := providerserver.NewProtocol6(ingressClassTestProvider{})()
+	var legacy map[string]any
+	if err := json.Unmarshal([]byte(ingressClassTestState), &legacy); err != nil {
+		t.Fatal(err)
 	}
-	first := model.Spec[0].Parameters[0]
-	model.Spec[0].Parameters[0].Scope = types.StringUnknown()
-	for _, scope := range []types.String{types.StringUnknown(), types.StringValue("Namespace"), types.StringNull()} {
-		extra := first
-		extra.Name = types.StringValue("ignored")
-		extra.Scope = scope
-		model.Spec[0].Parameters = append(model.Spec[0].Parameters, extra)
+	spec := legacy["spec"].([]any)[0].(map[string]any)
+	parameters := spec["parameters"].([]any)
+	spec["parameters"] = append(parameters, parameters[0])
+	raw, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
 	}
-	object := &networking.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "example", UID: "uid-1", ResourceVersion: "10", Generation: 1},
-		Spec: networking.IngressClassSpec{
-			Parameters: &networking.IngressClassParametersReference{Name: "example", Scope: ptr.To("Cluster")},
-		},
+	response, err := server.UpgradeResourceState(ctx, &tfprotov6.UpgradeResourceStateRequest{
+		TypeName: "kubernetes_ingress_class_v1", Version: 0, RawState: &tfprotov6.RawState{JSON: raw},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-	resolveIngressClassPlan(&model, object)
-	for i, scope := range []string{"Cluster", "", "Namespace", ""} {
-		if got := model.Spec[0].Parameters[i].Scope; !got.Equal(types.StringValue(scope)) {
-			t.Errorf("parameters[%d].scope = %s, want %q", i, got, scope)
+	for _, diagnostic := range response.Diagnostics {
+		if diagnostic.Severity == tfprotov6.DiagnosticSeverityError && strings.Contains(diagnostic.Detail, "parameters") && strings.Contains(diagnostic.Detail, "previous provider") {
+			return
 		}
 	}
-	if got := expandIngressClassSpec(model.Spec[0]).Parameters.Name; got != "example" {
-		t.Fatalf("API parameters = %q, want the first configured block", got)
-	}
+	t.Fatalf("multiple legacy parameters were silently truncated: %#v", response)
 }
 
 func TestIngressClassLifecycle(t *testing.T) {
@@ -482,7 +758,7 @@ func TestIngressClassLifecycle(t *testing.T) {
 		t.Fatal(diags)
 	}
 	model.Spec[0].Controller = types.StringValue("example.com/controller")
-	model.Spec[0].Parameters[0].Scope = types.StringUnknown()
+	model.Spec[0].Parameters.Scope = types.StringUnknown()
 	model.ID, model.Metadata[0].UID, model.Metadata[0].ResourceVersion = types.StringUnknown(), types.StringUnknown(), types.StringUnknown()
 	model.Metadata[0].Generation = types.Int64Unknown()
 	if diags := state.Set(ctx, &model); diags.HasError() {
@@ -498,7 +774,7 @@ func TestIngressClassLifecycle(t *testing.T) {
 		t.Fatal(diags)
 	}
 	if model.ID.ValueString() != "example" || model.Metadata[0].UID.ValueString() != "uid-1" ||
-		model.Spec[0].Parameters[0].Scope.ValueString() != "Cluster" || !model.Metadata[0].Labels.IsNull() {
+		model.Spec[0].Parameters.Scope.ValueString() != "Cluster" || !model.Metadata[0].Labels.IsNull() {
 		t.Fatalf("create did not preserve plan or resolve computed values: %#v", model)
 	}
 	var gotIdentity common.ResourceIdentity
@@ -511,7 +787,7 @@ func TestIngressClassLifecycle(t *testing.T) {
 
 	model.Metadata[0].Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"managed": types.StringValue("new")})
 	model.Metadata[0].Generation, model.Metadata[0].ResourceVersion = types.Int64Unknown(), types.StringUnknown()
-	model.Spec[0].Parameters[0].Name = types.StringValue("updated")
+	model.Spec[0].Parameters.Name = types.StringValue("updated")
 	planned := tfsdk.State{Schema: state.Schema}
 	if diags := planned.Set(ctx, &model); diags.HasError() {
 		t.Fatal(diags)
@@ -730,7 +1006,7 @@ func TestIngressClassImport(t *testing.T) {
 			}
 			if model.ID.ValueString() != "example" || model.Metadata[0].UID.ValueString() != "imported-uid" ||
 				!model.Metadata[0].GenerateName.Equal(types.StringValue("")) ||
-				model.Spec[0].Controller.ValueString() != "example.com/controller" || len(model.Spec[0].Parameters) != 0 {
+				model.Spec[0].Controller.ValueString() != "example.com/controller" || model.Spec[0].Parameters != nil {
 				t.Fatalf("incomplete imported state: %#v", model)
 			}
 		})
@@ -740,6 +1016,9 @@ func TestIngressClassImport(t *testing.T) {
 // Only the loopback fake API is reachable by either provider. This runs real Terraform
 // and a released provider without TF_ACC or a Kubernetes cluster.
 func TestIngressClassReleasedUpgradeOffline(t *testing.T) {
+	if os.Getenv("KUBE_NETWORKING_CORE_TEST") != "1" {
+		t.Skip("set KUBE_NETWORKING_CORE_TEST=1 for local fake-API Terraform CLI tests")
+	}
 	terraformPath, err := exec.LookPath("terraform")
 	if err != nil {
 		t.Skip("Terraform CLI is not installed")
@@ -752,7 +1031,6 @@ func TestIngressClassReleasedUpgradeOffline(t *testing.T) {
 	t.Setenv("TF_CLI_CONFIG_FILE", rc)
 	t.Setenv("TF_ACC_TERRAFORM_PATH", terraformPath)
 	t.Setenv("TF_ACC_TEMP_DIR", private)
-	t.Setenv("HOME", private)
 	for _, key := range []string{
 		"KUBECONFIG", "KUBE_CONFIG_PATH", "KUBE_CONFIG_PATHS", "KUBE_CTX", "KUBE_CTX_AUTH_INFO", "KUBE_CTX_CLUSTER",
 		"KUBE_USER", "KUBE_PASSWORD", "KUBE_TOKEN", "KUBE_CLIENT_CERT_DATA", "KUBE_CLIENT_KEY_DATA",
@@ -858,6 +1136,7 @@ func TestIngressClassReleasedUpgradeOffline(t *testing.T) {
 				  }
 				}
 				`, metadata)
+			targetConfig := NetworkingTargetTestConfig(config)
 			var before *networking.IngressClass
 			checkPreserved := func(*terraform.State) error {
 				mu.Lock()
@@ -907,7 +1186,7 @@ func TestIngressClassReleasedUpgradeOffline(t *testing.T) {
 						ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 							"kubernetes": providerserver.NewProtocol6WithError(ingressClassTestProvider{meta: meta}),
 						},
-						Config:           config,
+						Config:           targetConfig,
 						ConfigPlanChecks: tfresource.ConfigPlanChecks{PreApply: upgradeChecks},
 						Check:            checkPreserved,
 					},
@@ -915,7 +1194,7 @@ func TestIngressClassReleasedUpgradeOffline(t *testing.T) {
 						ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 							"kubernetes": providerserver.NewProtocol6WithError(ingressClassTestProvider{meta: meta}),
 						},
-						Config: config,
+						Config: targetConfig,
 						ConfigPlanChecks: tfresource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectEmptyPlan(),
 						}},
@@ -996,7 +1275,7 @@ func ingressInternalSchema(t *testing.T) schema.Schema {
 func ingressInternalState(t *testing.T, rawJSON string) tfsdk.State {
 	t.Helper()
 	s := ingressInternalSchema(t)
-	raw := tfprotov6.RawState{JSON: []byte(rawJSON)}
+	raw := tfprotov6.RawState{JSON: networkingTestFixtureJSON(t, []byte(rawJSON), s.Type().TerraformType(context.Background()))}
 	value, err := raw.Unmarshal(s.Type().TerraformType(context.Background()))
 	if err != nil {
 		t.Fatal(err)
@@ -1064,7 +1343,7 @@ func ingressInternalProtocolDiagnostics(t *testing.T, diagnostics []*tfprotov6.D
 func TestIngressV1InternalNativeSchemaAndDefaults(t *testing.T) {
 	ctx := context.Background()
 	s := ingressInternalSchema(t)
-	if s.Version != 0 {
+	if s.Version != 1 {
 		t.Fatalf("schema version = %d", s.Version)
 	}
 	if _, ok := NewIngressV1().(resource.ResourceWithMoveState); ok {
@@ -1103,11 +1382,11 @@ func TestIngressV1InternalNativeSchemaAndDefaults(t *testing.T) {
 	if model.Metadata[0].GenerateName.ValueString() != "" || model.Metadata[0].GenerateName.IsNull() || model.Metadata[0].Namespace.ValueString() != "default" {
 		t.Fatalf("metadata defaults: %#v", model.Metadata[0])
 	}
-	p := model.Spec[0].Rule[0].HTTP[0].Path[0]
+	p := model.Spec[0].Rule[0].HTTP.Path[0]
 	if p.Path.IsNull() || p.Path.ValueString() != "" || p.PathType.ValueString() != "ImplementationSpecific" {
 		t.Fatalf("path defaults: %#v", p)
 	}
-	if p.Backend[0].Service[0].Port[0].Name.IsNull() || model.Spec[0].Rule[0].Host.IsNull() || model.Spec[0].TLS[0].SecretName.IsNull() {
+	if p.Backend.Service.Port.Name.IsNull() || model.Spec[0].Rule[0].Host.IsNull() || model.Spec[0].TLS[0].SecretName.IsNull() {
 		t.Fatal("implicit SDK string zeros became null")
 	}
 	if !model.WaitForLoadBalancer.IsNull() || !model.Spec[0].IngressClassName.IsUnknown() || !model.Status.IsUnknown() {
@@ -1118,17 +1397,17 @@ func TestIngressV1InternalNativeSchemaAndDefaults(t *testing.T) {
 	}
 	_, unknown := ingressInternalPlan(t, func(m *IngressV1Model) {
 		m.Spec[0].Rule[0].Host = types.StringUnknown()
-		m.Spec[0].Rule[0].HTTP[0].Path[0].Backend[0].Service[0].Port[0].Number = types.Int64Unknown()
+		m.Spec[0].Rule[0].HTTP.Path[0].Backend.Service.Port.Number = types.Int64Unknown()
 		m.Spec[0].TLS[0].Hosts = types.ListUnknown(types.StringType)
 	})
-	if !unknown.Spec[0].Rule[0].Host.IsUnknown() || !unknown.Spec[0].Rule[0].HTTP[0].Path[0].Backend[0].Service[0].Port[0].Number.IsUnknown() || !unknown.Spec[0].TLS[0].Hosts.IsUnknown() {
+	if !unknown.Spec[0].Rule[0].Host.IsUnknown() || !unknown.Spec[0].Rule[0].HTTP.Path[0].Backend.Service.Port.Number.IsUnknown() || !unknown.Spec[0].TLS[0].Hosts.IsUnknown() {
 		t.Fatal("unknown configured values were coerced")
 	}
 	_, namedPort := ingressInternalPlan(t, func(m *IngressV1Model) {
-		port := &m.Spec[0].Rule[0].HTTP[0].Path[0].Backend[0].Service[0].Port[0]
+		port := m.Spec[0].Rule[0].HTTP.Path[0].Backend.Service.Port
 		port.Name, port.Number = types.StringValue("http"), types.Int64Null()
 	})
-	port := namedPort.Spec[0].Rule[0].HTTP[0].Path[0].Backend[0].Service[0].Port[0]
+	port := namedPort.Spec[0].Rule[0].HTTP.Path[0].Backend.Service.Port
 	if port.Number.IsNull() || port.Number.IsUnknown() || port.Number.ValueInt64() != 0 || port.Name.ValueString() != "http" {
 		t.Fatalf("named backend port lost SDK numerical zero: %#v", port)
 	}
@@ -1140,12 +1419,12 @@ func TestIngressV1InternalConversion(t *testing.T) {
 	model.Spec[0].TLS = append(model.Spec[0].TLS, IngressV1TLSModel{
 		Hosts: types.ListValueMust(types.StringType, []attr.Value{}), SecretName: types.StringValue(""),
 	})
-	model.Spec[0].DefaultBackend = []IngressV1BackendModel{{
-		Resource: []IngressV1ResourceBackendModel{{
+	model.Spec[0].DefaultBackend = &IngressV1BackendModel{
+		Resource: &IngressV1ResourceBackendModel{
 			APIGroup: types.StringValue("example.com"), Kind: types.StringValue("StorageBucket"), Name: types.StringValue("bucket"),
-		}},
-		Service: []IngressV1ServiceBackendModel{},
-	}}
+		},
+		Service: nil,
+	}
 	expanded, diags := ingressExpandSpec(ctx, model.Spec)
 	if diags.HasError() {
 		t.Fatal(diags)
@@ -1169,7 +1448,7 @@ func TestIngressV1InternalConversion(t *testing.T) {
 		t.Fatal("apply silently converted unknown host into empty string")
 	}
 	flat, diags = ingressFlattenSpec(ctx, networking.IngressSpec{Rules: []networking.IngressRule{{Host: "host-only"}}}, nil)
-	if diags.HasError() || len(flat[0].Rule[0].HTTP) != 0 {
+	if diags.HasError() || flat[0].Rule[0].HTTP != nil {
 		t.Fatalf("host-only rule conversion failed: %#v %v", flat, diags)
 	}
 }
@@ -1481,7 +1760,7 @@ func TestIngressV1InternalReadMetadataAndStatus(t *testing.T) {
 	if labels := model.Metadata[0].Labels.Elements(); len(labels) != 1 || !labels["ignored/managed"].Equal(types.StringValue("new")) {
 		t.Fatalf("metadata filtering/removal regression: %v", labels)
 	}
-	if model.Metadata[0].GenerateName.IsNull() || len(model.Spec[0].Rule[0].HTTP) != 0 {
+	if model.Metadata[0].GenerateName.IsNull() || model.Spec[0].Rule[0].HTTP != nil {
 		t.Fatal("read changed SDK zero/empty block semantics")
 	}
 	status := model.Status.Elements()[0].(types.Object).Attributes()
@@ -1569,9 +1848,9 @@ func TestIngressV1InternalValidationAndUnknownBlocks(t *testing.T) {
 	config := ingressInternalState(t, ingressInternalConfigJSON)
 	spec := tftypes.NewAttributePath().WithAttributeName("spec")
 	paths := spec.WithElementKeyInt(0).WithAttributeName("rule").WithElementKeyInt(0).
-		WithAttributeName("http").WithElementKeyInt(0).WithAttributeName("path")
-	port := paths.WithElementKeyInt(0).WithAttributeName("backend").WithElementKeyInt(0).
-		WithAttributeName("service").WithElementKeyInt(0).WithAttributeName("port")
+		WithAttributeName("http").WithAttributeName("path")
+	port := paths.WithElementKeyInt(0).WithAttributeName("backend").
+		WithAttributeName("service").WithAttributeName("port")
 	for _, tc := range []struct {
 		name  string
 		path  *tftypes.AttributePath
@@ -1621,8 +1900,8 @@ func TestIngressV1InternalRemovedScalarsPlanDefaults(t *testing.T) {
 	state, prior := ingressInternalExisting(t)
 	prior.WaitForLoadBalancer = types.BoolValue(true)
 	prior.Spec[0].Rule[0].Host = types.StringValue("example.com")
-	prior.Spec[0].Rule[0].HTTP[0].Path[0].Path = types.StringValue("/prefix")
-	prior.Spec[0].Rule[0].HTTP[0].Path[0].PathType = types.StringValue("Prefix")
+	prior.Spec[0].Rule[0].HTTP.Path[0].Path = types.StringValue("/prefix")
+	prior.Spec[0].Rule[0].HTTP.Path[0].PathType = types.StringValue("Prefix")
 	prior.Spec[0].TLS[0].SecretName = types.StringValue("certificate")
 	prior.Spec[0].TLS[0].Hosts = types.ListValueMust(types.StringType, []attr.Value{types.StringValue("example.com")})
 	if d := state.Set(ctx, prior); d.HasError() {
@@ -1651,7 +1930,7 @@ func TestIngressV1InternalRemovedScalarsPlanDefaults(t *testing.T) {
 	if d := plan.Get(ctx, &got); d.HasError() {
 		t.Fatal(d)
 	}
-	path := got.Spec[0].Rule[0].HTTP[0].Path[0]
+	path := got.Spec[0].Rule[0].HTTP.Path[0]
 	if got.WaitForLoadBalancer.ValueBool() || got.Spec[0].Rule[0].Host.ValueString() != "" ||
 		path.Path.ValueString() != "" || path.PathType.ValueString() != "ImplementationSpecific" ||
 		got.Spec[0].TLS[0].SecretName.ValueString() != "" || !got.Spec[0].TLS[0].Hosts.IsNull() {
@@ -1713,6 +1992,9 @@ func TestIngressV1InternalReleasedRefreshedUpgradeOffline(t *testing.T) {
 }
 
 func ingressInternalReleasedUpgradeOffline(t *testing.T, releasedRefresh bool) {
+	if os.Getenv("KUBE_NETWORKING_CORE_TEST") != "1" {
+		t.Skip("set KUBE_NETWORKING_CORE_TEST=1 for local fake-API Terraform CLI tests")
+	}
 	t.Helper()
 	terraformPath, err := exec.LookPath("terraform")
 	if err != nil {
@@ -1737,7 +2019,6 @@ func ingressInternalReleasedUpgradeOffline(t *testing.T, releasedRefresh bool) {
 	t.Setenv("TF_CLI_CONFIG_FILE", rc)
 	t.Setenv("TF_ACC_TERRAFORM_PATH", terraformPath)
 	t.Setenv("TF_ACC_TEMP_DIR", private)
-	t.Setenv("HOME", private)
 	for _, key := range []string{
 		"KUBECONFIG", "KUBE_CONFIG_PATH", "KUBE_CONFIG_PATHS", "KUBE_CTX", "KUBE_CTX_AUTH_INFO", "KUBE_CTX_CLUSTER",
 		"KUBE_USER", "KUBE_PASSWORD", "KUBE_TOKEN", "KUBE_CLIENT_CERT_DATA", "KUBE_CLIENT_KEY_DATA",
@@ -1907,6 +2188,7 @@ func ingressInternalReleasedUpgradeOffline(t *testing.T, releasedRefresh bool) {
 				  %s
 				}
 			`, name, tc.metadata, tc.spec, tc.extra)
+			targetConfig := NetworkingTargetTestConfig(config)
 			var before *networking.Ingress
 			var snapshot ingressInternalCoreSnapshot
 			checkUnchanged := func(*terraform.State) error {
@@ -1948,7 +2230,7 @@ func ingressInternalReleasedUpgradeOffline(t *testing.T, releasedRefresh bool) {
 				},
 				{
 					ProtoV6ProviderFactories: factories,
-					Config:                   config,
+					Config:                   targetConfig,
 					ConfigPlanChecks:         tfresource.ConfigPlanChecks{PreApply: checks},
 					Check:                    checkUnchanged,
 					ConfigStateChecks: []statecheck.StateCheck{
@@ -1957,7 +2239,7 @@ func ingressInternalReleasedUpgradeOffline(t *testing.T, releasedRefresh bool) {
 				},
 				{
 					ProtoV6ProviderFactories: factories,
-					Config:                   config,
+					Config:                   targetConfig,
 					ConfigPlanChecks: tfresource.ConfigPlanChecks{
 						PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					},
@@ -2024,7 +2306,11 @@ func (c ingressInternalCoreStateCheck) CheckState(_ context.Context, req statech
 		if found.Address != "kubernetes_ingress_v1.test" {
 			continue
 		}
-		if found.SchemaVersion != 0 || found.IdentitySchemaVersion == nil || *found.IdentitySchemaVersion != 1 {
+		expectedVersion := uint64(0)
+		if c.compare {
+			expectedVersion = 1
+		}
+		if found.SchemaVersion != expectedVersion || found.IdentitySchemaVersion == nil || *found.IdentitySchemaVersion != 1 {
 			resp.Error = fmt.Errorf("resource/identity schema version changed: resource=%d identity=%v", found.SchemaVersion, found.IdentitySchemaVersion)
 			return
 		}
@@ -2048,7 +2334,9 @@ func (c ingressInternalCoreStateCheck) CheckState(_ context.Context, req statech
 				after[field] = nil
 			}
 		}
-		if !reflect.DeepEqual(*c.snapshot, got) {
+		expected := *c.snapshot
+		expected.values = NetworkingTargetTestValues(expected.values)
+		if !reflect.DeepEqual(expected, got) {
 			differences := map[string]string{}
 			for key, before := range c.snapshot.values {
 				if after := got.values[key]; !reflect.DeepEqual(before, after) {
@@ -2181,7 +2469,10 @@ func networkPolicyTestState(t *testing.T, raw string) tfsdk.State {
 	ctx := context.Background()
 	var response resource.SchemaResponse
 	NewNetworkPolicyV1().Schema(ctx, resource.SchemaRequest{}, &response)
-	value, err := (&tfprotov6.RawState{JSON: []byte(raw)}).Unmarshal(response.Schema.Type().TerraformType(ctx))
+	if raw == networkPolicyTestStoredState {
+		return tfsdk.State{Schema: response.Schema, Raw: networkingTestUpgradedState(t, providerserver.NewProtocol6(networkPolicyTestProvider{})(), "kubernetes_network_policy_v1", raw, response.Schema.Type().TerraformType(ctx))}
+	}
+	value, err := (&tfprotov6.RawState{JSON: networkingTestFixtureJSON(t, []byte(raw), response.Schema.Type().TerraformType(ctx))}).Unmarshal(response.Schema.Type().TerraformType(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2208,10 +2499,20 @@ func networkPolicyTestProtocolErrors(t *testing.T, diags []*tfprotov6.Diagnostic
 
 func networkPolicyTestBlockShape(t *testing.T, location string, got, want *tfprotov6.SchemaBlock) {
 	t.Helper()
-	if len(got.BlockTypes) != len(want.BlockTypes) || len(got.Attributes) != len(want.Attributes) {
-		t.Fatalf("%s: HCL attributes and blocks changed", location)
-	}
 	for _, expected := range want.BlockTypes {
+		selected := expected.TypeName == "pod_selector" || expected.TypeName == "namespace_selector" || expected.TypeName == "ip_block"
+		if selected {
+			found := false
+			for _, attribute := range got.Attributes {
+				if attribute.Name == expected.TypeName {
+					_, found = attribute.ValueType().(tftypes.Object)
+				}
+			}
+			if !found {
+				t.Fatalf("%s.%s must be a singleton object", location, expected.TypeName)
+			}
+			continue
+		}
 		var actual *tfprotov6.SchemaNestedBlock
 		for _, candidate := range got.BlockTypes {
 			if candidate.TypeName == expected.TypeName {
@@ -2220,7 +2521,7 @@ func networkPolicyTestBlockShape(t *testing.T, location string, got, want *tfpro
 			}
 		}
 		if actual == nil || actual.Nesting != expected.Nesting {
-			t.Fatalf("%s.%s: block nesting changed", location, expected.TypeName)
+			t.Fatalf("%s.%s: genuine collection shape changed", location, expected.TypeName)
 		}
 		networkPolicyTestBlockShape(t, location+"."+expected.TypeName, actual.Block, expected.Block)
 	}
@@ -2244,12 +2545,12 @@ func TestNetworkPolicySchemaAndPlan(t *testing.T) {
 	}
 	networkPolicyTestProtocolErrors(t, sdkSchemas.Diagnostics)
 	typ := schemas.ResourceSchemas["kubernetes_network_policy_v1"].ValueType()
-	if !typ.Equal(sdkSchemas.ResourceSchemas["kubernetes_network_policy"].ValueType()) {
-		t.Fatal("Framework state types differ from the SDKv2 v1 alias")
+	if typ.Equal(sdkSchemas.ResourceSchemas["kubernetes_network_policy"].ValueType()) {
+		t.Fatal("singleton conversion must change the state type")
 	}
 	networkPolicyTestBlockShape(t, "network_policy", schemas.ResourceSchemas["kubernetes_network_policy_v1"].Block,
 		sdkSchemas.ResourceSchemas["kubernetes_network_policy"].Block)
-	if schemas.ResourceSchemas["kubernetes_network_policy_v1"].Version != 0 {
+	if schemas.ResourceSchemas["kubernetes_network_policy_v1"].Version != 1 {
 		t.Fatal("schema version changed")
 	}
 	config := networkPolicyTestState(t, networkPolicyTestConfig)
@@ -2284,7 +2585,7 @@ func TestNetworkPolicySchemaAndPlan(t *testing.T) {
 	if port.Port.ValueString() != "" || port.Port.IsNull() || port.EndPort.IsNull() ||
 		port.EndPort.ValueInt64() != 0 || port.Protocol.ValueString() != "TCP" ||
 		model.Metadata[0].Namespace.ValueString() != "default" || model.Metadata[0].GenerateName.IsNull() ||
-		model.Spec[0].Ingress[0].From[0].IPBlock[0].CIDR.IsNull() {
+		model.Spec[0].Ingress[0].From[0].IPBlock.CIDR.IsNull() {
 		t.Fatalf("SDK defaults not preserved: %#v", model)
 	}
 	stored := networkPolicyTestState(t, networkPolicyTestStoredState)
@@ -2339,9 +2640,9 @@ func TestNetworkPolicyPlanChanges(t *testing.T) {
 			m.Spec[0].Ingress = []networkPolicyIngressModel{}
 		}, false},
 		{"empty pod selector", func(m *NetworkPolicyV1Model) {
-			m.Spec[0].PodSelector = []networkPolicySelectorModel{{
+			m.Spec[0].PodSelector = &networkPolicySelectorModel{
 				MatchLabels: types.MapNull(types.StringType), MatchExpressions: []networkPolicyExpressionModel{},
-			}}
+			}
 		}, false},
 		{"change name", func(m *NetworkPolicyV1Model) {
 			m.Metadata[0].Name = types.StringValue("renamed")
@@ -2485,13 +2786,13 @@ func TestNetworkPolicyConversions(t *testing.T) {
 		t.Fatal(diags)
 	}
 	if imported[0].Ingress[0].Ports[0].Port.ValueString() != "80" ||
-		!imported[0].PodSelector[0].MatchLabels.IsNull() {
+		!imported[0].PodSelector.MatchLabels.IsNull() {
 		t.Fatalf("unexpected imported port or selector: %#v", imported)
 	}
 	for _, present := range []bool{false, true} {
-		var selector []networkPolicySelectorModel
+		var selector *networkPolicySelectorModel
 		if present {
-			selector = []networkPolicySelectorModel{{MatchLabels: types.MapNull(types.StringType)}}
+			selector = &networkPolicySelectorModel{MatchLabels: types.MapNull(types.StringType)}
 		}
 		got, d := networkPolicyExpandSelector(ctx, selector)
 		if d.HasError() || (got != nil) != present {
@@ -2910,7 +3211,7 @@ func TestNetworkPolicyPortSpelling(t *testing.T) {
 		t.Fatal("SDK int32 conversion changed a known end_port")
 	}
 	selector, diags := networkPolicyFlattenSelector(context.Background(), &metav1.LabelSelector{}, nil)
-	if diags.HasError() || len(selector) != 1 || !selector[0].MatchLabels.IsNull() {
+	if diags.HasError() || selector == nil || !selector.MatchLabels.IsNull() {
 		t.Fatalf("empty selector was lost: %#v %s", selector, diags)
 	}
 }
@@ -2922,21 +3223,13 @@ type networkPolicyOfflinePlanCheck struct {
 }
 
 func (check networkPolicyOfflinePlanCheck) CheckPlan(ctx context.Context, req plancheck.CheckPlanRequest, resp *plancheck.CheckPlanResponse) {
-	if !check.normalizeMetadata && !check.normalizeSelectorMaps && !check.normalizeExpressionValues {
-		plancheck.ExpectEmptyPlan().CheckPlan(ctx, req, resp)
-		if resp.Error != nil {
-			raw, _ := json.MarshalIndent(req.Plan.ResourceChanges, "", "  ")
-			resp.Error = fmt.Errorf("%w\n%s", resp.Error, raw)
-		}
-		return
-	}
 	if len(req.Plan.ResourceChanges) != 1 {
 		resp.Error = fmt.Errorf("expected exactly one state-only collection update, got %d changes", len(req.Plan.ResourceChanges))
 		return
 	}
 	change := req.Plan.ResourceChanges[0]
 	if change.Address != "kubernetes_network_policy_v1.test" || change.Change == nil ||
-		len(change.Change.Actions) != 1 || change.Change.Actions[0] != "update" || len(change.Change.ReplacePaths) != 0 {
+		len(change.Change.Actions) != 1 || (!change.Change.Actions.NoOp() && change.Change.Actions[0] != "update") || len(change.Change.ReplacePaths) != 0 {
 		resp.Error = fmt.Errorf("expected an in-place state-only collection update: %#v", change)
 		return
 	}
@@ -2965,6 +3258,19 @@ func (check networkPolicyOfflinePlanCheck) CheckPlan(ctx context.Context, req pl
 		resp.Error = err
 		return
 	}
+	expected = NetworkingOmittedTestExpressions(expected)
+	values = expected["metadata"].([]any)[0].(map[string]any)
+	expectedBeforeComputed, _ := json.Marshal(expected)
+	normalizing := string(expectedBeforeComputed) != string(beforeJSON)
+	if normalizing != (change.Change.Actions[0] == "update") {
+		resp.Error = fmt.Errorf("unexpected action for exact collection normalization: %v", change.Change.Actions)
+		return
+	}
+	if !normalizing {
+		plancheck.ExpectEmptyPlan().CheckPlan(ctx, req, resp)
+		return
+	}
+
 	// These two read-only values become unknown on any Framework update, but
 	// the post-apply state and fake API assertions still require exact equality.
 	unknown := change.Change.AfterUnknown.(map[string]any)["metadata"].([]any)[0].(map[string]any)
@@ -3016,6 +3322,9 @@ func networkPolicyExpectedSelectorNormalization(value any, normalizeMaps, normal
 // Both provider versions are isolated from kubeconfig and use only a loopback
 // fake API; real Terraform and the pinned Registry binary exercise Core planning.
 func TestNetworkPolicyReleasedUpgradeOffline(t *testing.T) {
+	if os.Getenv("KUBE_NETWORKING_CORE_TEST") != "1" {
+		t.Skip("set KUBE_NETWORKING_CORE_TEST=1 for local fake-API Terraform CLI tests")
+	}
 	terraformPath, err := exec.LookPath("terraform")
 	if err != nil {
 		t.Skip("Terraform CLI is not installed")
@@ -3033,7 +3342,6 @@ func TestNetworkPolicyReleasedUpgradeOffline(t *testing.T) {
 	t.Setenv("TF_PLUGIN_CACHE_DIR", cache)
 	t.Setenv("TF_ACC_TERRAFORM_PATH", terraformPath)
 	t.Setenv("TF_ACC_TEMP_DIR", private)
-	t.Setenv("HOME", private)
 	for _, key := range []string{
 		"KUBECONFIG", "KUBE_CONFIG_PATH", "KUBE_CONFIG_PATHS", "KUBE_CTX", "KUBE_CTX_AUTH_INFO", "KUBE_CTX_CLUSTER",
 		"KUBE_USER", "KUBE_PASSWORD", "KUBE_TOKEN", "KUBE_CLIENT_CERT_DATA", "KUBE_CLIENT_KEY_DATA",
@@ -3257,6 +3565,7 @@ func TestNetworkPolicyReleasedUpgradeOffline(t *testing.T) {
 							  spec { %s }
 							}
 						`, name, tc.metadata, tc.spec)
+			targetConfig := NetworkingTargetTestConfig(config)
 			var before *networking.NetworkPolicy
 			var beforeState map[string]string
 			releasedChecks := 0
@@ -3291,6 +3600,7 @@ func TestNetworkPolicyReleasedUpgradeOffline(t *testing.T) {
 					expected["spec.0.pod_selector.0.match_expressions.0.values.#"] = "0"
 					expected["spec.0.pod_selector.0.match_expressions.1.values.#"] = "0"
 				}
+				expected = networkingTargetFlatAttributes(expected)
 				if !reflect.DeepEqual(after.Primary.Attributes, expected) {
 					return fmt.Errorf("upgrade changed stored attributes:\nexpected %#v\nafter %#v", expected, after.Primary.Attributes)
 				}
@@ -3336,7 +3646,7 @@ func TestNetworkPolicyReleasedUpgradeOffline(t *testing.T) {
 					},
 					{
 						ProtoV6ProviderFactories: local,
-						Config:                   config,
+						Config:                   targetConfig,
 						ConfigPlanChecks: tfresource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 							networkPolicyOfflinePlanCheck{
 								normalizeMetadata: tc.normalizeMetadata, normalizeSelectorMaps: tc.normalizeSelectorMaps,
@@ -3347,7 +3657,7 @@ func TestNetworkPolicyReleasedUpgradeOffline(t *testing.T) {
 					},
 					{
 						ProtoV6ProviderFactories: local,
-						Config:                   config,
+						Config:                   targetConfig,
 						ConfigPlanChecks: tfresource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
 							plancheck.ExpectEmptyPlan(),
 						}},

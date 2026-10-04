@@ -18,8 +18,8 @@ import (
 func networkPolicyExpandSpec(ctx context.Context, in []networkPolicySpecModel) (networking.NetworkPolicySpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	var out networking.NetworkPolicySpec
-	if len(in) != 1 || len(in[0].PodSelector) != 1 {
-		diags.AddError("Invalid network policy specification", "Exactly one spec and pod_selector block is required.")
+	if len(in) != 1 || in[0].PodSelector == nil {
+		diags.AddError("Invalid network policy specification", "Exactly one spec block and a pod_selector object are required.")
 		return out, diags
 	}
 	model := in[0]
@@ -72,8 +72,8 @@ func networkPolicyExpandPeers(ctx context.Context, in []networkPolicyPeerModel) 
 	}
 	out := make([]networking.NetworkPolicyPeer, len(in))
 	for i, peer := range in {
-		if len(peer.IPBlock) > 0 {
-			block := peer.IPBlock[0]
+		if peer.IPBlock != nil {
+			block := peer.IPBlock
 			out[i].IPBlock = &networking.IPBlock{CIDR: block.CIDR.ValueString()}
 			diags.Append(block.Except.ElementsAs(ctx, &out[i].IPBlock.Except, false)...)
 		}
@@ -87,19 +87,19 @@ func networkPolicyExpandPeers(ctx context.Context, in []networkPolicyPeerModel) 
 	return out, diags
 }
 
-func networkPolicyExpandSelector(ctx context.Context, in []networkPolicySelectorModel) (*metav1.LabelSelector, diag.Diagnostics) {
+func networkPolicyExpandSelector(ctx context.Context, in *networkPolicySelectorModel) (*metav1.LabelSelector, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	if len(in) == 0 {
+	if in == nil {
 		return nil, diags
 	}
 	// A present empty selector must remain non-nil: it selects everything, rather
 	// than omitting this peer's selector.
 	out := &metav1.LabelSelector{}
-	diags.Append(in[0].MatchLabels.ElementsAs(ctx, &out.MatchLabels, false)...)
-	if len(in[0].MatchExpressions) > 0 {
-		out.MatchExpressions = make([]metav1.LabelSelectorRequirement, len(in[0].MatchExpressions))
+	diags.Append(in.MatchLabels.ElementsAs(ctx, &out.MatchLabels, false)...)
+	if len(in.MatchExpressions) > 0 {
+		out.MatchExpressions = make([]metav1.LabelSelectorRequirement, len(in.MatchExpressions))
 	}
-	for i, expression := range in[0].MatchExpressions {
+	for i, expression := range in.MatchExpressions {
 		out.MatchExpressions[i].Key = expression.Key.ValueString()
 		out.MatchExpressions[i].Operator = metav1.LabelSelectorOperator(expression.Operator.ValueString())
 		diags.Append(expression.Values.ElementsAs(ctx, &out.MatchExpressions[i].Values, false)...)
@@ -188,15 +188,18 @@ func networkPolicyFlattenPeers(ctx context.Context, in []networking.NetworkPolic
 	out := make([]networkPolicyPeerModel, len(in))
 	for i, peer := range in {
 		old := networkPolicyPrior(prior, i)
-		out[i].IPBlock = []networkPolicyIPBlockModel{}
+		out[i].IPBlock = nil
 		if peer.IPBlock != nil {
-			oldBlock := networkPolicyPrior(old.IPBlock, 0)
+			oldBlock := networkPolicyIPBlockModel{}
+			if old.IPBlock != nil {
+				oldBlock = *old.IPBlock
+			}
 			except, d := networkPolicyFlattenStrings(ctx, peer.IPBlock.Except, oldBlock.Except)
 			diags.Append(d...)
-			out[i].IPBlock = []networkPolicyIPBlockModel{{
+			out[i].IPBlock = &networkPolicyIPBlockModel{
 				CIDR:   types.StringValue(peer.IPBlock.CIDR),
 				Except: except,
-			}}
+			}
 		}
 		selector, d := networkPolicyFlattenSelector(ctx, peer.NamespaceSelector, old.NamespaceSelector)
 		diags.Append(d...)
@@ -208,12 +211,15 @@ func networkPolicyFlattenPeers(ctx context.Context, in []networking.NetworkPolic
 	return out, diags
 }
 
-func networkPolicyFlattenSelector(ctx context.Context, in *metav1.LabelSelector, prior []networkPolicySelectorModel) ([]networkPolicySelectorModel, diag.Diagnostics) {
+func networkPolicyFlattenSelector(ctx context.Context, in *metav1.LabelSelector, prior *networkPolicySelectorModel) (*networkPolicySelectorModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if in == nil {
-		return []networkPolicySelectorModel{}, diags
+		return nil, diags
 	}
-	old := networkPolicyPrior(prior, 0)
+	old := networkPolicySelectorModel{}
+	if prior != nil {
+		old = *prior
+	}
 	out := networkPolicySelectorModel{
 		MatchLabels:      types.MapNull(types.StringType),
 		MatchExpressions: make([]networkPolicyExpressionModel, len(in.MatchExpressions)),
@@ -226,6 +232,9 @@ func networkPolicyFlattenSelector(ctx context.Context, in *metav1.LabelSelector,
 		var d diag.Diagnostics
 		out.MatchLabels, d = types.MapValueFrom(ctx, types.StringType, labels)
 		diags.Append(d...)
+	}
+	if len(in.MatchExpressions) == 0 && old.MatchExpressions == nil {
+		out.MatchExpressions = nil
 	}
 	for i, expression := range in.MatchExpressions {
 		oldExpression := networkPolicyPrior(old.MatchExpressions, i)
@@ -245,7 +254,7 @@ func networkPolicyFlattenSelector(ctx context.Context, in *metav1.LabelSelector,
 			Values:   values,
 		}
 	}
-	return []networkPolicySelectorModel{out}, diags
+	return &out, diags
 }
 
 func networkPolicyFlattenStrings(ctx context.Context, in []string, prior types.List) (types.List, diag.Diagnostics) {

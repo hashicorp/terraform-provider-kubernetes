@@ -77,6 +77,12 @@ func (r *IngressClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 		resp.Diagnostics.AddError("Invalid IngressClass state", "The resource id must contain an IngressClass name.")
 		return
 	}
+	if resp.Identity != nil {
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, ingressClassIdentity(state.ID.ValueString()))...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
 	out, err := client.NetworkingV1().IngressClasses().Get(ctx, state.ID.ValueString(), metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)
@@ -133,7 +139,7 @@ func (r *IngressClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 	// Scope is API-owned when omitted. Unknown marking during a metadata-only
 	// update must not turn it into a spec edit.
 	if plannedSpec.Parameters != nil && priorSpec.Parameters != nil &&
-		(plan.Spec[0].Parameters[0].Scope.IsUnknown() || plan.Spec[0].Parameters[0].Scope.IsNull()) {
+		(plan.Spec[0].Parameters.Scope.IsUnknown() || plan.Spec[0].Parameters.Scope.IsNull()) {
 		plannedSpec.Parameters.Scope = priorSpec.Parameters.Scope
 	}
 	if !reflect.DeepEqual(priorSpec, plannedSpec) {
@@ -214,14 +220,10 @@ func resolveIngressClassPlan(plan *IngressClassV1Model, out *networking.IngressC
 	plan.Metadata[0].UID = types.StringValue(string(out.UID))
 	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
-	for i := range plan.Spec[0].Parameters {
-		scope := &plan.Spec[0].Parameters[i].Scope
-		if scope.IsNull() || scope.IsUnknown() {
-			*scope = types.StringValue("")
-			// SDKv2 accepts extra blocks but sends only the first to Kubernetes.
-			if i == 0 && out.Spec.Parameters != nil && out.Spec.Parameters.Scope != nil {
-				*scope = types.StringValue(*out.Spec.Parameters.Scope)
-			}
+	if parameters := plan.Spec[0].Parameters; parameters != nil && (parameters.Scope.IsNull() || parameters.Scope.IsUnknown()) {
+		parameters.Scope = types.StringValue("")
+		if out.Spec.Parameters != nil && out.Spec.Parameters.Scope != nil {
+			parameters.Scope = types.StringValue(*out.Spec.Parameters.Scope)
 		}
 	}
 }

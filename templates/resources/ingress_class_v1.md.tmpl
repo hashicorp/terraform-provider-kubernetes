@@ -17,7 +17,58 @@ description: |-
 
 ## Migration to Plugin Framework
 
-`kubernetes_ingress_class_v1` is implemented using the Terraform Plugin Framework. The resource type, configuration syntax, state schema version (0), and identity schema version (1) are unchanged. Existing `kubernetes_ingress_class_v1` state does not require a `moved` block or re-import.
+`kubernetes_ingress_class_v1` is implemented using the Terraform Plugin Framework. Apply the object syntax changes below before upgrading. The resource type and Kubernetes object identity are retained.
+
+### Object configuration and state upgrade
+
+The resource now uses state schema version 1 and upgrades existing version 0
+state automatically. Identity schema version 1 is unchanged. Existing
+`kubernetes_ingress_class_v1` resources need no `moved` block or re-import.
+
+Keep `metadata` and `spec` as blocks. Replace a released `parameters { ... }`
+block with an object argument inside `spec`:
+
+```terraform
+parameters = {
+  api_group = "example.com"
+  kind      = "IngressParameters"
+  name      = "external-lb"
+}
+```
+
+Keep omitted parameters omitted or `null`. The `scope` default remains
+`"Cluster"`. Replace `spec[0].parameters[0].name` with
+`spec[0].parameters.name` in references and `ignore_changes`; retain `spec[0]`.
+Terraform JSON uses `"parameters": {"kind": "IngressParameters", "name":
+"external-lb", "api_group": "example.com"}` instead of a singleton array.
+
+A conditional expression can replace a dynamic parameters block:
+
+```terraform
+parameters = var.parameters
+```
+
+Declare an optional module input as an object:
+
+```terraform
+variable "parameters" {
+  type = object({
+    kind      = string
+    name      = string
+    api_group = optional(string)
+    scope     = optional(string)
+    namespace = optional(string)
+  })
+  default = null
+}
+```
+
+**Multiple historical parameters blocks require preparation.** The SDK accepted
+several blocks but sent only the first one to Kubernetes. The new state converter
+rejects multiple stored elements instead of choosing one silently. Before
+upgrading, consolidate the old configuration to the single object Kubernetes
+uses, refresh with the previous provider, and confirm a clean plan. Then change
+that one block to object syntax. Keep the existing class name and controller.
 
 Before upgrading, confirm that the current configuration has an empty plan. Review the plan after upgrading; do not apply unexpected replacement or specification changes.
 
@@ -25,7 +76,7 @@ There is one narrow compatibility exception: if `metadata.labels = {}` or `metad
 
 ### Migration from `kubernetes_ingress_class`
 
-The deprecated alias remains on SDKv2. With Terraform 1.8 or later, replace the old resource block's type with `kubernetes_ingress_class_v1`, keep its configuration unchanged, update references, and add:
+The deprecated alias remains on SDKv2. With Terraform 1.8 or later, replace the old resource block's type with `kubernetes_ingress_class_v1`, apply the object syntax changes above while keeping the same settings, update references, and add:
 
 ```terraform
 moved {

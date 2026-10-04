@@ -1987,7 +1987,7 @@ func testAccKubernetesPodV1ConfigWithInitContainer(podName, image string) string
   }
 }
 
-resource "kubernetes_service_v1" "test" {
+resource "kubernetes_service" "test" {
   metadata {
     name = "%s-init-service"
   }

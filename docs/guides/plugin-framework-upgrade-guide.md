@@ -76,3 +76,16 @@ Run `terraform plan` to verify the move and review any in-place changes describe
 ## Data source: kubernetes_all_namespaces
 
 Behavior is unchanged; no configuration updates are required.
+
+## Version 4: Service
+
+`kubernetes_service_v1` changes `spec.session_affinity_config` and its `client_ip`
+child from blocks to object arguments. Both support values computed by Kubernetes.
+The `metadata`, `spec`, and `port` blocks retain their syntax.
+
+Follow the [Service migration instructions](../resources/service_v1.md#framework-migration-session-affinity-syntax)
+for configuration, references, `ignore_changes`, module types, and automatic port allocation.
+Existing versioned resources upgrade at the same address. Moving from
+`kubernetes_service` requires Terraform 1.8 or later and the documented `moved` block.
+State schema version increases to 2; provider 3.x cannot read the upgraded state.
+Back up state and recreate saved plans when upgrading.

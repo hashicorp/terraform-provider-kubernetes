@@ -81,6 +81,10 @@ testacc: fmtcheck vet
 testfuncs: fmtcheck 
 	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
 
+# Loopback fake-API CLI tests; no Kubernetes cluster or credentials are used.
+test-service-cli:
+	env -u TF_ACC TF_KUBERNETES_SERVICE_CLI_TESTS=1 go test ./internal/framework/provider/corev1 -run '^TestServiceCLI_' -count=1 -timeout=30m
+
 frameworkacc:
 	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
 
@@ -135,8 +139,10 @@ vet:
 #   DOCKER_VOLUME_OPTS="rw,Z"
 # For more info, see https://docs.docker.com/storage/bind-mounts/#configure-the-selinux-label
 DOCKER?=$(shell which docker)
+ifneq ($(MAKECMDGOALS),test-service-cli)
 ifeq ($(strip $(DOCKER)),)
 $(error "Docker binary could not be found in PATH. Please install docker, or specify an alternative by setting DOCKER=/path/to/binary")
+endif
 endif
 DOCKER_VOLUME_OPTS?="rw"
 DOCKER_SELINUX := $(shell which setenforce)
@@ -180,4 +186,4 @@ docs-lint-fix: tools
 	@echo "==> Fixing website terraform blocks code with terrafmt..."
 	@terrafmt fmt ./docs --pattern '*.markdown'
 
-.PHONY: build test testacc frameworkacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry
+.PHONY: build test testacc test-service-cli frameworkacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry

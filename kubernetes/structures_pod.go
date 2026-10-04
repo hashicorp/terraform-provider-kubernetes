@@ -623,6 +623,9 @@ func flattenSecretProjection(in *v1.SecretProjection) []interface{} {
 func flattenConfigMapProjection(in *v1.ConfigMapProjection) []interface{} {
 	att := make(map[string]interface{})
 	att["name"] = in.Name
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
 	if len(in.Items) > 0 {
 		items := make([]interface{}, len(in.Items))
 		for i, v := range in.Items {
@@ -1681,4 +1684,24 @@ func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 
 	}
 	return ops, nil
+}
+
+// ExpandPodSpec exposes the pod spec expander to the Framework workload resources.
+func ExpandPodSpec(spec []interface{}) (*v1.PodSpec, error) {
+	return expandPodSpec(spec)
+}
+
+// FlattenPodSpec exposes the pod spec flattener to the Framework workload resources.
+// It keeps every toleration, as for a pod template, and drops the injected
+// service-account token volume.
+func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
+	// The flattener removes the token volume from its slice in place.
+	return flattenPodSpec(*spec.DeepCopy(), true)
+}
+
+// IsBuiltInToleration reports whether key is a taint whose toleration
+// Kubernetes can add to a Pod on its own.
+func IsBuiltInToleration(key string) bool {
+	_, ok := builtInTolerations[key]
+	return ok
 }

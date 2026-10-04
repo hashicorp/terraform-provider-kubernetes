@@ -1,19 +1,26 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package batchv1_test
 
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 
 	batchv1 "k8s.io/api/batch/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -23,17 +30,17 @@ import (
 func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 	var conf1, conf2 batchv1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_cron_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.25.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.25.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1Config_basic(name, imageName),
@@ -88,17 +95,17 @@ func TestAccKubernetesCronJobV1_basic(t *testing.T) {
 func TestAccKubernetesCronJobV1_extra(t *testing.T) {
 	var conf batchv1.CronJob
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_cron_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.25.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.25.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1Config_extra(name, imageName),
@@ -132,18 +139,18 @@ func TestAccKubernetesCronJobV1_extra(t *testing.T) {
 
 func TestAccKubernetesCronJobV1_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	resourceName := "kubernetes_cron_job_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
+			kubetest.PreCheck(t)
 		},
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1Config_basic(name, imageName),
@@ -172,12 +179,12 @@ func TestAccKubernetesCronJobV1_minimalWithTemplateNamespace(t *testing.T) {
 
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_cron_job_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1ConfigMinimal(name, imageName),
@@ -211,16 +218,16 @@ func TestAccKubernetesCronJobV1_minimalWithPodFailurePolicy(t *testing.T) {
 
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_cron_job_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.25.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.25.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1ConfigMinimal(name, imageName),
@@ -263,16 +270,16 @@ func TestAccKubernetesCronJobV1_minimalWithBackoffLimitPerIndex(t *testing.T) {
 
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_cron_job_v1.test"
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
-			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.29.0")
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.29.0")
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesCronJobV1Destroy,
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesCronJobV1ConfigMinimal(name, imageName),
@@ -312,8 +319,255 @@ func TestAccKubernetesCronJobV1_minimalWithBackoffLimitPerIndex(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesCronJobV1_upgrade(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		config func(string, string) string
+	}{
+		{"minimal", testAccKubernetesCronJobV1ConfigMinimal},
+		{"configured", testAccKubernetesCronJobV1Config_basic},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			name := "tf-acc-cron-upgrade-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+			config := test.config(name, kubetest.BusyboxImage)
+			var before, after batchv1.CronJob
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck: func() {
+					kubetest.PreCheck(t)
+					kubetest.SkipIfClusterVersionLessThan(t, "1.25.0")
+				},
+				CheckDestroy: testAccCheckKubernetesCronJobV1Destroy,
+				Steps: []resource.TestStep{
+					{
+						ExternalProviders: kubetest.ReleasedProvider("3.2.1"),
+						Config:            config,
+						Check:             testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &before),
+					},
+					{
+						ProtoV6ProviderFactories: kubetest.ProviderFactories,
+						Config:                   config,
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &after),
+							testAccCheckKubernetesCronJobV1ForceNew(&before, &after, false),
+							func(_ *terraform.State) error {
+								if !reflect.DeepEqual(before.Spec, after.Spec) {
+									return fmt.Errorf("migration changed the CronJob API spec:\nbefore: %#v\nafter: %#v", before.Spec, after.Spec)
+								}
+								return nil
+							},
+						),
+					},
+					{
+						ProtoV6ProviderFactories: kubetest.ProviderFactories,
+						Config:                   config,
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+					},
+					{
+						ProtoV6ProviderFactories: kubetest.ProviderFactories,
+						ResourceName:             "kubernetes_cron_job_v1.test",
+						ImportState:              true,
+						ImportStateVerify:        true,
+						// The minimal CronJob runs every minute, and its status updates change the resource version.
+						ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+					},
+				},
+			})
+		})
+	}
+}
+
+func TestAccKubernetesCronJobV1_disappears(t *testing.T) {
+	var object batchv1.CronJob
+	name := "tf-acc-cron-gone-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
+		Steps: []resource.TestStep{{
+			Config: testAccKubernetesCronJobV1ConfigMinimal(name, kubetest.BusyboxImage),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				testAccCheckKubernetesCronJobV1Exists("kubernetes_cron_job_v1.test", &object),
+				func(_ *terraform.State) error {
+					client, err := kubetest.Clientset()
+					if err != nil {
+						return err
+					}
+					return client.BatchV1().CronJobs(object.Namespace).Delete(context.Background(), object.Name, metav1.DeleteOptions{})
+				},
+			),
+			ExpectNonEmptyPlan: true,
+		}},
+	})
+}
+
+func TestAccKubernetesCronJobV1_defaultsAfterRemoval(t *testing.T) {
+	name := "tf-acc-cron-default-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	minimal := testAccKubernetesCronJobV1ConfigMinimal(name, kubetest.BusyboxImage)
+	configured := strings.Replace(minimal, `schedule = "*/1 * * * *"`, `schedule = "*/1 * * * *"
+    failed_jobs_history_limit = 0
+    successful_jobs_history_limit = 0
+    suspend = true
+    timezone = "Etc/UTC"
+    starting_deadline_seconds = 20`, 1)
+	if configured == minimal {
+		t.Fatal("default-removal test did not configure overrides")
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.25.0")
+		},
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: configured,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "0"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "0"),
+				),
+			},
+			{
+				Config: minimal,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.failed_jobs_history_limit", "1"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.successful_jobs_history_limit", "3"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.timezone", ""),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.suspend", "false"),
+					resource.TestCheckResourceAttr("kubernetes_cron_job_v1.test", "spec.0.starting_deadline_seconds", "0"),
+				),
+			},
+			{
+				Config: minimal,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+// False and "" are values a CronJob update must send, not omissions.
+func TestAccKubernetesCronJobV1_falseAndEmptyValues(t *testing.T) {
+	var before, after batchv1.CronJob
+	name := "tf-acc-cron-false-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	const address = "kubernetes_cron_job_v1.test"
+	minimal := testAccKubernetesCronJobV1ConfigMinimal(name, kubetest.BusyboxImage)
+	utc := strings.Replace(minimal, `schedule = "*/1 * * * *"`, `schedule = "*/1 * * * *"
+    timezone = "UTC"`, 1)
+	noEscalation := strings.Replace(utc, `command = ["sleep", "5"]`, `command = ["sleep", "5"]
+              security_context {
+                allow_privilege_escalation = false
+              }`, 1)
+	noTimezone := strings.Replace(noEscalation, `timezone = "UTC"`, `timezone = ""`, 1)
+	update := resource.ConfigPlanChecks{
+		PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)},
+		PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+	}
+	live := func(check func(batchv1.CronJobSpec) error) resource.TestCheckFunc {
+		return resource.ComposeAggregateTestCheckFunc(
+			testAccCheckKubernetesCronJobV1Exists(address, &after),
+			testAccCheckKubernetesCronJobV1ForceNew(&before, &after, false),
+			func(*terraform.State) error { return check(after.Spec) },
+		)
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.25.0")
+		},
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: utc,
+				Check:  testAccCheckKubernetesCronJobV1Exists(address, &before),
+			},
+			{
+				Config:           noEscalation,
+				ConfigPlanChecks: update,
+				Check: live(func(spec batchv1.CronJobSpec) error {
+					sc := spec.JobTemplate.Spec.Template.Spec.Containers[0].SecurityContext
+					if sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation {
+						return fmt.Errorf("live securityContext = %+v, want allowPrivilegeEscalation false", sc)
+					}
+					return nil
+				}),
+			},
+			{
+				Config:           noTimezone,
+				ConfigPlanChecks: update,
+				Check: live(func(spec batchv1.CronJobSpec) error {
+					if spec.TimeZone != nil {
+						return fmt.Errorf("live timeZone = %q, want unset", *spec.TimeZone)
+					}
+					return nil
+				}),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesCronJobV1_keepsUnmanagedFields(t *testing.T) {
+	var before, after batchv1.CronJob
+	name := "tf-acc-cron-unmanaged-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	const address = "kubernetes_cron_job_v1.test"
+	minimal := testAccKubernetesCronJobV1ConfigMinimal(name, kubetest.BusyboxImage)
+	rescheduled := strings.Replace(minimal, `schedule = "*/1 * * * *"`, `schedule = "*/2 * * * *"`, 1)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			kubetest.SkipIfClusterVersionLessThan(t, "1.29.0")
+		},
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesCronJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: minimal,
+				Check:  testAccCheckKubernetesCronJobV1Exists(address, &before),
+			},
+			{
+				// Another tool sets a field the provider does not manage.
+				PreConfig: func() {
+					client, err := kubetest.Clientset()
+					if err != nil {
+						t.Fatal(err)
+					}
+					patch := []byte(`{"spec":{"jobTemplate":{"spec":{"podReplacementPolicy":"Failed"}}}}`)
+					if _, err := client.BatchV1().CronJobs(before.Namespace).Patch(context.Background(), name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: rescheduled,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesCronJobV1Exists(address, &after),
+					testAccCheckKubernetesCronJobV1ForceNew(&before, &after, false),
+					func(*terraform.State) error {
+						if after.Spec.Schedule != "*/2 * * * *" {
+							return fmt.Errorf("live schedule = %q", after.Spec.Schedule)
+						}
+						if policy := after.Spec.JobTemplate.Spec.PodReplacementPolicy; policy == nil || *policy != batchv1.Failed {
+							return fmt.Errorf("live podReplacementPolicy = %v, want Failed", policy)
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckKubernetesCronJobV1Destroy(s *terraform.State) error {
-	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	conn, err := kubetest.Clientset()
 	if err != nil {
 		return err
 	}
@@ -324,16 +578,17 @@ func testAccCheckKubernetesCronJobV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
 
-		resp, err := conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
+		_, err = conn.BatchV1().CronJobs(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("CronJob still exists: %s", rs.Primary.ID)
-			}
+			return fmt.Errorf("CronJob still exists: %s", rs.Primary.ID)
+		}
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
 	}
 
@@ -347,13 +602,13 @@ func testAccCheckKubernetesCronJobV1Exists(n string, obj *batchv1.CronJob) resou
 			return fmt.Errorf("Not found: %s", n)
 		}
 
-		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		conn, err := kubetest.Clientset()
 		if err != nil {
 			return err
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := IdParts(rs.Primary.ID)
+		namespace, name, err := kubernetes.IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

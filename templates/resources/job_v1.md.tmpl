@@ -9,6 +9,10 @@ description: |-
 
 {{ .Description }}
 
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = { ... }`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
+
+~> `spec.backoff_limit_per_index` and `spec.max_failed_indexes` default to `0` when omitted; this is a provider default, not a Kubernetes one. Changing `backoff_limit_per_index` requires replacement of the Job.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage - No waiting
@@ -21,5 +25,18 @@ description: |-
 
 Note:
 
-- Kubernetes provider will treat update operations that change the Job spec resulting in the job re-run as "# forces replacement". In such cases, the `create` timeout value is used for both Create and Update operations.
-- `wait_for_completion` is not applicable during Delete operations; thus, there is no "delete" timeout value for Delete operation.
+- Changes to immutable Job fields require replacement. Creating the replacement uses the `create` timeout; in-place updates use the `update` timeout.
+- The `create`, `update`, and `delete` timeouts each default to `1m`.
+- `wait_for_completion` defaults to `true` and applies only to create and update operations. Deletion still waits for the Job to disappear, using the `delete` timeout regardless of `wait_for_completion`.
+
+## Import
+
+Jobs can be imported using the namespace and name, separated by `/`:
+
+```shell
+terraform import kubernetes_job_v1.demo default/demo
+```
+
+`wait_for_completion` is not stored in Kubernetes and is set to `true` on import. If the configuration sets it to `false`, the next plan shows an in-place update that changes only state.
+
+To move from the deprecated `kubernetes_job` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

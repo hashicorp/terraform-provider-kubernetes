@@ -18,19 +18,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-const generateNameRequiresReplaceDescription = "Replaces the object when generate_name changes, except when SDKv2-written state holds an empty string for an unset value."
+const generateNameRequiresReplaceDescription = "Replaces the object when generate_name changes. An empty string and null both mean unset."
+
+// GenerateNameRequiresReplace treats "" and null as the same unset value, as
+// SDKv2 did, so normalising one to the other never replaces the object.
+func GenerateNameRequiresReplace() planmodifier.String {
+	return stringplanmodifier.RequiresReplaceIf(
+		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+			resp.RequiresReplace = req.PlanValue.IsUnknown() || req.StateValue.ValueString() != req.PlanValue.ValueString()
+		},
+		generateNameRequiresReplaceDescription,
+		generateNameRequiresReplaceDescription,
+	)
+}
 
 // MetadataSchema mirrors SDKv2 metadataSchema for cluster-scoped objects.
 // generatableName adds generate_name and its conflict with name; match the SDKv2 flag.
 // Decode into MetadataModel when true, MetadataBase when false.
 func MetadataSchema(objectName string, generatableName bool) schema.ListNestedBlock {
-	return metadataBlock(objectName, metadataAttributes(objectName, generatableName))
+	return metadataBlock(objectName, metadataAttributes(objectName, generatableName, false))
 }
 
 // NamespacedMetadataSchema mirrors SDKv2 namespacedMetadataSchema, including the namespace default.
 // NamespacedMetadataModel matches the true variant; the false variant needs a model without GenerateName.
+// SDKv2 never enforced the name and generate_name conflict here, so setting both is only a warning.
 func NamespacedMetadataSchema(objectName string, generatableName bool) schema.ListNestedBlock {
-	attributes := metadataAttributes(objectName, generatableName)
+	attributes := metadataAttributes(objectName, generatableName, true)
 
 	// Framework defaults require Computed. No namespace validator, matching SDKv2.
 	attributes["namespace"] = schema.StringAttribute{
@@ -47,16 +60,24 @@ func NamespacedMetadataSchema(objectName string, generatableName bool) schema.Li
 }
 
 // metadataAttributes shares SDKv2 metadataFields and the optional generate_name variant.
-func metadataAttributes(objectName string, generatableName bool) map[string]schema.Attribute {
+func metadataAttributes(objectName string, generatableName, namespaced bool) map[string]schema.Attribute {
 	// ConflictsWith comes before the syntax validator so an error names the conflict
 	// rather than complaining about a value the user is about to remove.
 	nameValidators := []validator.String{}
-	if generatableName {
+	generateNameValidators := []validator.String{}
+	switch {
+	case generatableName && namespaced:
+		generateNameValidators = append(generateNameValidators, generateNameIgnoredValidator{})
+	case generatableName:
 		nameValidators = append(nameValidators, stringvalidator.ConflictsWith(
 			path.MatchRelative().AtParent().AtName("generate_name"),
 		))
+		generateNameValidators = append(generateNameValidators, stringvalidator.ConflictsWith(
+			path.MatchRelative().AtParent().AtName("name"),
+		))
 	}
 	nameValidators = append(nameValidators, DNSSubdomainNameValidator())
+	generateNameValidators = append(generateNameValidators, DNSLabelPrefixValidator())
 
 	attributes := map[string]schema.Attribute{
 		"annotations": schema.MapAttribute{
@@ -107,27 +128,39 @@ func metadataAttributes(objectName string, generatableName bool) map[string]sche
 			Description: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:    true,
 			PlanModifiers: []planmodifier.String{
-				// SDKv2 stores unset as ""; Framework uses null. Exempt that transition
-				// so plan -refresh=false does not recreate upgraded resources.
-				stringplanmodifier.RequiresReplaceIf(
-					func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-						sdkv2UnsetBecomingNull := req.StateValue.Equal(types.StringValue("")) && req.PlanValue.IsNull()
-						resp.RequiresReplace = !sdkv2UnsetBecomingNull
-					},
-					generateNameRequiresReplaceDescription,
-					generateNameRequiresReplaceDescription,
-				),
+				GenerateNameRequiresReplace(),
 			},
-			Validators: []validator.String{
-				stringvalidator.ConflictsWith(
-					path.MatchRelative().AtParent().AtName("name"),
-				),
-				DNSLabelPrefixValidator(),
-			},
+			Validators: generateNameValidators,
 		}
 	}
 
 	return attributes
+}
+
+// generateNameIgnoredValidator warns when name is also set, since Kubernetes then
+// ignores generate_name.
+type generateNameIgnoredValidator struct{}
+
+func (v generateNameIgnoredValidator) Description(ctx context.Context) string {
+	return v.MarkdownDescription(ctx)
+}
+
+func (generateNameIgnoredValidator) MarkdownDescription(context.Context) string {
+	return "warns that generate_name is ignored when name is set"
+}
+
+func (generateNameIgnoredValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() || req.ConfigValue.ValueString() == "" {
+		return
+	}
+	var name types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("name"), &name)...)
+	if name.IsNull() || name.IsUnknown() || name.ValueString() == "" {
+		return
+	}
+	resp.Diagnostics.AddAttributeWarning(req.Path, "generate_name is ignored when name is set",
+		fmt.Sprintf("Kubernetes ignores generate_name when name is set. Remove generate_name from the configuration, "+
+			"and add %s to lifecycle ignore_changes so that the existing object is not replaced.", req.Path))
 }
 
 // metadataBlock wraps a set of metadata attributes in the list block shape SDKv2 produced.

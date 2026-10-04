@@ -1,0 +1,59 @@
+```release-note:breaking-change
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Migrate to the Terraform Plugin Framework. Container and init container `resources`, Deployment and DaemonSet `strategy` and its `rolling_update`, StatefulSet `persistent_volume_claim_retention_policy` and Job and CronJob `selector` change from blocks to object arguments, for example `resources = { ... }`, so references and `ignore_changes` paths drop their `[0]`. Pod spec `image_pull_secrets` and `readiness_gate` and Job and CronJob `selector.match_expressions` become lists of objects. See the v4 upgrade guide.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: The state schema version increases. Once this version has written the state, provider 3.x cannot read it, so back up state before upgrading.
+```
+
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Resource type names, `namespace/name` import IDs, import identities and existing state are kept, and an unchanged configuration normally plans no change. Values that earlier versions stored differently, such as explicitly empty `labels = {}`, can show a one-time in-place update that changes only Terraform state. With Terraform 1.8 or later, `moved` blocks can move resources from the deprecated `kubernetes_deployment`, `kubernetes_daemonset`, `kubernetes_stateful_set`, `kubernetes_pod`, `kubernetes_job` and `kubernetes_cron_job` types.
+```
+
+```release-note:bug
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: A pod `security_context` block that sets only empty values, such as `supplemental_groups = []`, no longer plans a change on every run.
+```
+
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: After a create or update, state records the planned values, and only values the plan leaves unknown come from Kubernetes. Fields that admission webhooks or other clients add, such as an injected sidecar container, show as drift on the next refreshed plan instead of being recorded by the apply; `lifecycle.ignore_changes` handles them as before.
+```
+
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_cron_job_v1`: Updates change only what the plan changes instead of replacing the whole spec (Deployment, DaemonSet, CronJob) or the whole pod template (StatefulSet). Spec fields that the configuration does not manage keep their live values. A change made outside Terraform to a managed field after the plan, such as with `-refresh=false` or a saved plan, is kept by that apply when the plan does not change that field, and reverted by the next refreshed apply.
+```
+
+```release-note:note
+`resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`: A plan that changes a Pod spec or a Job pod template reads the object from Kubernetes, even with `-refresh=false`, to decide whether it must be replaced. Planning fails if that read fails or takes longer than 30 seconds.
+```
+
+```release-note:note
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Setting both `name` and `generate_name` in `metadata` gives a warning, since Kubernetes ignores `generate_name` when `name` is set.
+```
+
+```release-note:note
+`resource/kubernetes_stateful_set_v1`: Warn during planning when changes to the `requests`, labels or annotations of a `volume_claim_template` cannot be applied to the existing StatefulSet. Replace the StatefulSet to apply such a change.
+```
+
+```release-note:bug
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Keep the configured spelling of numeric strings, such as `run_as_user = "01000"` or `replicas = "01"`, to avoid repeated planned changes or Pod and Job replacements for equivalent values.
+```
+
+```release-note:bug
+`resource/kubernetes_pod_v1`: Replace the Pod when `active_deadline_seconds` is increased or removed, instead of attempting an update that Kubernetes rejects.
+```
+
+```release-note:bug
+`resource/kubernetes_pod_v1`: Record the priority class Kubernetes assigns to a Pod that leaves out `priority_class_name`, such as a `globalDefault` PriorityClass, instead of replacing the Pod on every plan.
+```
+
+```release-note:bug
+`resource/kubernetes_pod_v1`: Keep a configured toleration of a built-in taint, such as `node.kubernetes.io/not-ready` with `toleration_seconds`, instead of replacing the Pod on every plan. A Pod whose state 3.x last wrote is replaced once more.
+```
+
+```release-note:bug
+`resource/kubernetes_pod_v1`: Keep several projections in one `projected` volume `sources` block without reporting a change on every plan.
+```
+
+```release-note:bug
+`resource/kubernetes_job_v1`: Apply changes to `ttl_seconds_after_finished` and `max_failed_indexes` to the Job.
+```

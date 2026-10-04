@@ -15,6 +15,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// GetLastWarningsForObject shares the event lookup with Framework resources.
+func GetLastWarningsForObject(ctx context.Context, conn *kubernetes.Clientset, metadata metav1.ObjectMeta, kind string, limit int) ([]api.Event, error) {
+	return getLastWarningsForObject(ctx, conn, metadata, kind, limit)
+}
+
+func StringifyEvents(events []api.Event) string {
+	return stringifyEvents(events)
+}
+
 func getLastWarningsForObject(ctx context.Context, conn *kubernetes.Clientset, metadata metav1.ObjectMeta, kind string, limit int) ([]api.Event, error) {
 	m := map[string]string{
 		"involvedObject.name": metadata.Name,

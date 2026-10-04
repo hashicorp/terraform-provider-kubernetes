@@ -1,0 +1,731 @@
+// Copyright IBM Corp. 2017, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package appsv1
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8types "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	k8sretry "k8s.io/client-go/util/retry"
+	"k8s.io/utils/ptr"
+)
+
+const (
+	defaultCreateTimeout = 10 * time.Minute
+	defaultUpdateTimeout = 10 * time.Minute
+	defaultDeleteTimeout = 10 * time.Minute
+)
+
+type deploymentSpecModel struct {
+	MinReadySeconds         types.Int64               `tfsdk:"min_ready_seconds"`
+	Paused                  types.Bool                `tfsdk:"paused"`
+	ProgressDeadlineSeconds types.Int64               `tfsdk:"progress_deadline_seconds"`
+	Replicas                types.String              `tfsdk:"replicas"`
+	RevisionHistoryLimit    types.Int64               `tfsdk:"revision_history_limit"`
+	Selector                []deploymentSelectorModel `tfsdk:"selector"`
+	Strategy                types.Object              `tfsdk:"strategy"`
+	Template                []workloadTemplateModel   `tfsdk:"template"`
+}
+
+type deploymentSelectorModel = LabelSelectorModel
+
+type deploymentSelectorRequirementModel = LabelSelectorRequirementModel
+
+type deploymentStrategyModel struct {
+	Type          types.String `tfsdk:"type"`
+	RollingUpdate types.Object `tfsdk:"rolling_update"`
+}
+
+type deploymentRollingUpdateModel struct {
+	MaxSurge       types.String `tfsdk:"max_surge"`
+	MaxUnavailable types.String `tfsdk:"max_unavailable"`
+}
+
+func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan DeploymentV1Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	timeout, timeoutDiags := plan.Timeouts.Create(ctx, defaultCreateTimeout)
+	resp.Diagnostics.Append(timeoutDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	clients, filters, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	spec, diags := expandDeploymentSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Info(ctx, "Creating deployment", map[string]any{
+		"name":      metadata.Name,
+		"namespace": metadata.Namespace,
+	})
+	out, err := conn.AppsV1().Deployments(metadata.Namespace).Create(ctx, &appsv1.Deployment{
+		ObjectMeta: metadata,
+		Spec:       *spec,
+	}, metav1.CreateOptions{})
+	if err != nil {
+		if apierrors.IsInvalid(err) {
+			// Preserve SDKv2's unwrapped Kubernetes validation diagnostic.
+			resp.Diagnostics.AddError(err.Error(), "")
+		} else {
+			resp.Diagnostics.AddError("Error creating deployment", err.Error())
+		}
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), kubernetes.BuildId(out.ObjectMeta))...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(out.Namespace, out.Name))...)
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !plan.WaitForRollout.ValueBool() {
+		return
+	}
+	err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDeploymentReplicasFunc(ctx, conn, out.Namespace, out.Name))
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error waiting for deployment rollout",
+			fmt.Sprintf("Deployment %q was created but rollout did not complete: %s", kubernetes.BuildId(out.ObjectMeta), err),
+		)
+	}
+}
+
+func (d *DeploymentV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state DeploymentV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	clients, filters, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
+	out, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		resp.Diagnostics.AddError("Error reading deployment", err.Error())
+		return
+	}
+
+	refreshed, diags := deploymentModelFromObject(ctx, out, state, filters, true)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &refreshed)...)
+}
+
+func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan DeploymentV1Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var state DeploymentV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	timeout, timeoutDiags := plan.Timeouts.Update(ctx, defaultUpdateTimeout)
+	resp.Diagnostics.Append(timeoutDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	clients, filters, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
+
+	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
+		resp.Diagnostics.AddError("Invalid deployment metadata", "Expected exactly one metadata block in state and plan.")
+		return
+	}
+	var original, desired *appsv1.DeploymentSpec
+	if !plan.Spec.Equal(state.Spec) {
+		var diags diag.Diagnostics
+		original, diags = expandDeploymentSpec(ctx, state.Spec, nil, path.Root("spec"))
+		resp.Diagnostics.Append(diags...)
+		desired, diags = expandDeploymentSpec(ctx, plan.Spec, &req.Config, path.Root("spec"))
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		// A planned replicas of "" leaves the live count alone; an omitted value is planned from state and sent.
+		if desired.Replicas == nil {
+			original.Replicas = nil
+		}
+		patch, err := deploymentSpecPatch(*original, *desired)
+		if err != nil {
+			resp.Diagnostics.AddError("Error creating deployment spec patch", err.Error())
+			return
+		}
+		if string(patch) == "{}" {
+			original, desired = nil, nil
+		}
+	}
+	dynamicClient, err := clients.DynamicClient()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	var out *appsv1.Deployment
+	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
+		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("deployments")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		out = &appsv1.Deployment{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, out); err != nil {
+			return err
+		}
+		ops := deploymentMetadataPatchOps(state, plan, out.ObjectMeta)
+		if desired != nil {
+			from, to := *original, *desired
+			// The selector is immutable and replaces on any change, so the live one is
+			// kept: state written by SDKv2 may order its set values differently.
+			from.Selector, to.Selector = out.Spec.Selector, out.Spec.Selector
+			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.Deployment{})
+			if err != nil {
+				return err
+			}
+			ops = append(ops, specOps...)
+		}
+		if len(ops) == 0 {
+			return nil
+		}
+		ops = append(kubernetes.PatchOperations{common.ResourceVersionGuard(raw.GetResourceVersion())}, ops...)
+		data, err := ops.MarshalJSON()
+		if err != nil {
+			return err
+		}
+		out, err = conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.JSONPatchType, data, metav1.PatchOptions{})
+		return err
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating deployment", err.Error())
+		return
+	}
+
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if plan.WaitForRollout.ValueBool() {
+		err = retry.RetryContext(ctx, timeout, kubernetes.WaitForDeploymentReplicasFunc(ctx, conn, out.Namespace, out.Name))
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error waiting for deployment rollout",
+				fmt.Sprintf("Deployment %q was updated but rollout did not complete: %s", plan.ID.ValueString(), err),
+			)
+			return
+		}
+	}
+
+	out, err = conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading deployment after update", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+}
+
+func (d *DeploymentV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state DeploymentV1Model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	clients, _, metaDiags := d.sdkv2Meta()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	conn, err := clients.MainClientset()
+	if err != nil {
+		resp.Diagnostics.AddError("Kubernetes client error", err.Error())
+		return
+	}
+
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid deployment id", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(namespace, name))...)
+	deleteTimeout, dTimeout := state.Timeouts.Delete(ctx, defaultDeleteTimeout)
+	resp.Diagnostics.Append(dTimeout...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
+
+	err = conn.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		resp.Diagnostics.AddError("Error deleting deployment", err.Error())
+		return
+	}
+	err = retry.RetryContext(ctx, deleteTimeout, func() *retry.RetryError {
+		_, err := conn.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return retry.NonRetryableError(err)
+		}
+		return retry.RetryableError(fmt.Errorf("deployment (%s) still exists", state.ID.ValueString()))
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Error waiting for deployment delete", err.Error())
+	}
+}
+
+// expandDeploymentSpec converts the "spec" list at path at; config is passed
+// for a write payload, see podspec.Built.ExpandSpec.
+func expandDeploymentSpec(ctx context.Context, value types.List, config *tfsdk.Config, at path.Path) (*appsv1.DeploymentSpec, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if value.IsNull() || value.IsUnknown() || len(value.Elements()) != 1 {
+		diags.AddAttributeError(at, "Invalid deployment specification", "Exactly one spec block is required.")
+		return nil, diags
+	}
+
+	models, d := deploymentSpecModels(ctx, value)
+	diags.Append(d...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	if len(models) != 1 {
+		diags.AddAttributeError(at, "Invalid deployment specification", "Exactly one spec block is required.")
+		return nil, diags
+	}
+
+	input, element := models[0], at.AtListIndex(0)
+	out := &appsv1.DeploymentSpec{
+		MinReadySeconds: int32(input.MinReadySeconds.ValueInt64()),
+		Paused:          input.Paused.ValueBool(),
+	}
+	out.ProgressDeadlineSeconds = ptr.To(int32(input.ProgressDeadlineSeconds.ValueInt64()))
+	out.RevisionHistoryLimit = ptr.To(int32(input.RevisionHistoryLimit.ValueInt64()))
+
+	if !input.Replicas.IsNull() && !input.Replicas.IsUnknown() && input.Replicas.ValueString() != "" {
+		replicas, err := strconvParseInt32(input.Replicas.ValueString())
+		if err != nil {
+			diags.AddAttributeError(element.AtName("replicas"), "Invalid replicas value", err.Error())
+			return nil, diags
+		}
+		out.Replicas = ptr.To(replicas)
+	}
+
+	if len(input.Selector) > 0 {
+		selector, d := expandSelector(ctx, input.Selector[0], element.AtName("selector").AtListIndex(0))
+		diags.Append(d...)
+		out.Selector = selector
+	}
+
+	strategy, d := expandDeploymentStrategy(ctx, input.Strategy, element.AtName("strategy"))
+	diags.Append(d...)
+	out.Strategy = strategy
+
+	if len(input.Template) != 1 {
+		diags.AddAttributeError(element.AtName("template"), "Invalid deployment template", "Exactly one template block is required.")
+		return nil, diags
+	}
+	template := input.Template[0]
+	metadata, d := common.ExpandNamespacedMetadata(ctx, template.Metadata)
+	diags.Append(d...)
+	spec, d := podspec.For(podspec.Deployment()).ExpandSpec(ctx, template.Spec, config, element.AtName("template").AtListIndex(0).AtName("spec"))
+	diags.Append(d...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	out.Template = corev1.PodTemplateSpec{
+		ObjectMeta: metadata,
+		Spec:       spec,
+	}
+	return out, diags
+}
+
+func flattenDeploymentSpec(ctx context.Context, spec appsv1.DeploymentSpec, baseline types.List, at path.Path, refresh bool) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	model := deploymentSpecModel{
+		MinReadySeconds:         types.Int64Value(int64(spec.MinReadySeconds)),
+		Paused:                  types.BoolValue(spec.Paused),
+		ProgressDeadlineSeconds: types.Int64Value(600),
+		RevisionHistoryLimit:    types.Int64Value(10),
+		Replicas:                types.StringNull(),
+	}
+	if spec.ProgressDeadlineSeconds != nil {
+		model.ProgressDeadlineSeconds = types.Int64Value(int64(*spec.ProgressDeadlineSeconds))
+	}
+	if spec.RevisionHistoryLimit != nil {
+		model.RevisionHistoryLimit = types.Int64Value(int64(*spec.RevisionHistoryLimit))
+	}
+	if spec.Replicas != nil {
+		model.Replicas = types.StringValue(fmt.Sprintf("%d", *spec.Replicas))
+	}
+	var priorTemplateSpec types.List
+	var priorTemplateMetadata []common.NamespacedMetadataModel
+	var priorSelector []LabelSelectorModel
+	priorStrategy := types.ObjectNull(deploymentStrategyObjectType().AttrTypes)
+	if !baseline.IsNull() && !baseline.IsUnknown() {
+		priorSpecs, d := deploymentSpecModels(ctx, baseline)
+		diags.Append(d...)
+		if diags.HasError() {
+			return types.ListNull(deploymentSpecListType().ElemType), diags
+		}
+		if len(priorSpecs) == 1 {
+			priorSelector = priorSpecs[0].Selector
+			priorStrategy = priorSpecs[0].Strategy
+		}
+		if len(priorSpecs) == 1 && len(priorSpecs[0].Template) == 1 {
+			priorTemplateSpec = priorSpecs[0].Template[0].Spec
+			priorTemplateMetadata = priorSpecs[0].Template[0].Metadata
+			replicas := priorSpecs[0].Replicas
+			if !replicas.IsNull() && !replicas.IsUnknown() {
+				if replicas.ValueString() == "" {
+					model.Replicas = replicas
+				} else if parsed, err := strconvParseInt32(replicas.ValueString()); err == nil && spec.Replicas != nil && parsed == *spec.Replicas {
+					model.Replicas = replicas
+				}
+			}
+		}
+	}
+	strategyValue, d := flattenDeploymentStrategy(ctx, spec.Strategy, priorStrategy)
+	diags.Append(d...)
+	model.Strategy = strategyValue
+	if diags.HasError() {
+		return types.ListNull(deploymentSpecListType().ElemType), diags
+	}
+	model.Selector, d = flattenWorkloadSelector(ctx, spec.Selector, priorSelector)
+	diags.Append(d...)
+	if priorTemplateSpec.IsNull() || priorTemplateSpec.IsUnknown() {
+		priorTemplateSpec = templateSpecNull()
+	}
+	podSpec := podspec.For(podspec.Deployment())
+	flatten := podSpec.FlattenSpec
+	if refresh {
+		flatten = podSpec.RefreshSpec
+	}
+	templateSpec, d := flatten(ctx, spec.Template.Spec, priorTemplateSpec, at.AtName("template").AtListIndex(0).AtName("spec"))
+	diags.Append(d...)
+	templateMetadata, d := flattenWorkloadTemplateMetadata(ctx, spec.Template.ObjectMeta, priorTemplateMetadata)
+	diags.Append(d...)
+	model.Template = []workloadTemplateModel{{
+		Metadata: templateMetadata,
+		Spec:     templateSpec,
+	}}
+
+	value, dValue := deploymentSpecListValue(ctx, model)
+	diags.Append(dValue...)
+	return value, diags
+}
+
+// deploymentSpecListValue is types.ListValueFrom for a single spec model,
+// built by hand so the pod spec is not reflected over.
+func deploymentSpecListValue(ctx context.Context, model deploymentSpecModel) (types.List, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	listType := deploymentSpecListType()
+	specType := listType.ElemType.(types.ObjectType)
+	null := types.ListNull(specType)
+
+	selectorType := specType.AttrTypes["selector"].(types.ListType)
+	selector, d := types.ListValueFrom(ctx, selectorType.ElemType, model.Selector)
+	diags.Append(d...)
+
+	template, d := workloadTemplateListValue(ctx, specType.AttrTypes["template"].(types.ListType), model.Template)
+	diags.Append(d...)
+	if diags.HasError() {
+		return null, diags
+	}
+
+	spec, d := types.ObjectValue(specType.AttrTypes, map[string]attr.Value{
+		"min_ready_seconds":         model.MinReadySeconds,
+		"paused":                    model.Paused,
+		"progress_deadline_seconds": model.ProgressDeadlineSeconds,
+		"replicas":                  model.Replicas,
+		"revision_history_limit":    model.RevisionHistoryLimit,
+		"selector":                  selector,
+		"strategy":                  model.Strategy,
+		"template":                  template,
+	})
+	diags.Append(d...)
+	if diags.HasError() {
+		return null, diags
+	}
+	value, d := types.ListValue(specType, []attr.Value{spec})
+	diags.Append(d...)
+	return value, diags
+}
+
+// deploymentSpecModels is ElementsAs for the spec block, but takes the pod
+// spec over as a value instead of reflecting over it.
+func deploymentSpecModels(ctx context.Context, value types.List) ([]deploymentSpecModel, diag.Diagnostics) {
+	return workloadModels(value, func(attrs map[string]attr.Value, diags *diag.Diagnostics) deploymentSpecModel {
+		model := deploymentSpecModel{
+			MinReadySeconds:         attributeAs[types.Int64](attrs, "min_ready_seconds", diags),
+			Paused:                  attributeAs[types.Bool](attrs, "paused", diags),
+			ProgressDeadlineSeconds: attributeAs[types.Int64](attrs, "progress_deadline_seconds", diags),
+			Replicas:                attributeAs[types.String](attrs, "replicas", diags),
+			RevisionHistoryLimit:    attributeAs[types.Int64](attrs, "revision_history_limit", diags),
+			Strategy:                attributeAs[types.Object](attrs, "strategy", diags),
+		}
+		attributeElementsAs(ctx, attrs, "selector", &model.Selector, diags)
+		template, d := workloadTemplateModels(ctx, attributeAs[types.List](attrs, "template", diags))
+		diags.Append(d...)
+		model.Template = template
+		return model
+	})
+}
+
+func expandSelector(ctx context.Context, in deploymentSelectorModel, at path.Path) (*metav1.LabelSelector, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	out := &metav1.LabelSelector{}
+	if !in.MatchLabels.IsNull() && !in.MatchLabels.IsUnknown() {
+		out.MatchLabels = map[string]string{}
+		diags.Append(in.MatchLabels.ElementsAs(ctx, &out.MatchLabels, false)...)
+	}
+	if len(in.MatchExpressions) > 0 {
+		out.MatchExpressions = make([]metav1.LabelSelectorRequirement, len(in.MatchExpressions))
+		for i, req := range in.MatchExpressions {
+			out.MatchExpressions[i].Key = req.Key.ValueString()
+			out.MatchExpressions[i].Operator = metav1.LabelSelectorOperator(req.Operator.ValueString())
+			if !req.Values.IsNull() && !req.Values.IsUnknown() {
+				diags.Append(req.Values.ElementsAs(ctx, &out.MatchExpressions[i].Values, false)...)
+			}
+		}
+	}
+	if diags.HasError() {
+		diags.AddAttributeError(at, "Invalid selector", "Unable to decode selector values.")
+	}
+	return out, diags
+}
+
+func expandDeploymentStrategy(ctx context.Context, value types.Object, at path.Path) (appsv1.DeploymentStrategy, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	result := appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}
+	if value.IsNull() || value.IsUnknown() {
+		return result, diags
+	}
+	var in deploymentStrategyModel
+	diags.Append(value.As(ctx, &in, basetypes.ObjectAsOptions{})...)
+	if diags.HasError() {
+		return result, diags
+	}
+	if !in.Type.IsNull() && !in.Type.IsUnknown() && in.Type.ValueString() != "" {
+		result.Type = appsv1.DeploymentStrategyType(in.Type.ValueString())
+	}
+	if !in.RollingUpdate.IsNull() && !in.RollingUpdate.IsUnknown() {
+		var update deploymentRollingUpdateModel
+		diags.Append(in.RollingUpdate.As(ctx, &update, basetypes.ObjectAsOptions{})...)
+		if !diags.HasError() {
+			rolling := &appsv1.RollingUpdateDeployment{}
+			if !update.MaxSurge.IsNull() && !update.MaxSurge.IsUnknown() {
+				v := intstr.Parse(update.MaxSurge.ValueString())
+				rolling.MaxSurge = &v
+			}
+			if !update.MaxUnavailable.IsNull() && !update.MaxUnavailable.IsUnknown() {
+				v := intstr.Parse(update.MaxUnavailable.ValueString())
+				rolling.MaxUnavailable = &v
+			}
+			result.RollingUpdate = rolling
+		}
+	}
+	if result.Type == appsv1.RecreateDeploymentStrategyType {
+		result.RollingUpdate = nil
+	} else if result.RollingUpdate == nil {
+		maxSurge, maxUnavailable := intstr.Parse("25%"), intstr.Parse("25%")
+		result.RollingUpdate = &appsv1.RollingUpdateDeployment{MaxSurge: &maxSurge, MaxUnavailable: &maxUnavailable}
+	}
+	if diags.HasError() {
+		diags.AddAttributeError(at, "Invalid strategy", "Unable to decode strategy values.")
+	}
+	return result, diags
+}
+
+func flattenDeploymentStrategy(ctx context.Context, strategy appsv1.DeploymentStrategy, prior types.Object) (types.Object, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if strategy.Type == "" {
+		strategy.Type = appsv1.RollingUpdateDeploymentStrategyType
+	}
+	rollingType := deploymentStrategyObjectType().AttrTypes["rolling_update"].(types.ObjectType)
+	rolling := types.ObjectNull(rollingType.AttrTypes)
+	if strategy.RollingUpdate != nil {
+		maxSurge, maxUnavailable := "", ""
+		if strategy.RollingUpdate.MaxSurge != nil {
+			maxSurge = strategy.RollingUpdate.MaxSurge.String()
+		}
+		if strategy.RollingUpdate.MaxUnavailable != nil {
+			maxUnavailable = strategy.RollingUpdate.MaxUnavailable.String()
+		}
+		value, d := types.ObjectValue(rollingType.AttrTypes, map[string]attr.Value{
+			"max_surge":       rollingUpdateSpelling(prior, "max_surge", maxSurge),
+			"max_unavailable": rollingUpdateSpelling(prior, "max_unavailable", maxUnavailable),
+		})
+		diags.Append(d...)
+		rolling = value
+	}
+	value, d := types.ObjectValue(deploymentStrategyObjectType().AttrTypes, map[string]attr.Value{
+		"type":           types.StringValue(string(strategy.Type)),
+		"rolling_update": rolling,
+	})
+	diags.Append(d...)
+	return value, diags
+}
+
+func templateSpecNull() types.List {
+	return types.ListNull(podspec.For(podspec.Deployment()).ObjectType())
+}
+
+var deploymentSpecListType = workloadSpecListType(deploymentFrozenSchema)
+
+func deploymentMetadataPatchOps(state, plan DeploymentV1Model, live metav1.ObjectMeta) kubernetes.PatchOperations {
+	if len(state.Metadata) != 1 || len(plan.Metadata) != 1 {
+		return nil
+	}
+	return common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live)
+}
+
+// deploymentWriteResult records the plan after a write, with the values
+// Kubernetes chose for those it left unknown.
+func deploymentWriteResult(ctx context.Context, state *tfsdk.State, plan tfsdk.Plan, model DeploymentV1Model, out *appsv1.Deployment, filters kubernetes.MetadataFilters) diag.Diagnostics {
+	return common.SetWriteResult(ctx, state, plan, func(actual *tfsdk.State) diag.Diagnostics {
+		written, diags := deploymentModelFromObject(ctx, out, model, filters, false)
+		if diags.HasError() {
+			return diags
+		}
+		return append(diags, actual.Set(ctx, &written)...)
+	})
+}
+
+func deploymentModelFromObject(ctx context.Context, object *appsv1.Deployment, baseline DeploymentV1Model, filters kubernetes.MetadataFilters, refresh bool) (DeploymentV1Model, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	metadata, metadataDiags := common.FlattenNamespacedMetadata(
+		ctx,
+		object.ObjectMeta,
+		baseline.Metadata,
+		filters.GetIgnoreAnnotations(),
+		filters.GetIgnoreLabels(),
+	)
+	diags.Append(metadataDiags...)
+	spec, specDiags := flattenDeploymentSpec(ctx, object.Spec, baseline.Spec, path.Root("spec"), refresh)
+	diags.Append(specDiags...)
+
+	baseline.ID = types.StringValue(kubernetes.BuildId(object.ObjectMeta))
+	baseline.Metadata = metadata
+	baseline.Spec = spec
+	if baseline.WaitForRollout.IsNull() || baseline.WaitForRollout.IsUnknown() {
+		baseline.WaitForRollout = types.BoolValue(true)
+	}
+	return baseline, diags
+}
+
+func deploymentSpecPatch(original, modified appsv1.DeploymentSpec) ([]byte, error) {
+	originalJSON, err := json.Marshal(appsv1.Deployment{Spec: original})
+	if err != nil {
+		return nil, err
+	}
+	modifiedJSON, err := json.Marshal(appsv1.Deployment{Spec: modified})
+	if err != nil {
+		return nil, err
+	}
+	return strategicpatch.CreateTwoWayMergePatch(originalJSON, modifiedJSON, appsv1.Deployment{})
+}
+
+func strconvParseInt32(value string) (int32, error) {
+	parsed, err := strconv.ParseInt(value, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int32(parsed), nil
+}

@@ -16,6 +16,7 @@ import (
 func flattenDeploymentSpec(in appsv1.DeploymentSpec, d *schema.ResourceData, meta interface{}) ([]interface{}, error) {
 	att := make(map[string]interface{})
 	att["min_ready_seconds"] = in.MinReadySeconds
+	att["paused"] = in.Paused
 
 	if in.Replicas != nil {
 		att["replicas"] = strconv.Itoa(int(*in.Replicas))

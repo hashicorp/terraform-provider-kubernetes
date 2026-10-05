@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Fix a provider crash when reading `spec.pod_failure_policy.rule.on_exit_codes` without `container_name` set.
+```

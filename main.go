@@ -17,13 +17,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6/tf6server"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/useragent"
 )
 
-const (
-	providerName = "registry.terraform.io/hashicorp/kubernetes"
+const providerName = "registry.terraform.io/hashicorp/kubernetes"
 
-	Version = "dev"
-)
+// Version is the provider version. Release builds overwrite it with
+// -ldflags "-X 'main.Version=<version>'", which only works on a variable, so
+// this must not become a constant.
+var Version = "dev"
 
 // Generate docs for website
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
@@ -31,6 +33,8 @@ const (
 func main() {
 	debugFlag := flag.Bool("debug", false, "Start provider in stand-alone debug mode.")
 	flag.Parse()
+
+	useragent.ProviderVersion = Version
 
 	ctx := context.Background()
 	muxer, err := mux.MuxServer(ctx, Version)

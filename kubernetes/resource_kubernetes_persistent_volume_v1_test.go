@@ -1398,7 +1398,7 @@ func testAccKubernetesPersistentVolumeV1Config_azure_PersistentVolumeAzureFile(n
 }
 
 func testAccKubernetesPersistentVolumeV1Config_azure_PersistentVolumeAzureFileNamespace(name, namespace, secretName string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[2]q
   }
@@ -1943,7 +1943,7 @@ func testAccKubernetesPersistentVolumeV1Config_hostPath_claimRef_noNamespace(nam
 }
 
 func testAccKubernetesPersistentVolumeV1Config_hostPath_claimRef_withNamespace(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -1960,7 +1960,7 @@ resource "kubernetes_persistent_volume_v1" "test" {
     mount_options = ["foo"]
     claim_ref {
       name      = %[1]q
-      namespace = kubernetes_namespace_v1.test.metadata.0.name
+      namespace = kubernetes_namespace.test.metadata.0.name
     }
 
     persistent_volume_source {
@@ -1973,7 +1973,7 @@ resource "kubernetes_persistent_volume_v1" "test" {
 }
 
 func testAccKubernetesPersistentVolumeV1Config_hostPath_claimRef_withPVC(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = %[1]q
   }
@@ -1991,7 +1991,7 @@ resource "kubernetes_persistent_volume_v1" "test" {
     mount_options = ["foo"]
     claim_ref {
       name      = %[1]q
-      namespace = kubernetes_namespace_v1.test.metadata.0.name
+      namespace = kubernetes_namespace.test.metadata.0.name
     }
 
     persistent_volume_source {
@@ -2005,7 +2005,7 @@ resource "kubernetes_persistent_volume_v1" "test" {
 resource "kubernetes_persistent_volume_claim_v1" "test" {
   metadata {
     name      = %[1]q
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {

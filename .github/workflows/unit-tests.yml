@@ -11,6 +11,12 @@ on:
       - v3-major-release
     paths:
       - 'kubernetes/*.go'
+      - 'internal/framework/**'
+      - 'internal/mux/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'GNUmakefile'
+      - '.github/workflows/unit-tests.yml'
   workflow_dispatch:
 
 jobs:

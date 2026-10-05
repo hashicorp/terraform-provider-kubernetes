@@ -1,3 +1,21 @@
+## 3.3.0 (Oct 1,2026)
+
+BREAKING CHANGES:
+
+* `resource/kubernetes_namespace_v1`: Validate that `metadata.labels` and `metadata.annotations` entries contain non-null strings. Previously accepted null entries are now rejected during planning; omit those entries or provide string values. Entire maps may still be omitted or set to `null`. [[GH-2979](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2979)]
+
+BUG FIXES:
+
+* `data-source/kubernetes_namespace_v1`: Report a missing `metadata.name` during validation instead of failing during the namespace lookup. [[GH-2960](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2960)]
+* `resource/kubernetes_stateful_set_v1`: Fix `Missing Resource Identity After Update` error when `wait_for_rollout` is `true` and the StatefulSet is updated in place [[GH-2967](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2967)]
+* provider: Bump `google.golang.org/grpc` to v1.82.1 and `golang.org/x/crypto` to v0.52.0 to resolve upstream security advisories. [[GH-2959](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2959)]
+
+NOTES:
+
+* `data-source/kubernetes_all_namespaces`: Migrated from SDKv2 to the Plugin Framework. [[GH-2962](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2962)]
+* `data-source/kubernetes_namespace_v1`: Migrated from SDKv2 to the Plugin Framework. [[GH-2960](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2960)]
+* `resource/kubernetes_namespace_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax. `moved` blocks from the deprecated `kubernetes_namespace` resource are supported. Explicitly empty metadata maps may produce a one-time in-place update after upgrading. [[GH-2979](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2979)]
+
 ## 3.2.1 (Jun 30, 2026)
 
 BUG FIXES:

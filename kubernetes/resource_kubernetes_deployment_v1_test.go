@@ -1401,7 +1401,7 @@ func testAccCheckKubernetesDeploymentV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -1429,7 +1429,7 @@ func getDeploymentFromResourceName(s *terraform.State, n string) (*appsv1.Deploy
 	}
 	ctx := context.TODO()
 
-	namespace, name, err := idParts(rs.Primary.ID)
+	namespace, name, err := IdParts(rs.Primary.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1623,7 +1623,7 @@ func testAccKubernetesDeploymentV1Config_with_restart_policy(name, imageName, re
 }
 
 func testAccKubernetesDeploymentV1Config_initContainer(namespace, name, imageName, imageName1, memory, envName, initName, initCommand, pullPolicy string) string {
-	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_namespace" "test" {
   metadata {
     name = "%s"
   }
@@ -1640,7 +1640,7 @@ resource "kubernetes_deployment_v1" "test" {
       TestLabelTwo   = "two"
       TestLabelThree = "three"
     }
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
     name      = "%s"
   }
   spec {
@@ -1739,7 +1739,7 @@ resource "kubernetes_deployment_v1" "test" {
 resource "kubernetes_service_v1" "test" {
   metadata {
     name      = "%s-init-service"
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
     labels = {
       TestLabelOne   = "one"
       TestLabelTwo   = "two"
@@ -1757,7 +1757,7 @@ resource "kubernetes_service_v1" "test" {
 resource "kubernetes_secret_v1" "test" {
   metadata {
     name      = "%s-test"
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
   data = {
     "SECRETENV" = "asdf1234"
@@ -1768,7 +1768,7 @@ resource "kubernetes_secret_v1" "test" {
 resource "kubernetes_config_map_v1" "test" {
   metadata {
     name      = "%s-test"
-    namespace = kubernetes_namespace_v1.test.metadata.0.name
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
   data = {
     "ENV" = "somedata"

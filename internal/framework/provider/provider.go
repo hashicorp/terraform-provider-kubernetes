@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/policyv1"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
@@ -197,6 +198,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
 		corev1.NewNamespaceV1,
+		policyv1.NewPodDisruptionBudgetV1,
 	}
 }
 

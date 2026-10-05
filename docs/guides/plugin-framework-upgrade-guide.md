@@ -76,3 +76,27 @@ Run `terraform plan` to verify the move and review any in-place changes describe
 ## Data source: kubernetes_all_namespaces
 
 Behavior is unchanged; no configuration updates are required.
+
+## Version 4: PodDisruptionBudget
+
+`kubernetes_pod_disruption_budget_v1.spec.selector` changes from a block to a
+required object, and `match_expressions` becomes a list of objects. This is an
+intentional version 4 configuration change. Plugin Framework also supports blocks;
+workload selectors such as Deployment selectors retain their existing syntax.
+
+Follow the [PDB migration instructions](../resources/pod_disruption_budget_v1.md#upgrading-the-provider)
+for object syntax, references, `ignore_changes`, module variables, conditional
+values, and Terraform JSON. `selector = {}` selects every pod in the namespace;
+do not substitute it for an absent selector.
+
+Existing versioned resources upgrade at the same address without a moved block
+or re-import. Moving from the deprecated `kubernetes_pod_disruption_budget` is
+unsupported because it uses `policy/v1beta1`, whose empty-selector semantics differ.
+
+An omitted `match_expressions` can produce a one-time `[]` to `null` update.
+Explicit empty label maps or expression values can normalize legacy `null` to
+empty collections. These updates only change state, make no Kubernetes writes,
+and do not replace the PDB. Changes to the actual specification still replace it.
+
+State schema version increases from 0 to 1. Provider 3.x cannot read the upgraded
+state. Back up state and recreate saved plans when upgrading.

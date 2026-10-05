@@ -488,7 +488,7 @@ func testAccCheckKubernetesReplicationControllerV1Destroy(s *terraform.State) er
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -517,7 +517,7 @@ func testAccCheckKubernetesReplicationControllerV1Exists(n string, obj *api.Repl
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

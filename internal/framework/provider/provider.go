@@ -196,12 +196,15 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
+		corev1.NewNamespaceV1,
 	}
 }
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		corev1.NewConfigMapV1DataSource,
+		corev1.NewAllNamespacesDataSource,
+		corev1.NewNamespaceV1DataSource,
 	}
 }
 

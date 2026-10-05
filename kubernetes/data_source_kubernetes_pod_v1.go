@@ -53,7 +53,7 @@ func dataSourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, 
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading pod %s", metadata.Name)
 	pod, err := conn.CoreV1().Pods(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

@@ -19,7 +19,7 @@ import (
 func TestAccKubernetesIgnoreKubernetesMetadata_basic(t *testing.T) {
 	namespaceName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	ignoreKubernetesMetadata := "terraform.io/provider"
-	dataSourceName := "data.kubernetes_namespace_v1.this"
+	dataSourceName := "data.kubernetes_namespace.this"
 	oneOrMore := regexp.MustCompile(`^[1-9][0-9]*$`)
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -53,7 +53,7 @@ func testAccKubernetesIgnoreKubernetesMetadataProviderConfig(namespaceName strin
   ]
 }
 
-data "kubernetes_namespace_v1" "this" {
+data "kubernetes_namespace" "this" {
   metadata {
     name = "%s"
   }

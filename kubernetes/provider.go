@@ -353,9 +353,6 @@ func Provider() *schema.Provider {
 
 			// authentication
 			"kubernetes_token_request_v1": resourceKubernetesTokenRequestV1(),
-
-			// node
-			"kubernetes_runtime_class_v1": resourceKubernetesRuntimeClassV1(),
 		},
 	}
 

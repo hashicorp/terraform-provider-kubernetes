@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, and `resource/kubernetes_stateful_set_v1`: Avoid forced replacement when updating generic ephemeral volume claim templates
+```

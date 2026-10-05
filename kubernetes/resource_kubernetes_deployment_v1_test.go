@@ -887,6 +887,60 @@ func TestAccKubernetesDeploymentV1_with_empty_dir_volume(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesDeploymentV1_genericEphemeralVolumeUpdate(t *testing.T) {
+	var initial, modified, after appsv1.Deployment
+
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_deployment_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithGenericEphemeralVolume(deploymentName, imageName, "1Mi"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &initial),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.name", "scratch"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.0.volume_claim_template.0.spec.0.access_modes.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.0.volume_claim_template.0.spec.0.resources.0.limits.storage", "1Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.0.volume_claim_template.0.spec.0.resources.0.requests.storage", "1Mi"),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithGenericEphemeralVolume(deploymentName, imageName, "4Mi"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &modified),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.0.volume_claim_template.0.spec.0.resources.0.limits.storage", "4Mi"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.0.volume_claim_template.0.spec.0.resources.0.requests.storage", "4Mi"),
+					testAccCheckKubernetesDeploymentForceNew(&initial, &modified, false),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithMemoryBackedEmptyDirVolume(deploymentName, imageName, "4Mi"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &after),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.replicas", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.name", "scratch"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.ephemeral.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.empty_dir.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.empty_dir.0.medium", "Memory"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.volume.0.empty_dir.0.size_limit", "4Mi"),
+					testAccCheckKubernetesDeploymentForceNew(&modified, &after, false),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDeploymentV1_with_empty_dir_huge_page(t *testing.T) {
 	var conf appsv1.Deployment
 
@@ -2899,6 +2953,94 @@ func testAccKubernetesDeploymentV1ConfigWithEmptyDirVolumesModified(deploymentNa
   }
 }
 `, deploymentName, imageName)
+}
+
+func testAccKubernetesDeploymentV1ConfigWithGenericEphemeralVolume(deploymentName, imageName, storageSize string) string {
+	return testAccKubernetesDeploymentV1ConfigWithUpdateableVolume(
+		deploymentName,
+		imageName,
+		fmt.Sprintf(`ephemeral {
+            volume_claim_template {
+              spec {
+                access_modes = ["ReadWriteOnce"]
+
+                resources {
+                  limits = {
+                    storage = %[1]q
+                  }
+                  requests = {
+                    storage = %[1]q
+                  }
+                }
+              }
+            }
+          }`, storageSize),
+	)
+}
+
+func testAccKubernetesDeploymentV1ConfigWithMemoryBackedEmptyDirVolume(deploymentName, imageName, storageSize string) string {
+	return testAccKubernetesDeploymentV1ConfigWithUpdateableVolume(
+		deploymentName,
+		imageName,
+		fmt.Sprintf(`empty_dir {
+            medium     = "Memory"
+            size_limit = %[1]q
+          }`, storageSize),
+	)
+}
+
+func testAccKubernetesDeploymentV1ConfigWithUpdateableVolume(deploymentName, imageName, volumeSource string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment_v1" "test" {
+  metadata {
+    name = %[1]q
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    replicas = 0
+
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        container {
+          image   = %[2]q
+          name    = "containername"
+          command = ["sleep", "300"]
+
+          volume_mount {
+            mount_path = "/scratch"
+            name       = "scratch"
+          }
+        }
+
+        volume {
+          name = "scratch"
+
+          %[3]s
+        }
+
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+
+  wait_for_rollout = false
+}
+`, deploymentName, imageName, volumeSource)
 }
 
 func testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, strategy, imageName string) string {

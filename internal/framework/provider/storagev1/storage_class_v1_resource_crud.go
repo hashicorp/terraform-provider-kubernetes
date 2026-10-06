@@ -7,10 +7,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +21,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 )
+
+// defaultDeleteTimeout matches the SDKv2 resource's delete timeout.
+const defaultDeleteTimeout = 5 * time.Minute
 
 func (r *StorageClassV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan StorageClassModel
@@ -105,6 +110,14 @@ func (r *StorageClassV1) Read(ctx context.Context, req resource.ReadRequest, res
 	name := state.ID.ValueString()
 	out, err := conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
+		// Populate identity before clearing state. The Framework requires Read
+		// to always set identity when the resource implements ResourceWithIdentity,
+		// even on a missing-object path. Without this, a first-upgrade refresh
+		// where the object was deleted out-of-band returns
+		// "Missing Resource Identity After Read".
+		if resp.Identity != nil {
+			resp.Diagnostics.Append(resp.Identity.Set(ctx, storageClassIdentity(name))...)
+		}
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -233,10 +246,36 @@ func (r *StorageClassV1) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	name := state.ID.ValueString()
 	err = conn.StorageV1().StorageClasses().Delete(ctx, name, metav1.DeleteOptions{})
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return
+		}
 		resp.Diagnostics.AddError(
 			"error deleting StorageClass",
 			fmt.Sprintf("Failed to delete StorageClass %q: %s", name, err.Error()),
+		)
+		return
+	}
+
+	// Wait for the object to disappear. Without this loop, Terraform removes
+	// state immediately after the API call returns, while Kubernetes may still
+	// hold the object (e.g. when a finalizer is attached). A same-name
+	// recreate in the same apply would then receive 409 AlreadyExists.
+	// Mirrors the SDKv2 resourceKubernetesStorageClassV1Delete retry loop.
+	waitErr := retry.RetryContext(ctx, defaultDeleteTimeout, func() *retry.RetryError {
+		_, getErr := conn.StorageV1().StorageClasses().Get(ctx, name, metav1.GetOptions{})
+		if apierrors.IsNotFound(getErr) {
+			return nil
+		}
+		if getErr != nil {
+			return retry.NonRetryableError(getErr)
+		}
+		return retry.RetryableError(fmt.Errorf("StorageClass %q still exists", name))
+	})
+	if waitErr != nil {
+		resp.Diagnostics.AddError(
+			"error waiting for StorageClass deletion",
+			fmt.Sprintf("StorageClass %q was not removed within the timeout: %s", name, waitErr.Error()),
 		)
 	}
 }

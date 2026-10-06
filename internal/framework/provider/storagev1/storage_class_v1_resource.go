@@ -5,6 +5,7 @@ package storagev1
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -80,8 +81,12 @@ func (r *StorageClassV1) ModifyPlan(ctx context.Context, req resource.ModifyPlan
 		return
 	}
 
-	// If allowed_topologies block count or content changed, force replacement
-	if len(state.AllowedTopologies) != len(plan.AllowedTopologies) {
+	// Force replacement whenever allowed_topologies differs at any depth.
+	// StorageClass.allowedTopologies is immutable in Kubernetes; any change
+	// (term count, expression key, or values set) requires a destroy+create.
+	// Comparing only slice length (the prior check) missed mutations to inner
+	// match_label_expressions entries that kept the term count the same.
+	if !reflect.DeepEqual(state.AllowedTopologies, plan.AllowedTopologies) {
 		resp.RequiresReplace.Append(path.Root("allowed_topologies"))
 	}
 }

@@ -102,7 +102,7 @@ During `terraform plan`, you might encounter the error below:
 Error: .spec[0].container[0].resources[0].limits: missing expected {
 ```
 
-This ocurrs when a Pod data source is present during upgrade. To work around this error, remove the data source from state and try the plan again.
+This occurs when a Pod data source is present during upgrade. To work around this error, remove the data source from state and try the plan again.
 
 ```
 $ terraform state rm data.kubernetes_pod.test

@@ -87,7 +87,7 @@ This release upgrades the Terraform protocol version used by the provider to the
 
 ### Changes to Kubernetes credentials for `kubernetes_manifest` resource
 
-We have made changes to the way the `kubernetes_manifest` resolves credentials to make it consistent with the other resources. In `v2.x.x` this resource would allow environment variables such as `KUBE_CONFIG_PATH` to override values present in the configuration file. This was inconsistent with how all other resources resolve environent variables, which is to use the value from the environment if no value is specified in the configuration.  
+We have made changes to the way the `kubernetes_manifest` resolves credentials to make it consistent with the other resources. In `v2.x.x` this resource would allow environment variables such as `KUBE_CONFIG_PATH` to override values present in the configuration file. This was inconsistent with how all other resources resolve environment variables, which is to use the value from the environment if no value is specified in the configuration.  
 
 ### Deprecation of non-versioned resource names
 

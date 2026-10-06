@@ -6,12 +6,15 @@ package corev1
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // Schema defines the Framework schema for data.kubernetes_secret_v1.
@@ -27,7 +30,12 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 		Blocks: map[string]schema.Block{
 			// ListNestedBlock preserves metadata.0.* indexed paths — identical to SDKv2 TypeList/MaxItems:1.
 			"metadata": schema.ListNestedBlock{
-				Description: "Standard object metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+				Description: "Standard object metadata. Exactly one metadata block is required. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
+				Validators: []validator.List{
+					listvalidator.SizeAtLeast(1),
+					listvalidator.IsRequired(),
+					listvalidator.SizeAtMost(1),
+				},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
@@ -35,10 +43,10 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.String{
-								dnsSubdomainValidator{},
 								stringvalidator.ConflictsWith(
 									path.MatchRelative().AtParent().AtName("generate_name"),
 								),
+								common.DNSSubdomainNameValidator(),
 							},
 						},
 						"namespace": schema.StringAttribute{
@@ -51,10 +59,10 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.String{
-								dnsLabelValidator{},
 								stringvalidator.ConflictsWith(
 									path.MatchRelative().AtParent().AtName("name"),
 								),
+								common.DNSLabelPrefixValidator(),
 							},
 						},
 						"annotations": schema.MapAttribute{
@@ -72,7 +80,7 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 							Optional:    true,
 							Computed:    true,
 							Validators: []validator.Map{
-								labelKeysAndValuesValidator{},
+								common.LabelsValidator(),
 							},
 						},
 						"generation": schema.Int64Attribute{
@@ -106,6 +114,7 @@ func (d *SecretV1DataSource) Schema(_ context.Context, _ datasource.SchemaReques
 				Description: "A map of the secret data with values encoded in base64 format",
 				ElementType: types.StringType,
 				Optional:    true,
+				Computed:    true,
 				Sensitive:   true,
 			},
 			"type": schema.StringAttribute{

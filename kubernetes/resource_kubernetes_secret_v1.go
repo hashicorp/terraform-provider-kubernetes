@@ -195,7 +195,7 @@ func resourceKubernetesSecretV1Create(ctx context.Context, d *schema.ResourceDat
 	}
 
 	log.Printf("[INFO] Submitting new secret: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	if out.Type == corev1.SecretTypeServiceAccountToken && d.Get("wait_for_service_account_token").(bool) {
 		log.Printf("[DEBUG] Waiting for secret service account token to be created")
@@ -242,7 +242,7 @@ func resourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -299,7 +299,7 @@ func resourceKubernetesSecretV1Update(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -384,7 +384,7 @@ func resourceKubernetesSecretV1Update(ctx context.Context, d *schema.ResourceDat
 	}
 
 	log.Printf("[INFO] Submitting updated secret: %#v", out.ObjectMeta)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesSecretV1Read(ctx, d, meta)
 }
@@ -395,7 +395,7 @@ func resourceKubernetesSecretV1Delete(ctx context.Context, d *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -422,7 +422,7 @@ func resourceKubernetesSecretV1Exists(ctx context.Context, d *schema.ResourceDat
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

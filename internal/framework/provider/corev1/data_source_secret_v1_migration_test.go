@@ -50,7 +50,7 @@ func TestAccKubernetesDataSourceSecretV1_migration(t *testing.T) {
 			{
 				// Step 2: same config, served by the local Framework/mux provider.
 				// Data sources carry no persisted state, so the plan must be empty.
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: testAccMuxProviderFactories,
 				Config:                   testAccKubernetesDataSourceSecretV1MigrationConfig(name),
 				ExpectNonEmptyPlan:       false,
 				Check: resource.ComposeAggregateTestCheckFunc(

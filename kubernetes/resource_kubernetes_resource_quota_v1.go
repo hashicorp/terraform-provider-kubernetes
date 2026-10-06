@@ -130,7 +130,7 @@ func resourceKubernetesResourceQuotaV1Create(ctx context.Context, d *schema.Reso
 		return diag.Errorf("Failed to create resource quota: %s", err)
 	}
 	log.Printf("[INFO] Submitted new resource quota: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate), func() *retry.RetryError {
 		quota, err := conn.CoreV1().ResourceQuotas(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
@@ -165,7 +165,7 @@ func resourceKubernetesResourceQuotaV1Read(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -204,7 +204,7 @@ func resourceKubernetesResourceQuotaV1Update(ctx context.Context, d *schema.Reso
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -233,7 +233,7 @@ func resourceKubernetesResourceQuotaV1Update(ctx context.Context, d *schema.Reso
 		return diag.Errorf("Failed to update resource quota: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated resource quota: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	if waitForChangedSpec {
 		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate), func() *retry.RetryError {
@@ -262,7 +262,7 @@ func resourceKubernetesResourceQuotaV1Delete(ctx context.Context, d *schema.Reso
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -288,7 +288,7 @@ func resourceKubernetesResourceQuotaV1Exists(ctx context.Context, d *schema.Reso
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

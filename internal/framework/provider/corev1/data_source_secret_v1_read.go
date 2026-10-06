@@ -5,10 +5,8 @@ package corev1
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,15 +44,26 @@ func (d *SecretV1DataSource) Read(ctx context.Context, req datasource.ReadReques
 		namespace = "default"
 	}
 	name := meta.Name.ValueString()
+	// SDKv2 assigns the configured namespace/name ID before issuing the API request,
+	// and keeps it when the Secret is not found.
+	model.ID = types.StringValue(kubernetes.BuildId(metav1.ObjectMeta{
+		Namespace: namespace,
+		Name:      name,
+	}))
 
-	conn, err := d.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
+	conn, metaDiags := d.clientset()
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	client, err := conn.MainClientset()
 	if err != nil {
 		resp.Diagnostics.AddError("failed to create Kubernetes client", err.Error())
 		return
 	}
 
 	log.Printf("[INFO] Reading secret %s/%s", namespace, name)
-	secret, err := conn.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
+	secret, err := client.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Secret does not exist — return empty state with no error, matching SDKv2.
@@ -66,12 +75,19 @@ func (d *SecretV1DataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 	log.Printf("[INFO] Received secret: %#v", secret.ObjectMeta)
 
-	// Set id to namespace/name — identical to the SDKv2 buildId value (K8S-MIGRATE-006).
-	model.ID = types.StringValue(fmt.Sprintf("%s/%s", secret.Namespace, secret.Name))
+	// Set id to namespace/name via kubernetes.BuildId — the exact SDKv2 buildId value,
+	// so the id format cannot drift between the two providers.
+	model.ID = types.StringValue(kubernetes.BuildId(secret.ObjectMeta))
 
-	// Flatten metadata — use the local, unfiltered helper (not the provider-aware
-	// flattenMetadata) so ignore_annotations / ignore_labels are not applied.
-	model.Metadata[0] = flattenSecretV1Metadata(secret.ObjectMeta)
+	// Flatten metadata — use the local, unfiltered helper (not common.FlattenNamespacedMetadata)
+	// so ignore_annotations / ignore_labels and control-plane keys are not filtered, matching
+	// the SDKv2 data source's flattenMetadataFields.
+	metadata, diags := flattenSecretV1Metadata(ctx, secret.ObjectMeta)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	model.Metadata[0] = metadata
 
 	// binary_data selective extraction — replicate SDKv2 logic exactly:
 	// 1. If the user declared keys in binary_data, extract their raw bytes from
@@ -95,12 +111,26 @@ func (d *SecretV1DataSource) Read(ctx context.Context, req datasource.ReadReques
 			binaryRaw[k] = workingData[k]
 			delete(workingData, k)
 		}
-		model.BinaryData = flattenTypesMap(base64EncodeByteMap(binaryRaw))
+
+		binaryData, binDiags := types.MapValueFrom(ctx, types.StringType, base64EncodeByteMap(binaryRaw))
+		resp.Diagnostics.Append(binDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		model.BinaryData = binaryData
 	} else {
-		model.BinaryData = types.MapValueMust(types.StringType, map[string]attr.Value{})
+		// SDKv2's GetOk treats both an omitted and explicitly empty map as absent;
+		// in either case Read leaves binary_data null in state.
+		model.BinaryData = types.MapNull(types.StringType)
 	}
 
-	model.Data = flattenTypesMap(flattenByteMapToStringMap(workingData))
+	dataMap, dataDiags := types.MapValueFrom(ctx, types.StringType, flattenByteMapToStringMap(workingData))
+	resp.Diagnostics.Append(dataDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	model.Data = dataMap
+
 	model.Type = types.StringValue(string(secret.Type))
 
 	immutable := false

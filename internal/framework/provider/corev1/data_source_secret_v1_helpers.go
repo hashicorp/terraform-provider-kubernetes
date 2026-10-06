@@ -4,45 +4,68 @@
 package corev1
 
 import (
+	"context"
 	"encoding/base64"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 // flattenSecretV1Metadata converts a Kubernetes ObjectMeta into a
-// SecretV1MetadataModel. It is the Framework equivalent of the SDKv2
-// flattenMetadataFields — intentionally unfiltered so that provider-level
-// ignore_annotations / ignore_labels do NOT suppress any annotations or labels.
-func flattenSecretV1Metadata(meta metav1.ObjectMeta) SecretV1MetadataModel {
-	m := SecretV1MetadataModel{
-		Name:            types.StringValue(meta.Name),
-		Namespace:       types.StringValue(meta.Namespace),
-		GenerateName:    types.StringValue(meta.GenerateName),
-		Generation:      types.Int64Value(meta.Generation),
-		ResourceVersion: types.StringValue(meta.ResourceVersion),
-		UID:             types.StringValue(string(meta.UID)),
-		Annotations:     flattenStringMap(meta.Annotations),
-		Labels:          flattenStringMap(meta.Labels),
+// common.NamespacedMetadataModel.
+//
+// It is the Framework equivalent of the SDKv2 flattenMetadataFields (used by the
+// SDKv2 secret data source), and is intentionally UNFILTERED: unlike
+// common.FlattenNamespacedMetadata — which runs RemoveInternalKeys / RemoveKeys to
+// drop control-plane and ignore-listed keys for the resource Read path — the secret
+// data source surfaces every annotation and label exactly as the API returns them.
+// This matches the SDKv2 data source, which never applied ignore_annotations /
+// ignore_labels.
+//
+// nil maps become null (not {}), matching flattenMetadataFields, which stored the raw
+// map and left SDKv2 to serialise a nil map as null.
+func flattenSecretV1Metadata(ctx context.Context, meta metav1.ObjectMeta) (common.NamespacedMetadataModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	annotations, d := stringMapToTypesMap(ctx, meta.Annotations)
+	diags.Append(d...)
+	labels, d := stringMapToTypesMap(ctx, meta.Labels)
+	diags.Append(d...)
+
+	// generate_name is omitted from state unless the server actually set it, matching
+	// flattenMetadataFields, which only wrote the key when meta.GenerateName != "".
+	generateName := types.StringNull()
+	if meta.GenerateName != "" {
+		generateName = types.StringValue(meta.GenerateName)
 	}
-	return m
+
+	return common.NamespacedMetadataModel{
+		MetadataModel: common.MetadataModel{
+			MetadataBase: common.MetadataBase{
+				Name:            types.StringValue(meta.Name),
+				Generation:      types.Int64Value(meta.Generation),
+				ResourceVersion: types.StringValue(meta.ResourceVersion),
+				UID:             types.StringValue(string(meta.UID)),
+				Annotations:     annotations,
+				Labels:          labels,
+			},
+			GenerateName: generateName,
+		},
+		Namespace: types.StringValue(meta.Namespace),
+	}, diags
 }
 
-// flattenStringMap converts a plain Go map[string]string into a
-// map[string]types.String suitable for Framework model fields.
-// Returns nil when m is nil so that the state stores null — matching the SDKv2
-// flattenMetadataFields behaviour and preventing null→{} drift on upgrade
-// (K8S-MIGRATE-005).
-func flattenStringMap(m map[string]string) map[string]types.String {
+// stringMapToTypesMap converts a plain Go map into a types.Map of strings. A nil map
+// yields a null Map so the state matches the SDKv2 data source, which stored null for
+// absent annotations / labels.
+func stringMapToTypesMap(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
 	if m == nil {
-		return nil
+		return types.MapNull(types.StringType), nil
 	}
-	result := make(map[string]types.String, len(m))
-	for k, v := range m {
-		result[k] = types.StringValue(v)
-	}
-	return result
+	return types.MapValueFrom(ctx, types.StringType, m)
 }
 
 // flattenByteMapToStringMap decodes each byte slice as a UTF-8 string.
@@ -63,14 +86,4 @@ func base64EncodeByteMap(m map[string][]byte) map[string]string {
 		result[k] = base64.StdEncoding.EncodeToString(v)
 	}
 	return result
-}
-
-// flattenTypesMap converts a plain Go map[string]string into a types.Map
-// with StringType element type.
-func flattenTypesMap(m map[string]string) types.Map {
-	elems := make(map[string]attr.Value, len(m))
-	for k, v := range m {
-		elems[k] = types.StringValue(v)
-	}
-	return types.MapValueMust(types.StringType, elems)
 }

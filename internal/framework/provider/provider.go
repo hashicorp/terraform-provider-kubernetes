@@ -203,7 +203,10 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 }
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		corev1.NewAllNamespacesDataSource,
+		corev1.NewNamespaceV1DataSource,
+	}
 }
 
 func (p *KubernetesProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {

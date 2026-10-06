@@ -17,7 +17,7 @@ import (
 // Arguments:
 //   - in : the actual raw unstructured value to be converted
 //   - st : the expected type of the converted value
-//   - th : type hints (optional, describes ambigous encodings such as
+//   - th : type hints (optional, describes ambiguous encodings such as
 //     IntOrString values in more detail).
 //     Pass in empty map when not using hints.
 //   - at : attribute path which recursively tracks the conversion.

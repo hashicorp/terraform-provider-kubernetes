@@ -54,9 +54,9 @@ If you want to learn more about developing a Terraform provider, please refer to
 
 This quick guide covers best practices for adding a new Resource. 
 
-1. Ensure all dependncies are installed.
+1. Ensure all dependencies are installed.
 2. Add an SDK Client. 
-3. Add Resource Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). A best and recommended practice is reuse constants from the Kuberentes packages as a default value in an attribute or within a validation function. 
+3. Add Resource Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs). A best and recommended practice is reuse constants from the Kubernetes packages as a default value in an attribute or within a validation function. 
 4. Scaffold an empty/new resource.
 5. Add Acceptance Tests(s) for the resource.
 6. Run Acceptance Tests(s) for this resource. 
@@ -67,10 +67,10 @@ This quick guide covers best practices for adding a new Resource.
 
 ### Adding a New Data Source
 
-1. Ensure all dependncies are installed.
+1. Ensure all dependencies are installed.
 2. Add an SDK Client. 
 3. Add Data Source Schema and define attributes [see Kubernetes Documentation](https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs).
-A best and recommended practice is reuse constants from the Kuberentes packages as a default value in an attribute or within a validation function. 
+A best and recommended practice is reuse constants from the Kubernetes packages as a default value in an attribute or within a validation function. 
 4. Scaffold an empty/new resource.
 5. Add Acceptance Tests(s) for the data source.
 6. Run Acceptance Tests(s) for this data source. 
@@ -118,7 +118,7 @@ However, PRs of the following categories should be added to the appropriate sect
 
 Please refer to our [ChangeLog Guide](../CHANGELOG_GUIDE.md).
 
-## Creating & Submiting a PR
+## Creating & Submitting a PR
 
 Please refer to this [guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
 

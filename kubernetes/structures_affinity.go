@@ -86,6 +86,12 @@ func flattenPodAffinityTerms(in []v1.PodAffinityTerm) []interface{} {
 		m := make(map[string]interface{})
 		m["namespaces"] = newStringSet(schema.HashString, n.Namespaces)
 		m["topology_key"] = n.TopologyKey
+		if len(n.MatchLabelKeys) != 0 {
+			m["match_label_keys"] = newStringSet(schema.HashString, n.MatchLabelKeys)
+		}
+		if len(n.MismatchLabelKeys) != 0 {
+			m["mismatch_label_keys"] = newStringSet(schema.HashString, n.MismatchLabelKeys)
+		}
 		if n.NamespaceSelector != nil {
 			m["namespace_selector"] = flattenNamespaceSelector(n.NamespaceSelector)
 		}
@@ -228,6 +234,12 @@ func expandPodAffinityTerms(t []interface{}) []v1.PodAffinityTerm {
 		}
 		if v, ok := in["namespaces"].(*schema.Set); ok {
 			obj[i].Namespaces = sliceOfString(v.List())
+		}
+		if v, ok := in["match_label_keys"].(*schema.Set); ok {
+			obj[i].MatchLabelKeys = sliceOfString(v.List())
+		}
+		if v, ok := in["mismatch_label_keys"].(*schema.Set); ok {
+			obj[i].MismatchLabelKeys = sliceOfString(v.List())
 		}
 		if v, ok := in["topology_key"].(string); ok {
 			obj[i].TopologyKey = v

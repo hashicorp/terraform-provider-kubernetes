@@ -3,5 +3,5 @@
 ```
 
 ```release-note:breaking-change
-`resource/kubernetes_namespace_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions silently dropped such entries; they are now rejected during plan. Remove the key or give it a string value.
+`resource/kubernetes_namespace_v1`: Validate that `metadata.labels` and `metadata.annotations` entries contain non-null strings. Previously accepted null entries are now rejected during planning; omit those entries or provide string values. Entire maps may still be omitted or set to `null`.
 ```

@@ -754,3 +754,121 @@ func TestFlattenNamespacedMetadata(t *testing.T) {
 		t.Errorf("prior metadata or ignore filters were not preserved: %v", got[0])
 	}
 }
+
+// TestFlattenDataSourceMetadataFieldsEmptyMaps pins nil → {} rather than nil → null.
+//
+// This is the default case, not an edge case: the Kubernetes API omits annotations entirely
+// for any object created without them, so every data source reading such an object hits it.
+// (Namespace labels are never empty only because the API server injects
+// kubernetes.io/metadata.name.)
+//
+// SDKv2's TypeMap has no null, so flattenMetadataFields stored a nil Go map as {}.
+// types.MapValueFrom on a nil map produces null instead, and that difference is visible to
+// anything reading the attribute — so a data source would report a change on upgrade for
+// every object with no annotations. Reverting stringMapValue to a plain MapValueFrom fails
+// this test.
+func TestFlattenDataSourceMetadataFieldsEmptyMaps(t *testing.T) {
+	t.Parallel()
+
+	got, diags := FlattenDataSourceMetadataFields(context.Background(), metav1.ObjectMeta{Name: "thing"})
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	for field, v := range map[string]types.Map{"Annotations": got.Annotations, "Labels": got.Labels} {
+		if v.IsNull() {
+			t.Errorf("%s is null, want a known empty map — SDKv2 stored {} here", field)
+		}
+		if n := len(v.Elements()); n != 0 {
+			t.Errorf("%s has %d elements, want 0", field, n)
+		}
+	}
+}
+
+// TestFlattenDataSourceMetadataFieldsDoesNotFilter is the guard for the other half of the data source
+// contract: SDKv2's flattenMetadataFields strips nothing, so internal keys the resource path
+// removes must survive here. Filtering would hide data practitioners read today.
+func TestFlattenDataSourceMetadataFieldsDoesNotFilter(t *testing.T) {
+	t.Parallel()
+
+	objMeta := metav1.ObjectMeta{
+		Name:        "thing",
+		Labels:      map[string]string{"kubernetes.io/metadata.name": "thing", "env": "demo"},
+		Annotations: map[string]string{"deprecated.daemonset.template.generation": "1"},
+	}
+
+	got, diags := FlattenDataSourceMetadataFields(context.Background(), objMeta)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	if n := len(got.Labels.Elements()); n != 2 {
+		t.Errorf("labels has %d elements, want 2 — the internal key must not be filtered", n)
+	}
+	if n := len(got.Annotations.Elements()); n != 1 {
+		t.Errorf("annotations has %d elements, want 1 — the internal key must not be filtered", n)
+	}
+}
+
+// TestNormalizeNotFoundMetadata pins the SDKv2 state shape for a data source read of a
+// missing object: unset fields become zero values, configured fields are left alone.
+func TestNormalizeNotFoundMetadata(t *testing.T) {
+	configured := types.MapValueMust(types.StringType, map[string]attr.Value{"k": types.StringValue("v")})
+
+	t.Run("unset fields become zero values", func(t *testing.T) {
+		out := NormalizeNotFoundMetadata(MetadataBase{Name: types.StringValue("absent")})
+
+		if out.Name.ValueString() != "absent" {
+			t.Errorf("Name = %v, want %q", out.Name, "absent")
+		}
+		if out.Annotations.IsNull() || len(out.Annotations.Elements()) != 0 {
+			t.Errorf("Annotations = %v, want empty non-null map", out.Annotations)
+		}
+		if out.Labels.IsNull() || len(out.Labels.Elements()) != 0 {
+			t.Errorf("Labels = %v, want empty non-null map", out.Labels)
+		}
+		if out.Generation.IsNull() || out.Generation.ValueInt64() != 0 {
+			t.Errorf("Generation = %v, want 0", out.Generation)
+		}
+		if out.ResourceVersion.IsNull() || out.ResourceVersion.ValueString() != "" {
+			t.Errorf("ResourceVersion = %v, want \"\"", out.ResourceVersion)
+		}
+		if out.UID.IsNull() || out.UID.ValueString() != "" {
+			t.Errorf("UID = %v, want \"\"", out.UID)
+		}
+	})
+
+	t.Run("configured values are kept", func(t *testing.T) {
+		out := NormalizeNotFoundMetadata(MetadataBase{
+			Name:        types.StringValue("absent"),
+			Annotations: configured,
+			Labels:      configured,
+		})
+
+		if !out.Annotations.Equal(configured) {
+			t.Errorf("Annotations = %v, want %v", out.Annotations, configured)
+		}
+		if !out.Labels.Equal(configured) {
+			t.Errorf("Labels = %v, want %v", out.Labels, configured)
+		}
+	})
+
+	t.Run("null values in a configured map are dropped", func(t *testing.T) {
+		withNull := types.MapValueMust(types.StringType, map[string]attr.Value{
+			"k":    types.StringValue("v"),
+			"gone": types.StringNull(),
+		})
+		out := NormalizeNotFoundMetadata(MetadataBase{
+			Name:        types.StringValue("absent"),
+			Annotations: withNull,
+			Labels:      withNull,
+		})
+
+		if !out.Annotations.Equal(configured) {
+			t.Errorf("Annotations = %v, want %v", out.Annotations, configured)
+		}
+		if !out.Labels.Equal(configured) {
+			t.Errorf("Labels = %v, want %v", out.Labels, configured)
+		}
+	})
+}

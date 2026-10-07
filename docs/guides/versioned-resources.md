@@ -28,7 +28,7 @@ Ultimately, we plan to completely automate the generation of Terraform resources
 
 ## What will happen to the resources without versions in the name?
 
-These resources will continue to be supported and maintained as is through to v3.0.0 of the provider, at which point they will be marked as deprecated and then subsequently removed in v4.0.0.
+Resources without a version suffix remain deprecated and will continue to be available in v3.0.0. No removal version is currently scheduled. We recommend migrating to the corresponding versioned resources. Any future removal will be announced in advance and occur in a major release.
 
 
 ## `v1` and above resources

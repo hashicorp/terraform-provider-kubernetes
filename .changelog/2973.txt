@@ -1,0 +1,3 @@
+```release-note:note
+`data/kubernetes_secret_v1`: Migrate the data source from SDKv2 to the Terraform Plugin Framework.
+```

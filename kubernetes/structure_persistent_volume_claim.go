@@ -29,6 +29,20 @@ func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []int
 	if in.VolumeMode != nil {
 		att["volume_mode"] = in.VolumeMode
 	}
+	if in.DataSource != nil {
+		att["data_source"] = flattenDataSource(in.DataSource)
+	}
+	return []interface{}{att}
+}
+
+func flattenDataSource(in *corev1.TypedLocalObjectReference) []interface{} {
+	att := map[string]interface{}{
+		"kind": in.Kind,
+		"name": in.Name,
+	}
+	if in.APIGroup != nil {
+		att["api_group"] = *in.APIGroup
+	}
 	return []interface{}{att}
 }
 
@@ -91,7 +105,25 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 	if v, ok := in["volume_mode"].(string); ok && v != "" {
 		obj.VolumeMode = ptr.To(corev1.PersistentVolumeMode(v))
 	}
+	if v, ok := in["data_source"].([]interface{}); ok && len(v) > 0 {
+		obj.DataSource = expandDataSource(v)
+	}
 	return obj, nil
+}
+
+func expandDataSource(l []interface{}) *corev1.TypedLocalObjectReference {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+	in := l[0].(map[string]interface{})
+	obj := &corev1.TypedLocalObjectReference{
+		Kind: in["kind"].(string),
+		Name: in["name"].(string),
+	}
+	if v, ok := in["api_group"].(string); ok && v != "" {
+		obj.APIGroup = ptr.To(v)
+	}
+	return obj
 }
 
 func expandResourceRequirements(l []interface{}) (*corev1.VolumeResourceRequirements, error) {

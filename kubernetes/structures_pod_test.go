@@ -739,3 +739,42 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenPodSecurityContext_SeLinuxChangePolicy(t *testing.T) {
+	policy := corev1.SELinuxChangePolicyRecursive
+	input := &corev1.PodSecurityContext{
+		SELinuxChangePolicy: &policy,
+	}
+
+	output := flattenPodSecurityContext(input)
+	if len(output) == 0 {
+		t.Fatal("Expected non-empty output")
+	}
+	m := output[0].(map[string]interface{})
+	got, ok := m["se_linux_change_policy"]
+	if !ok {
+		t.Fatal("se_linux_change_policy missing from flattened output")
+	}
+	if got != string(corev1.SELinuxChangePolicyRecursive) {
+		t.Fatalf("Expected se_linux_change_policy=%q, got %q", corev1.SELinuxChangePolicyRecursive, got)
+	}
+}
+
+func TestExpandPodSecurityContext_SeLinuxChangePolicy(t *testing.T) {
+	input := []interface{}{
+		map[string]interface{}{
+			"se_linux_change_policy": "Recursive",
+		},
+	}
+
+	output, err := expandPodSecurityContext(input)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if output.SELinuxChangePolicy == nil {
+		t.Fatal("Expected SELinuxChangePolicy to be set")
+	}
+	if *output.SELinuxChangePolicy != corev1.SELinuxChangePolicyRecursive {
+		t.Fatalf("Expected SELinuxChangePolicy=%q, got %q", corev1.SELinuxChangePolicyRecursive, *output.SELinuxChangePolicy)
+	}
+}

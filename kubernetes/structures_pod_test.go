@@ -739,3 +739,58 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenPodResourceRequirements(t *testing.T) {
+	input := &corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("4Gi"),
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse("2Gi"),
+		},
+	}
+
+	output := flattenPodResourceRequirements(input)
+	if len(output) == 0 {
+		t.Fatal("Expected non-empty output")
+	}
+	m := output[0].(map[string]interface{})
+	limits, ok := m["limits"].(map[string]string)
+	if !ok {
+		t.Fatal("limits missing or wrong type")
+	}
+	if limits["memory"] != "4Gi" {
+		t.Fatalf("Expected limits[memory]=4Gi, got %q", limits["memory"])
+	}
+	requests, ok := m["requests"].(map[string]string)
+	if !ok {
+		t.Fatal("requests missing or wrong type")
+	}
+	if requests["memory"] != "2Gi" {
+		t.Fatalf("Expected requests[memory]=2Gi, got %q", requests["memory"])
+	}
+}
+
+func TestExpandPodResourceRequirements(t *testing.T) {
+	input := []interface{}{
+		map[string]interface{}{
+			"limits": map[string]interface{}{
+				"memory": "4Gi",
+			},
+			"requests": map[string]interface{}{
+				"memory": "2Gi",
+			},
+		},
+	}
+
+	output := expandPodResourceRequirements(input)
+	if output == nil {
+		t.Fatal("Expected non-nil output")
+	}
+	if output.Limits.Memory().String() != "4Gi" {
+		t.Fatalf("Expected Limits[memory]=4Gi, got %q", output.Limits.Memory().String())
+	}
+	if output.Requests.Memory().String() != "2Gi" {
+		t.Fatalf("Expected Requests[memory]=2Gi, got %q", output.Requests.Memory().String())
+	}
+}

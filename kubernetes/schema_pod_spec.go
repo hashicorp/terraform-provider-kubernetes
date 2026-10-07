@@ -195,6 +195,29 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Default:     conditionalDefault(!isComputed, false),
 			Description: "Use the host's pid namespace.",
 		},
+		"resources": {
+			Type:        schema.TypeList,
+			Description: "Resources describes the compute resource requirements (PodLevelResources feature gate).",
+			Optional:    true,
+			Computed:    isComputed,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"limits": {
+						Type:        schema.TypeMap,
+						Description: "Describes the maximum amount of compute resources allowed.",
+						Optional:    true,
+						Computed:    true,
+					},
+					"requests": {
+						Type:        schema.TypeMap,
+						Description: "Describes the minimum amount of compute resources required.",
+						Optional:    true,
+						Computed:    true,
+					},
+				},
+			},
+		},
 
 		"hostname": {
 			Type:        schema.TypeString,

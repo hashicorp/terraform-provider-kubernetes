@@ -102,9 +102,7 @@ func flattenServiceSpec(in v1.ServiceSpec) []interface{} {
 	if in.SessionAffinityConfig != nil {
 		att["session_affinity_config"] = flattenSessionAffinityConfig(*in.SessionAffinityConfig)
 	}
-	if in.LoadBalancerIP != "" {
-		att["load_balancer_ip"] = in.LoadBalancerIP
-	}
+	att["load_balancer_ip"] = in.LoadBalancerIP
 	if len(in.LoadBalancerSourceRanges) > 0 {
 		att["load_balancer_source_ranges"] = newStringSet(schema.HashString, in.LoadBalancerSourceRanges)
 	}

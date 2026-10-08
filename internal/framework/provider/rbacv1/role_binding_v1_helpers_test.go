@@ -239,3 +239,37 @@ func TestApplySubjectComputedFields_groupSubjectNonEmptyAPIGroup(t *testing.T) {
 		t.Errorf("api_group = %q, want %q", got.APIGroup.ValueString(), "rbac.authorization.k8s.io")
 	}
 }
+
+// ── flattenSubjects ────────────────────────────────────────────────────────────
+
+// TestFlattenSubjects_emptyNamespaceNormalizedToDefault verifies that
+// flattenSubjects writes "default" whenever the Kubernetes API returns an
+// empty namespace string, and preserves non-empty namespaces unchanged.
+func TestFlattenSubjects_emptyNamespaceNormalizedToDefault(t *testing.T) {
+	t.Parallel()
+
+	// User and Group subjects: Kubernetes stores no namespace, returns "".
+	in := []rbacv1api.Subject{
+		{Kind: "User", Name: "alice", APIGroup: "rbac.authorization.k8s.io", Namespace: ""},
+		{Kind: "Group", Name: "dev-team", APIGroup: "rbac.authorization.k8s.io", Namespace: ""},
+		{Kind: "ServiceAccount", Name: "sa", APIGroup: "", Namespace: "kube-system"},
+	}
+
+	got := flattenSubjects(in)
+
+	if len(got) != 3 {
+		t.Fatalf("got %d subjects, want 3", len(got))
+	}
+	// "" → "default" for User.
+	if got[0].Namespace.ValueString() != "default" {
+		t.Errorf("User namespace = %q, want %q", got[0].Namespace.ValueString(), "default")
+	}
+	// "" → "default" for Group.
+	if got[1].Namespace.ValueString() != "default" {
+		t.Errorf("Group namespace = %q, want %q", got[1].Namespace.ValueString(), "default")
+	}
+	// Non-empty namespace is preserved as-is.
+	if got[2].Namespace.ValueString() != "kube-system" {
+		t.Errorf("ServiceAccount namespace = %q, want %q", got[2].Namespace.ValueString(), "kube-system")
+	}
+}

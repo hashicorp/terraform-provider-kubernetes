@@ -22,3 +22,39 @@ Role can be imported using the namespace and name, e.g.
 ```
 $ terraform import kubernetes_role_v1.example default/terraform-example
 ```
+
+Identity imports use `api_version = "rbac.authorization.k8s.io/v1"`, `kind = "Role"`,
+and `name`. The optional identity `namespace` defaults to `default` when omitted.
+
+## Migrating from `kubernetes_role`
+
+With Terraform 1.8 or later, rename the deprecated `kubernetes_role` resource type
+to `kubernetes_role_v1`, retain its configuration, and add:
+
+```terraform
+moved {
+  from = kubernetes_role.example
+  to   = kubernetes_role_v1.example
+}
+```
+
+Terraform records the address change without replacing the Role. A move-only
+plan may return exit code 2 with `-detailed-exitcode`, even with no infrastructure
+changes. After applying the move, an unchanged configuration plans no changes.
+
+Configurations specifying both `metadata.name` and `metadata.generate_name` are
+rejected during planning. Remove `generate_name` when an explicit name is configured.
+
+Existing `kubernetes_role_v1` configurations do not need a `moved` block when
+upgrading the provider, including upgrades from provider 2.37.1 before resource
+identity was introduced. Omitted `resource_names` defaults to an empty set.
+An unset `generate_name` is represented by null rather than the SDKv2 empty string.
+Explicit empty metadata maps may require a one-time in-place update. Removing
+previously configured labels, annotations, or resource names clears those values.
+
+### Null-valued metadata entries
+
+An individual label or annotation value of `null` is rejected during planning.
+Earlier SDKv2 versions accepted these entries but silently dropped them from the
+Kubernetes object. Remove null-valued entries from the configuration before
+upgrading or moving the resource.

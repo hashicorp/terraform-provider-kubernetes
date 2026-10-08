@@ -310,8 +310,8 @@ func Provider() *schema.Provider {
 			"kubernetes_certificate_signing_request_v1": resourceKubernetesCertificateSigningRequestV1(),
 
 			// rbac
+			// kubernetes_role_v1 has migrated to the Plugin Framework provider (internal/framework/provider/rbacv1).
 			"kubernetes_role":                    resourceKubernetesRoleV1("Deprecated; use kubernetes_role_v1."),
-			"kubernetes_role_v1":                 resourceKubernetesRoleV1(""),
 			"kubernetes_role_binding":            resourceKubernetesRoleBindingV1("Deprecated; use kubernetes_role_binding_v1."),
 			"kubernetes_role_binding_v1":         resourceKubernetesRoleBindingV1(""),
 			"kubernetes_cluster_role":            resourceKubernetesClusterRoleV1("Deprecated; use kubernetes_cluster_role_v1."),

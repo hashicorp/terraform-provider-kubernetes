@@ -1,0 +1,11 @@
+```release-note:note
+`resource/kubernetes_role_v1`: Migrated the resource to the Terraform Plugin Framework, preserving block syntax and resource identity, including upgrades from versions before identity support. Added support for moving from the deprecated `kubernetes_role` resource using a `moved` block with Terraform 1.8 or later, restricted to source providers in the `hashicorp` namespace. Explicit empty metadata maps may require a one-time in-place update. Identity imports default an omitted namespace to `default`. See the configuration changes below.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_role_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected during plan. Earlier versions allowed it, but the Kubernetes API ignores `generate_name` whenever `name` is set. Remove `generate_name` from configurations that set both.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_role_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry.
+```

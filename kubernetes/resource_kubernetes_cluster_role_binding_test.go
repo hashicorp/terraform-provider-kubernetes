@@ -20,20 +20,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-func TestAccKubernetesClusterRoleBindingV1_basic(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_basic(t *testing.T) {
 	var conf rbacv1.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_cluster_role_binding_v1.test"
+	resourceName := "kubernetes_cluster_role_binding.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingV1Destroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_basic(name),
+				Config: testAccKubernetesClusterRoleBindingConfig_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -49,9 +49,15 @@ func TestAccKubernetesClusterRoleBindingV1_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_modified(name),
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -74,9 +80,15 @@ func TestAccKubernetesClusterRoleBindingV1_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_modified_role_ref(name),
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingConfig_modified_role_ref(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -99,9 +111,15 @@ func TestAccKubernetesClusterRoleBindingV1_basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_modified(name),
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingConfig_modified(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -123,24 +141,30 @@ func TestAccKubernetesClusterRoleBindingV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subject.2.kind", "Group"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 		},
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingV1_identity(t *testing.T) {
-	resourceName := "kubernetes_cluster_role_binding_v1.test"
+func TestAccKubernetesClusterRoleBinding_identity(t *testing.T) {
+	resourceName := "kubernetes_cluster_role_binding.test"
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingV1Destroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_12_0),
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_basic(name),
+				Config: testAccKubernetesClusterRoleBindingConfig_basic(name),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectIdentity(
 						resourceName, map[string]knownvalue.Check{
@@ -160,20 +184,20 @@ func TestAccKubernetesClusterRoleBindingV1_identity(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingV1_generatedName(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_generatedName(t *testing.T) {
 	var conf rbacv1.ClusterRoleBinding
 	prefix := "tf-acc-test-gen:"
-	resourceName := "kubernetes_cluster_role_binding_v1.test"
+	resourceName := "kubernetes_cluster_role_binding.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingV1Destroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_generateName(prefix),
+				Config: testAccKubernetesClusterRoleBindingConfig_generateName(prefix),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestMatchResourceAttr(resourceName, "metadata.0.name", regexp.MustCompile("^"+prefix)),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -188,24 +212,30 @@ func TestAccKubernetesClusterRoleBindingV1_generatedName(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 		},
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingV1_serviceaccount_subject(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_serviceaccount_subject(t *testing.T) {
 	var conf rbacv1.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_cluster_role_binding_v1.test"
+	resourceName := "kubernetes_cluster_role_binding.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingV1Destroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_serviceaccount_subject(name),
+				Config: testAccKubernetesClusterRoleBindingConfig_serviceaccount_subject(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -220,24 +250,30 @@ func TestAccKubernetesClusterRoleBindingV1_serviceaccount_subject(t *testing.T) 
 					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "ServiceAccount"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 		},
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingV1_group_subject(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_group_subject(t *testing.T) {
 	var conf rbacv1.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_cluster_role_binding_v1.test"
+	resourceName := "kubernetes_cluster_role_binding.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingV1Destroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_group_subject(name),
+				Config: testAccKubernetesClusterRoleBindingConfig_group_subject(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -262,20 +298,20 @@ func TestAccKubernetesClusterRoleBindingV1_group_subject(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleBindingV1_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
+func TestAccKubernetesClusterRoleBinding_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf rbacv1.ClusterRoleBinding
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_cluster_role_binding_v1.test"
+	resourceName := "kubernetes_cluster_role_binding.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingV1Destroy,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1ConfigBug_step_0(name),
+				Config: testAccKubernetesClusterRoleBindingConfigBug_step_0(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -297,9 +333,15 @@ func TestAccKubernetesClusterRoleBindingV1_UpdatePatchOperationsOrderWithRemoval
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleBindingV1ConfigBug_step_1(name),
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingConfigBug_step_1(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -318,9 +360,15 @@ func TestAccKubernetesClusterRoleBindingV1_UpdatePatchOperationsOrderWithRemoval
 				),
 			},
 			{
-				Config: testAccKubernetesClusterRoleBindingV1ConfigBug_step_2(name),
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingConfigBug_step_2(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesClusterRoleBindingV1Exists(resourceName, &conf),
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.generation"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
@@ -344,11 +392,17 @@ func TestAccKubernetesClusterRoleBindingV1_UpdatePatchOperationsOrderWithRemoval
 					resource.TestCheckResourceAttr(resourceName, "subject.3.kind", "User"),
 				),
 			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
 		},
 	})
 }
 
-func testAccCheckKubernetesClusterRoleBindingV1Destroy(s *terraform.State) error {
+func testAccCheckKubernetesClusterRoleBindingDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 	if err != nil {
 		return err
@@ -356,7 +410,7 @@ func testAccCheckKubernetesClusterRoleBindingV1Destroy(s *terraform.State) error
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_cluster_role_binding_v1" {
+		if rs.Type != "kubernetes_cluster_role_binding" {
 			continue
 		}
 		name := rs.Primary.ID
@@ -371,7 +425,7 @@ func testAccCheckKubernetesClusterRoleBindingV1Destroy(s *terraform.State) error
 	return nil
 }
 
-func testAccCheckKubernetesClusterRoleBindingV1Exists(n string, obj *rbacv1.ClusterRoleBinding) resource.TestCheckFunc {
+func testAccCheckKubernetesClusterRoleBindingExists(n string, obj *rbacv1.ClusterRoleBinding) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -395,8 +449,8 @@ func testAccCheckKubernetesClusterRoleBindingV1Exists(n string, obj *rbacv1.Clus
 	}
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfig_basic(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -416,8 +470,8 @@ func testAccKubernetesClusterRoleBindingV1Config_basic(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_generateName(namePrefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfig_generateName(namePrefix string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -437,8 +491,8 @@ func testAccKubernetesClusterRoleBindingV1Config_generateName(namePrefix string)
 `, namePrefix)
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfig_modified(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -471,8 +525,8 @@ func testAccKubernetesClusterRoleBindingV1Config_modified(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_modified_role_ref(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfig_modified_role_ref(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -507,8 +561,8 @@ func testAccKubernetesClusterRoleBindingV1Config_modified_role_ref(name string) 
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_serviceaccount_subject(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfig_serviceaccount_subject(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -527,8 +581,8 @@ func testAccKubernetesClusterRoleBindingV1Config_serviceaccount_subject(name str
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_group_subject(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfig_group_subject(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -548,8 +602,8 @@ func testAccKubernetesClusterRoleBindingV1Config_group_subject(name string) stri
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1ConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfigBug_step_0(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -579,8 +633,8 @@ func testAccKubernetesClusterRoleBindingV1ConfigBug_step_0(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1ConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfigBug_step_1(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }
@@ -605,8 +659,8 @@ func testAccKubernetesClusterRoleBindingV1ConfigBug_step_1(name string) string {
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1ConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+func testAccKubernetesClusterRoleBindingConfigBug_step_2(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
   metadata {
     name = "%s"
   }

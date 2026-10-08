@@ -12,6 +12,13 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
+// sdkv2CRBProviderAddressSuffix is the expected suffix of the source provider
+// address (HOSTNAME/NAMESPACE/TYPE). The hostname is ignored so registry
+// mirrors are accepted; the leading slash anchors the match to a whole segment.
+const sdkv2CRBProviderAddressSuffix = "/hashicorp/kubernetes"
+
+const moveStateCRBErrSummary = "Unable to move kubernetes_cluster_role_binding state"
+
 // MoveState implements resource.ResourceWithMoveState. It enables a
 // practitioner to rename an existing kubernetes_cluster_role_binding resource
 // (the deprecated SDKv2 alias) to kubernetes_cluster_role_binding_v1 (this
@@ -36,8 +43,8 @@ func (r *ClusterRoleBinding) MoveState(_ context.Context) []resource.StateMover 
 		{
 			// Providing SourceSchema lets the framework populate
 			// req.SourceState so we can use typed Get() instead of raw JSON.
-			// State conversion errors are only DEBUG-logged; we still guard
-			// with an explicit type-name check inside the mover.
+			// If the framework cannot decode the source state it only logs at
+			// DEBUG and leaves SourceState nil, so the mover must check for nil.
 			SourceSchema: &schemaResp.Schema,
 			StateMover:   moveFromClusterRoleBinding,
 		},
@@ -52,8 +59,9 @@ func (r *ClusterRoleBinding) MoveState(_ context.Context) []resource.StateMover 
 // is sufficient — no field-level transformation is required.
 //
 // The function guards against unrelated move requests by checking
-// SourceTypeName; if the request is not for the expected source type, the
-// response is left empty (framework considers the mover skipped).
+// SourceTypeName, SourceSchemaVersion, and SourceProviderAddress; if the
+// request does not match the expected source, the response is left empty
+// (framework considers the mover skipped).
 func moveFromClusterRoleBinding(
 	ctx context.Context,
 	req resource.MoveStateRequest,
@@ -63,14 +71,28 @@ func moveFromClusterRoleBinding(
 	// We match the suffix so the check is robust across provider FQDNs.
 	// The bare name ends in "kubernetes_cluster_role_binding" but NOT
 	// "kubernetes_cluster_role_binding_v1" — check the v1 suffix first.
+	//
+	// Additionally require SourceSchemaVersion == 0 (the SDKv2 resource never
+	// sets a schema version) and a hashicorp/kubernetes source provider.
 	if strings.HasSuffix(req.SourceTypeName, "kubernetes_cluster_role_binding_v1") ||
-		!strings.HasSuffix(req.SourceTypeName, "kubernetes_cluster_role_binding") {
-		// Either already the v1 type, or something entirely unrelated — skip.
+		!strings.HasSuffix(req.SourceTypeName, "kubernetes_cluster_role_binding") ||
+		req.SourceSchemaVersion != 0 ||
+		!strings.HasSuffix(req.SourceProviderAddress, sdkv2CRBProviderAddressSuffix) {
 		return
 	}
 
-	// Decode the source state into our shared model. req.SourceState is
-	// populated because we provided SourceSchema in the StateMover above.
+	// Guard against a nil SourceState. Providing SourceSchema does not
+	// guarantee a non-nil req.SourceState: the framework still calls the mover
+	// when source decoding fails, leaving SourceState nil. Dereferencing a nil
+	// pointer here would panic, so we check explicitly and return a diagnostic.
+	if req.SourceState == nil {
+		resp.Diagnostics.AddError(moveStateCRBErrSummary,
+			"The source state is unavailable. This can happen when the source "+
+				"state could not be decoded by the framework.")
+		return
+	}
+
+	// Decode the source state into our shared model.
 	var src ClusterRoleBindingModel
 	resp.Diagnostics.Append(req.SourceState.Get(ctx, &src)...)
 	if resp.Diagnostics.HasError() {

@@ -492,10 +492,10 @@ func TestSubjectsEqual(t *testing.T) {
 	}
 }
 
-// TestFlattenSubjects_emptyNamespaceNormalizedToDefault verifies that when the
-// Kubernetes API returns an empty namespace (which is typical for User and Group subjects),
-// flattenSubjects normalizes it to "default" to match the schema default and SDKv2 state.
-func TestFlattenSubjects_emptyNamespaceNormalizedToDefault(t *testing.T) {
+// TestFlattenSubjects_namespacePreserved verifies that flattenSubjects keeps the
+// namespace returned by the Kubernetes API, including an explicitly empty one,
+// instead of re-applying the schema default.
+func TestFlattenSubjects_namespacePreserved(t *testing.T) {
 	t.Parallel()
 
 	input := []api.Subject{
@@ -503,19 +503,19 @@ func TestFlattenSubjects_emptyNamespaceNormalizedToDefault(t *testing.T) {
 			Kind:      "User",
 			Name:      "alice",
 			APIGroup:  "rbac.authorization.k8s.io",
-			Namespace: "", // Kubernetes API returns "" for cluster-scoped subjects
+			Namespace: "",
 		},
 		{
 			Kind:      "Group",
 			Name:      "dev-team",
 			APIGroup:  "rbac.authorization.k8s.io",
-			Namespace: "",
+			Namespace: "default",
 		},
 		{
 			Kind:      "ServiceAccount",
 			Name:      "custom-sa",
 			APIGroup:  "",
-			Namespace: "kube-system", // Explicit namespace must be preserved
+			Namespace: "kube-system",
 		},
 	}
 
@@ -525,8 +525,8 @@ func TestFlattenSubjects_emptyNamespaceNormalizedToDefault(t *testing.T) {
 		t.Fatalf("flattenSubjects returned %d subjects, want 3", len(got))
 	}
 
-	if got[0].Namespace.ValueString() != "default" {
-		t.Errorf("User subject namespace = %q, want %q", got[0].Namespace.ValueString(), "default")
+	if got[0].Namespace.IsNull() || got[0].Namespace.ValueString() != "" {
+		t.Errorf("User subject namespace = %v, want empty string", got[0].Namespace)
 	}
 	if got[1].Namespace.ValueString() != "default" {
 		t.Errorf("Group subject namespace = %q, want %q", got[1].Namespace.ValueString(), "default")

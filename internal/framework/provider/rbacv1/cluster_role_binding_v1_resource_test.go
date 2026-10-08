@@ -168,6 +168,36 @@ func TestAccFrameworkClusterRoleBinding_groupSubject(t *testing.T) {
 	})
 }
 
+// TestAccFrameworkClusterRoleBinding_emptySubjectNamespace verifies that an
+// explicitly empty subject namespace is kept as-is and does not produce a
+// diff, while an omitted namespace still takes the schema default.
+func TestAccFrameworkClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "2"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.name", "explicit-empty"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.namespace", ""),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.name", "omitted"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.namespace", "default"),
+				),
+			},
+			{
+				ResourceName:            clusterRoleBindingResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccFrameworkClusterRoleBinding_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -345,6 +375,34 @@ func testAccKubernetesClusterRoleBindingV1Config_groupSubject(name string) strin
     api_group = "rbac.authorization.k8s.io"
     kind      = "Group"
     name      = "somegroup"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "explicit-empty"
+    namespace = ""
+  }
+
+  subject {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "User"
+    name      = "omitted"
   }
 }
 `, name)

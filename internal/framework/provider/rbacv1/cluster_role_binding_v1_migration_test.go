@@ -161,6 +161,19 @@ func TestAccMigrateClusterRoleBinding_groupSubject(t *testing.T) {
 	)
 }
 
+// TestAccMigrateClusterRoleBinding_emptySubjectNamespace verifies migration of
+// a binding whose subject sets namespace = "" explicitly alongside one that
+// relies on the "default" namespace, with no diff afterwards.
+func TestAccMigrateClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	migrationTestCase(t,
+		testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.namespace", ""),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.namespace", "default"),
+	)
+}
+
 // TestAccMigrateClusterRoleBinding_thenUpdate verifies the full lifecycle
 // across the migration boundary: create with the released SDKv2 provider,
 // migrate to the Framework provider with no diff, then apply an actual

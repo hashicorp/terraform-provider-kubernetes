@@ -70,11 +70,9 @@ func flattenSubjects(in []api.Subject) []SubjectModel {
 			APIGroup: types.StringValue(s.APIGroup),
 			Kind:     types.StringValue(s.Kind),
 			Name:     types.StringValue(s.Name),
-		}
-		if s.Namespace != "" {
-			model.Namespace = types.StringValue(s.Namespace)
-		} else {
-			model.Namespace = types.StringValue("default")
+			// The API echoes back the namespace that was sent, so an empty
+			// value is kept as-is; the schema default applies only at plan time.
+			Namespace: types.StringValue(s.Namespace),
 		}
 		subjects = append(subjects, model)
 	}

@@ -506,6 +506,52 @@ func TestMigration_MoveState_emptyProviderAddressAccepted(t *testing.T) {
 	}
 }
 
+func TestMigration_MoveState_unsupportedSchemaVersionIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	r := schedulingv1.NewPriorityClassV1()
+	movers := r.(interface {
+		MoveState(context.Context) []resource.StateMover
+	}).MoveState(context.Background())
+
+	if len(movers) == 0 {
+		t.Fatal("expected at least 1 StateMover")
+	}
+
+	raw := sdkv2RawJSON(
+		"my-pc", "my-pc", "",
+		"", "PreemptLowerPriority", 100, false,
+		nil, nil, "1", "uid-sv", 0,
+	)
+
+	// Schema version 1 should be rejected — the handler only knows how to
+	// decode version 0 state.  Accepting it would silently corrupt fields
+	// whose layout changed in the hypothetical future v1 schema.
+	req := resource.MoveStateRequest{
+		SourceTypeName:        "kubernetes_priority_class",
+		SourceSchemaVersion:   1,
+		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
+		SourceRawState:        &tfprotov6.RawState{JSON: raw},
+	}
+	resp := &resource.MoveStateResponse{
+		TargetState: tfsdk.State{Schema: schedulingv1.PriorityClassV1Schema()},
+	}
+
+	movers[0].StateMover(context.Background(), req, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Errorf("expected no error diagnostics for unsupported schema version (handler should silently skip), got: %s",
+			resp.Diagnostics)
+	}
+
+	var m schedulingv1.PriorityClassModel
+	diags := resp.TargetState.Get(context.Background(), &m)
+	if !diags.HasError() && m.ID.ValueString() != "" {
+		t.Errorf("expected empty target state for unsupported schema version, got id=%q",
+			m.ID.ValueString())
+	}
+}
+
 func TestMigration_MoveState_explicitEmptyAnnotations(t *testing.T) {
 	t.Parallel()
 

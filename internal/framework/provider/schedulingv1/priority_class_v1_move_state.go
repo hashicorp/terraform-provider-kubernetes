@@ -62,14 +62,13 @@ type sdkv2PriorityClassStateV0 struct {
 //	  to   = kubernetes_priority_class_v1.example
 //	}
 func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
-	if req.SourceTypeName != "kubernetes_priority_class" {
-		return
-	}
-
-	// Guard against state move requests from a different provider — e.g., a
-	// fork or a test provider that happens to use the same type name.
+	// Guard on all three fields before decoding.  An under-gated handler would
+	// silently accept a future schema-version state and decode it with the v0
+	// struct, producing zeroed/dropped fields with no error.
 	const sdkv2ProviderAddressSuffix = "/hashicorp/kubernetes"
-	if req.SourceProviderAddress != "" && !strings.HasSuffix(req.SourceProviderAddress, sdkv2ProviderAddressSuffix) {
+	if req.SourceTypeName != "kubernetes_priority_class" ||
+		req.SourceSchemaVersion != 0 ||
+		(req.SourceProviderAddress != "" && !strings.HasSuffix(req.SourceProviderAddress, sdkv2ProviderAddressSuffix)) {
 		return
 	}
 

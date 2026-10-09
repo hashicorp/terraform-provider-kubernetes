@@ -259,6 +259,11 @@ func podConfigSets(value attr.Value) bool {
 
 // podSpecAPIValue converts a known Framework value into SDKv2 expander input.
 func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key string, computed map[string]bool, diagnostics *diag.Diagnostics) interface{} {
+	// These pointer fields were absent from older state. In particular, an
+	// omitted host_users must never become false through ValueBool().
+	if value.IsNull() && (key == "spec.host_users" || podProcMountPath(key)) {
+		return podSpecOmitted
+	}
 	if value.IsUnknown() {
 		if computed[key] {
 			return podSpecOmitted
@@ -275,7 +280,7 @@ func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key st
 		return int(v.ValueInt64())
 	case types.Object:
 		if v.IsNull() {
-			if podContainerResourcesPath(key) {
+			if podContainerResourcesPath(key) || key == "spec.volume.image" {
 				return podSpecOmitted
 			}
 			diagnostics.AddAttributeError(at, "Invalid Pod Template Specification", "A nested pod template spec object cannot be null.")
@@ -416,6 +421,14 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 	var result attr.Value
 	switch t := typ.(type) {
 	case types.ObjectType:
+		if key == "spec.volume.image" {
+			// Older state could not record admission-supplied image sources.
+			// Keep those unconfigured sources unowned; import has no baseline
+			// and records the live source so a matching configuration is safe.
+			if !rv.IsValid() || (prior != nil && prior.IsNull()) {
+				return types.ObjectNull(t.AttrTypes)
+			}
+		}
 		entries := map[string]attr.Value{}
 		var old map[string]attr.Value
 		if object, ok := prior.(types.Object); ok && !object.IsNull() && !object.IsUnknown() {
@@ -460,10 +473,28 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 			return prior
 		}
 		entries := make([]attr.Value, count)
+		var volumesByName map[string]attr.Value
+		if key == "spec.volume" {
+			volumesByName = make(map[string]attr.Value, len(previous))
+			for _, value := range previous {
+				if volume, ok := value.(types.Object); ok {
+					if name, ok := volume.Attributes()["name"].(types.String); ok && !name.IsUnknown() && !name.IsNull() {
+						volumesByName[name.ValueString()] = value
+					}
+				}
+			}
+		}
 		for i := 0; i < count; i++ {
 			var old attr.Value
 			if i < len(previous) {
 				old = previous[i]
+			}
+			// Admission may reorder volumes; image ownership belongs to a
+			// named volume, not the element previously at this index.
+			if volumesByName != nil {
+				volume, _ := rv.Index(i).Interface().(map[string]interface{})
+				name, _ := volume["name"].(string)
+				old = volumesByName[name]
 			}
 			entries[i] = podSpecStateValue(ctx, t.ElemType, rv.Index(i).Interface(), old, names, key, b, diagnostics)
 		}
@@ -509,6 +540,12 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 	default:
 		switch {
 		case typ.Equal(types.StringType):
+			if podProcMountPath(key) && !rv.IsValid() {
+				if prior == nil || prior.IsNull() || prior.IsUnknown() {
+					return types.StringNull()
+				}
+				return types.StringValue(string(corev1.DefaultProcMount))
+			}
 			text := ""
 			if rv.IsValid() {
 				text = fmt.Sprint(rv.Interface())
@@ -522,6 +559,12 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 				}
 			}
 		case typ.Equal(types.BoolType):
+			if key == "spec.host_users" && !rv.IsValid() {
+				if prior == nil || prior.IsNull() || prior.IsUnknown() {
+					return types.BoolNull()
+				}
+				return types.BoolValue(true)
+			}
 			result = types.BoolValue(rv.IsValid() && rv.Bool())
 		case typ.Equal(types.Int64Type):
 			number := int64(0)
@@ -606,9 +649,8 @@ func podAbsentZeroBlocks(b *Built) map[string]bool {
 	return result
 }
 
-// expandSDKPodSpec expands a pod spec through the SDKv2 expander, which expects
-// container resources as a one-element list rather than an object. It copies
-// the affected containers so the caller's value is not changed.
+// expandSDKPodSpec adapts object arguments to SDKv2 singleton lists without
+// changing the caller's value.
 func expandSDKPodSpec(spec []interface{}) (*corev1.PodSpec, error) {
 	adapted := make([]interface{}, len(spec))
 	for i, entry := range spec {
@@ -638,13 +680,28 @@ func expandSDKPodSpec(spec []interface{}) (*corev1.PodSpec, error) {
 			}
 			object[name] = converted
 		}
+		if volumes, ok := object["volume"].([]interface{}); ok {
+			converted := make([]interface{}, len(volumes))
+			for j, entry := range volumes {
+				volume, ok := entry.(map[string]interface{})
+				if !ok {
+					converted[j] = entry
+					continue
+				}
+				volume = maps.Clone(volume)
+				if image, ok := volume["image"].(map[string]interface{}); ok {
+					volume["image"] = []interface{}{image}
+				}
+				converted[j] = volume
+			}
+			object["volume"] = converted
+		}
 		adapted[i] = object
 	}
 	return kubernetes.ExpandPodSpec(adapted)
 }
 
-// flattenSDKPodSpec flattens a pod spec through the SDKv2 flattener and turns
-// its one-element container resources lists into objects.
+// flattenSDKPodSpec adapts SDKv2 singleton lists to object arguments.
 func flattenSDKPodSpec(spec corev1.PodSpec) ([]interface{}, error) {
 	flat, err := kubernetes.FlattenPodSpec(spec)
 	if err != nil {
@@ -660,8 +717,36 @@ func flattenSDKPodSpec(spec corev1.PodSpec) ([]interface{}, error) {
 				container["resources"] = container["resources"].([]interface{})[0]
 			}
 		}
+		volumes, _ := object["volume"].([]interface{})
+		for _, entry := range volumes {
+			volume := entry.(map[string]interface{})
+			if image, ok := volume["image"].([]interface{}); ok && len(image) == 1 {
+				volume["image"] = image[0]
+			} else {
+				delete(volume, "image")
+			}
+		}
 	}
 	return flat, nil
+}
+
+func podProcMountPath(key string) bool {
+	return key == "spec.container.security_context.proc_mount" || key == "spec.init_container.security_context.proc_mount"
+}
+
+// NormalizeFeatureDefaults makes effective API defaults compare equal to
+// omission. Callers use a copy; this does not change write payloads or state.
+func NormalizeFeatureDefaults(spec *corev1.PodSpec) {
+	if spec.HostUsers != nil && *spec.HostUsers {
+		spec.HostUsers = nil
+	}
+	for _, containers := range [][]corev1.Container{spec.Containers, spec.InitContainers} {
+		for i := range containers {
+			if sc := containers[i].SecurityContext; sc != nil && sc.ProcMount != nil && *sc.ProcMount == corev1.DefaultProcMount {
+				sc.ProcMount = nil
+			}
+		}
+	}
 }
 
 func podRoundTrip(b *Built, element interface{}) (interface{}, bool) {

@@ -372,6 +372,51 @@ Leave the selector omitted when Kubernetes should generate it; keep the existing
 
 Changed arguments: `spec.job_template.spec.selector`, `spec.job_template.spec.selector.match_expressions`, and the pod spec arguments under `spec.job_template.spec.template.spec`. The selector changes as shown for [kubernetes_job_v1](#kubernetes_job_v1).
 
+## Additional Pod spec features
+
+The six Framework workload resources also support three optional Kubernetes features:
+
+- `host_users = false` runs a Pod in an isolated Linux user namespace. The cluster and nodes must support [user namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/), including the required kernel and container runtime capabilities. Omitting the argument keeps the existing behavior.
+- Container and init container `security_context.proc_mount` accepts `Default` or `Unmasked`. `Unmasked` requires `host_users = false` and cluster support for the [ProcMountType feature](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#managing-access-to-the-proc-filesystem).
+- `volume.image` mounts an OCI image or artifact as a read-only volume. It requires [image volume support](https://kubernetes.io/docs/concepts/storage/volumes/#image) in Kubernetes and the container runtime. In Kubernetes 1.33, this feature is beta and the `ImageVolume` feature gate must be enabled explicitly.
+
+For example, on a cluster that supports these features:
+
+```terraform
+resource "kubernetes_pod_v1" "artifact" {
+  metadata {
+    name = "artifact"
+  }
+  spec {
+    host_users = false
+    container {
+      name  = "app"
+      image = "registry.k8s.io/pause:3.10"
+      security_context {
+        proc_mount = "Unmasked"
+      }
+      volume_mount {
+        name       = "artifact"
+        mount_path = "/artifact"
+      }
+    }
+    volume {
+      name = "artifact"
+      image = {
+        reference   = "registry.k8s.io/conformance:v1.33.0"
+        pull_policy = "IfNotPresent"
+      }
+    }
+  }
+}
+```
+
+`image` is an object argument inside the existing `volume` block. Its `reference` is required for a standalone Pod; workload templates may leave it unset for admission to supply. Omitting `pull_policy` lets Kubernetes select its default. Image volumes are Pod volumes and are not supported by PersistentVolume resources.
+
+For isolated user namespaces, `Unmasked` proc mounts and image volumes, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. This check does not verify node or container runtime support.
+
+Changes to these immutable settings replace standalone Pods and Jobs. Controller template changes may roll out Pods; CronJob changes apply to new Jobs. Existing state without these attributes is upgraded automatically, and leaving them unconfigured does not enable the features.
+
 ## Moving from the deprecated resource types
 
 The deprecated unversioned resource types still use the Plugin SDKv2 and the earlier block syntax. To adopt the versioned type, rename the resource, convert its syntax as described above, update references to the new address, and add a `moved` block. Moving between resource types requires Terraform 1.8 or later.

@@ -633,6 +633,9 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 	if v, ok := in["privileged"]; ok {
 		obj.Privileged = ptr.To(v.(bool))
 	}
+	if v, ok := in["proc_mount"].(string); ok && v != "" {
+		obj.ProcMount = ptr.To(v1.ProcMountType(v))
+	}
 	if v, ok := in["read_only_root_filesystem"]; ok {
 		obj.ReadOnlyRootFilesystem = ptr.To(v.(bool))
 	}

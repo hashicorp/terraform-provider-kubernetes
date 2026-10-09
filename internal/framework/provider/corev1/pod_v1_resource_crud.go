@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,10 +60,18 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		return
 	}
 
-	pod, err := conn.CoreV1().Pods(metadata.Namespace).Create(ctx, &corev1.Pod{
-		ObjectMeta: metadata,
-		Spec:       spec,
-	}, metav1.CreateOptions{})
+	obj := corev1.Pod{ObjectMeta: metadata, Spec: spec}
+	if podspec.HasGatedFeatures(&spec) {
+		preview, err := conn.CoreV1().Pods(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		if err == nil {
+			err = podspec.CheckPodFeaturePreservation(&spec, &preview.Spec)
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			return
+		}
+	}
+	pod, err := conn.CoreV1().Pods(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating Pod", err.Error())
 		return
@@ -71,6 +80,10 @@ func (p *PodV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	// Save the returned identity before waiting can fail.
 	resp.Diagnostics.Append(podV1WriteResult(ctx, &resp.State, req.Plan, plan, pod)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, podV1Identity(pod.Namespace, pod.Name))...)
+	if err := podspec.CheckPodFeaturePreservation(&spec, &pod.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -202,6 +215,15 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		if err != nil {
 			return err
 		}
+		if podspec.HasGatedFeatures(&plannedSpec) {
+			preview, err := conn.CoreV1().Pods(namespace).Patch(ctx, name, k8stypes.StrategicMergePatchType, data, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
+			if err != nil {
+				return fmt.Errorf("Pod feature preflight failed: %w", err)
+			}
+			if err := podspec.CheckPodFeaturePreservation(&plannedSpec, &preview.Spec); err != nil {
+				return err
+			}
+		}
 		pod, err = conn.CoreV1().Pods(namespace).Patch(ctx, name, k8stypes.StrategicMergePatchType, data, metav1.PatchOptions{})
 		return err
 	})
@@ -211,6 +233,10 @@ func (p *PodV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 	}
 
 	resp.Diagnostics.Append(podV1WriteResult(ctx, &resp.State, req.Plan, plan, pod)...)
+	if err := podspec.CheckPodFeaturePreservation(&plannedSpec, &pod.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 }
 
 func (p *PodV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

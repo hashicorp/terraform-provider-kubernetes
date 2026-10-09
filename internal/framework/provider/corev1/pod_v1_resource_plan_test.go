@@ -44,7 +44,21 @@ func TestPodV1SpecRequiresReplacement(t *testing.T) {
 		prior, edit func(*corev1.PodSpec)
 		want        bool
 	}{
-		"unchanged":                  {edit: func(*corev1.PodSpec) {}},
+		"unchanged":             {edit: func(*corev1.PodSpec) {}},
+		"host users default":    {edit: func(s *corev1.PodSpec) { s.HostUsers = ptr.To(true) }},
+		"enable user namespace": {edit: func(s *corev1.PodSpec) { s.HostUsers = ptr.To(false) }, want: true},
+		"disable user namespace": {prior: func(s *corev1.PodSpec) { s.HostUsers = ptr.To(false) }, edit: func(s *corev1.PodSpec) {
+			s.HostUsers = nil
+		}, want: true},
+		"proc mount default": {edit: func(s *corev1.PodSpec) {
+			s.Containers[0].SecurityContext = &corev1.SecurityContext{ProcMount: ptr.To(corev1.DefaultProcMount)}
+		}},
+		"unmasked proc mount": {edit: func(s *corev1.PodSpec) {
+			s.Containers[0].SecurityContext = &corev1.SecurityContext{ProcMount: ptr.To(corev1.UnmaskedProcMount)}
+		}, want: true},
+		"image volume": {edit: func(s *corev1.PodSpec) {
+			s.Volumes[0].VolumeSource = corev1.VolumeSource{Image: &corev1.ImageVolumeSource{Reference: "registry.example/data:v1"}}
+		}, want: true},
 		"active deadline is set":     {edit: deadline(60)},
 		"active deadline is lowered": {prior: deadline(120), edit: deadline(60)},
 		"active deadline is raised":  {prior: deadline(60), edit: deadline(120), want: true},

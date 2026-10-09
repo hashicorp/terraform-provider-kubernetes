@@ -4,6 +4,7 @@
 package kubernetes
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -12,6 +13,76 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 )
+
+func TestFrameworkPodSpecFeatures(t *testing.T) {
+	for _, hostUsers := range []*bool{nil, ptr.To(true), ptr.To(false)} {
+		input := corev1.PodSpec{
+			HostUsers: hostUsers,
+			Containers: []corev1.Container{{Name: "app", Image: "busybox", SecurityContext: &corev1.SecurityContext{
+				ProcMount: ptr.To(corev1.UnmaskedProcMount),
+			}}},
+			InitContainers: []corev1.Container{{Name: "init", Image: "busybox", SecurityContext: &corev1.SecurityContext{
+				ProcMount: ptr.To(corev1.DefaultProcMount),
+			}}},
+			Volumes: []corev1.Volume{
+				{Name: "kube-api-access-test", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{}}},
+				{Name: "artifact", VolumeSource: corev1.VolumeSource{Image: &corev1.ImageVolumeSource{
+					Reference: "registry.example.com/artifact:v1", PullPolicy: corev1.PullIfNotPresent,
+				}}},
+			},
+		}
+		flat, err := FlattenPodSpec(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		object := flat[0].(map[string]interface{})
+		if hostUsers == nil {
+			if _, exists := object["host_users"]; exists {
+				t.Fatal("omitted hostUsers must stay omitted for the Framework state builder")
+			}
+		} else if object["host_users"] != *hostUsers {
+			t.Fatalf("host_users = %v, want %t", object["host_users"], *hostUsers)
+		}
+		encoded, err := json.Marshal(flat)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded []interface{}
+		if err := json.Unmarshal(encoded, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		got, err := ExpandPodSpec(decoded)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got.HostUsers, hostUsers) {
+			t.Fatalf("hostUsers = %v, want %v", got.HostUsers, hostUsers)
+		}
+		if got.Containers[0].SecurityContext.ProcMount == nil || *got.Containers[0].SecurityContext.ProcMount != corev1.UnmaskedProcMount {
+			t.Fatal("container proc_mount was lost")
+		}
+		if got.InitContainers[0].SecurityContext.ProcMount == nil || *got.InitContainers[0].SecurityContext.ProcMount != corev1.DefaultProcMount {
+			t.Fatal("init container proc_mount was lost")
+		}
+		if len(got.Volumes) != 1 || got.Volumes[0].Name != "artifact" || !reflect.DeepEqual(got.Volumes[0].Image, input.Volumes[1].Image) {
+			t.Fatalf("image volume was lost after filtering the injected volume: %#v", got.Volumes)
+		}
+		legacy, err := flattenPodSpec(input, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		legacyObject := legacy[0].(map[string]interface{})
+		if _, exists := legacyObject["host_users"]; exists {
+			t.Fatal("SDKv2 state must not contain Framework-only host_users")
+		}
+		if _, exists := legacyObject["container"].([]interface{})[0].(map[string]interface{})["security_context"].([]interface{})[0].(map[string]interface{})["proc_mount"]; exists {
+			t.Fatal("SDKv2 state must not contain Framework-only proc_mount")
+		}
+		if _, exists := legacyObject["volume"].([]interface{})[0].(map[string]interface{})["image"]; exists {
+			t.Fatal("SDKv2 state must not contain Framework-only image source")
+		}
+	}
+}
 
 func TestFlattenTolerations(t *testing.T) {
 	cases := []struct {

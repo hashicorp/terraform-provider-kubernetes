@@ -107,10 +107,18 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 		"name":      metadata.Name,
 		"namespace": metadata.Namespace,
 	})
-	out, err := conn.AppsV1().Deployments(metadata.Namespace).Create(ctx, &appsv1.Deployment{
-		ObjectMeta: metadata,
-		Spec:       *spec,
-	}, metav1.CreateOptions{})
+	obj := appsv1.Deployment{ObjectMeta: metadata, Spec: *spec}
+	if podspec.HasGatedFeatures(&spec.Template.Spec) {
+		preview, err := conn.AppsV1().Deployments(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		if err == nil {
+			err = podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &preview.Spec.Template.Spec)
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			return
+		}
+	}
+	out, err := conn.AppsV1().Deployments(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsInvalid(err) {
 			// Preserve SDKv2's unwrapped Kubernetes validation diagnostic.
@@ -124,6 +132,10 @@ func (d *DeploymentV1) Create(ctx context.Context, req resource.CreateRequest, r
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), kubernetes.BuildId(out.ObjectMeta))...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, deploymentIdentity(out.Namespace, out.Name))...)
 	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+	if err := podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &out.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -255,6 +267,7 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	var out *appsv1.Deployment
+	var expectedPodSpec *corev1.PodSpec
 	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
 		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("deployments")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
@@ -263,6 +276,10 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		out = &appsv1.Deployment{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, out); err != nil {
 			return err
+		}
+		expectedPodSpec = &out.Spec.Template.Spec
+		if desired != nil {
+			expectedPodSpec = &desired.Template.Spec
 		}
 		ops := deploymentMetadataPatchOps(state, plan, out.ObjectMeta)
 		if desired != nil {
@@ -284,6 +301,15 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		if err != nil {
 			return err
 		}
+		if podspec.HasGatedFeatures(expectedPodSpec) {
+			preview, err := conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.JSONPatchType, data, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
+			if err != nil {
+				return fmt.Errorf("Pod feature preflight failed: %w", err)
+			}
+			if err := podspec.CheckPodFeaturePreservation(expectedPodSpec, &preview.Spec.Template.Spec); err != nil {
+				return err
+			}
+		}
 		out, err = conn.AppsV1().Deployments(namespace).Patch(ctx, name, k8types.JSONPatchType, data, metav1.PatchOptions{})
 		return err
 	})
@@ -293,6 +319,10 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	resp.Diagnostics.Append(deploymentWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+	if err := podspec.CheckPodFeaturePreservation(expectedPodSpec, &out.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}

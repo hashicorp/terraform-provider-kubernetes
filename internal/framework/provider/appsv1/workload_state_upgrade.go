@@ -14,7 +14,7 @@ import (
 // change to objects. Source schema version 0 also needs the old quantity repair.
 func upgradeWorkloadState(version int64, singleton string) func(map[string]any) error {
 	return func(raw map[string]any) error {
-		if err := podspec.UpgradeResourcesState(raw, "state", []string{"spec", "template", "spec"}, version == 0); err != nil {
+		if err := podspec.UpgradeState(raw, "state", []string{"spec", "template", "spec"}, version == 0); err != nil {
 			return err
 		}
 		specs, _ := raw["spec"].([]any) // The shared traversal validated the retained blocks.

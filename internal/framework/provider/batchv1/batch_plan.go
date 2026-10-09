@@ -223,6 +223,7 @@ func podTemplatesEqual(have, want corev1.PodTemplateSpec) bool {
 			delete(template.Labels, key)
 		}
 		clearUnsetFalse(&template.Spec)
+		podspec.NormalizeFeatureDefaults(&template.Spec)
 	}
 	return payloadsEqual(have, want)
 }

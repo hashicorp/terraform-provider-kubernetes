@@ -136,7 +136,7 @@ func upgradeJobSpecState(spec map[string]any, location string, legacyQuantities 
 			return fmt.Errorf("expected exactly one pod template in Job v0 state")
 		}
 	}
-	if err := podspec.UpgradeResourcesState(spec, location, []string{"template", "spec"}, legacyQuantities); err != nil {
+	if err := podspec.UpgradeState(spec, location, []string{"template", "spec"}, legacyQuantities); err != nil {
 		return err
 	}
 	switch selector := spec["selector"].(type) {

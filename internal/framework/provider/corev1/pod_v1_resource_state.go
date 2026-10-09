@@ -226,7 +226,7 @@ func (p *PodV1) decodeLegacyState(ctx context.Context, raw *tfprotov6.RawState, 
 				return fmt.Errorf("expected exactly one spec element")
 			}
 		}
-		return podspec.UpgradeResourcesState(values, "state", []string{"spec"}, version == 0)
+		return podspec.UpgradeState(values, "state", []string{"spec"}, version == 0)
 	})
 	if err != nil {
 		diags.AddError(summary, err.Error())

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batchapi "k8s.io/api/batch/v1"
 	coreapi "k8s.io/api/core/v1"
@@ -56,7 +57,18 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	out, err := conn.BatchV1().Jobs(metadata.Namespace).Create(ctx, &batchapi.Job{ObjectMeta: metadata, Spec: spec}, metav1.CreateOptions{})
+	obj := batchapi.Job{ObjectMeta: metadata, Spec: spec}
+	if podspec.HasGatedFeatures(&spec.Template.Spec) {
+		preview, err := conn.BatchV1().Jobs(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		if err == nil {
+			err = podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &preview.Spec.Template.Spec)
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			return
+		}
+	}
+	out, err := conn.BatchV1().Jobs(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create Job", err.Error())
 		return
@@ -65,6 +77,10 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(out.Namespace, out.Name))...)
+	if err := podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &out.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
 		return
 	}
@@ -154,6 +170,11 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		return
 	}
 	ops = append(ops, specOps...)
+	desiredSpec, diags := expandJobSpec(ctx, plan.Spec, true, nil, path.Root("spec"))
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	var out *batchapi.Job
 	if len(ops) == 0 {
 		out, err = conn.BatchV1().Jobs(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -163,6 +184,17 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 			resp.Diagnostics.AddError("Failed to marshal Job update", marshalErr.Error())
 			return
 		}
+		if podspec.HasGatedFeatures(&desiredSpec.Template.Spec) {
+			preview, err := conn.BatchV1().Jobs(namespace).Patch(ctx, name, k8stypes.JSONPatchType, data, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
+			if err != nil {
+				resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+				return
+			}
+			if err := podspec.CheckPodFeaturePreservation(&desiredSpec.Template.Spec, &preview.Spec.Template.Spec); err != nil {
+				resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+				return
+			}
+		}
 		out, err = conn.BatchV1().Jobs(namespace).Patch(ctx, name, k8stypes.JSONPatchType, data, metav1.PatchOptions{})
 	}
 	if err != nil {
@@ -170,6 +202,10 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		return
 	}
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+	if err := podspec.CheckPodFeaturePreservation(&desiredSpec.Template.Spec, &out.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
 	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
 		return

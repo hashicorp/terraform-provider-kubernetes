@@ -70,10 +70,18 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	created, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(ctx, &appsv1.DaemonSet{
-		ObjectMeta: metadata,
-		Spec:       spec,
-	}, metav1.CreateOptions{})
+	obj := appsv1.DaemonSet{ObjectMeta: metadata, Spec: spec}
+	if podspec.HasGatedFeatures(&spec.Template.Spec) {
+		preview, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		if err == nil {
+			err = podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &preview.Spec.Template.Spec)
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			return
+		}
+	}
+	created, err := conn.AppsV1().DaemonSets(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating daemonset", err.Error())
 		return
@@ -81,6 +89,10 @@ func (d *DaemonSetV1) Create(ctx context.Context, req resource.CreateRequest, re
 
 	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, daemonSetIdentity(created.Namespace, created.Name))...)
+	if err := podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &created.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -197,6 +209,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	var updated *appsv1.DaemonSet
+	var expectedPodSpec *corev1.PodSpec
 	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
 		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("daemonsets")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
@@ -205,6 +218,10 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		updated = &appsv1.DaemonSet{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, updated); err != nil {
 			return err
+		}
+		expectedPodSpec = &updated.Spec.Template.Spec
+		if planned != nil {
+			expectedPodSpec = &planned.Template.Spec
 		}
 		ops := daemonSetMetadataPatchOps(state, plan, updated.ObjectMeta)
 		if planned != nil {
@@ -226,6 +243,15 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		if err != nil {
 			return err
 		}
+		if podspec.HasGatedFeatures(expectedPodSpec) {
+			preview, err := conn.AppsV1().DaemonSets(namespace).Patch(ctx, name, k8Types.JSONPatchType, data, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
+			if err != nil {
+				return fmt.Errorf("Pod feature preflight failed: %w", err)
+			}
+			if err := podspec.CheckPodFeaturePreservation(expectedPodSpec, &preview.Spec.Template.Spec); err != nil {
+				return err
+			}
+		}
 		updated, err = conn.AppsV1().DaemonSets(namespace).Patch(ctx, name, k8Types.JSONPatchType, data, metav1.PatchOptions{})
 		return err
 	})
@@ -235,6 +261,10 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	resp.Diagnostics.Append(d.daemonSetWriteResult(ctx, &resp.State, req.Plan, plan, updated, filters)...)
+	if err := podspec.CheckPodFeaturePreservation(expectedPodSpec, &updated.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}

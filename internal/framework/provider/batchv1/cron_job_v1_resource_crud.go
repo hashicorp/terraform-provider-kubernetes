@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batch "k8s.io/api/batch/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,15 +55,28 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
-	out, err := conn.BatchV1().CronJobs(metadata.Namespace).Create(ctx, &batch.CronJob{
-		ObjectMeta: metadata, Spec: spec,
-	}, metav1.CreateOptions{})
+	obj := batch.CronJob{ObjectMeta: metadata, Spec: spec}
+	if podspec.HasGatedFeatures(&spec.JobTemplate.Spec.Template.Spec) {
+		preview, err := conn.BatchV1().CronJobs(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		if err == nil {
+			err = podspec.CheckPodFeaturePreservation(&spec.JobTemplate.Spec.Template.Spec, &preview.Spec.JobTemplate.Spec.Template.Spec)
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			return
+		}
+	}
+	out, err := conn.BatchV1().CronJobs(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating CronJob", err.Error())
 		return
 	}
 	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(out.Namespace, out.Name))...)
+	if err := podspec.CheckPodFeaturePreservation(&spec.JobTemplate.Spec.Template.Spec, &out.Spec.JobTemplate.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 }
 
 func (r *CronJobV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -169,6 +183,15 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		if err != nil {
 			return err
 		}
+		if podspec.HasGatedFeatures(&desiredSpec.JobTemplate.Spec.Template.Spec) {
+			preview, err := conn.BatchV1().CronJobs(namespace).Patch(ctx, name, k8stypes.JSONPatchType, data, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
+			if err != nil {
+				return fmt.Errorf("Pod feature preflight failed: %w", err)
+			}
+			if err := podspec.CheckPodFeaturePreservation(&desiredSpec.JobTemplate.Spec.Template.Spec, &preview.Spec.JobTemplate.Spec.Template.Spec); err != nil {
+				return err
+			}
+		}
 		out, err = conn.BatchV1().CronJobs(namespace).Patch(ctx, name, k8stypes.JSONPatchType, data, metav1.PatchOptions{})
 		return err
 	})
@@ -177,6 +200,10 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		return
 	}
 	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
+	if err := podspec.CheckPodFeaturePreservation(&desiredSpec.JobTemplate.Spec.Template.Spec, &out.Spec.JobTemplate.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 }
 
 func (r *CronJobV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

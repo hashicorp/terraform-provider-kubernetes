@@ -263,6 +263,69 @@ func (podEmptyStringKeepsState) PlanModifyString(_ context.Context, req planmodi
 	}
 }
 
+// These pointer fields use nonzero API defaults, so SDKv2's null/zero
+// equivalence cannot decide whether changing them needs replacement.
+type podHostUsersRequiresReplace struct{}
+
+func (podHostUsersRequiresReplace) Description(context.Context) string {
+	return "changes require replacement; an omitted value means the host user namespace"
+}
+func (m podHostUsersRequiresReplace) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (podHostUsersRequiresReplace) PlanModifyBool(_ context.Context, req planmodifier.BoolRequest, resp *planmodifier.BoolResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+	before := req.StateValue.IsNull() || req.StateValue.ValueBool()
+	after := req.PlanValue.IsNull() || req.PlanValue.ValueBool()
+	resp.RequiresReplace = req.PlanValue.IsUnknown() || before != after
+}
+
+type podProcMountRequiresReplace struct{}
+
+func (podProcMountRequiresReplace) Description(context.Context) string {
+	return "changes require replacement; an omitted value means Default"
+}
+func (m podProcMountRequiresReplace) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (podProcMountRequiresReplace) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() || req.ConfigValue.IsNull() {
+		return
+	}
+	before, after := req.StateValue.ValueString(), req.PlanValue.ValueString()
+	if before == "" {
+		before = "Default"
+	}
+	if after == "" {
+		after = "Default"
+	}
+	resp.RequiresReplace = req.PlanValue.IsUnknown() || before != after
+}
+
+type podImageRequiresReplace struct{}
+
+func (podImageRequiresReplace) Description(context.Context) string {
+	return "adding, removing or changing an image volume requires replacement"
+}
+func (m podImageRequiresReplace) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (podImageRequiresReplace) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
+		return
+	}
+	configured, err := req.ConfigValue.ToTerraformValue(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to compare image volume", err.Error())
+		return
+	}
+	// The API supplies an omitted pull policy; its unknown planned value
+	// alone does not change the image source.
+	resp.RequiresReplace = !configured.IsFullyKnown() || !Satisfies(req.StateValue, req.PlanValue)
+}
+
 // Removed list elements do not run their leaf plan modifiers. Carry immutable
 // descendants' replacement rules up to the collection's structural boundary.
 type podReplacementBoundary interface {
@@ -284,6 +347,9 @@ func (podMapRequiresReplace) podRequiresReplacement()           {}
 func (podSetRequiresReplace) podRequiresReplacement()           {}
 func (podListStructureRequiresReplace) podRequiresReplacement() {}
 func (podResourcesRequiresReplace) podRequiresReplacement()     {}
+func (podHostUsersRequiresReplace) podRequiresReplacement()     {}
+func (podProcMountRequiresReplace) podRequiresReplacement()     {}
+func (podImageRequiresReplace) podRequiresReplacement()         {}
 
 func (m podStringRequiresReplace) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
 	if !podZeroEquivalent(req.StateValue, req.PlanValue) {

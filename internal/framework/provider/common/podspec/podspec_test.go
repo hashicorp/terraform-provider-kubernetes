@@ -56,6 +56,15 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 			if tc.options.Immutable {
 				// SDKv2 omitted ForceNew here, but the API rejects the change.
 				want["spec.dns_config.searches"] = true
+				// These features are exposed only by the Framework resources.
+				want["spec.host_users"] = true
+				want["spec.container.security_context.proc_mount"] = true
+				want["spec.init_container.security_context.proc_mount"] = true
+				// The image object handles changes to its source and presence;
+				// computed child values do not replace it on their own.
+				want["spec.volume.image"] = true
+				want["spec.volume.image.reference"] = false
+				want["spec.volume.image.pull_policy"] = false
 			}
 
 			spec := For(tc.options).Spec
@@ -160,6 +169,109 @@ func TestReplacementIgnoresZeroValues(t *testing.T) {
 		if resp.RequiresReplace != tc.replace {
 			t.Errorf("%s -> %s: replace = %t, want %t", tc.state, tc.plan, resp.RequiresReplace, tc.replace)
 		}
+	}
+}
+
+func TestAPIDefaultedPointerReplacement(t *testing.T) {
+	for name, tc := range map[string]struct {
+		state, config, plan attr.Value
+		replace             bool
+	}{
+		"host users omitted":      {types.BoolNull(), types.BoolNull(), types.BoolUnknown(), false},
+		"host users true default": {types.BoolNull(), types.BoolValue(true), types.BoolValue(true), false},
+		"host users false":        {types.BoolNull(), types.BoolValue(false), types.BoolValue(false), true},
+		"host users restored":     {types.BoolValue(false), types.BoolValue(true), types.BoolValue(true), true},
+		"host users retained":     {types.BoolValue(false), types.BoolNull(), types.BoolValue(false), false},
+		"host users unknown":      {types.BoolValue(true), types.BoolUnknown(), types.BoolUnknown(), true},
+		"proc mount omitted":      {types.StringNull(), types.StringNull(), types.StringUnknown(), false},
+		"proc mount Default":      {types.StringNull(), types.StringValue("Default"), types.StringValue("Default"), false},
+		"proc mount Unmasked":     {types.StringNull(), types.StringValue("Unmasked"), types.StringValue("Unmasked"), true},
+		"proc mount restored":     {types.StringValue("Unmasked"), types.StringValue("Default"), types.StringValue("Default"), true},
+		"proc mount retained":     {types.StringValue("Unmasked"), types.StringNull(), types.StringValue("Unmasked"), false},
+		"proc mount unknown":      {types.StringValue("Default"), types.StringUnknown(), types.StringUnknown(), true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw := tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+			state, plan := tfsdk.State{Raw: raw}, tfsdk.Plan{Raw: raw}
+			var replace bool
+			switch value := tc.plan.(type) {
+			case types.Bool:
+				var response planmodifier.BoolResponse
+				podHostUsersRequiresReplace{}.PlanModifyBool(context.Background(), planmodifier.BoolRequest{
+					State: state, Plan: plan, StateValue: tc.state.(types.Bool), ConfigValue: tc.config.(types.Bool), PlanValue: value,
+				}, &response)
+				replace = response.RequiresReplace
+			case types.String:
+				var response planmodifier.StringResponse
+				podProcMountRequiresReplace{}.PlanModifyString(context.Background(), planmodifier.StringRequest{
+					State: state, Plan: plan, StateValue: tc.state.(types.String), ConfigValue: tc.config.(types.String), PlanValue: value,
+				}, &response)
+				replace = response.RequiresReplace
+			}
+			if replace != tc.replace {
+				t.Fatalf("replace = %t, want %t", replace, tc.replace)
+			}
+		})
+	}
+}
+
+func TestImageVolumeObjectPlan(t *testing.T) {
+	attributes := map[string]attr.Type{"reference": types.StringType, "pull_policy": types.StringType}
+	image := func(reference string, policy types.String) types.Object {
+		return types.ObjectValueMust(attributes, map[string]attr.Value{"reference": types.StringValue(reference), "pull_policy": policy})
+	}
+	absent, unresolved := types.ObjectNull(attributes), types.ObjectUnknown(attributes)
+	current := image("example.com/data:v1", types.StringValue("IfNotPresent"))
+	for name, tc := range map[string]struct {
+		state, config, plan types.Object
+		replace             bool
+	}{
+		"absent":          {absent, absent, absent, false},
+		"added":           {absent, current, current, true},
+		"removed":         {current, absent, absent, true},
+		"unchanged":       {current, current, current, false},
+		"reference":       {current, image("example.com/data:v2", types.StringNull()), image("example.com/data:v2", types.StringUnknown()), true},
+		"policy":          {current, image("example.com/data:v1", types.StringValue("Never")), image("example.com/data:v1", types.StringValue("Never")), true},
+		"computed policy": {current, image("example.com/data:v1", types.StringNull()), image("example.com/data:v1", types.StringUnknown()), false},
+		"unknown policy":  {current, image("example.com/data:v1", types.StringUnknown()), image("example.com/data:v1", types.StringUnknown()), true},
+		"unknown object":  {current, unresolved, unresolved, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw := tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+			request := planmodifier.ObjectRequest{State: tfsdk.State{Raw: raw}, Plan: tfsdk.Plan{Raw: raw},
+				StateValue: tc.state, ConfigValue: tc.config, PlanValue: tc.plan}
+			var response planmodifier.ObjectResponse
+			podImageRequiresReplace{}.PlanModifyObject(context.Background(), request, &response)
+			if response.Diagnostics.HasError() || response.RequiresReplace != tc.replace {
+				t.Fatalf("replace = %t, want %t; diagnostics = %v", response.RequiresReplace, tc.replace, response.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestNewPodFeatureSchemas(t *testing.T) {
+	for name, options := range map[string]Options{"pod": Pod(), "deployment": Deployment(), "daemonset": DaemonSet(), "statefulset": StatefulSet(), "job": Job(), "cronjob": CronJob()} {
+		t.Run(name, func(t *testing.T) {
+			object := builder{o: options}.podSpecObject()
+			hostUsers := object.Attributes["host_users"].(schema.BoolAttribute)
+			if !hostUsers.Optional || !hostUsers.Computed || hostUsers.Default != nil {
+				t.Fatal("host_users must use an API default")
+			}
+			for _, kind := range []string{"container", "init_container"} {
+				container := object.Blocks[kind].(schema.ListNestedBlock).NestedObject
+				security := container.Blocks["security_context"].(schema.ListNestedBlock).NestedObject
+				procMount := security.Attributes["proc_mount"].(schema.StringAttribute)
+				if !procMount.Optional || !procMount.Computed || procMount.Default != nil {
+					t.Fatal("proc_mount must use an API default")
+				}
+			}
+			volume := object.Blocks["volume"].(schema.ListNestedBlock).NestedObject
+			image := volume.Attributes["image"].(schema.SingleNestedAttribute)
+			reference := image.Attributes["reference"].(schema.StringAttribute)
+			if !image.Optional || image.Computed || reference.Required == options.Template || reference.Computed != options.Template || hasReplacement(image.PlanModifiers) != options.Immutable {
+				t.Fatal("image source presence, reference or replacement rules do not match its owner")
+			}
+		})
 	}
 }
 
@@ -553,6 +665,14 @@ func TestAddedElementReplacement(t *testing.T) {
 		"unknown empty_dir on a template": {DaemonSet(), volume, func(v attr.Type) map[string]attr.Value {
 			return map[string]attr.Value{"name": types.StringValue("v"), "empty_dir": types.ListUnknown(elem(v, "empty_dir"))}
 		}, false},
+		"image volume on a Pod": {Pod(), volume, func(v attr.Type) map[string]attr.Value {
+			image := v.(types.ObjectType).AttrTypes["image"]
+			return map[string]attr.Value{"name": types.StringValue("v"), "image": object(image, map[string]attr.Value{"reference": types.StringValue("example.com/data:v1")})}
+		}, true},
+		"image volume on a template": {Deployment(), volume, func(v attr.Type) map[string]attr.Value {
+			image := v.(types.ObjectType).AttrTypes["image"]
+			return map[string]attr.Value{"name": types.StringValue("v"), "image": object(image, map[string]attr.Value{"reference": types.StringValue("example.com/data:v1")})}
+		}, false},
 		"unknown node_selector_term": {Deployment(), affinity, func(a attr.Type) map[string]attr.Value {
 			return nodeTerms(a, types.ListUnknown)
 		}, false},
@@ -583,6 +703,12 @@ func TestAddedElementReplacement(t *testing.T) {
 			podListInheritedRequiresReplace{object: parent}.PlanModifyList(ctx, req, &resp)
 			if resp.RequiresReplace != tc.replace {
 				t.Errorf("replace = %t, want %t", resp.RequiresReplace, tc.replace)
+			}
+			req.StateValue, req.PlanValue = req.PlanValue, req.StateValue
+			resp = planmodifier.ListResponse{}
+			podListInheritedRequiresReplace{object: parent}.PlanModifyList(ctx, req, &resp)
+			if resp.RequiresReplace != tc.replace {
+				t.Errorf("removal replace = %t, want %t", resp.RequiresReplace, tc.replace)
 			}
 		})
 	}

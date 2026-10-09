@@ -798,6 +798,9 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	if v, ok := in["host_pid"]; ok {
 		obj.HostPID = v.(bool)
 	}
+	if v, ok := in["host_users"].(bool); ok {
+		obj.HostUsers = ptr.To(v)
+	}
 
 	if v, ok := in["hostname"]; ok {
 		obj.Hostname = v.(string)
@@ -1632,6 +1635,12 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		if v, ok := m["photon_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 			vl[i].PhotonPersistentDisk = expandPhotonPersistentDiskVolumeSource(v)
 		}
+		if v, ok := m["image"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+			image := v[0].(map[string]interface{})
+			reference, _ := image["reference"].(string)
+			pullPolicy, _ := image["pull_policy"].(string)
+			vl[i].Image = &v1.ImageVolumeSource{Reference: reference, PullPolicy: v1.PullPolicy(pullPolicy)}
+		}
 		if v, ok := m["ephemeral"].([]interface{}); ok && len(v) > 0 {
 			ephemeral, err := expandEphemeralVolumeSource(v)
 			if err != nil {
@@ -1696,7 +1705,43 @@ func ExpandPodSpec(spec []interface{}) (*v1.PodSpec, error) {
 // service-account token volume.
 func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 	// The flattener removes the token volume from its slice in place.
-	return flattenPodSpec(*spec.DeepCopy(), true)
+	flat, err := flattenPodSpec(*spec.DeepCopy(), true)
+	if err != nil {
+		return nil, err
+	}
+	// These fields belong to the Framework schemas. Keep them out of SDKv2
+	// state until its resources have their own schema and migration support.
+	object := flat[0].(map[string]interface{})
+	if spec.HostUsers != nil {
+		object["host_users"] = *spec.HostUsers
+	}
+	for name, containers := range map[string][]v1.Container{"container": spec.Containers, "init_container": spec.InitContainers} {
+		flattened := object[name].([]interface{})
+		for i, container := range containers {
+			if container.SecurityContext == nil || container.SecurityContext.ProcMount == nil {
+				continue
+			}
+			securityContext := flattened[i].(map[string]interface{})["security_context"].([]interface{})[0].(map[string]interface{})
+			securityContext["proc_mount"] = string(*container.SecurityContext.ProcMount)
+		}
+	}
+	images := make(map[string]*v1.ImageVolumeSource)
+	for _, volume := range spec.Volumes {
+		if volume.Image != nil {
+			images[volume.Name] = volume.Image
+		}
+	}
+	volumes, _ := object["volume"].([]interface{})
+	for _, raw := range volumes {
+		volume := raw.(map[string]interface{})
+		name, _ := volume["name"].(string)
+		if image := images[name]; image != nil {
+			volume["image"] = []interface{}{map[string]interface{}{
+				"reference": image.Reference, "pull_policy": string(image.PullPolicy),
+			}}
+		}
+	}
+	return flat, nil
 }
 
 // IsBuiltInToleration reports whether key is a taint whose toleration

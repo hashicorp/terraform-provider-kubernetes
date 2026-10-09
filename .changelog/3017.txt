@@ -57,3 +57,15 @@
 ```release-note:bug
 `resource/kubernetes_job_v1`: Apply changes to `ttl_seconds_after_finished` and `max_failed_indexes` to the Job.
 ```
+
+```release-note:enhancement
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add `host_users` to the Pod spec for Linux user namespace isolation on supported clusters.
+```
+
+```release-note:enhancement
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add `proc_mount` to container and init container security contexts. `Unmasked` requires `host_users = false` and cluster support for the feature.
+```
+
+```release-note:enhancement
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add the `volume.image` object argument for mounting OCI images or artifacts as read-only volumes on supported clusters.
+```

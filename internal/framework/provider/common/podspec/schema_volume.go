@@ -8,14 +8,26 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 func (b builder) podVolumeObject() schema.NestedBlockObject {
+	image := schema.SingleNestedAttribute{
+		Optional:    true,
+		Description: "Mount an OCI image or artifact as a read-only volume. Requires Kubernetes 1.31 or later, a compatible container runtime and the ImageVolume feature gate, which is disabled by default in Kubernetes 1.33.",
+		Attributes: map[string]schema.Attribute{
+			"reference":   b.str(!b.o.Template, b.o.Template, updatable, "", stringvalidator.LengthAtLeast(1)),
+			"pull_policy": b.str(false, true, updatable, "", stringvalidator.OneOf("Always", "Never", "IfNotPresent")),
+		},
+	}
+	if b.replace(immutable) {
+		image.PlanModifiers = []planmodifier.Object{podImageRequiresReplace{}}
+	}
 	return schema.NestedBlockObject{
-		Attributes: map[string]schema.Attribute{"name": b.str(false, false, updatable, "")},
+		Attributes: map[string]schema.Attribute{"name": b.str(false, false, updatable, ""), "image": image},
 		Blocks: map[string]schema.Block{
 			"aws_elastic_block_store": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
 				"fs_type":   b.str(false, false, updatable, ""),

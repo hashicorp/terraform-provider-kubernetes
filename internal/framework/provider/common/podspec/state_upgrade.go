@@ -5,10 +5,10 @@ package podspec
 
 import "fmt"
 
-// UpgradeResourcesState converts container resources at a known PodSpec path.
+// UpgradeState converts container resources and image volumes at a known PodSpec path.
 // The path consists of retained singleton blocks; genuine collections keep their
 // shape. legacyQuantities repairs SDKv2 v0 limits/requests before unwrapping.
-func UpgradeResourcesState(object map[string]any, location string, path []string, legacyQuantities bool) error {
+func UpgradeState(object map[string]any, location string, path []string, legacyQuantities bool) error {
 	if object == nil {
 		return fmt.Errorf("%s must be an object", location)
 	}
@@ -29,7 +29,7 @@ func UpgradeResourcesState(object map[string]any, location string, path []string
 		if !ok {
 			return fmt.Errorf("%s.%s[0] must be an object", location, name)
 		}
-		return UpgradeResourcesState(child, location+"."+name+"[0]", path[1:], legacyQuantities)
+		return UpgradeState(child, location+"."+name+"[0]", path[1:], legacyQuantities)
 	}
 	for _, name := range []string{"container", "init_container"} {
 		if object[name] == nil {
@@ -94,6 +94,39 @@ func UpgradeResourcesState(object map[string]any, location string, path []string
 			}
 			container["resources"] = resources
 		}
+	}
+	if object["volume"] == nil {
+		return nil
+	}
+	volumes, ok := object["volume"].([]any)
+	if !ok {
+		return fmt.Errorf("%s.volume must be a list", location)
+	}
+	for i, entry := range volumes {
+		at := fmt.Sprintf("%s.volume[%d].image", location, i)
+		volume, ok := entry.(map[string]any)
+		if !ok {
+			return fmt.Errorf("%s.volume[%d] must be an object", location, i)
+		}
+		image := volume["image"]
+		if image == nil {
+			continue
+		}
+		if list, ok := image.([]any); ok {
+			if len(list) > 1 {
+				return fmt.Errorf("%s must contain at most one object", at)
+			}
+			if len(list) == 0 {
+				volume["image"] = nil
+				continue
+			}
+			image = list[0]
+		}
+		imageObject, ok := image.(map[string]any)
+		if !ok || imageObject == nil {
+			return fmt.Errorf("%s must be an object or singleton object list", at)
+		}
+		volume["image"] = imageObject
 	}
 	return nil
 }

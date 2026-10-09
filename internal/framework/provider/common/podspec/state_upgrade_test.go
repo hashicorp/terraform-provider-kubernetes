@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -18,9 +19,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 )
 
-func TestUpgradeResourcesState(t *testing.T) {
+func TestUpgradeState(t *testing.T) {
 	for _, tc := range []struct {
 		name, input, want string
 		legacy            bool
@@ -49,7 +51,7 @@ func TestUpgradeResourcesState(t *testing.T) {
 				container["name"] = "app"
 				sibling := []any{map[string]any{"name": "data"}}
 				state := map[string]any{"spec": []any{map[string]any{kind: []any{container}, "volume": sibling}}}
-				err := UpgradeResourcesState(state, "state", []string{"spec"}, tc.legacy)
+				err := UpgradeState(state, "state", []string{"spec"}, tc.legacy)
 				if tc.errorPath != "" {
 					if err == nil || !strings.Contains(err.Error(), "state.spec[0]."+kind+"[0]."+tc.errorPath) {
 						t.Fatalf("error = %v", err)
@@ -67,7 +69,7 @@ func TestUpgradeResourcesState(t *testing.T) {
 					t.Fatalf("got %#v, want %#v", container, want)
 				}
 				before, _ := json.Marshal(state)
-				if err := UpgradeResourcesState(state, "state", []string{"spec"}, tc.legacy); err != nil {
+				if err := UpgradeState(state, "state", []string{"spec"}, tc.legacy); err != nil {
 					t.Fatal(err)
 				}
 				after, _ := json.Marshal(state)
@@ -80,12 +82,161 @@ func TestUpgradeResourcesState(t *testing.T) {
 			}
 		})
 	}
-	for _, input := range []string{`{"spec":[{},{}]}`, `{"spec":[null]}`, `{"spec":{}}`, `{"spec":[{"container":[null]}]}`} {
+	for _, input := range []string{`{"spec":[{},{}]}`, `{"spec":[null]}`, `{"spec":{}}`, `{"spec":[{"container":[null]}]}`, `{"spec":[{"volume":[{"image":[{},{}]}]}]}`, `{"spec":[{"volume":[{"image":[null]}]}]}`} {
 		var state map[string]any
 		_ = json.Unmarshal([]byte(input), &state)
-		if err := UpgradeResourcesState(state, "state", []string{"spec"}, false); err == nil {
+		if err := UpgradeState(state, "state", []string{"spec"}, false); err == nil {
 			t.Fatalf("accepted malformed state %s", input)
 		}
+	}
+}
+
+func TestPodFeatureStateMigration(t *testing.T) {
+	ctx := context.Background()
+	for owner, option := range map[string]Options{"deployment": Deployment(), "daemonset": DaemonSet(), "statefulset": StatefulSet(), "pod": Pod(), "job": Job(), "cronjob": CronJob()} {
+		for _, populated := range []bool{false, true} {
+			t.Run(owner+"/"+map[bool]string{false: "absent", true: "configured"}[populated], func(t *testing.T) {
+				b := For(option)
+				raw := `{"spec":[{"container":[{"name":"app","security_context":[{}]}],"init_container":[{"name":"init","security_context":[{}]}],"volume":[{"name":"data","empty_dir":[{}]}]}]}`
+				if populated {
+					raw = `{"spec":[{"host_users":false,"container":[{"name":"app","security_context":[{"proc_mount":"Unmasked"}]}],"init_container":[{"name":"init","security_context":[{"proc_mount":"Unmasked"}]}],"volume":[{"name":"data","image":[{"reference":"registry.example/data:v1","pull_policy":"IfNotPresent"}]}]}]}`
+				}
+				var object map[string]any
+				if err := json.Unmarshal([]byte(raw), &object); err != nil {
+					t.Fatal(err)
+				}
+				if err := UpgradeState(object, "state", []string{"spec"}, false); err != nil {
+					t.Fatal(err)
+				}
+				data, _ := json.Marshal(object)
+				if err := UpgradeState(object, "state", []string{"spec"}, false); err != nil {
+					t.Fatal(err)
+				}
+				again, _ := json.Marshal(object)
+				if string(data) != string(again) {
+					t.Fatal("upgrade was not idempotent")
+				}
+				s := schema.Schema{Blocks: map[string]schema.Block{"spec": b.Spec}}
+				decoded, err := (&tfprotov6.RawState{JSON: data}).Unmarshal(s.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				state := tfsdk.State{Schema: s, Raw: decoded}
+				var baseline types.List
+				if d := state.GetAttribute(ctx, path.Root("spec"), &baseline); d.HasError() {
+					t.Fatal(d)
+				}
+				live, d := b.ExpandSpec(ctx, baseline, nil, path.Root("spec"))
+				if d.HasError() {
+					t.Fatal(d)
+				}
+				if populated {
+					if live.HostUsers == nil || *live.HostUsers || live.Containers[0].SecurityContext.ProcMount == nil || *live.Containers[0].SecurityContext.ProcMount != corev1.UnmaskedProcMount || live.InitContainers[0].SecurityContext.ProcMount == nil || live.Volumes[0].Image == nil || live.Volumes[0].Image.Reference != "registry.example/data:v1" {
+						t.Fatalf("configured features lost: %#v", live)
+					}
+				} else if live.HostUsers != nil || live.Containers[0].SecurityContext.ProcMount != nil || live.InitContainers[0].SecurityContext.ProcMount != nil || live.Volumes[0].Image != nil {
+					t.Fatalf("legacy omission changed API payload: %#v", live)
+				}
+				refreshed, d := b.RefreshSpec(ctx, live, baseline, path.Root("spec"))
+				if d.HasError() {
+					t.Fatal(d)
+				}
+				current := tfsdk.State{Schema: s, Raw: decoded}
+				if d := current.SetAttribute(ctx, path.Root("spec"), refreshed); d.HasError() {
+					t.Fatal(d)
+				}
+				at := path.Root("spec").AtListIndex(0)
+				paths := []path.Path{at.AtName("host_users"), at.AtName("volume").AtListIndex(0).AtName("image")}
+				for _, kind := range []string{"container", "init_container"} {
+					paths = append(paths, at.AtName(kind).AtListIndex(0).AtName("security_context").AtListIndex(0).AtName("proc_mount"))
+				}
+				for _, at := range paths {
+					var before, after attr.Value
+					if d := state.GetAttribute(ctx, at, &before); d.HasError() {
+						t.Fatal(d)
+					}
+					if d := current.GetAttribute(ctx, at, &after); d.HasError() {
+						t.Fatal(d)
+					}
+					if !before.Equal(after) || (!populated && !after.IsNull()) {
+						t.Fatalf("%s: upgraded %s, refreshed %s", at, before, after)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestAbsentPodFeatureDefaults(t *testing.T) {
+	ctx := context.Background()
+	b := For(Pod())
+	live := corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{}}}}
+	baseline, d := b.RefreshSpec(ctx, live, types.ListNull(b.ObjectType()), path.Root("spec"))
+	if d.HasError() {
+		t.Fatal(d)
+	}
+	// Explicit false and Unmasked remain observable when a later API response
+	// drops the settings; effective defaults must not be mistaken for isolation.
+	live.HostUsers = ptr.To(false)
+	live.Containers[0].SecurityContext.ProcMount = ptr.To(corev1.UnmaskedProcMount)
+	configured, d := b.RefreshSpec(ctx, live, baseline, path.Root("spec"))
+	if d.HasError() {
+		t.Fatal(d)
+	}
+	live.HostUsers = nil
+	live.Containers[0].SecurityContext.ProcMount = nil
+	refreshed, d := b.RefreshSpec(ctx, live, configured, path.Root("spec"))
+	if d.HasError() {
+		t.Fatal(d)
+	}
+	values := refreshed.Elements()[0].(types.Object).Attributes()
+	if !values["host_users"].Equal(types.BoolValue(true)) {
+		t.Fatalf("dropped host_users=false hidden: %s", values["host_users"])
+	}
+	sc := values["container"].(types.List).Elements()[0].(types.Object).Attributes()["security_context"].(types.List).Elements()[0].(types.Object).Attributes()
+	if !sc["proc_mount"].Equal(types.StringValue("Default")) {
+		t.Fatalf("dropped Unmasked hidden: %s", sc["proc_mount"])
+	}
+}
+
+func TestImageVolumeOwnershipAcrossRefresh(t *testing.T) {
+	ctx := context.Background()
+	for owner, option := range map[string]Options{"deployment": Deployment(), "daemonset": DaemonSet(), "statefulset": StatefulSet(), "pod": Pod(), "job": Job(), "cronjob": CronJob()} {
+		t.Run(owner, func(t *testing.T) {
+			b := For(option)
+			live := corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}, Volumes: []corev1.Volume{
+				{Name: "data", VolumeSource: corev1.VolumeSource{Image: &corev1.ImageVolumeSource{Reference: "data:v1", PullPolicy: corev1.PullIfNotPresent}}},
+				{Name: "other", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
+			}}
+			imported, d := b.RefreshSpec(ctx, live, types.ListNull(b.ObjectType()), path.Root("spec"))
+			if d.HasError() {
+				t.Fatal(d)
+			}
+			image := get(imported, 0, "volume", 0, "image").(types.Object)
+			if image.IsNull() || !image.Attributes()["reference"].Equal(types.StringValue("data:v1")) {
+				t.Fatal("import must discover the existing image")
+			}
+			legacy := with(t, imported, types.ObjectNull(image.AttributeTypes(ctx)), 0, "volume", 0, "image").(types.List)
+			for name, flatten := range map[string]func(context.Context, corev1.PodSpec, types.List, path.Path) (types.List, diag.Diagnostics){"refresh": b.RefreshSpec, "write": b.FlattenSpec} {
+				t.Run(name, func(t *testing.T) {
+					unconfigured, d := flatten(ctx, live, legacy, path.Root("spec"))
+					if d.HasError() || !get(unconfigured, 0, "volume", 0, "image").IsNull() {
+						t.Fatalf("unconfigured admission image adopted: %s; %v", unconfigured, d)
+					}
+					changed := live.DeepCopy()
+					changed.Volumes[0].Image.Reference = "data:v2"
+					observed, d := flatten(ctx, *changed, imported, path.Root("spec"))
+					if d.HasError() || get(observed, 0, "volume", 0, "image").IsNull() || !get(observed, 0, "volume", 0, "image", "reference").Equal(types.StringValue("data:v2")) {
+						t.Fatalf("configured image drift hidden: %s; %v", observed, d)
+					}
+					changed.Volumes[0], changed.Volumes[1] = changed.Volumes[1], changed.Volumes[0]
+					observed, d = flatten(ctx, *changed, imported, path.Root("spec"))
+					if d.HasError() || get(observed, 0, "volume", 1, "image").IsNull() || !get(observed, 0, "volume", 1, "image", "reference").Equal(types.StringValue("data:v2")) {
+						t.Fatalf("reordering hid the configured image: %s; %v", observed, d)
+					}
+				})
+			}
+		})
 	}
 }
 
@@ -102,7 +253,7 @@ func TestResourcesUpgradeMatchesRefresh(t *testing.T) {
 				if err := json.Unmarshal([]byte(raw), &values); err != nil {
 					t.Fatal(err)
 				}
-				if err := UpgradeResourcesState(values, "state", []string{"spec"}, false); err != nil {
+				if err := UpgradeState(values, "state", []string{"spec"}, false); err != nil {
 					t.Fatal(err)
 				}
 				data, _ := json.Marshal(values)

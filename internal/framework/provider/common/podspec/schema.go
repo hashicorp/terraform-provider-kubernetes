@@ -204,6 +204,11 @@ func (b builder) block(object schema.NestedBlockObject, minimum, maximum int, f 
 
 func (b builder) podSpecObject() schema.NestedBlockObject {
 	restartPolicy := []string{"Always", "OnFailure", "Never"}
+	hostUsers := b.boolean(true, updatable, false)
+	hostUsers.Description = "Use the host's user namespace. Kubernetes treats omission as true. Setting false requires Linux, a compatible container runtime and the UserNamespacesSupport feature gate."
+	if b.replace(immutable) {
+		hostUsers.PlanModifiers = append(hostUsers.PlanModifiers, podHostUsersRequiresReplace{})
+	}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
 			"active_deadline_seconds":          b.integer(false, false, updatable, 0, int64validator.AtLeast(1)),
@@ -213,6 +218,7 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 			"host_ipc":                         b.boolean(false, immutable, false),
 			"host_network":                     b.boolean(false, immutable, false),
 			"host_pid":                         b.boolean(false, immutable, false),
+			"host_users":                       hostUsers,
 			"hostname":                         b.str(false, true, immutable, ""),
 			"image_pull_secrets":               b.references("name", immutable),
 			"node_name":                        b.str(false, true, immutable, ""),

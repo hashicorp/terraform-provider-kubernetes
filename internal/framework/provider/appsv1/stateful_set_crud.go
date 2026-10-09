@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -80,6 +81,16 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	obj := appsv1.StatefulSet{ObjectMeta: meta, Spec: *spec}
+	if podspec.HasGatedFeatures(&spec.Template.Spec) {
+		preview, err := conn.AppsV1().StatefulSets(meta.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+		if err == nil {
+			err = podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &preview.Spec.Template.Spec)
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			return
+		}
+	}
 	created, err := conn.AppsV1().StatefulSets(meta.Namespace).Create(ctx, &obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating StatefulSet", err.Error())
@@ -89,6 +100,10 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ID = types.StringValue(kubernetes.BuildId(created.ObjectMeta))
 	resp.Diagnostics.Append(r.statefulSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(created.Namespace, created.Name))...)
+	if err := podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &created.Spec.Template.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+		return
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -213,6 +228,7 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	var updated *appsv1.StatefulSet
 	err = k8sretry.RetryOnConflict(k8sretry.DefaultRetry, func() error {
 		raw, err := dynamicClient.Resource(appsv1.SchemeGroupVersion.WithResource("statefulsets")).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
@@ -222,6 +238,7 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(raw.Object, live); err != nil {
 			return err
 		}
+		updated = live
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live.ObjectMeta)
 		if desired != nil {
 			from, to := statefulSetPatchSpecs(*original, *desired, live.Spec)
@@ -239,12 +256,29 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		if err != nil {
 			return err
 		}
-		_, err = conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{})
+		if desired != nil && podspec.HasGatedFeatures(&desired.Template.Spec) {
+			preview, err := conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
+			if err != nil {
+				return fmt.Errorf("Pod feature preflight failed: %w", err)
+			}
+			if err := podspec.CheckPodFeaturePreservation(&desired.Template.Spec, &preview.Spec.Template.Spec); err != nil {
+				return err
+			}
+		}
+		updated, err = conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{})
 		return err
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update StatefulSet", err.Error())
 		return
+	}
+
+	if desired != nil {
+		if err := podspec.CheckPodFeaturePreservation(&desired.Template.Spec, &updated.Spec.Template.Spec); err != nil {
+			resp.Diagnostics.Append(r.statefulSetWriteResult(ctx, &resp.State, req.Plan, plan, updated, filters)...)
+			resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+			return
+		}
 	}
 
 	if plan.WaitForRollout.ValueBool() {

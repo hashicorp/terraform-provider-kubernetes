@@ -105,6 +105,7 @@ Optional:
 - `host_ipc` (Boolean) Use the host's ipc namespace. Optional: Defaults to false.
 - `host_network` (Boolean) Host networking requested for this pod. Use the host's network namespace. If this option is set, the ports that will be used must be specified.
 - `host_pid` (Boolean) Use the host's pid namespace.
+- `host_users` (Boolean) Use the host's user namespace. Kubernetes treats omission as true. Setting false requires Linux, a compatible container runtime and the UserNamespacesSupport feature gate.
 - `hostname` (String) Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.
 - `image_pull_secrets` (Attributes List) ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. For example, in the case of docker, only DockerConfig type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod List of reference objects. Omit or use null to retain API-populated references. When configured, supply at least one reference; an empty list is not omission. (see [below for nested schema](#nestedatt--spec--template--spec--image_pull_secrets))
 - `init_container` (Block List) List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ (see [below for nested schema](#nestedblock--spec--template--spec--init_container))
@@ -866,6 +867,7 @@ Optional:
 - `allow_privilege_escalation` (Boolean) AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN
 - `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context--capabilities))
 - `privileged` (Boolean) Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.
+- `proc_mount` (String) Proc filesystem mount type. Kubernetes defaults to Default. Unmasked requires Linux and the ProcMountType feature gate; Kubernetes 1.31 and later also require host_users = false.
 - `read_only_root_filesystem` (Boolean) Whether this container has a read-only root filesystem. Default is false.
 - `run_as_group` (String) The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_non_root` (Boolean) Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
@@ -1430,6 +1432,7 @@ Optional:
 - `allow_privilege_escalation` (Boolean) AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN
 - `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context--capabilities))
 - `privileged` (Boolean) Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.
+- `proc_mount` (String) Proc filesystem mount type. Kubernetes defaults to Default. Unmasked requires Linux and the ProcMountType feature gate; Kubernetes 1.31 and later also require host_users = false.
 - `read_only_root_filesystem` (Boolean) Whether this container has a read-only root filesystem. Default is false.
 - `run_as_group` (String) The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_non_root` (Boolean) Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
@@ -1699,6 +1702,7 @@ Optional:
 - `git_repo` (Block List, Max: 1) GitRepo represents a git repository at a particular revision. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--git_repo))
 - `glusterfs` (Block List, Max: 1) Represents a Glusterfs volume that is attached to a host and exposed to the pod. Provisioned by an admin. More info: https://examples.k8s.io/volumes/glusterfs/README.md At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--glusterfs))
 - `host_path` (Block List, Max: 1) Represents a directory on the host. Provisioned by a developer or tester. This is useful for single-node development and testing only! On-host storage is not supported in any way and WILL NOT WORK in a multi-node cluster. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--host_path))
+- `image` (Attributes) Mount an OCI image or artifact as a read-only volume. Requires Kubernetes 1.31 or later, a compatible container runtime and the ImageVolume feature gate, which is disabled by default in Kubernetes 1.33. (see [below for nested schema](#nestedatt--spec--template--spec--volume--image))
 - `iscsi` (Block List, Max: 1) Represents an ISCSI Disk resource that is attached to a kubelet's host machine and then exposed to the pod. Provisioned by an admin. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--iscsi))
 - `local` (Block List, Max: 1) Represents a mounted local storage device such as a disk, partition or directory. Local volumes can only be used as a statically created PersistentVolume. Dynamic provisioning is not supported yet. More info: https://kubernetes.io/docs/concepts/storage/volumes#local At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--local))
 - `name` (String) Volume's name. Must be a DNS_LABEL and unique within the pod. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
@@ -2055,6 +2059,15 @@ Optional:
 
 - `path` (String) Path of the directory on the host. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
 - `type` (String) Type for HostPath volume. Allowed values are "" (default), DirectoryOrCreate, Directory, FileOrCreate, File, Socket, CharDevice and BlockDevice
+
+
+<a id="nestedatt--spec--template--spec--volume--image"></a>
+### Nested Schema for `spec.template.spec.volume.image`
+
+Optional:
+
+- `pull_policy` (String) Policy for pulling the image or artifact: Always, Never or IfNotPresent. Kubernetes defaults to Always for the latest tag, including references without a tag, and IfNotPresent otherwise.
+- `reference` (String) Image or artifact reference. Required for a Pod; workload templates may omit it so admission can supply it.
 
 
 <a id="nestedblock--spec--template--spec--volume--iscsi"></a>

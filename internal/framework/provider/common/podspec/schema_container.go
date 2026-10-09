@@ -169,10 +169,16 @@ func (b builder) podProbeObject() schema.NestedBlockObject {
 }
 
 func (b builder) podContainerSecurityContextObject() schema.NestedBlockObject {
+	procMount := b.str(false, true, updatable, "", stringvalidator.OneOf("Default", "Unmasked"))
+	procMount.Description = "Proc filesystem mount type. Kubernetes defaults to Default. Unmasked requires Linux and the ProcMountType feature gate; Kubernetes 1.31 and later also require host_users = false."
+	if b.replace(immutable) {
+		procMount.PlanModifiers = append(procMount.PlanModifiers, podProcMountRequiresReplace{})
+	}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
 			"allow_privilege_escalation": b.boolean(false, immutable, true),
 			"privileged":                 b.boolean(false, immutable, false),
+			"proc_mount":                 procMount,
 			"read_only_root_filesystem":  b.boolean(false, immutable, false),
 			"run_as_group":               b.str(false, false, immutable, "", podStringRule("nullable-int")),
 			"run_as_user":                b.str(false, false, immutable, "", podStringRule("nullable-int")),

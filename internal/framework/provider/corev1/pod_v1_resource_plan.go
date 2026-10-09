@@ -178,6 +178,8 @@ func podV1SpecRequiresReplacement(prior, planned corev1.PodSpec) bool {
 // podV1SpecValue is the spec as API JSON without null, zero or empty values,
 // which the provider treats as unset.
 func podV1SpecValue(spec corev1.PodSpec) interface{} {
+	spec = *spec.DeepCopy()
+	podspec.NormalizeFeatureDefaults(&spec)
 	data, err := json.Marshal(spec)
 	if err != nil {
 		return nil
@@ -193,6 +195,10 @@ func podV1PruneZero(value interface{}) interface{} {
 	switch v := value.(type) {
 	case map[string]interface{}:
 		for key, child := range v {
+			// Unlike zero-default booleans, hostUsers=false enables isolation.
+			if key == "hostUsers" && child == false {
+				continue
+			}
 			if child = podV1PruneZero(child); child == nil {
 				delete(v, key)
 			} else {

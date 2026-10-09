@@ -45,7 +45,7 @@ Read-Only:
 
 Required:
 
-- `api_group` (String) The API group of the user. The only value possible at the moment is `rbac.authorization.k8s.io`.
+- `api_group` (String) The API group of the role. Defaults in Kubernetes RBAC are rbac.authorization.k8s.io; other groups (for example OpenShift roles.authorization.openshift.io) are allowed.
 - `kind` (String) The kind of resource.
 - `name` (String) The name of the User to bind to.
 

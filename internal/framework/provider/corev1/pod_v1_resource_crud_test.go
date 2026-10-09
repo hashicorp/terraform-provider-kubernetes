@@ -92,6 +92,53 @@ func TestPodFeatureRetention(t *testing.T) {
 			}
 		})
 	}
+	for name, test := range map[string]struct {
+		spec  corev1.PodSpec
+		gated bool
+	}{
+		"set_hostname_as_fqdn": {spec: corev1.PodSpec{SetHostnameAsFQDN: ptr.To(true)}},
+		"app_armor_profile": {spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
+			AppArmorProfile: &corev1.AppArmorProfile{Type: corev1.AppArmorProfileTypeRuntimeDefault},
+		}}},
+		"supplemental_groups_policy": {gated: true, spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
+			SupplementalGroupsPolicy: ptr.To(corev1.SupplementalGroupsPolicyStrict),
+		}}},
+		"se_linux_change_policy": {gated: true, spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
+			SELinuxChangePolicy: ptr.To(corev1.SELinuxChangePolicyRecursive),
+		}}},
+		"windows_options": {spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{
+			WindowsOptions: &corev1.WindowsSecurityContextOptions{RunAsUserName: ptr.To("ContainerUser")},
+		}}}}},
+		"probe termination grace period": {spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app",
+			LivenessProbe: &corev1.Probe{TerminationGracePeriodSeconds: ptr.To[int64](5)},
+		}}}},
+		"lifecycle sleep": {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app",
+			Lifecycle: &corev1.Lifecycle{PreStop: &corev1.LifecycleHandler{Sleep: &corev1.SleepAction{Seconds: 0}}},
+		}}}},
+		"recursive_read_only": {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app",
+			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data", ReadOnly: true, RecursiveReadOnly: ptr.To(corev1.RecursiveReadOnlyEnabled)}},
+		}}}},
+		"affinity label keys": {gated: true, spec: corev1.PodSpec{Affinity: &corev1.Affinity{PodAffinity: &corev1.PodAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{TopologyKey: "topology.kubernetes.io/zone", MatchLabelKeys: []string{"app"}}},
+		}}}},
+	} {
+		t.Run("additional features/"+name, func(t *testing.T) {
+			if podspec.HasGatedFeatures(&test.spec) != test.gated {
+				t.Fatal("incorrect preflight selection")
+			}
+			if err := podspec.CheckPodFeaturePreservation(&test.spec, test.spec.DeepCopy()); err != nil {
+				t.Fatalf("retained feature rejected: %v", err)
+			}
+			actual := corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}}
+			if err := podspec.CheckPodFeaturePreservation(&test.spec, &actual); err == nil || !strings.Contains(err.Error(), name) {
+				t.Fatalf("dropped feature error = %v, want %q", err, name)
+			}
+			// An omitted optional field must not claim admission-added values.
+			if err := podspec.CheckPodFeaturePreservation(&actual, &test.spec); err != nil {
+				t.Fatalf("unconfigured feature rejected: %v", err)
+			}
+		})
+	}
 }
 
 func TestPodV1CreateFeaturePreflight(t *testing.T) {

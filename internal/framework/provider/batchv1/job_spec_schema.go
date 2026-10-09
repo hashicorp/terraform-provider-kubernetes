@@ -45,6 +45,15 @@ func jobSpecBlock(job bool) schema.ListNestedBlock {
 		policy.PlanModifiers = []planmodifier.List{jobPolicyRequiresReplace{}}
 		policy.Description = "Rules for handling pod failures. Rules are evaluated in order; unmatched failures count toward the job's backoff limit. Kubernetes does not allow changing the policy of a Job, so any change replaces it."
 	}
+	managedBy := schema.StringAttribute{
+		Description: "Controller responsible for this Job. Omission uses the Kubernetes Job controller. Requires the JobManagedBy feature gate on Kubernetes versions before 1.35.",
+		Optional:    true, Validators: []validator.String{stringvalidator.LengthBetween(1, 63)},
+	}
+	successPolicy := jobSuccessPolicyAttribute()
+	if job {
+		managedBy.PlanModifiers = []planmodifier.String{jobManagedByRequiresReplace{}}
+		successPolicy.PlanModifiers = []planmodifier.Object{objectplanmodifier.RequiresReplace()}
+	}
 	return schema.ListNestedBlock{
 		Description: "Specification of the job. Exactly one spec block is required.",
 		Validators:  []validator.List{listvalidator.IsRequired(), listvalidator.SizeBetween(1, 1)},
@@ -95,7 +104,14 @@ func jobSpecBlock(job bool) schema.ListNestedBlock {
 					Optional:    true, Computed: true, Default: int64default.StaticInt64(1),
 					Validators: []validator.Int64{int64validator.AtLeast(0)},
 				},
-				"selector": jobSelectorAttribute(),
+				"selector":       jobSelectorAttribute(),
+				"suspend":        schema.BoolAttribute{Optional: true, Description: "Suspend execution of the Job. A suspended Job does not wait for completion. Omission defaults to false."},
+				"managed_by":     managedBy,
+				"success_policy": successPolicy,
+				"pod_replacement_policy": schema.StringAttribute{
+					Optional: true, Description: "When to replace Pods: Failed or TerminatingOrFailed. With pod_failure_policy only Failed is allowed. Requires Kubernetes 1.28 or later with JobPodReplacementPolicy enabled; stable in 1.34.",
+					Validators: []validator.String{stringvalidator.OneOf("Failed", "TerminatingOrFailed")},
+				},
 				"ttl_seconds_after_finished": schema.StringAttribute{
 					Description: "Seconds to retain a finished job. Zero allows immediate deletion; omission disables automatic deletion.",
 					Optional:    true, Computed: true, Default: stringdefault.StaticString(""),
@@ -164,7 +180,7 @@ func podFailurePolicyBlock() schema.ListNestedBlock {
 									Required: true, ElementType: types.Int64Type,
 									Validators: []validator.List{
 										listvalidator.SizeBetween(1, 255),
-										listvalidator.ValueInt64sAre(int64validator.NoneOf(0)),
+										jobFailureExitCodesValidator{},
 									},
 								},
 							}},
@@ -238,5 +254,47 @@ func (jobTTLValidator) ValidateString(_ context.Context, req validator.StringReq
 	if err != nil || value < 0 {
 		resp.Diagnostics.AddAttributeError(req.Path, "Invalid job TTL",
 			fmt.Sprintf("%q must be a non-negative 32-bit integer.", req.ConfigValue.ValueString()))
+	}
+}
+
+func jobSuccessPolicyAttribute() schema.SingleNestedAttribute {
+	return schema.SingleNestedAttribute{
+		Optional:    true,
+		Description: "Success criteria for an Indexed Job. Requires JobSuccessPolicy on Kubernetes versions before 1.33. Changes replace a standalone Job.",
+		Attributes: map[string]schema.Attribute{
+			"rules": schema.ListNestedAttribute{
+				Required: true, Description: "Ordered success rules. At least one rule must succeed.",
+				Validators: []validator.List{listvalidator.SizeBetween(1, 20)},
+				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+					"succeeded_indexes": schema.StringAttribute{Optional: true, Description: "Succeeded indexes or ranges, for example 0,2-4.", Validators: []validator.String{stringvalidator.LengthAtLeast(1)}},
+					"succeeded_count":   schema.Int64Attribute{Optional: true, Description: "Number of succeeded indexes required, optionally restricted by succeeded_indexes.", Validators: []validator.Int64{int64validator.Between(0, 2147483647)}},
+				}},
+			},
+		},
+	}
+}
+
+type jobFailureExitCodesValidator struct{}
+
+func (jobFailureExitCodesValidator) Description(context.Context) string {
+	return "Exit code zero is only valid with NotIn."
+}
+func (v jobFailureExitCodesValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (jobFailureExitCodesValidator) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	var operator types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName("operator"), &operator)...)
+	if operator.IsUnknown() || operator.ValueString() != "In" {
+		return
+	}
+	for _, value := range req.ConfigValue.Elements() {
+		if n, ok := knownInt64(value); ok && n == 0 {
+			resp.Diagnostics.AddAttributeError(req.Path, "Invalid exit code", "Exit code zero cannot be used with the In operator; it is allowed with NotIn.")
+			return
+		}
 	}
 }

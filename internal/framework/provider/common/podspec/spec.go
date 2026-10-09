@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -261,7 +262,7 @@ func podConfigSets(value attr.Value) bool {
 func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key string, computed map[string]bool, diagnostics *diag.Diagnostics) interface{} {
 	// These pointer fields were absent from older state. In particular, an
 	// omitted host_users must never become false through ValueBool().
-	if value.IsNull() && (key == "spec.host_users" || podProcMountPath(key)) {
+	if value.IsNull() && (key == "spec.host_users" || podProcMountPath(key) || podOptionalFeaturePath(key)) {
 		return podSpecOmitted
 	}
 	if value.IsUnknown() {
@@ -280,7 +281,7 @@ func podSpecAPIValue(ctx context.Context, value attr.Value, at path.Path, key st
 		return int(v.ValueInt64())
 	case types.Object:
 		if v.IsNull() {
-			if podContainerResourcesPath(key) || key == "spec.volume.image" {
+			if podContainerResourcesPath(key) || key == "spec.volume.image" || podOptionalFeaturePath(key) {
 				return podSpecOmitted
 			}
 			diagnostics.AddAttributeError(at, "Invalid Pod Template Specification", "A nested pod template spec object cannot be null.")
@@ -407,6 +408,37 @@ func podSpecBlockPaths(object schema.NestedBlockObject, prefix string, blocks ma
 // podSpecStateValue converts SDKv2 flattener output into a value of typ, with
 // prior deciding null versus empty.
 func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prior attr.Value, names []string, key string, b *Built, diagnostics *diag.Diagnostics) attr.Value {
+	// Older state never owned these optional fields. Do not adopt admission
+	// values during upgrade; import has no baseline and records the live value.
+	if podOptionalFeaturePath(key) {
+		if prior != nil && prior.IsNull() {
+			return prior
+		}
+		if raw == nil {
+			// A state-only update can explicitly select a runtime default
+			// without adding its optional pointer to an existing Pod.
+			if value, ok := prior.(types.Bool); ok && key == "spec.set_hostname_as_fqdn" && !value.IsUnknown() && !value.ValueBool() {
+				return value
+			}
+			if value, ok := prior.(types.String); ok && !value.IsUnknown() &&
+				(key == "spec.security_context.supplemental_groups_policy" && value.ValueString() == "Merge" || strings.HasSuffix(key, ".volume_mount.recursive_read_only") && value.ValueString() == "Disabled") {
+				return value
+			}
+			// Kubernetes omits zero-length sets and the default TCP host from
+			// JSON. Keep an explicitly configured empty value equivalent to it.
+			if empty, ok := prior.(types.Set); ok && !empty.IsUnknown() && len(empty.Elements()) == 0 {
+				return empty
+			}
+			if empty, ok := prior.(types.String); ok && strings.HasSuffix(key, ".tcp_socket.host") && !empty.IsUnknown() && empty.ValueString() == "" {
+				return empty
+			}
+			value, err := typ.ValueFromTerraform(ctx, tftypes.NewValue(typ.TerraformType(ctx), nil))
+			if err != nil {
+				diagnostics.AddError("Unable to flatten optional Pod field", err.Error())
+			}
+			return value
+		}
+	}
 	if set, ok := raw.(*sdkschema.Set); ok {
 		raw = set.List()
 	}
@@ -433,6 +465,11 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		var old map[string]attr.Value
 		if object, ok := prior.(types.Object); ok && !object.IsNull() && !object.IsUnknown() {
 			old = object.Attributes()
+		}
+		if !b.template && strings.Contains(key, ".affinity.") {
+			if object, ok := raw.(map[string]interface{}); ok {
+				podRemoveGeneratedAffinityExpressions(object, old)
+			}
 		}
 		for name, childType := range t.AttrTypes {
 			var child interface{}
@@ -734,18 +771,102 @@ func podProcMountPath(key string) bool {
 	return key == "spec.container.security_context.proc_mount" || key == "spec.init_container.security_context.proc_mount"
 }
 
-// NormalizeFeatureDefaults makes effective API defaults compare equal to
-// omission. Callers use a copy; this does not change write payloads or state.
-func NormalizeFeatureDefaults(spec *corev1.PodSpec) {
-	if spec.HostUsers != nil && *spec.HostUsers {
-		spec.HostUsers = nil
+func podOptionalFeaturePath(key string) bool {
+	switch key {
+	case "spec.set_hostname_as_fqdn", "spec.security_context.supplemental_groups_policy", "spec.security_context.se_linux_change_policy":
+		return true
 	}
-	for _, containers := range [][]corev1.Container{spec.Containers, spec.InitContainers} {
-		for i := range containers {
-			if sc := containers[i].SecurityContext; sc != nil && sc.ProcMount != nil && *sc.ProcMount == corev1.DefaultProcMount {
-				sc.ProcMount = nil
+	for _, object := range []string{"spec.security_context.app_armor_profile", "spec.container.security_context.app_armor_profile", "spec.init_container.security_context.app_armor_profile", "spec.container.security_context.windows_options", "spec.init_container.security_context.windows_options"} {
+		if key == object || strings.HasPrefix(key, object+".") {
+			return true
+		}
+	}
+	return strings.Contains(key, ".affinity.") && (strings.HasSuffix(key, ".match_label_keys") || strings.HasSuffix(key, ".mismatch_label_keys")) ||
+		strings.HasSuffix(key, ".volume_mount.recursive_read_only") || strings.HasSuffix(key, ".tcp_socket.host") ||
+		strings.HasSuffix(key, ".liveness_probe.termination_grace_period_seconds") || strings.HasSuffix(key, ".startup_probe.termination_grace_period_seconds") ||
+		strings.HasSuffix(key, ".post_start.sleep") || strings.HasSuffix(key, ".pre_stop.sleep") || strings.HasSuffix(key, ".sleep.seconds")
+}
+
+// Pod admission merges these keys into the selector once at creation. Keep
+// those derived predicates out of Terraform's configured selector; unrelated
+// expressions, including drift, remain visible.
+func podRemoveGeneratedAffinityExpressions(term map[string]interface{}, prior map[string]attr.Value) {
+	keys := map[string]string{}
+	for name, operator := range map[string]string{"match_label_keys": "In", "mismatch_label_keys": "NotIn"} {
+		if prior != nil {
+			if values, ok := prior[name].(types.Set); ok {
+				for _, value := range values.Elements() {
+					if !value.IsNull() && !value.IsUnknown() {
+						keys[value.(types.String).ValueString()] = operator
+					}
+				}
+			}
+		} else if values, ok := term[name].([]string); ok {
+			for _, value := range values {
+				keys[value] = operator
 			}
 		}
+	}
+	if len(keys) == 0 {
+		return
+	}
+	// Only single-value predicates can be generated. Preserve configured
+	// predicates exactly; an Exists predicate does not own every use of its key.
+	configured := map[[3]string]int{}
+	if selectors, ok := prior["label_selector"].(types.List); ok {
+		for _, selector := range selectors.Elements() {
+			if selector.IsNull() || selector.IsUnknown() {
+				continue
+			}
+			if expressions, ok := selector.(types.Object).Attributes()["match_expressions"].(types.List); ok {
+				for _, expression := range expressions.Elements() {
+					if expression.IsNull() || expression.IsUnknown() {
+						continue
+					}
+					attrs := expression.(types.Object).Attributes()
+					values, ok := attrs["values"].(types.Set)
+					if !ok || len(values.Elements()) != 1 {
+						continue
+					}
+					key := attrs["key"].(types.String)
+					operator := attrs["operator"].(types.String)
+					value := values.Elements()[0].(types.String)
+					if !key.IsNull() && !key.IsUnknown() && !operator.IsNull() && !operator.IsUnknown() && !value.IsNull() && !value.IsUnknown() {
+						configured[[3]string{key.ValueString(), operator.ValueString(), value.ValueString()}]++
+					}
+				}
+			}
+		}
+	}
+	selectors, _ := term["label_selector"].([]interface{})
+	for _, entry := range selectors {
+		selector, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		expressions, _ := selector["match_expressions"].([]interface{})
+		selector["match_expressions"] = slices.DeleteFunc(expressions, func(entry interface{}) bool {
+			expression, ok := entry.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			key, _ := expression["key"].(string)
+			operator := fmt.Sprint(expression["operator"])
+			values, ok := expression["values"].(*sdkschema.Set)
+			if keys[key] == "" || keys[key] != operator || !ok || values.Len() != 1 {
+				return false
+			}
+			value, ok := values.List()[0].(string)
+			if !ok {
+				return false
+			}
+			predicate := [3]string{key, operator, value}
+			if configured[predicate] > 0 {
+				configured[predicate]--
+				return false
+			}
+			return true
+		})
 	}
 }
 
@@ -875,4 +996,72 @@ func Satisfies(actual, planned attr.Value) bool {
 
 func podContainerResourcesPath(key string) bool {
 	return key == "spec.container.resources" || key == "spec.init_container.resources"
+}
+
+// TCPHostPatchBaseline retains a newly configured empty TCP probe host in a
+// strategic merge: API structs otherwise serialize it just like an omitted
+// host. Only that adoption uses the live value as the original merge baseline.
+// original must be a copy, since conflict retries read a fresh live object.
+func TCPHostPatchBaseline(ctx context.Context, state tfsdk.State, plan tfsdk.Plan, at path.Path, original, live *corev1.PodSpec) diag.Diagnostics {
+	var prior, planned types.List
+	var diagnostics diag.Diagnostics
+	diagnostics.Append(state.GetAttribute(ctx, at, &prior)...)
+	diagnostics.Append(plan.GetAttribute(ctx, at, &planned)...)
+	if diagnostics.HasError() {
+		return diagnostics
+	}
+	host := func(container types.Object, probe string) types.String {
+		p, _ := singleKnownObject(container.Attributes()[probe])
+		socket, _ := singleKnownObject(p.Attributes()["tcp_socket"])
+		value, ok := socket.Attributes()["host"].(types.String)
+		if !ok {
+			return types.StringNull()
+		}
+		return value
+	}
+	for _, group := range []struct {
+		name     string
+		original *[]corev1.Container
+		live     []corev1.Container
+	}{{"container", &original.Containers, live.Containers}, {"init_container", &original.InitContainers, live.InitContainers}} {
+		before := map[string]types.Object{}
+		for _, value := range podSpecBlock(prior, group.name) {
+			object := value.(types.Object)
+			before[object.Attributes()["name"].(types.String).ValueString()] = object
+		}
+		for _, value := range podSpecBlock(planned, group.name) {
+			object := value.(types.Object)
+			name := object.Attributes()["name"].(types.String).ValueString()
+			liveIndex := slices.IndexFunc(group.live, func(c corev1.Container) bool { return c.Name == name })
+			if liveIndex < 0 {
+				continue
+			}
+			liveContainer := &group.live[liveIndex]
+			for index, probe := range []string{"liveness_probe", "readiness_probe", "startup_probe"} {
+				want := host(object, probe)
+				if want.IsNull() || want.IsUnknown() || want.ValueString() != "" || !host(before[name], probe).IsNull() {
+					continue
+				}
+				liveProbe := []*corev1.Probe{liveContainer.LivenessProbe, liveContainer.ReadinessProbe, liveContainer.StartupProbe}[index]
+				if liveProbe == nil || liveProbe.TCPSocket == nil || liveProbe.TCPSocket.Host == "" {
+					continue
+				}
+				originalIndex := slices.IndexFunc(*group.original, func(c corev1.Container) bool { return c.Name == name })
+				if originalIndex < 0 {
+					*group.original = append(*group.original, corev1.Container{Name: name})
+					originalIndex = len(*group.original) - 1
+				}
+				container := &(*group.original)[originalIndex]
+				probePointer := []**corev1.Probe{&container.LivenessProbe, &container.ReadinessProbe, &container.StartupProbe}[index]
+				if *probePointer == nil {
+					*probePointer = &corev1.Probe{}
+				}
+				if (*probePointer).TCPSocket == nil {
+					(*probePointer).TCPSocket = &corev1.TCPSocketAction{}
+				}
+				(*probePointer).TCPSocket.Host = liveProbe.TCPSocket.Host
+			}
+		}
+	}
+	return diagnostics
 }

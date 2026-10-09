@@ -241,7 +241,10 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		updated = live
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, live.ObjectMeta)
 		if desired != nil {
-			from, to := statefulSetPatchSpecs(*original, *desired, live.Spec)
+			from, to := statefulSetPatchSpecs(*original.DeepCopy(), *desired, live.Spec)
+			if diags := podspec.TCPHostPatchBaseline(ctx, req.State, req.Plan, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"), &from.Template.Spec, &live.Spec.Template.Spec); diags.HasError() {
+				return fmt.Errorf("unable to prepare TCP probe host update: %v", diags)
+			}
 			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.StatefulSet{})
 			if err != nil {
 				return err
@@ -368,6 +371,7 @@ func setStatefulSetState(ctx context.Context, state *tfsdk.State, model Stateful
 			"pod_management_policy":  in.PodManagementPolicy,
 			"replicas":               in.Replicas,
 			"revision_history_limit": in.RevisionHistoryLimit,
+			"ordinals":               in.Ordinals,
 			"selector":               selector,
 			"service_name":           in.ServiceName,
 			"template":               template,

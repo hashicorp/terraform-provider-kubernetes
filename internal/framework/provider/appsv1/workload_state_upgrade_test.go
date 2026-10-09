@@ -66,6 +66,12 @@ func TestWorkloadSingletonStateMigration(t *testing.T) {
 				if !moved.TargetState.Raw.Equal(upgraded.State.Raw) {
 					t.Fatal("alias move and same-type upgrade differ")
 				}
+				if tc.name == "statefulset" {
+					var ordinals types.Object
+					if d := upgraded.State.GetAttribute(ctx, path.Root("spec").AtListIndex(0).AtName("ordinals"), &ordinals); d.HasError() || !ordinals.IsNull() {
+						t.Fatalf("legacy ordinals must stay null: %s, %v", ordinals, d)
+					}
+				}
 				podPath := path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec")
 				var prior types.List
 				if d := upgraded.State.GetAttribute(ctx, podPath, &prior); d.HasError() {

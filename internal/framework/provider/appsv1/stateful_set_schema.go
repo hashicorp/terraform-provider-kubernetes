@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -97,9 +98,8 @@ func buildStatefulSetSchema(ctx context.Context, _ resource.SchemaRequest, resp 
 							Computed:    true,
 							PlanModifiers: []planmodifier.Int64{
 								int64planmodifier.UseStateForUnknown(),
-								int64planmodifier.RequiresReplace(),
 							},
-							Validators: []validator.Int64{positiveInt64Validator{}},
+							Validators: []validator.Int64{int64validator.Between(0, 2147483647)},
 						},
 						"service_name": schema.StringAttribute{
 							Description:   "The name of the service that governs this StatefulSet. This service must exist before the StatefulSet, and is responsible for the network identity of the set.",
@@ -114,6 +114,13 @@ func buildStatefulSetSchema(ctx context.Context, _ resource.SchemaRequest, resp 
 							Validators:  []validator.Int64{nonNegativeInt64Validator{}},
 						},
 						"persistent_volume_claim_retention_policy": persistentVolumeClaimRetentionPolicyAttribute(),
+						"ordinals": schema.SingleNestedAttribute{
+							Description: "Ordinal numbering for StatefulSet pods. Kubernetes defaults the start ordinal to zero. Requires Kubernetes 1.31 or later.",
+							Optional:    true,
+							Attributes: map[string]schema.Attribute{
+								"start": schema.Int64Attribute{Required: true, Description: "The first pod ordinal. Changing it changes the pods managed by this StatefulSet.", Validators: []validator.Int64{int64validator.Between(0, 2147483647)}},
+							},
+						},
 					},
 					Blocks: map[string]schema.Block{
 						"selector":              labelSelectorBlock(true, "A label query over pods that should match the replica count. It must match the pod template's labels."),
@@ -350,21 +357,6 @@ func (v nullableIntStringValidator) ValidateString(_ context.Context, req valida
 	}
 	if _, err := strconv.ParseInt(value, 10, 64); err != nil {
 		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(req.Path, err.Error(), req.ConfigValue.String()))
-	}
-}
-
-type positiveInt64Validator struct{}
-
-func (v positiveInt64Validator) Description(context.Context) string { return "must be greater than 0" }
-func (v positiveInt64Validator) MarkdownDescription(context.Context) string {
-	return v.Description(context.Background())
-}
-func (v positiveInt64Validator) ValidateInt64(_ context.Context, req validator.Int64Request, resp *validator.Int64Response) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-	if req.ConfigValue.ValueInt64() <= 0 {
-		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(req.Path, "must be greater than 0", req.ConfigValue.String()))
 	}
 }
 

@@ -5,10 +5,13 @@ package kubernetes
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
@@ -82,6 +85,160 @@ func TestFrameworkPodSpecFeatures(t *testing.T) {
 			t.Fatal("SDKv2 state must not contain Framework-only image source")
 		}
 	}
+}
+
+func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
+	t.Run("unset fields preserve SDK output", func(t *testing.T) {
+		input := corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{}, Affinity: &corev1.Affinity{},
+			Containers: []corev1.Container{{
+				SecurityContext: &corev1.SecurityContext{}, LivenessProbe: &corev1.Probe{},
+				Lifecycle: &corev1.Lifecycle{PreStop: &corev1.LifecycleHandler{}},
+			}},
+		}
+		legacy, err := flattenPodSpec(input, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		framework, err := FlattenPodSpec(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(legacy, framework); diff != "" {
+			t.Fatalf("omitted fields changed flattening (-SDKv2 +Framework):\n%s", diff)
+		}
+	})
+
+	block := func(value map[string]interface{}) []interface{} { return []interface{}{value} }
+	term := map[string]interface{}{
+		"topology_key":        "kubernetes.io/hostname",
+		"match_label_keys":    schema.NewSet(schema.HashString, []interface{}{"pod-template-hash"}),
+		"mismatch_label_keys": schema.NewSet(schema.HashString, []interface{}{"tenant"}),
+	}
+	affinity := block(map[string]interface{}{
+		"required_during_scheduling_ignored_during_execution": block(term),
+		"preferred_during_scheduling_ignored_during_execution": block(map[string]interface{}{
+			"weight": 10, "pod_affinity_term": block(term),
+		}),
+	})
+	container := map[string]interface{}{
+		"name": "app",
+		"security_context": block(map[string]interface{}{
+			"app_armor_profile": map[string]interface{}{"type": "Localhost", "localhost_profile": "profiles/app"},
+		}),
+		"liveness_probe": block(map[string]interface{}{
+			"termination_grace_period_seconds": 5,
+			"tcp_socket":                       block(map[string]interface{}{"port": "8080", "host": "127.0.0.1"}),
+		}),
+		"startup_probe": block(map[string]interface{}{
+			"termination_grace_period_seconds": 6,
+			"tcp_socket":                       block(map[string]interface{}{"port": "8080", "host": "127.0.0.2"}),
+		}),
+		"lifecycle": block(map[string]interface{}{
+			"post_start": block(map[string]interface{}{"sleep": map[string]interface{}{"seconds": 2}}),
+			"pre_stop":   block(map[string]interface{}{"sleep": map[string]interface{}{"seconds": 0}}),
+		}),
+		"volume_mount": block(map[string]interface{}{
+			"name": "data", "mount_path": "/data", "read_only": true, "recursive_read_only": "Enabled",
+		}),
+	}
+	raw := block(map[string]interface{}{
+		"set_hostname_as_fqdn": false,
+		"security_context": block(map[string]interface{}{
+			"app_armor_profile":          map[string]interface{}{"type": "RuntimeDefault"},
+			"supplemental_groups_policy": "Strict", "se_linux_change_policy": "Recursive",
+		}),
+		"affinity":  block(map[string]interface{}{"pod_affinity": affinity, "pod_anti_affinity": affinity}),
+		"container": block(container), "init_container": block(container),
+	})
+	spec, err := ExpandPodSpec(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.SetHostnameAsFQDN == nil || *spec.SetHostnameAsFQDN {
+		t.Fatal("explicit set_hostname_as_fqdn = false was lost")
+	}
+	wantContext := &corev1.PodSecurityContext{
+		AppArmorProfile:          &corev1.AppArmorProfile{Type: corev1.AppArmorProfileTypeRuntimeDefault},
+		SupplementalGroupsPolicy: ptr.To(corev1.SupplementalGroupsPolicyStrict),
+		SELinuxChangePolicy:      ptr.To(corev1.SELinuxChangePolicyRecursive),
+	}
+	if diff := cmp.Diff(wantContext, spec.SecurityContext); diff != "" {
+		t.Fatalf("Pod security context (-want +got):\n%s", diff)
+	}
+	for _, c := range append(spec.Containers, spec.InitContainers...) {
+		if c.SecurityContext.AppArmorProfile.LocalhostProfile == nil || *c.SecurityContext.AppArmorProfile.LocalhostProfile != "profiles/app" ||
+			c.LivenessProbe.TerminationGracePeriodSeconds == nil || *c.LivenessProbe.TerminationGracePeriodSeconds != 5 ||
+			c.StartupProbe.TerminationGracePeriodSeconds == nil || *c.StartupProbe.TerminationGracePeriodSeconds != 6 ||
+			c.LivenessProbe.TCPSocket.Host != "127.0.0.1" || c.StartupProbe.TCPSocket.Host != "127.0.0.2" ||
+			c.Lifecycle.PostStart.Sleep == nil || c.Lifecycle.PostStart.Sleep.Seconds != 2 ||
+			c.Lifecycle.PreStop.Sleep == nil || c.Lifecycle.PreStop.Sleep.Seconds != 0 ||
+			c.VolumeMounts[0].RecursiveReadOnly == nil || *c.VolumeMounts[0].RecursiveReadOnly != corev1.RecursiveReadOnlyEnabled {
+			t.Fatalf("container fields were not expanded: %#v", c)
+		}
+	}
+	for _, terms := range [][]corev1.PodAffinityTerm{
+		spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		{spec.Affinity.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].PodAffinityTerm},
+		spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution,
+		{spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].PodAffinityTerm},
+	} {
+		if diff := cmp.Diff([]string{"pod-template-hash"}, terms[0].MatchLabelKeys); diff != "" {
+			t.Fatal(diff)
+		}
+		if diff := cmp.Diff([]string{"tenant"}, terms[0].MismatchLabelKeys); diff != "" {
+			t.Fatal(diff)
+		}
+	}
+	// A filtered token mount must not shift the recursive-read-only value onto another mount.
+	spec.Containers[0].VolumeMounts = append([]corev1.VolumeMount{{Name: "kube-api-access-test", MountPath: "/token"}}, spec.Containers[0].VolumeMounts...)
+	flat, err := FlattenPodSpec(*spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded := fmt.Sprintf("%#v", flat)
+	legacy, err := flattenPodSpec(*spec.DeepCopy(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyFields := fmt.Sprintf("%#v", legacy)
+	for _, field := range []string{"set_hostname_as_fqdn", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys"} {
+		key := `"` + field + `":`
+		if !strings.Contains(encoded, key) || strings.Contains(legacyFields, key) {
+			t.Fatalf("%s must be present only in Framework flattening", field)
+		}
+	}
+	flatContainer := flat[0].(map[string]interface{})["container"].([]interface{})[0].(map[string]interface{})
+	mounts := flatContainer["volume_mount"].([]interface{})
+	if len(mounts) != 1 || mounts[0].(map[string]interface{})["recursive_read_only"] != "Enabled" {
+		t.Fatalf("recursive read-only mount lost after filtering: %#v", mounts)
+	}
+
+	t.Run("Windows explicit false and omitted fields", func(t *testing.T) {
+		windows, err := ExpandPodSpec(block(map[string]interface{}{"container": block(map[string]interface{}{
+			"name": "windows", "security_context": block(map[string]interface{}{
+				"windows_options": map[string]interface{}{"host_process": false, "run_as_username": "ContainerUser"},
+			}),
+		})}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		options := windows.Containers[0].SecurityContext.WindowsOptions
+		if options.HostProcess == nil || *options.HostProcess || options.GMSACredentialSpec != nil || options.RunAsUserName == nil || *options.RunAsUserName != "ContainerUser" {
+			t.Fatalf("Windows optional values lost: %#v", options)
+		}
+		flat, err := FlattenPodSpec(*windows)
+		if err != nil {
+			t.Fatal(err)
+		}
+		value := flat[0].(map[string]interface{})["container"].([]interface{})[0].(map[string]interface{})["security_context"].([]interface{})[0].(map[string]interface{})
+		if diff := cmp.Diff(map[string]interface{}{"host_process": false, "run_as_username": "ContainerUser"}, value["windows_options"]); diff != "" {
+			t.Fatal(diff)
+		}
+		if _, exists := value["app_armor_profile"]; exists {
+			t.Fatal("omitted AppArmor profile must remain absent")
+		}
+	})
 }
 
 func TestFlattenTolerations(t *testing.T) {

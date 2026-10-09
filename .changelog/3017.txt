@@ -69,3 +69,31 @@
 ```release-note:enhancement
 `resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add the `volume.image` object argument for mounting OCI images or artifacts as read-only volumes on supported clusters.
 ```
+
+```release-note:enhancement
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add Pod `set_hostname_as_fqdn`, affinity label keys, AppArmor profiles, container Windows options, supplemental group and SELinux policies, probe termination grace periods, lifecycle sleep, TCP probe host, and recursive read-only mounts. Availability depends on Kubernetes version and node support.
+```
+
+```release-note:enhancement
+`resource/kubernetes_stateful_set_v1`: Add the `ordinals` object argument to configure the starting Pod ordinal.
+```
+
+```release-note:enhancement
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add Job `suspend`, `success_policy`, `pod_replacement_policy`, and `managed_by`. A suspended standalone Job skips waiting for completion.
+```
+
+```release-note:bug
+`resource/kubernetes_stateful_set_v1`: Update `revision_history_limit` in place and accept zero.
+```
+
+```release-note:bug
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Accept SCTP container ports, downward API volume items that use only `resource_field_ref`, and huge page sizes beyond 2Mi and 1Gi in `empty_dir.medium`.
+```
+
+```release-note:bug
+`resource/kubernetes_daemon_set_v1`: Accept `"0%"` for rolling-update limits when the other limit permits progress.
+```
+
+```release-note:bug
+`resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Accept exit code zero with the `NotIn` operator in Pod failure policy rules.
+```

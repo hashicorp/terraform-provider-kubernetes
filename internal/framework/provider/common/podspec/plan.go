@@ -304,26 +304,48 @@ func (podProcMountRequiresReplace) PlanModifyString(_ context.Context, req planm
 	resp.RequiresReplace = req.PlanValue.IsUnknown() || before != after
 }
 
-type podImageRequiresReplace struct{}
+type podOptionalObjectRequiresReplace struct{}
 
-func (podImageRequiresReplace) Description(context.Context) string {
-	return "adding, removing or changing an image volume requires replacement"
+func (podOptionalObjectRequiresReplace) Description(context.Context) string {
+	return "adding, removing or changing this object requires replacement"
 }
-func (m podImageRequiresReplace) MarkdownDescription(ctx context.Context) string {
+func (m podOptionalObjectRequiresReplace) MarkdownDescription(ctx context.Context) string {
 	return m.Description(ctx)
 }
-func (podImageRequiresReplace) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+func (podOptionalObjectRequiresReplace) PlanModifyObject(ctx context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
 	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
 		return
 	}
 	configured, err := req.ConfigValue.ToTerraformValue(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to compare image volume", err.Error())
+		resp.Diagnostics.AddError("Unable to compare optional object", err.Error())
 		return
 	}
-	// The API supplies an omitted pull policy; its unknown planned value
-	// alone does not change the image source.
+	// An omitted computed child alone does not change the configured object.
 	resp.RequiresReplace = !configured.IsFullyKnown() || !Satisfies(req.StateValue, req.PlanValue)
+}
+
+// Unlike an API-computed field, omitting an optional policy restores its default.
+type podDefaultedStringRequiresReplace struct{ fallback string }
+
+func (m podDefaultedStringRequiresReplace) Description(context.Context) string {
+	return "changes require replacement; omission means " + m.fallback
+}
+func (m podDefaultedStringRequiresReplace) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (m podDefaultedStringRequiresReplace) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
+		return
+	}
+	before, after := req.StateValue.ValueString(), req.PlanValue.ValueString()
+	if req.StateValue.IsNull() {
+		before = m.fallback
+	}
+	if req.PlanValue.IsNull() {
+		after = m.fallback
+	}
+	resp.RequiresReplace = req.PlanValue.IsUnknown() || before != after
 }
 
 // Removed list elements do not run their leaf plan modifiers. Carry immutable
@@ -339,17 +361,18 @@ type podListRequiresReplace struct{ planmodifier.List }
 type podMapRequiresReplace struct{ planmodifier.Map }
 type podSetRequiresReplace struct{ planmodifier.Set }
 
-func (podStringRequiresReplace) podRequiresReplacement()        {}
-func (podBoolRequiresReplace) podRequiresReplacement()          {}
-func (podInt64RequiresReplace) podRequiresReplacement()         {}
-func (podListRequiresReplace) podRequiresReplacement()          {}
-func (podMapRequiresReplace) podRequiresReplacement()           {}
-func (podSetRequiresReplace) podRequiresReplacement()           {}
-func (podListStructureRequiresReplace) podRequiresReplacement() {}
-func (podResourcesRequiresReplace) podRequiresReplacement()     {}
-func (podHostUsersRequiresReplace) podRequiresReplacement()     {}
-func (podProcMountRequiresReplace) podRequiresReplacement()     {}
-func (podImageRequiresReplace) podRequiresReplacement()         {}
+func (podStringRequiresReplace) podRequiresReplacement()          {}
+func (podBoolRequiresReplace) podRequiresReplacement()            {}
+func (podInt64RequiresReplace) podRequiresReplacement()           {}
+func (podListRequiresReplace) podRequiresReplacement()            {}
+func (podMapRequiresReplace) podRequiresReplacement()             {}
+func (podSetRequiresReplace) podRequiresReplacement()             {}
+func (podListStructureRequiresReplace) podRequiresReplacement()   {}
+func (podResourcesRequiresReplace) podRequiresReplacement()       {}
+func (podHostUsersRequiresReplace) podRequiresReplacement()       {}
+func (podProcMountRequiresReplace) podRequiresReplacement()       {}
+func (podOptionalObjectRequiresReplace) podRequiresReplacement()  {}
+func (podDefaultedStringRequiresReplace) podRequiresReplacement() {}
 
 func (m podStringRequiresReplace) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
 	if !podZeroEquivalent(req.StateValue, req.PlanValue) {

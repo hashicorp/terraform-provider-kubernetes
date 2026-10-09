@@ -374,7 +374,7 @@ Changed arguments: `spec.job_template.spec.selector`, `spec.job_template.spec.se
 
 ## Additional Pod spec features
 
-The six Framework workload resources also support three optional Kubernetes features:
+The six Framework workload resources share the following optional Kubernetes features. Their availability depends on the Kubernetes version, enabled feature gates, and node support:
 
 - `host_users = false` runs a Pod in an isolated Linux user namespace. The cluster and nodes must support [user namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/), including the required kernel and container runtime capabilities. Omitting the argument keeps the existing behavior.
 - Container and init container `security_context.proc_mount` accepts `Default` or `Unmasked`. `Unmasked` requires `host_users = false` and cluster support for the [ProcMountType feature](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#managing-access-to-the-proc-filesystem).
@@ -413,9 +413,70 @@ resource "kubernetes_pod_v1" "artifact" {
 
 `image` is an object argument inside the existing `volume` block. Its `reference` is required for a standalone Pod; workload templates may leave it unset for admission to supply. Omitting `pull_policy` lets Kubernetes select its default. Image volumes are Pod volumes and are not supported by PersistentVolume resources.
 
-For isolated user namespaces, `Unmasked` proc mounts and image volumes, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. This check does not verify node or container runtime support.
+Additional settings are available at the Pod or container level:
+
+| Setting | Kubernetes requirements and behavior |
+| --- | --- |
+| Pod `set_hostname_as_fqdn` | Stable since 1.22. Sets the Linux hostname to the Pod's FQDN, which must fit the kernel's 64-byte limit. |
+| Pod and container `security_context.app_armor_profile` | Stable since 1.31. Use `RuntimeDefault`, `Unconfined`, or `Localhost`; a local profile must already be loaded on the node. A container setting overrides the Pod setting. |
+| Pod `security_context.supplemental_groups_policy` | Beta and enabled by default in 1.33; stable in 1.35. `Strict` requires node support and prevents supplementary groups from the image being merged into the process's groups. |
+| Pod `security_context.se_linux_change_policy` | Beta and enabled by default in 1.33; stable in 1.36. Accepts `Recursive` or `MountOption`; mount-based labeling also depends on the volume driver and SELinux mount feature support. |
+| Container `security_context.windows_options` | Windows-specific security settings, including `host_process` (stable since 1.26). Omitted options inherit the Pod settings. The existing Pod-level `windows_options` remains a block. |
+| Pod affinity and anti-affinity `match_label_keys`, `mismatch_label_keys` | Beta and enabled by default in 1.31; stable in 1.33. Kubernetes derives selector requirements from the Pod's labels at creation; later label edits do not update those requirements. |
+| Liveness and startup probe `termination_grace_period_seconds` | Stable since 1.28. Overrides the Pod grace period for that probe. Omit it to inherit the Pod setting; readiness probes do not support it. TCP probes also accept `tcp_socket.host`. |
+| Lifecycle `post_start.sleep`, `pre_stop.sleep` | Beta and enabled by default in 1.30; stable in 1.34. A duration of zero additionally requires 1.34 or the `PodLifecycleSleepActionAllowZero` gate. |
+| Volume mount `recursive_read_only` | Beta and enabled by default in 1.31; stable in 1.33. `Enabled` and `IfPossible` require `read_only = true`, no mount propagation, and compatible Linux kernel and runtime support. |
+
+See the Kubernetes documentation for [security contexts](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/), [Pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#matchlabelkeys), [probe grace periods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#probe-level-terminationgraceperiodseconds), and [lifecycle hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/).
+
+New singular settings use object arguments. For example, inside a Linux container block:
+
+```terraform
+security_context {
+  app_armor_profile = {
+    type = "RuntimeDefault"
+  }
+}
+lifecycle {
+  pre_stop {
+    sleep = { seconds = 5 }
+  }
+}
+```
+
+For a Windows container, use `security_context { windows_options = { run_as_username = "ContainerUser" } }` instead. Existing parent blocks keep their syntax.
+
+For isolated user namespaces, `Unmasked` proc mounts, image volumes, supplemental group and SELinux policies, affinity label keys, lifecycle sleep, and recursive read-only mounts, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. The provider also checks the write response; neither check verifies node or container runtime support.
 
 Changes to these immutable settings replace standalone Pods and Jobs. Controller template changes may roll out Pods; CronJob changes apply to new Jobs. Existing state without these attributes is upgraded automatically, and leaving them unconfigured does not enable the features.
+
+## Additional controller settings
+
+StatefulSets accept `spec.ordinals = { start = 10 }`, stable in Kubernetes 1.31. Changing `start` updates the StatefulSet in place but changes its Pod ordinal range, so the controller can remove and create Pods. The `revision_history_limit` can also be updated in place and accepts zero.
+
+Jobs and CronJob job templates support these optional settings:
+
+| Setting | Kubernetes requirements and behavior |
+| --- | --- |
+| `suspend` | Stable since 1.24. Suspends Job execution. A suspended standalone Job skips the provider's completion wait; resuming it enables the normal wait again. CronJob `spec.suspend` still controls scheduling future Jobs separately. |
+| `success_policy` | Stable since 1.33; requires `completion_mode = "Indexed"`. Ordered rules specify which successful indexes or how many successes allow the Job to finish early. |
+| `pod_replacement_policy` | Stable since 1.34. Choose `Failed` or `TerminatingOrFailed`; a Job with `pod_failure_policy` requires `Failed`. |
+| `managed_by` | Stable since 1.35. A custom value delegates the Job to an external controller, which must be installed separately. Omission uses the Kubernetes Job controller. |
+
+Earlier releases may support these settings with the corresponding feature gates; releases that predate a field cannot use it. See [Kubernetes Jobs](https://kubernetes.io/docs/concepts/workloads/controllers/job/) for controller behavior and requirements. For example, in a Job's `spec` block or a CronJob's `job_template.spec` block:
+
+```terraform
+completion_mode = "Indexed"
+completions     = 3
+success_policy = {
+  rules = [{
+    succeeded_indexes = "0-2"
+    succeeded_count   = 2
+  }]
+}
+```
+
+Changing a standalone Job's `success_policy` or `managed_by` replaces the Job. Changing these fields in a CronJob updates its template for future Jobs.
 
 ## Moving from the deprecated resource types
 

@@ -5,6 +5,8 @@ package batchv1
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"slices"
 	"strconv"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	batchapi "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,6 +64,16 @@ func expandJobSpec(ctx context.Context, value types.List, job bool, config *tfsd
 		out.Parallelism = ptr.To(int32(n))
 	}
 	out.PodFailurePolicy = expandPodFailurePolicy(a["pod_failure_policy"])
+	if b, ok := a["suspend"].(types.Bool); ok && !b.IsNull() && !b.IsUnknown() {
+		out.Suspend = ptr.To(b.ValueBool())
+	}
+	if v, ok := knownString(a["managed_by"]); ok {
+		out.ManagedBy = ptr.To(v)
+	}
+	if v, ok := knownString(a["pod_replacement_policy"]); ok {
+		out.PodReplacementPolicy = ptr.To(batchapi.PodReplacementPolicy(v))
+	}
+	out.SuccessPolicy = expandJobSuccessPolicy(a["success_policy"])
 	out.Selector = expandLabelSelector(a["selector"])
 	if s, ok := knownString(a["ttl_seconds_after_finished"]); ok && s != "" {
 		ttl, err := strconv.ParseInt(s, 10, 32)
@@ -199,6 +212,10 @@ func flattenJobSpec(ctx context.Context, in batchapi.JobSpec, prior types.List, 
 		templateLabels = jobGeneratedLabels
 	}
 	template, diags := flattenPodTemplate(ctx, in.Template, previous["template"], typ.AttrTypes["template"].(types.ListType), job, refresh, templateLabels, at.AtListIndex(0).AtName("template"))
+	successPolicy := types.ObjectNull(typ.AttrTypes["success_policy"].(types.ObjectType).AttrTypes)
+	if prior := previous["success_policy"]; prior == nil || !prior.IsNull() {
+		successPolicy = flattenJobSuccessPolicy(in.SuccessPolicy, typ.AttrTypes["success_policy"].(types.ObjectType))
+	}
 	attributes := map[string]attr.Value{
 		"active_deadline_seconds":    types.Int64Value(ptr.Deref(in.ActiveDeadlineSeconds, 0)),
 		"backoff_limit":              types.Int64Value(int64(ptr.Deref(in.BackoffLimit, 0))),
@@ -206,6 +223,10 @@ func flattenJobSpec(ctx context.Context, in batchapi.JobSpec, prior types.List, 
 		"completion_mode":            types.StringValue(completionMode),
 		"completions":                types.Int64Value(int64(ptr.Deref(in.Completions, 0))),
 		"manual_selector":            types.BoolValue(ptr.Deref(in.ManualSelector, false)),
+		"suspend":                    jobSuspendValue(in.Suspend, previous["suspend"]),
+		"managed_by":                 jobOptionalString(in.ManagedBy, previous["managed_by"], "kubernetes.io/job-controller"),
+		"pod_replacement_policy":     jobReplacementPolicyValue(in, previous["pod_replacement_policy"]),
+		"success_policy":             successPolicy,
 		"max_failed_indexes":         types.Int64Value(int64(ptr.Deref(in.MaxFailedIndexes, 0))),
 		"parallelism":                types.Int64Value(int64(ptr.Deref(in.Parallelism, 0))),
 		"pod_failure_policy":         flattenPodFailurePolicy(in.PodFailurePolicy, typ.AttrTypes["pod_failure_policy"].(types.ListType)),
@@ -456,6 +477,100 @@ func isEmptyCollection(value attr.Value) bool {
 func objectAttribute(value attr.Value, name string) attr.Value {
 	if object, ok := value.(types.Object); ok && !object.IsNull() && !object.IsUnknown() {
 		return object.Attributes()[name]
+	}
+	return nil
+}
+
+func expandJobSuccessPolicy(value attr.Value) *batchapi.SuccessPolicy {
+	policy, ok := value.(types.Object)
+	if !ok || policy.IsNull() || policy.IsUnknown() {
+		return nil
+	}
+	out := &batchapi.SuccessPolicy{}
+	for _, value := range knownElements(policy.Attributes()["rules"]) {
+		rule, ok := value.(types.Object)
+		if !ok || rule.IsNull() || rule.IsUnknown() {
+			continue
+		}
+		var r batchapi.SuccessPolicyRule
+		if n, ok := knownInt64(rule.Attributes()["succeeded_count"]); ok {
+			r.SucceededCount = ptr.To(int32(n))
+		}
+		if s, ok := knownString(rule.Attributes()["succeeded_indexes"]); ok {
+			r.SucceededIndexes = ptr.To(s)
+		}
+		out.Rules = append(out.Rules, r)
+	}
+	return out
+}
+
+func flattenJobSuccessPolicy(in *batchapi.SuccessPolicy, typ types.ObjectType) types.Object {
+	if in == nil {
+		return types.ObjectNull(typ.AttrTypes)
+	}
+	ruleType := typ.AttrTypes["rules"].(types.ListType).ElemType.(types.ObjectType)
+	rules := make([]attr.Value, len(in.Rules))
+	for i, r := range in.Rules {
+		count, indexes := types.Int64Null(), types.StringNull()
+		if r.SucceededCount != nil {
+			count = types.Int64Value(int64(*r.SucceededCount))
+		}
+		if r.SucceededIndexes != nil {
+			indexes = types.StringValue(*r.SucceededIndexes)
+		}
+		rules[i] = types.ObjectValueMust(ruleType.AttrTypes, map[string]attr.Value{"succeeded_count": count, "succeeded_indexes": indexes})
+	}
+	return types.ObjectValueMust(typ.AttrTypes, map[string]attr.Value{"rules": types.ListValueMust(ruleType, rules)})
+}
+
+func jobSuspendValue(value *bool, prior attr.Value) types.Bool {
+	if (prior != nil && prior.IsNull()) || (!ptr.Deref(value, false) && prior == nil) {
+		return types.BoolNull()
+	}
+	return types.BoolValue(ptr.Deref(value, false))
+}
+
+// Previously omitted fields stay unmanaged after upgrade, including values
+// admission supplied. Imports and configured fields record the API value.
+func jobOptionalString(value *string, prior attr.Value, fallback string) types.String {
+	actual := ptr.Deref(value, fallback)
+	if (prior != nil && prior.IsNull()) || (actual == fallback && prior == nil) {
+		return types.StringNull()
+	}
+	return types.StringValue(actual)
+}
+
+func jobReplacementPolicyValue(in batchapi.JobSpec, prior attr.Value) types.String {
+	fallback := string(batchapi.TerminatingOrFailed)
+	if in.PodFailurePolicy != nil {
+		fallback = string(batchapi.Failed)
+	}
+	var value *string
+	if in.PodReplacementPolicy != nil {
+		value = ptr.To(string(*in.PodReplacementPolicy))
+	}
+	return jobOptionalString(value, prior, fallback)
+}
+
+func hasJobFeatures(spec *batchapi.JobSpec) bool {
+	return spec.Suspend != nil || spec.SuccessPolicy != nil || spec.ManagedBy != nil || spec.PodReplacementPolicy != nil || podspec.HasGatedFeatures(&spec.Template.Spec)
+}
+
+func checkJobFeatures(want, got *batchapi.JobSpec) error {
+	if err := podspec.CheckPodFeaturePreservation(&want.Template.Spec, &got.Template.Spec); err != nil {
+		return err
+	}
+	if want.SuccessPolicy != nil && !reflect.DeepEqual(want.SuccessPolicy, got.SuccessPolicy) {
+		return fmt.Errorf("Kubernetes did not preserve success_policy; verify JobSuccessPolicy support and admission policies")
+	}
+	if want.ManagedBy != nil && ptr.Deref(got.ManagedBy, "kubernetes.io/job-controller") != *want.ManagedBy {
+		return fmt.Errorf("Kubernetes did not preserve managed_by; verify JobManagedBy support and admission policies")
+	}
+	if want.PodReplacementPolicy != nil && !reflect.DeepEqual(want.PodReplacementPolicy, got.PodReplacementPolicy) {
+		return fmt.Errorf("Kubernetes did not preserve pod_replacement_policy; verify JobPodReplacementPolicy support and admission policies")
+	}
+	if want.Suspend != nil && *want.Suspend != ptr.Deref(got.Suspend, false) {
+		return fmt.Errorf("Kubernetes did not preserve suspend; verify admission policies")
 	}
 	return nil
 }

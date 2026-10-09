@@ -805,6 +805,9 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	if v, ok := in["hostname"]; ok {
 		obj.Hostname = v.(string)
 	}
+	if v, ok := in["set_hostname_as_fqdn"].(bool); ok {
+		obj.SetHostnameAsFQDN = ptr.To(v)
+	}
 
 	if v, ok := in["image_pull_secrets"].([]interface{}); ok {
 		cs := expandLocalObjectReferenceArray(v)
@@ -1032,6 +1035,15 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 	if v, ok := in["supplemental_groups"].(*schema.Set); ok {
 		obj.SupplementalGroups = schemaSetToInt64Array(v)
 	}
+	if v, ok := in["supplemental_groups_policy"].(string); ok && v != "" {
+		obj.SupplementalGroupsPolicy = ptr.To(v1.SupplementalGroupsPolicy(v))
+	}
+	if v, ok := in["se_linux_change_policy"].(string); ok && v != "" {
+		obj.SELinuxChangePolicy = ptr.To(v1.PodSELinuxChangePolicy(v))
+	}
+	if v, ok := in["app_armor_profile"].(map[string]interface{}); ok {
+		obj.AppArmorProfile = expandAppArmorProfile(v)
+	}
 	if v, ok := in["sysctl"].([]interface{}); ok && len(v) > 0 {
 		obj.Sysctls = expandSysctls(v)
 	}
@@ -1043,6 +1055,25 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 		obj.WindowsOptions = expandWindowsOptions(v)
 	}
 	return obj, nil
+}
+
+func expandAppArmorProfile(in map[string]interface{}) *v1.AppArmorProfile {
+	obj := &v1.AppArmorProfile{}
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.AppArmorProfileType(v)
+	}
+	if v, ok := in["localhost_profile"].(string); ok {
+		obj.LocalhostProfile = ptr.To(v)
+	}
+	return obj
+}
+
+func flattenFrameworkAppArmorProfile(in *v1.AppArmorProfile) map[string]interface{} {
+	att := map[string]interface{}{"type": string(in.Type)}
+	if in.LocalhostProfile != nil {
+		att["localhost_profile"] = *in.LocalhostProfile
+	}
+	return att
 }
 
 func expandSysctls(l []interface{}) []v1.Sysctl {
@@ -1715,14 +1746,33 @@ func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 	if spec.HostUsers != nil {
 		object["host_users"] = *spec.HostUsers
 	}
+	if spec.SetHostnameAsFQDN != nil {
+		object["set_hostname_as_fqdn"] = *spec.SetHostnameAsFQDN
+	}
+	if spec.SecurityContext != nil && (spec.SecurityContext.AppArmorProfile != nil || spec.SecurityContext.SupplementalGroupsPolicy != nil || spec.SecurityContext.SELinuxChangePolicy != nil) {
+		securityContext := map[string]interface{}{}
+		if blocks, ok := object["security_context"].([]interface{}); ok && len(blocks) > 0 {
+			securityContext = blocks[0].(map[string]interface{})
+		} else {
+			object["security_context"] = []interface{}{securityContext}
+		}
+		if spec.SecurityContext.AppArmorProfile != nil {
+			securityContext["app_armor_profile"] = flattenFrameworkAppArmorProfile(spec.SecurityContext.AppArmorProfile)
+		}
+		if spec.SecurityContext.SupplementalGroupsPolicy != nil {
+			securityContext["supplemental_groups_policy"] = string(*spec.SecurityContext.SupplementalGroupsPolicy)
+		}
+		if spec.SecurityContext.SELinuxChangePolicy != nil {
+			securityContext["se_linux_change_policy"] = string(*spec.SecurityContext.SELinuxChangePolicy)
+		}
+	}
+	if spec.Affinity != nil {
+		flattenFrameworkAffinityFields(spec.Affinity, object["affinity"].([]interface{}))
+	}
 	for name, containers := range map[string][]v1.Container{"container": spec.Containers, "init_container": spec.InitContainers} {
 		flattened := object[name].([]interface{})
 		for i, container := range containers {
-			if container.SecurityContext == nil || container.SecurityContext.ProcMount == nil {
-				continue
-			}
-			securityContext := flattened[i].(map[string]interface{})["security_context"].([]interface{})[0].(map[string]interface{})
-			securityContext["proc_mount"] = string(*container.SecurityContext.ProcMount)
+			flattenFrameworkContainerFields(container, flattened[i].(map[string]interface{}))
 		}
 	}
 	images := make(map[string]*v1.ImageVolumeSource)

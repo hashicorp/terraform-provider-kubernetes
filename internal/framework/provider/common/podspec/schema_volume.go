@@ -24,7 +24,7 @@ func (b builder) podVolumeObject() schema.NestedBlockObject {
 		},
 	}
 	if b.replace(immutable) {
-		image.PlanModifiers = []planmodifier.Object{podImageRequiresReplace{}}
+		image.PlanModifiers = []planmodifier.Object{podOptionalObjectRequiresReplace{}}
 	}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{"name": b.str(false, false, updatable, ""), "image": image},
@@ -78,7 +78,7 @@ func (b builder) podVolumeObject() schema.NestedBlockObject {
 			}, 0, 1, updatable),
 			"downward_api": b.block(b.podDownwardAPIVolumeObject(false), 0, 1, updatable),
 			"empty_dir": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-				"medium":     b.str(false, false, immutable, "", stringvalidator.OneOf("", "Memory", "HugePages", "HugePages-2Mi", "HugePages-1Gi")),
+				"medium":     b.str(false, false, immutable, "", podStringRule("empty-dir-medium")),
 				"size_limit": b.quantityString(immutable, ""),
 			}}, 0, 1, updatable),
 			"ephemeral": b.block(schema.NestedBlockObject{Blocks: map[string]schema.Block{
@@ -215,7 +215,7 @@ func (b builder) podDownwardAPIVolumeObject(projected bool) schema.NestedBlockOb
 				"path": b.str(true, false, updatable, "", podStringRule("path")),
 			},
 			Blocks: map[string]schema.Block{
-				"field_ref":          b.block(b.podFieldReferenceObject(updatable), podRequiredUnlessProjected(projected), 1, updatable),
+				"field_ref":          b.block(b.podFieldReferenceObject(updatable), 0, 1, updatable),
 				"resource_field_ref": b.block(b.podResourceFieldReferenceObject(true, updatable), 0, 1, updatable),
 			},
 		}, 0, 0, updatable),
@@ -224,13 +224,6 @@ func (b builder) podDownwardAPIVolumeObject(projected bool) schema.NestedBlockOb
 		o.Attributes = map[string]schema.Attribute{"default_mode": b.str(false, false, updatable, "0644", podStringRule("mode"))}
 	}
 	return o
-}
-
-func podRequiredUnlessProjected(projected bool) int {
-	if projected {
-		return 0
-	}
-	return 1
 }
 
 func (b builder) podProjectedVolumeObject() schema.NestedBlockObject {

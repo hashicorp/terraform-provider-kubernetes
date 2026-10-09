@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -65,6 +66,24 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 				want["spec.volume.image"] = true
 				want["spec.volume.image.reference"] = false
 				want["spec.volume.image.pull_policy"] = false
+				for _, field := range []string{"set_hostname_as_fqdn", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
+					want["spec."+field] = true
+				}
+				for _, affinity := range []string{"pod_affinity", "pod_anti_affinity"} {
+					for _, term := range []string{"required_during_scheduling_ignored_during_execution", "preferred_during_scheduling_ignored_during_execution.pod_affinity_term"} {
+						for _, keys := range []string{"match_label_keys", "mismatch_label_keys"} {
+							want["spec.affinity."+affinity+"."+term+"."+keys] = true
+						}
+					}
+				}
+				for _, container := range []string{"container", "init_container"} {
+					for _, field := range []string{"security_context.app_armor_profile", "security_context.windows_options", "volume_mount.recursive_read_only", "liveness_probe.termination_grace_period_seconds", "startup_probe.termination_grace_period_seconds", "lifecycle.pre_stop.sleep", "lifecycle.post_start.sleep"} {
+						want["spec."+container+"."+field] = true
+					}
+					for _, handler := range []string{"liveness_probe", "readiness_probe", "startup_probe"} {
+						want["spec."+container+"."+handler+".tcp_socket.host"] = true
+					}
+				}
 			}
 
 			spec := For(tc.options).Spec
@@ -241,7 +260,7 @@ func TestImageVolumeObjectPlan(t *testing.T) {
 			request := planmodifier.ObjectRequest{State: tfsdk.State{Raw: raw}, Plan: tfsdk.Plan{Raw: raw},
 				StateValue: tc.state, ConfigValue: tc.config, PlanValue: tc.plan}
 			var response planmodifier.ObjectResponse
-			podImageRequiresReplace{}.PlanModifyObject(context.Background(), request, &response)
+			podOptionalObjectRequiresReplace{}.PlanModifyObject(context.Background(), request, &response)
 			if response.Diagnostics.HasError() || response.RequiresReplace != tc.replace {
 				t.Fatalf("replace = %t, want %t; diagnostics = %v", response.RequiresReplace, tc.replace, response.Diagnostics)
 			}
@@ -263,6 +282,21 @@ func TestNewPodFeatureSchemas(t *testing.T) {
 				procMount := security.Attributes["proc_mount"].(schema.StringAttribute)
 				if !procMount.Optional || !procMount.Computed || procMount.Default != nil {
 					t.Fatal("proc_mount must use an API default")
+				}
+				for _, field := range []string{"app_armor_profile", "windows_options"} {
+					object := security.Attributes[field].(schema.SingleNestedAttribute)
+					if !object.Optional || object.Computed || hasReplacement(object.PlanModifiers) != options.Immutable {
+						t.Fatalf("unexpected %s schema", field)
+					}
+				}
+				readiness := container.Blocks["readiness_probe"].(schema.ListNestedBlock).NestedObject
+				if _, ok := readiness.Attributes["termination_grace_period_seconds"]; ok {
+					t.Fatal("readiness probes do not support a grace period")
+				}
+				for _, probe := range []string{"liveness_probe", "readiness_probe", "startup_probe"} {
+					if _, ok := container.Blocks[probe].(schema.ListNestedBlock).NestedObject.Attributes["sleep"]; ok {
+						t.Fatal("sleep is a lifecycle action, not a probe")
+					}
 				}
 			}
 			volume := object.Blocks["volume"].(schema.ListNestedBlock).NestedObject
@@ -866,6 +900,31 @@ func TestSDKPodSpecResourcesAdapter(t *testing.T) {
 		got := flat[0].(map[string]interface{})[kind].([]interface{})[0].(map[string]interface{})["resources"]
 		if _, ok := got.(map[string]interface{}); !ok {
 			t.Fatalf("%s.resources remains %T", kind, got)
+		}
+	}
+}
+
+func TestAppArmorProfileValidation(t *testing.T) {
+	ctx := context.Background()
+	a := builder{o: Pod()}.podAppArmorAttribute()
+	for _, tc := range []struct {
+		typ     string
+		profile types.String
+		invalid bool
+	}{
+		{"Localhost", types.StringValue("example"), false},
+		{"Localhost", types.StringNull(), true},
+		{"RuntimeDefault", types.StringNull(), false},
+		{"RuntimeDefault", types.StringValue("example"), true},
+		{"Unconfined", types.StringValue("example"), true},
+	} {
+		value := types.ObjectValueMust(map[string]attr.Type{"type": types.StringType, "localhost_profile": types.StringType}, map[string]attr.Value{"type": types.StringValue(tc.typ), "localhost_profile": tc.profile})
+		var response validator.ObjectResponse
+		for _, v := range a.Validators {
+			v.ValidateObject(ctx, validator.ObjectRequest{ConfigValue: value, Path: path.Root("app_armor_profile")}, &response)
+		}
+		if response.Diagnostics.HasError() != tc.invalid {
+			t.Fatalf("%s/%s: %v", tc.typ, tc.profile, response.Diagnostics)
 		}
 	}
 }

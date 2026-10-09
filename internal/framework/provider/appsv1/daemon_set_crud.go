@@ -193,14 +193,7 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		patch, err := daemonSetSpecPatch(oldSpec, newSpec)
-		if err != nil {
-			resp.Diagnostics.AddError("Error creating daemonset spec patch", err.Error())
-			return
-		}
-		if string(patch) != "{}" {
-			original, planned = &oldSpec, &newSpec
-		}
+		original, planned = &oldSpec, &newSpec
 	}
 	dynamicClient, err := clients.DynamicClient()
 	if err != nil {
@@ -220,20 +213,27 @@ func (d *DaemonSetV1) Update(ctx context.Context, req resource.UpdateRequest, re
 			return err
 		}
 		expectedPodSpec = &updated.Spec.Template.Spec
-		if planned != nil {
-			expectedPodSpec = &planned.Template.Spec
-		}
 		ops := daemonSetMetadataPatchOps(state, plan, updated.ObjectMeta)
 		if planned != nil {
-			from, to := *original, *planned
+			from, to := *original.DeepCopy(), *planned
+			if diags := podspec.TCPHostPatchBaseline(ctx, req.State, req.Plan, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"), &from.Template.Spec, &updated.Spec.Template.Spec); diags.HasError() {
+				return fmt.Errorf("unable to prepare TCP probe host update: %v", diags)
+			}
 			// The selector is immutable and replaces on any change, so the live one is
 			// kept: state written by SDKv2 may order its set values differently.
 			from.Selector, to.Selector = updated.Spec.Selector, updated.Spec.Selector
-			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.DaemonSet{})
+			patch, err := daemonSetSpecPatch(from, to)
 			if err != nil {
 				return err
 			}
-			ops = append(ops, specOps...)
+			if string(patch) != "{}" {
+				expectedPodSpec = &planned.Template.Spec
+				specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.DaemonSet{})
+				if err != nil {
+					return err
+				}
+				ops = append(ops, specOps...)
+			}
 		}
 		if len(ops) == 0 {
 			return nil

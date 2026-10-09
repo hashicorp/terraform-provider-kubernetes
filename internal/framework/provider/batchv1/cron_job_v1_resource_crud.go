@@ -56,13 +56,13 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 	obj := batch.CronJob{ObjectMeta: metadata, Spec: spec}
-	if podspec.HasGatedFeatures(&spec.JobTemplate.Spec.Template.Spec) {
+	if hasJobFeatures(&spec.JobTemplate.Spec) {
 		preview, err := conn.BatchV1().CronJobs(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
 		if err == nil {
-			err = podspec.CheckPodFeaturePreservation(&spec.JobTemplate.Spec.Template.Spec, &preview.Spec.JobTemplate.Spec.Template.Spec)
+			err = checkJobFeatures(&spec.JobTemplate.Spec, &preview.Spec.JobTemplate.Spec)
 		}
 		if err != nil {
-			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			resp.Diagnostics.AddError("Kubernetes Job feature preflight failed", err.Error())
 			return
 		}
 	}
@@ -73,8 +73,8 @@ func (r *CronJobV1) Create(ctx context.Context, req resource.CreateRequest, resp
 	}
 	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, cronJobIdentity(out.Namespace, out.Name))...)
-	if err := podspec.CheckPodFeaturePreservation(&spec.JobTemplate.Spec.Template.Spec, &out.Spec.JobTemplate.Spec.Template.Spec); err != nil {
-		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+	if err := checkJobFeatures(&spec.JobTemplate.Spec, &out.Spec.JobTemplate.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Job features", err.Error())
 		return
 	}
 }
@@ -170,7 +170,11 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 			return err
 		}
 		ops := common.MetadataPatchOpsAgainstLive("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel, out.ObjectMeta)
-		specOps, err := common.StrategicMergeSpecOps(raw, previousSpec, desiredSpec, batch.CronJob{})
+		original := previousSpec.DeepCopy()
+		if diags := podspec.TCPHostPatchBaseline(ctx, req.State, req.Plan, path.Root("spec").AtListIndex(0).AtName("job_template").AtListIndex(0).AtName("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"), &original.JobTemplate.Spec.Template.Spec, &out.Spec.JobTemplate.Spec.Template.Spec); diags.HasError() {
+			return fmt.Errorf("unable to prepare TCP probe host update: %v", diags)
+		}
+		specOps, err := common.StrategicMergeSpecOps(raw, original, desiredSpec, batch.CronJob{})
 		if err != nil {
 			return err
 		}
@@ -183,12 +187,12 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		if err != nil {
 			return err
 		}
-		if podspec.HasGatedFeatures(&desiredSpec.JobTemplate.Spec.Template.Spec) {
+		if hasJobFeatures(&desiredSpec.JobTemplate.Spec) {
 			preview, err := conn.BatchV1().CronJobs(namespace).Patch(ctx, name, k8stypes.JSONPatchType, data, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
 			if err != nil {
-				return fmt.Errorf("Pod feature preflight failed: %w", err)
+				return fmt.Errorf("Job feature preflight failed: %w", err)
 			}
-			if err := podspec.CheckPodFeaturePreservation(&desiredSpec.JobTemplate.Spec.Template.Spec, &preview.Spec.JobTemplate.Spec.Template.Spec); err != nil {
+			if err := checkJobFeatures(&desiredSpec.JobTemplate.Spec, &preview.Spec.JobTemplate.Spec); err != nil {
 				return err
 			}
 		}
@@ -200,8 +204,8 @@ func (r *CronJobV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 		return
 	}
 	resp.Diagnostics.Append(cronJobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
-	if err := podspec.CheckPodFeaturePreservation(&desiredSpec.JobTemplate.Spec.Template.Spec, &out.Spec.JobTemplate.Spec.Template.Spec); err != nil {
-		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+	if err := checkJobFeatures(&desiredSpec.JobTemplate.Spec, &out.Spec.JobTemplate.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Job features", err.Error())
 		return
 	}
 }

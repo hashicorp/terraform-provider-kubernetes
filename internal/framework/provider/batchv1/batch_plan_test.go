@@ -6,10 +6,14 @@ package batchv1
 import (
 	"context"
 	"encoding/json"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -364,17 +368,21 @@ func (planClientsets) GetIgnoreLabels() []string                      { return n
 func TestJobV1ModifyPlanReadsLiveJob(t *testing.T) {
 	ctx := context.Background()
 	for name, test := range map[string]struct {
-		status      int
-		wantReplace bool
-		wantError   bool
+		status          int
+		wantReplace     bool
+		wantError       bool
+		adoptController bool
 	}{
-		"live Job holds the removed block": {status: http.StatusOK, wantReplace: true},
-		"Job no longer exists":             {status: http.StatusNotFound},
-		"forbidden":                        {status: http.StatusForbidden, wantError: true},
-		"unavailable":                      {status: http.StatusServiceUnavailable, wantError: true},
+		"live Job holds the removed block":   {status: http.StatusOK, wantReplace: true},
+		"template and controller share read": {status: http.StatusOK, wantReplace: true, adoptController: true},
+		"Job no longer exists":               {status: http.StatusNotFound},
+		"forbidden":                          {status: http.StatusForbidden, wantError: true},
+		"unavailable":                        {status: http.StatusServiceUnavailable, wantError: true},
 	} {
 		t.Run(name, func(t *testing.T) {
+			reads := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				reads++
 				if r.URL.Path != "/apis/batch/v1/namespaces/ns/jobs/j" || test.status != http.StatusOK {
 					http.Error(w, "unavailable", test.status)
 					return
@@ -404,6 +412,11 @@ func TestJobV1ModifyPlanReadsLiveJob(t *testing.T) {
 				return tfsdk.State{Schema: schemaResp.Schema, Raw: v}
 			}
 			state, planned := value(`,"security_context":[{"run_as_non_root":false}]`), value("")
+			if test.adoptController {
+				if diags := planned.SetAttribute(ctx, path.Root("spec").AtListIndex(0).AtName("managed_by"), types.StringValue(batch.JobControllerName)); diags.HasError() {
+					t.Fatal(diags)
+				}
+			}
 			req := resource.ModifyPlanRequest{State: state, Plan: tfsdk.Plan(planned), Config: tfsdk.Config(planned)}
 			resp := resource.ModifyPlanResponse{Plan: req.Plan}
 			job.ModifyPlan(ctx, req, &resp)
@@ -412,6 +425,231 @@ func TestJobV1ModifyPlanReadsLiveJob(t *testing.T) {
 			}
 			if replace := len(resp.RequiresReplace) == 1 && resp.RequiresReplace[0].Equal(jobTemplatePath); replace != test.wantReplace {
 				t.Fatalf("requires replace = %v, want %t", resp.RequiresReplace, test.wantReplace)
+			}
+			if test.adoptController && reads != 1 {
+				t.Fatalf("template and controller planning performed %d reads, want 1", reads)
+			}
+		})
+	}
+}
+
+func TestStableJobFields(t *testing.T) {
+	ctx := context.Background()
+	for _, job := range []bool{true, false} {
+		typ := types.ListType{ElemType: jobSpecTypeFor(job)}
+		decode := func(fields string) types.List {
+			raw := tfprotov6.RawState{JSON: []byte(`[{` + fields + `"template":[{"spec":[{"container":[{"name":"c","image":"i"}]}]}]}]`)}
+			value, err := raw.Unmarshal(typ.TerraformType(ctx))
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := typ.ValueFromTerraform(ctx, value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return result.(types.List)
+		}
+		prior := decode(`"suspend":true,"managed_by":"example.com/controller","pod_replacement_policy":"Failed","success_policy":{"rules":[{"succeeded_count":0,"succeeded_indexes":"0-2"}]},`)
+		api, diags := expandJobSpec(ctx, prior, job, nil, path.Root("spec"))
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if !ptr.Deref(api.Suspend, false) || ptr.Deref(api.ManagedBy, "") != "example.com/controller" || api.SuccessPolicy == nil || *api.SuccessPolicy.Rules[0].SucceededCount != 0 {
+			t.Fatalf("fields lost: %#v", api)
+		}
+		flat, diags := flattenJobSpec(ctx, api, prior, job, true, path.Root("spec"))
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		for _, name := range []string{"suspend", "managed_by", "pod_replacement_policy", "success_policy"} {
+			if !priorAttributes(flat)[name].Equal(priorAttributes(prior)[name]) {
+				t.Fatalf("roundtrip %s: %s", name, priorAttributes(flat)[name])
+			}
+		}
+		if err := checkJobFeatures(&api, api.DeepCopy()); err != nil {
+			t.Fatal(err)
+		}
+		dropped := api.DeepCopy()
+		dropped.ManagedBy = nil
+		if err := checkJobFeatures(&api, dropped); err == nil {
+			t.Fatal("dropped managed_by was accepted")
+		}
+		legacy := decode("")
+		defaults := batch.JobSpec{Suspend: ptr.To(false), ManagedBy: ptr.To("kubernetes.io/job-controller"), PodReplacementPolicy: ptr.To(batch.TerminatingOrFailed), Template: api.Template}
+		flat, diags = flattenJobSpec(ctx, defaults, legacy, job, true, path.Root("spec"))
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		for _, name := range []string{"suspend", "managed_by", "pod_replacement_policy", "success_policy"} {
+			if !priorAttributes(flat)[name].IsNull() {
+				t.Fatalf("legacy %s became %s", name, priorAttributes(flat)[name])
+			}
+		}
+		unmanaged, diags := flattenJobSpec(ctx, api, legacy, job, true, path.Root("spec"))
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		for _, name := range []string{"suspend", "managed_by", "pod_replacement_policy", "success_policy"} {
+			if !priorAttributes(unmanaged)[name].IsNull() {
+				t.Fatalf("unmanaged API field %s was adopted into upgraded state", name)
+			}
+		}
+		if job {
+			ops, diags := patchJobSpec(ctx, legacy, decode(`"suspend":false,`))
+			if diags.HasError() || len(ops) != 1 || ops[0].(*kubernetes.AddOperation).Path != "/spec/suspend" {
+				t.Fatalf("explicit false lost: %#v %v", ops, diags)
+			}
+			ops, diags = patchJobSpec(ctx, prior, decode(`"suspend":false,"managed_by":"example.com/controller","pod_replacement_policy":"TerminatingOrFailed",`))
+			if diags.HasError() || len(ops) != 2 {
+				t.Fatalf("mutable fields not patched: %#v %v", ops, diags)
+			}
+		}
+	}
+}
+
+func TestJobFailureExitCodeZero(t *testing.T) {
+	ctx := context.Background()
+	var schemaResponse resource.SchemaResponse
+	(&JobV1{}).Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
+	for _, operator := range []string{"In", "NotIn"} {
+		raw := tfprotov6.RawState{JSON: []byte(`{"spec":[{"pod_failure_policy":[{"rule":[{"on_exit_codes":[{"operator":"` + operator + `","values":[0]}]}]}]}]}`)}
+		value, err := raw.Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		config := tfsdk.Config{Schema: schemaResponse.Schema, Raw: value}
+		at := path.Root("spec").AtListIndex(0).AtName("pod_failure_policy").AtListIndex(0).AtName("rule").AtListIndex(0).AtName("on_exit_codes").AtListIndex(0).AtName("values")
+		var codes types.List
+		if d := config.GetAttribute(ctx, at, &codes); d.HasError() {
+			t.Fatal(d)
+		}
+		var response validator.ListResponse
+		jobFailureExitCodesValidator{}.ValidateList(ctx, validator.ListRequest{Config: config, Path: at, ConfigValue: codes}, &response)
+		if response.Diagnostics.HasError() != (operator == "In") {
+			t.Fatalf("%s diagnostics: %v", operator, response.Diagnostics)
+		}
+	}
+}
+
+func TestSuspendedJobDoesNotWaitForCompletion(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(&batch.Job{Spec: batch.JobSpec{Suspend: ptr.To(true)}})
+	}))
+	defer server.Close()
+	client, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := waitForJobCompletion(context.Background(), client.BatchV1().Jobs("ns"), "ns", "suspended", time.Second); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("wait performed %d reads", calls)
+	}
+}
+
+func TestJobManagedByReplacement(t *testing.T) {
+	for _, tc := range []struct {
+		before, after types.String
+		replace       bool
+	}{
+		{types.StringNull(), types.StringValue("kubernetes.io/job-controller"), false},
+		{types.StringValue("kubernetes.io/job-controller"), types.StringNull(), false},
+		{types.StringNull(), types.StringValue("example.com/controller"), false},
+		{types.StringNull(), types.StringUnknown(), true},
+		{types.StringValue("example.com/controller"), types.StringNull(), true},
+		{types.StringValue("example.com/controller"), types.StringValue("example.com/controller"), false},
+	} {
+		req := planmodifier.StringRequest{StateValue: tc.before, PlanValue: tc.after, State: tfsdk.State{Raw: tftypes.NewValue(tftypes.Bool, true)}, Plan: tfsdk.Plan{Raw: tftypes.NewValue(tftypes.Bool, true)}}
+		var resp planmodifier.StringResponse
+		jobManagedByRequiresReplace{}.PlanModifyString(context.Background(), req, &resp)
+		if resp.RequiresReplace != tc.replace {
+			t.Fatalf("%s -> %s: replace=%t", tc.before, tc.after, resp.RequiresReplace)
+		}
+	}
+}
+
+func TestJobManagedByAdoption(t *testing.T) {
+	ctx := context.Background()
+	builtin := "kubernetes.io/job-controller"
+	custom := "example.com/controller"
+	other := "example.com/other"
+	for name, tc := range map[string]struct {
+		prior, configured types.String
+		live              *string
+		status            int
+		reads             int
+		replace, error    bool
+	}{
+		"replace custom controller": {types.StringNull(), types.StringValue(builtin), &custom, http.StatusOK, 1, true, false},
+		"adopt implicit built-in":   {types.StringNull(), types.StringValue(builtin), nil, http.StatusOK, 1, false, false},
+		"adopt explicit built-in":   {types.StringNull(), types.StringValue(builtin), &builtin, http.StatusOK, 1, false, false},
+		"adopt current custom":      {types.StringNull(), types.StringValue(custom), &custom, http.StatusOK, 1, false, false},
+		"replace other custom":      {types.StringNull(), types.StringValue(custom), &other, http.StatusOK, 1, true, false},
+		"unmanaged controller":      {types.StringNull(), types.StringNull(), &custom, http.StatusOK, 0, false, false},
+		"owned built-in unchanged":  {types.StringValue(builtin), types.StringValue(builtin), &builtin, http.StatusOK, 0, false, false},
+		"custom change replaces":    {types.StringNull(), types.StringValue(custom), nil, http.StatusOK, 1, true, false},
+		"known controller change":   {types.StringValue(custom), types.StringValue(builtin), nil, http.StatusOK, 0, true, false},
+		"missing Job":               {types.StringNull(), types.StringValue(builtin), nil, http.StatusNotFound, 1, false, false},
+		"unreadable Job":            {types.StringNull(), types.StringValue(builtin), nil, http.StatusForbidden, 1, false, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			reads := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				reads++
+				if req.Method != http.MethodGet || req.URL.Path != "/apis/batch/v1/namespaces/ns/jobs/j" {
+					t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+				}
+				if tc.status != http.StatusOK {
+					http.Error(w, "unavailable", tc.status)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(&batch.Job{Spec: batch.JobSpec{ManagedBy: tc.live}})
+			}))
+			defer server.Close()
+			client, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+			if err != nil {
+				t.Fatal(err)
+			}
+			job := &JobV1{SDKv2Meta: func() any { return planClientsets{client: client} }}
+			var schemaResponse resource.SchemaResponse
+			job.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
+			raw := tfprotov6.RawState{JSON: []byte(`{"id":"ns/j","metadata":[{"name":"j","namespace":"ns"}],"spec":[{"template":[{"spec":[{"container":[{"name":"app","image":"busybox"}],"restart_policy":"Never"}]}]}]}`)}
+			value, err := raw.Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
+			if err != nil {
+				t.Fatal(err)
+			}
+			at := path.Root("spec").AtListIndex(0).AtName("managed_by")
+			state := tfsdk.State{Schema: schemaResponse.Schema, Raw: value}
+			if diags := state.SetAttribute(ctx, at, tc.prior); diags.HasError() {
+				t.Fatal(diags)
+			}
+			plan := tfsdk.Plan{Schema: schemaResponse.Schema, Raw: value}
+			if diags := plan.SetAttribute(ctx, at, tc.configured); diags.HasError() {
+				t.Fatal(diags)
+			}
+			config := tfsdk.Config{Schema: schemaResponse.Schema, Raw: plan.Raw}
+			var modifier planmodifier.StringResponse
+			jobManagedByRequiresReplace{}.PlanModifyString(ctx, planmodifier.StringRequest{
+				StateValue: tc.prior, PlanValue: tc.configured, State: state, Plan: plan, Config: config,
+			}, &modifier)
+			response := resource.ModifyPlanResponse{Plan: plan}
+			job.ModifyPlan(ctx, resource.ModifyPlanRequest{State: state, Plan: plan, Config: config}, &response)
+			if response.Diagnostics.HasError() != tc.error || reads != tc.reads {
+				t.Fatalf("diagnostics=%v, reads=%d; want error=%t, reads=%d", response.Diagnostics, reads, tc.error, tc.reads)
+			}
+			replace := modifier.RequiresReplace || len(response.RequiresReplace) > 0
+			if replace != tc.replace {
+				t.Fatalf("replacement=%t, want %t", replace, tc.replace)
+			}
+			for _, replacement := range response.RequiresReplace {
+				if !replacement.Equal(at) {
+					t.Fatalf("unexpected replacement path: %s", replacement)
+				}
 			}
 		})
 	}

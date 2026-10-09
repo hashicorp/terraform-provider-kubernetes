@@ -251,14 +251,6 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 		if desired.Replicas == nil {
 			original.Replicas = nil
 		}
-		patch, err := deploymentSpecPatch(*original, *desired)
-		if err != nil {
-			resp.Diagnostics.AddError("Error creating deployment spec patch", err.Error())
-			return
-		}
-		if string(patch) == "{}" {
-			original, desired = nil, nil
-		}
 	}
 	dynamicClient, err := clients.DynamicClient()
 	if err != nil {
@@ -278,20 +270,27 @@ func (d *DeploymentV1) Update(ctx context.Context, req resource.UpdateRequest, r
 			return err
 		}
 		expectedPodSpec = &out.Spec.Template.Spec
-		if desired != nil {
-			expectedPodSpec = &desired.Template.Spec
-		}
 		ops := deploymentMetadataPatchOps(state, plan, out.ObjectMeta)
 		if desired != nil {
-			from, to := *original, *desired
+			from, to := *original.DeepCopy(), *desired
+			if diags := podspec.TCPHostPatchBaseline(ctx, req.State, req.Plan, path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec"), &from.Template.Spec, &out.Spec.Template.Spec); diags.HasError() {
+				return fmt.Errorf("unable to prepare TCP probe host update: %v", diags)
+			}
 			// The selector is immutable and replaces on any change, so the live one is
 			// kept: state written by SDKv2 may order its set values differently.
 			from.Selector, to.Selector = out.Spec.Selector, out.Spec.Selector
-			specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.Deployment{})
+			patch, err := deploymentSpecPatch(from, to)
 			if err != nil {
 				return err
 			}
-			ops = append(ops, specOps...)
+			if string(patch) != "{}" {
+				expectedPodSpec = &desired.Template.Spec
+				specOps, err := common.StrategicMergeSpecOps(raw, from, to, appsv1.Deployment{})
+				if err != nil {
+					return err
+				}
+				ops = append(ops, specOps...)
+			}
 		}
 		if len(ops) == 0 {
 			return nil

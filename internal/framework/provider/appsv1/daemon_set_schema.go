@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 )
 
-var daemonSetRollingValuePattern = regexp.MustCompile(`^(\+?[0-9]+|[1-9][0-9]?%|100%)$`)
+var daemonSetRollingValuePattern = regexp.MustCompile(`^(\+?[0-9]+|[0-9][0-9]?%|100%)$`)
 
 var daemonSetFrozenSchema = common.FrozenSchema(buildDaemonSetSchema)
 

@@ -79,6 +79,15 @@ func TestBatchSingletonStateRoutes(t *testing.T) {
 				}
 				state = response.TargetState
 			}
+			var migratedSpec types.Object
+			if diags := state.GetAttribute(ctx, at, &migratedSpec); diags.HasError() {
+				t.Fatal(diags)
+			}
+			for _, name := range []string{"suspend", "success_policy", "managed_by", "pod_replacement_policy"} {
+				if !migratedSpec.Attributes()[name].IsNull() {
+					t.Fatalf("new field %s must remain omitted after upgrade/move", name)
+				}
+			}
 			var selector types.Object
 			if diags := state.GetAttribute(ctx, at.AtName("selector"), &selector); diags.HasError() {
 				t.Fatal(diags)

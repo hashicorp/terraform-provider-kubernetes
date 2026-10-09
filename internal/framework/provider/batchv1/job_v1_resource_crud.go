@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	batchapi "k8s.io/api/batch/v1"
 	coreapi "k8s.io/api/core/v1"
@@ -26,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/typed/batch/v1"
+	"k8s.io/utils/ptr"
 )
 
 const jobDefaultTimeout = time.Minute
@@ -58,13 +58,13 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 		return
 	}
 	obj := batchapi.Job{ObjectMeta: metadata, Spec: spec}
-	if podspec.HasGatedFeatures(&spec.Template.Spec) {
+	if hasJobFeatures(&spec) {
 		preview, err := conn.BatchV1().Jobs(metadata.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
 		if err == nil {
-			err = podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &preview.Spec.Template.Spec)
+			err = checkJobFeatures(&spec, &preview.Spec)
 		}
 		if err != nil {
-			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			resp.Diagnostics.AddError("Kubernetes Job feature preflight failed", err.Error())
 			return
 		}
 	}
@@ -77,11 +77,11 @@ func (r *JobV1) Create(ctx context.Context, req resource.CreateRequest, resp *re
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, jobIdentity(out.Namespace, out.Name))...)
-	if err := podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &out.Spec.Template.Spec); err != nil {
-		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+	if err := checkJobFeatures(&spec, &out.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Job features", err.Error())
 		return
 	}
-	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
+	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() || ptr.Deref(out.Spec.Suspend, false) {
 		return
 	}
 	if err := waitForJobCompletion(ctx, conn.BatchV1().Jobs(out.Namespace), out.Namespace, out.Name, timeout); err != nil {
@@ -184,14 +184,14 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 			resp.Diagnostics.AddError("Failed to marshal Job update", marshalErr.Error())
 			return
 		}
-		if podspec.HasGatedFeatures(&desiredSpec.Template.Spec) {
+		if hasJobFeatures(&desiredSpec) {
 			preview, err := conn.BatchV1().Jobs(namespace).Patch(ctx, name, k8stypes.JSONPatchType, data, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
 			if err != nil {
-				resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+				resp.Diagnostics.AddError("Kubernetes Job feature preflight failed", err.Error())
 				return
 			}
-			if err := podspec.CheckPodFeaturePreservation(&desiredSpec.Template.Spec, &preview.Spec.Template.Spec); err != nil {
-				resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			if err := checkJobFeatures(&desiredSpec, &preview.Spec); err != nil {
+				resp.Diagnostics.AddError("Kubernetes Job feature preflight failed", err.Error())
 				return
 			}
 		}
@@ -202,12 +202,12 @@ func (r *JobV1) Update(ctx context.Context, req resource.UpdateRequest, resp *re
 		return
 	}
 	resp.Diagnostics.Append(jobWriteResult(ctx, &resp.State, req.Plan, plan, out, filters)...)
-	if err := podspec.CheckPodFeaturePreservation(&desiredSpec.Template.Spec, &out.Spec.Template.Spec); err != nil {
-		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+	if err := checkJobFeatures(&desiredSpec, &out.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve Job features", err.Error())
 		return
 	}
 	resp.Diagnostics.Append(resp.Private.SetKey(ctx, podTemplateMetadataOwnershipInitialized, []byte("true"))...)
-	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() {
+	if resp.Diagnostics.HasError() || !plan.WaitForCompletion.ValueBool() || ptr.Deref(out.Spec.Suspend, false) {
 		return
 	}
 	if err := waitForJobCompletion(ctx, conn.BatchV1().Jobs(namespace), namespace, name, timeout); err != nil {
@@ -275,6 +275,9 @@ func waitForJobCompletion(ctx context.Context, jobs v1.JobInterface, namespace, 
 		}
 		if err != nil {
 			return retry.NonRetryableError(err)
+		}
+		if ptr.Deref(job.Spec.Suspend, false) {
+			return nil
 		}
 		for _, condition := range job.Status.Conditions {
 			if condition.Status != coreapi.ConditionTrue {
@@ -388,12 +391,14 @@ func patchJobSpec(ctx context.Context, state, plan types.List) (kubernetes.Patch
 		{"manual_selector", "manualSelector", spec.ManualSelector, previousSpec.ManualSelector},
 		{"max_failed_indexes", "maxFailedIndexes", spec.MaxFailedIndexes, previousSpec.MaxFailedIndexes},
 		{"parallelism", "parallelism", spec.Parallelism, previousSpec.Parallelism},
+		{"suspend", "suspend", spec.Suspend, previousSpec.Suspend},
+		{"pod_replacement_policy", "podReplacementPolicy", spec.PodReplacementPolicy, previousSpec.PodReplacementPolicy},
 		{"ttl_seconds_after_finished", "ttlSecondsAfterFinished", spec.TTLSecondsAfterFinished, previousSpec.TTLSecondsAfterFinished},
 	}
 	ops := make(kubernetes.PatchOperations, 0, len(fields))
 	for _, field := range fields {
 		// State written before a field existed holds null where the plan holds its zero default.
-		if oldAttrs[field.name].Equal(newAttrs[field.name]) || (oldAttrs[field.name].IsNull() && isZeroAttr(newAttrs[field.name])) {
+		if oldAttrs[field.name].Equal(newAttrs[field.name]) || (field.name != "suspend" && oldAttrs[field.name].IsNull() && isZeroAttr(newAttrs[field.name])) {
 			continue
 		}
 		// JSON Patch "add" replaces existing members and also works for an omitted

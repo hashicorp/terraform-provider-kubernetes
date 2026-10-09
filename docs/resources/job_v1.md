@@ -62,11 +62,15 @@ Optional:
 - `backoff_limit_per_index` (Number) Maximum retries per index in an Indexed job. Applies only when completion_mode is Indexed, where omission sends zero. Changes require replacement.
 - `completion_mode` (String) Whether pod completions are tracked as `NonIndexed` (the Kubernetes default) or `Indexed`. Changes require replacement.
 - `completions` (Number) Desired number of successfully finished pods. Defaults to 1. Changes require replacement.
+- `managed_by` (String) Controller responsible for this Job. Omission uses the Kubernetes Job controller. Requires the JobManagedBy feature gate on Kubernetes versions before 1.35.
 - `manual_selector` (Boolean) Controls generation of pod labels and pod selectors. Leave unset unless you are certain what you are doing. When false or unset, the system pick labels unique to this job and appends those labels to the pod template. When true, the user is responsible for picking unique labels and specifying the selector. Failure to pick a unique label may cause this and other jobs to not function correctly. More info: https://git.k8s.io/community/contributors/design-proposals/selector-generation.md
 - `max_failed_indexes` (Number) Maximum number of failed indexes before an Indexed job is marked failed. Applies only when completion_mode is Indexed, where omission sends zero.
 - `parallelism` (Number) Maximum number of pods the job runs at any time. Defaults to 1.
 - `pod_failure_policy` (Block List, Max: 1) Rules for handling pod failures. Rules are evaluated in order; unmatched failures count toward the job's backoff limit. Kubernetes does not allow changing the policy of a Job, so any change replaces it. (see [below for nested schema](#nestedblock--spec--pod_failure_policy))
+- `pod_replacement_policy` (String) When to replace Pods: Failed or TerminatingOrFailed. With pod_failure_policy only Failed is allowed. Requires Kubernetes 1.28 or later with JobPodReplacementPolicy enabled; stable in 1.34.
 - `selector` (Attributes) A label query over the pods owned by the job. Omit it to keep the selector Kubernetes generates. Changes require replacement. (see [below for nested schema](#nestedatt--spec--selector))
+- `success_policy` (Attributes) Success criteria for an Indexed Job. Requires JobSuccessPolicy on Kubernetes versions before 1.33. Changes replace a standalone Job. (see [below for nested schema](#nestedatt--spec--success_policy))
+- `suspend` (Boolean) Suspend execution of the Job. A suspended Job does not wait for completion. Omission defaults to false.
 - `ttl_seconds_after_finished` (String) Seconds to retain a finished job. Zero allows immediate deletion; omission disables automatic deletion.
 
 <a id="nestedblock--spec--template"></a>
@@ -127,6 +131,7 @@ Optional:
 - `scheduler_name` (String) If specified, the pod will be dispatched by specified scheduler. If not specified, the pod will be dispatched by default scheduler.
 - `security_context` (Block List, Max: 1) SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--security_context))
 - `service_account_name` (String) ServiceAccountName is the name of the ServiceAccount to use to run this pod. More info: http://releases.k8s.io/HEAD/docs/design/service_accounts.md.
+- `set_hostname_as_fqdn` (Boolean) Set the Pod hostname to its fully qualified domain name. Omission uses the short hostname. Requires Linux; the resulting hostname must fit the kernel's 64-byte limit.
 - `share_process_namespace` (Boolean) Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set. Optional: Defaults to false.
 - `subdomain` (String) If specified, the fully qualified Pod hostname will be "...svc.". If not specified, the pod will not have a domainname at all..
 - `termination_grace_period_seconds` (Number) Optional duration in seconds the pod needs to terminate gracefully. May be decreased in delete request. Value must be non-negative integer. The value zero indicates delete immediately. If this value is nil, the default grace period will be used instead. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Set this value longer than the expected cleanup time for your process.
@@ -259,6 +264,8 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `match_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using In. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
+- `mismatch_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using NotIn. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
 - `namespace_selector` (Block List) A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--namespace_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
@@ -312,6 +319,8 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `match_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using In. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
+- `mismatch_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using NotIn. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
 - `namespace_selector` (Block List) A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution--namespace_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
@@ -381,6 +390,8 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--label_selector))
+- `match_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using In. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
+- `mismatch_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using NotIn. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
 - `namespace_selector` (Block List) A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--preferred_during_scheduling_ignored_during_execution--pod_affinity_term--namespace_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
@@ -434,6 +445,8 @@ Required:
 Optional:
 
 - `label_selector` (Block List) A label query over a set of resources, in this case pods. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--label_selector))
+- `match_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using In. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
+- `mismatch_label_keys` (Set of String) Pod label keys whose values are combined with label_selector using NotIn. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated.
 - `namespace_selector` (Block List) A label query over the set of namespaces that the term applies to. The term is applied to the union of the namespaces selected by this field and the ones listed in the namespaces field. (see [below for nested schema](#nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution--namespace_selector))
 - `namespaces` (Set of String) namespaces specifies which namespaces the labelSelector applies to (matches against); null or empty list means 'this pod's namespace'
 
@@ -625,6 +638,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start--http_get))
+- `sleep` (Attributes) Pause a lifecycle hook for the specified number of seconds. A zero duration requires Kubernetes 1.34 or later, or the PodLifecycleSleepActionAllowZero feature gate. (see [below for nested schema](#nestedatt--spec--template--spec--container--lifecycle--post_start--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--post_start--tcp_socket))
 
 <a id="nestedblock--spec--template--spec--container--lifecycle--post_start--exec"></a>
@@ -656,6 +670,14 @@ Optional:
 
 
 
+<a id="nestedatt--spec--template--spec--container--lifecycle--post_start--sleep"></a>
+### Nested Schema for `spec.template.spec.container.lifecycle.post_start.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep, including zero when supported by the cluster.
+
+
 <a id="nestedblock--spec--template--spec--container--lifecycle--post_start--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.container.lifecycle.post_start.tcp_socket`
 
@@ -672,6 +694,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop--http_get))
+- `sleep` (Attributes) Pause a lifecycle hook for the specified number of seconds. A zero duration requires Kubernetes 1.34 or later, or the PodLifecycleSleepActionAllowZero feature gate. (see [below for nested schema](#nestedatt--spec--template--spec--container--lifecycle--pre_stop--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--lifecycle--pre_stop--tcp_socket))
 
 <a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop--exec"></a>
@@ -703,6 +726,14 @@ Optional:
 
 
 
+<a id="nestedatt--spec--template--spec--container--lifecycle--pre_stop--sleep"></a>
+### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep, including zero when supported by the cluster.
+
+
 <a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop.tcp_socket`
 
@@ -726,6 +757,7 @@ Optional:
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number) Grace period after a failed probe before forcibly terminating the container. Omission inherits the Pod's termination grace period. Not supported for readiness probes.
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
 <a id="nestedblock--spec--template--spec--container--liveness_probe--exec"></a>
@@ -776,7 +808,9 @@ Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 
+Optional:
 
+- `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
 <a id="nestedblock--spec--template--spec--container--port"></a>
 ### Nested Schema for `spec.template.spec.container.port`
@@ -790,8 +824,7 @@ Optional:
 - `host_ip` (String) What host IP to bind the external port to.
 - `host_port` (Number) Number of port to expose on the host. If specified, this must be a valid port number, 0 < x < 65536. If HostNetwork is specified, this must match ContainerPort. Most containers do not need this.
 - `name` (String) If specified, this must be an IANA_SVC_NAME and unique within the pod. Each named port in a pod must have a unique name. Name for the port that can be referred to by services
-- `protocol` (String) Protocol for port. Must be UDP or TCP. Defaults to "TCP".
-
+- `protocol` (String) Protocol for port. Must be UDP, TCP or SCTP. Defaults to "TCP".
 
 <a id="nestedblock--spec--template--spec--container--readiness_probe"></a>
 ### Nested Schema for `spec.template.spec.container.readiness_probe`
@@ -856,7 +889,9 @@ Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 
+Optional:
 
+- `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
 <a id="nestedatt--spec--template--spec--container--resources"></a>
 ### Nested Schema for `spec.template.spec.container.resources`
@@ -873,6 +908,7 @@ Optional:
 Optional:
 
 - `allow_privilege_escalation` (Boolean) AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN
+- `app_armor_profile` (Attributes) Linux AppArmor profile. A container profile overrides the Pod profile. Localhost requires a profile already loaded on the node; localhost_profile must be set only for that type. (see [below for nested schema](#nestedatt--spec--template--spec--container--security_context--app_armor_profile))
 - `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context--capabilities))
 - `privileged` (Boolean) Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.
 - `proc_mount` (String) Proc filesystem mount type. Kubernetes defaults to Default. Unmasked requires Linux and the ProcMountType feature gate; Kubernetes 1.31 and later also require host_users = false.
@@ -882,6 +918,19 @@ Optional:
 - `run_as_user` (String) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context--se_linux_options))
 - `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context--seccomp_profile))
+- `windows_options` (Attributes) Windows container security options. Omitted settings inherit the corresponding Pod options. (see [below for nested schema](#nestedatt--spec--template--spec--container--security_context--windows_options))
+
+<a id="nestedatt--spec--template--spec--container--security_context--app_armor_profile"></a>
+### Nested Schema for `spec.template.spec.container.security_context.app_armor_profile`
+
+Required:
+
+- `type` (String) AppArmor profile type: Localhost, RuntimeDefault or Unconfined.
+
+Optional:
+
+- `localhost_profile` (String) Name of the AppArmor profile already loaded on the node. Required only for Localhost.
+
 
 <a id="nestedblock--spec--template--spec--container--security_context--capabilities"></a>
 ### Nested Schema for `spec.template.spec.container.security_context.capabilities`
@@ -913,6 +962,18 @@ Optional:
 
 
 
+<a id="nestedatt--spec--template--spec--container--security_context--windows_options"></a>
+### Nested Schema for `spec.template.spec.container.security_context.windows_options`
+
+Optional:
+
+- `gmsa_credential_spec` (String) Contents of the GMSA credential specification.
+- `gmsa_credential_spec_name` (String) Name of the GMSA credential specification resource.
+- `host_process` (Boolean) Run the container as a Windows HostProcess container. Omission inherits the Pod setting.
+- `run_as_username` (String) Windows user name for the container entrypoint. Omission inherits the Pod setting.
+
+
+
 <a id="nestedblock--spec--template--spec--container--startup_probe"></a>
 ### Nested Schema for `spec.template.spec.container.startup_probe`
 
@@ -926,6 +987,7 @@ Optional:
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number) Grace period after a failed probe before forcibly terminating the container. Omission inherits the Pod's termination grace period. Not supported for readiness probes.
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
 <a id="nestedblock--spec--template--spec--container--startup_probe--exec"></a>
@@ -976,7 +1038,9 @@ Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 
+Optional:
 
+- `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
 <a id="nestedblock--spec--template--spec--container--volume_device"></a>
 ### Nested Schema for `spec.template.spec.container.volume_device`
@@ -999,10 +1063,9 @@ Optional:
 
 - `mount_propagation` (String) Mount propagation mode. mount_propagation determines how mounts are propagated from the host to container and the other way around. Valid values are None (default), HostToContainer and Bidirectional.
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
+- `recursive_read_only` (String) Recursively protect a read-only mount. IfPossible uses runtime support when available; Enabled fails when unsupported. Requires read_only = true, mount_propagation = None, and RecursiveReadOnlyMounts on Kubernetes versions where it is gated. Omission means Disabled.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 - `sub_path_expr` (String) Expanded path within the volume from which the container's volume should be mounted. Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment. Defaults to "" (volume's root).
-
-
 
 <a id="nestedblock--spec--template--spec--dns_config"></a>
 ### Nested Schema for `spec.template.spec.dns_config`
@@ -1190,6 +1253,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start--http_get))
+- `sleep` (Attributes) Pause a lifecycle hook for the specified number of seconds. A zero duration requires Kubernetes 1.34 or later, or the PodLifecycleSleepActionAllowZero feature gate. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--lifecycle--post_start--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--post_start--tcp_socket))
 
 <a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start--exec"></a>
@@ -1221,6 +1285,14 @@ Optional:
 
 
 
+<a id="nestedatt--spec--template--spec--init_container--lifecycle--post_start--sleep"></a>
+### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep, including zero when supported by the cluster.
+
+
 <a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start.tcp_socket`
 
@@ -1237,6 +1309,7 @@ Optional:
 
 - `exec` (Block List, Max: 1) exec specifies the action to take. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--exec))
 - `http_get` (Block List, Max: 1) Specifies the http request to perform. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--http_get))
+- `sleep` (Attributes) Pause a lifecycle hook for the specified number of seconds. A zero duration requires Kubernetes 1.34 or later, or the PodLifecycleSleepActionAllowZero feature gate. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--lifecycle--pre_stop--sleep))
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--tcp_socket))
 
 <a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--exec"></a>
@@ -1268,6 +1341,14 @@ Optional:
 
 
 
+<a id="nestedatt--spec--template--spec--init_container--lifecycle--pre_stop--sleep"></a>
+### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop.sleep`
+
+Required:
+
+- `seconds` (Number) Number of seconds to sleep, including zero when supported by the cluster.
+
+
 <a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop.tcp_socket`
 
@@ -1291,6 +1372,7 @@ Optional:
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number) Grace period after a failed probe before forcibly terminating the container. Omission inherits the Pod's termination grace period. Not supported for readiness probes.
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
 <a id="nestedblock--spec--template--spec--init_container--liveness_probe--exec"></a>
@@ -1341,7 +1423,9 @@ Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 
+Optional:
 
+- `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
 <a id="nestedblock--spec--template--spec--init_container--port"></a>
 ### Nested Schema for `spec.template.spec.init_container.port`
@@ -1355,8 +1439,7 @@ Optional:
 - `host_ip` (String) What host IP to bind the external port to.
 - `host_port` (Number) Number of port to expose on the host. If specified, this must be a valid port number, 0 < x < 65536. If HostNetwork is specified, this must match ContainerPort. Most containers do not need this.
 - `name` (String) If specified, this must be an IANA_SVC_NAME and unique within the pod. Each named port in a pod must have a unique name. Name for the port that can be referred to by services
-- `protocol` (String) Protocol for port. Must be UDP or TCP. Defaults to "TCP".
-
+- `protocol` (String) Protocol for port. Must be UDP, TCP or SCTP. Defaults to "TCP".
 
 <a id="nestedblock--spec--template--spec--init_container--readiness_probe"></a>
 ### Nested Schema for `spec.template.spec.init_container.readiness_probe`
@@ -1421,7 +1504,9 @@ Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 
+Optional:
 
+- `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
 <a id="nestedatt--spec--template--spec--init_container--resources"></a>
 ### Nested Schema for `spec.template.spec.init_container.resources`
@@ -1438,6 +1523,7 @@ Optional:
 Optional:
 
 - `allow_privilege_escalation` (Boolean) AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN
+- `app_armor_profile` (Attributes) Linux AppArmor profile. A container profile overrides the Pod profile. Localhost requires a profile already loaded on the node; localhost_profile must be set only for that type. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--security_context--app_armor_profile))
 - `capabilities` (Block List, Max: 1) The capabilities to add/drop when running containers. Defaults to the default set of capabilities granted by the container runtime. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context--capabilities))
 - `privileged` (Boolean) Run container in privileged mode. Processes in privileged containers are essentially equivalent to root on the host. Defaults to false.
 - `proc_mount` (String) Proc filesystem mount type. Kubernetes defaults to Default. Unmasked requires Linux and the ProcMountType feature gate; Kubernetes 1.31 and later also require host_users = false.
@@ -1447,6 +1533,19 @@ Optional:
 - `run_as_user` (String) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context--se_linux_options))
 - `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context--seccomp_profile))
+- `windows_options` (Attributes) Windows container security options. Omitted settings inherit the corresponding Pod options. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--security_context--windows_options))
+
+<a id="nestedatt--spec--template--spec--init_container--security_context--app_armor_profile"></a>
+### Nested Schema for `spec.template.spec.init_container.security_context.app_armor_profile`
+
+Required:
+
+- `type` (String) AppArmor profile type: Localhost, RuntimeDefault or Unconfined.
+
+Optional:
+
+- `localhost_profile` (String) Name of the AppArmor profile already loaded on the node. Required only for Localhost.
+
 
 <a id="nestedblock--spec--template--spec--init_container--security_context--capabilities"></a>
 ### Nested Schema for `spec.template.spec.init_container.security_context.capabilities`
@@ -1478,6 +1577,18 @@ Optional:
 
 
 
+<a id="nestedatt--spec--template--spec--init_container--security_context--windows_options"></a>
+### Nested Schema for `spec.template.spec.init_container.security_context.windows_options`
+
+Optional:
+
+- `gmsa_credential_spec` (String) Contents of the GMSA credential specification.
+- `gmsa_credential_spec_name` (String) Name of the GMSA credential specification resource.
+- `host_process` (Boolean) Run the container as a Windows HostProcess container. Omission inherits the Pod setting.
+- `run_as_username` (String) Windows user name for the container entrypoint. Omission inherits the Pod setting.
+
+
+
 <a id="nestedblock--spec--template--spec--init_container--startup_probe"></a>
 ### Nested Schema for `spec.template.spec.init_container.startup_probe`
 
@@ -1491,6 +1602,7 @@ Optional:
 - `period_seconds` (Number) How often (in seconds) to perform the probe
 - `success_threshold` (Number) Minimum consecutive successes for the probe to be considered successful after having failed.
 - `tcp_socket` (Block List) TCPSocket specifies an action involving a TCP port. TCP hooks not yet supported (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number) Grace period after a failed probe before forcibly terminating the container. Omission inherits the Pod's termination grace period. Not supported for readiness probes.
 - `timeout_seconds` (Number) Number of seconds after which the probe times out. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
 
 <a id="nestedblock--spec--template--spec--init_container--startup_probe--exec"></a>
@@ -1541,7 +1653,9 @@ Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
 
+Optional:
 
+- `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
 <a id="nestedblock--spec--template--spec--init_container--volume_device"></a>
 ### Nested Schema for `spec.template.spec.init_container.volume_device`
@@ -1564,10 +1678,9 @@ Optional:
 
 - `mount_propagation` (String) Mount propagation mode. mount_propagation determines how mounts are propagated from the host to container and the other way around. Valid values are None (default), HostToContainer and Bidirectional.
 - `read_only` (Boolean) Mounted read-only if true, read-write otherwise (false or unspecified). Defaults to false.
+- `recursive_read_only` (String) Recursively protect a read-only mount. IfPossible uses runtime support when available; Enabled fails when unsupported. Requires read_only = true, mount_propagation = None, and RecursiveReadOnlyMounts on Kubernetes versions where it is gated. Omission means Disabled.
 - `sub_path` (String) Path within the volume from which the container's volume should be mounted. Defaults to "" (volume's root).
 - `sub_path_expr` (String) Expanded path within the volume from which the container's volume should be mounted. Behaves similarly to SubPath but environment variable references $(VAR_NAME) are expanded using the container's environment. Defaults to "" (volume's root).
-
-
 
 <a id="nestedblock--spec--template--spec--os"></a>
 ### Nested Schema for `spec.template.spec.os`
@@ -1590,16 +1703,31 @@ Required:
 
 Optional:
 
+- `app_armor_profile` (Attributes) Linux AppArmor profile. A container profile overrides the Pod profile. Localhost requires a profile already loaded on the node; localhost_profile must be set only for that type. (see [below for nested schema](#nestedatt--spec--template--spec--security_context--app_armor_profile))
 - `fs_group` (String) A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- If unset, the Kubelet will not modify the ownership and permissions of any volume.
 - `fs_group_change_policy` (String) fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.
 - `run_as_group` (String) The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.
 - `run_as_non_root` (Boolean) Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 - `run_as_user` (String) The UID to run the entrypoint of the container process. Defaults to user specified in image metadata if unspecified. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.
+- `se_linux_change_policy` (String) How SELinux labels are applied to volumes. Recursive relabels files; MountOption uses a mount context and additionally requires SELinuxMount. Requires SELinuxChangePolicy on Kubernetes versions where it is gated. Omission follows the cluster and volume defaults.
 - `se_linux_options` (Block List, Max: 1) The SELinux context to be applied to all containers. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in SecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--se_linux_options))
 - `seccomp_profile` (Block List, Max: 1) The seccomp options to use by the containers in this pod. Note that this field cannot be set when spec.os.name is windows. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--seccomp_profile))
 - `supplemental_groups` (Set of Number) A list of groups applied to the first process run in each container, in addition to the container's primary GID. If unspecified, no groups will be added to any container.
+- `supplemental_groups_policy` (String) Controls whether image-defined groups are merged with configured groups. Strict attaches only configured groups; omission means Merge. Requires Linux, a supporting runtime and SupplementalGroupsPolicy on Kubernetes versions where it is gated.
 - `sysctl` (Block List) holds a list of namespaced sysctls used for the pod. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--sysctl))
 - `windows_options` (Block List, Max: 1) The Windows specific settings applied to all containers. If unspecified, the options within a container's SecurityContext will be used. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence. Note that this field cannot be set when spec.os.name is linux. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--security_context--windows_options))
+
+<a id="nestedatt--spec--template--spec--security_context--app_armor_profile"></a>
+### Nested Schema for `spec.template.spec.security_context.app_armor_profile`
+
+Required:
+
+- `type` (String) AppArmor profile type: Localhost, RuntimeDefault or Unconfined.
+
+Optional:
+
+- `localhost_profile` (String) Name of the AppArmor profile already loaded on the node. Required only for Localhost.
+
 
 <a id="nestedblock--spec--template--spec--security_context--se_linux_options"></a>
 ### Nested Schema for `spec.template.spec.security_context.se_linux_options`
@@ -1862,11 +1990,11 @@ Optional:
 
 Required:
 
-- `field_ref` (Block List, Min: 1, Max: 1) Required: Selects a field of the pod: only annotations, labels, name and namespace are supported. Exactly 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--downward_api--items--field_ref))
 - `path` (String) Path is the relative path name of the file to be created. Must not be absolute or contain the '..' path. Must be utf-8 encoded. The first item of the relative path must not start with '..'
 
 Optional:
 
+- `field_ref` (Block List, Max: 1) Selects a field of the pod. Set either field_ref or resource_field_ref. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--downward_api--items--field_ref))
 - `mode` (String) Optional: mode bits to use on this file, must be a value between 0 and 0777. If not specified, the volume defaultMode will be used. This might be in conflict with other options that affect the file mode, like fsGroup, and the result can be other mode bits set.
 - `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, requests.cpu and requests.memory) are currently supported. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--downward_api--items--resource_field_ref))
 
@@ -1899,9 +2027,8 @@ Optional:
 
 Optional:
 
-- `medium` (String) What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Must be one of ["" "Memory" "HugePages" "HugePages-2Mi" "HugePages-1Gi"]. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
+- `medium` (String) What type of storage medium should back this directory. The default is "" which means to use the node's default medium. Use an empty string, Memory, HugePages, or HugePages- followed by a page-size quantity supported by the node. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
 - `size_limit` (String) Total amount of local storage required for this EmptyDir volume.
-
 
 <a id="nestedblock--spec--template--spec--volume--ephemeral"></a>
 ### Nested Schema for `spec.template.spec.volume.ephemeral`
@@ -2391,6 +2518,23 @@ Optional:
 - `operator` (String) A key's relationship to a set of values. Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`.
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
 
+
+
+
+<a id="nestedatt--spec--success_policy"></a>
+### Nested Schema for `spec.success_policy`
+
+Required:
+
+- `rules` (Attributes List) Ordered success rules. At least one rule must succeed. (see [below for nested schema](#nestedatt--spec--success_policy--rules))
+
+<a id="nestedatt--spec--success_policy--rules"></a>
+### Nested Schema for `spec.success_policy.rules`
+
+Optional:
+
+- `succeeded_count` (Number) Number of succeeded indexes required, optionally restricted by succeeded_indexes.
+- `succeeded_indexes` (String) Succeeded indexes or ranges, for example 0,2-4.
 
 
 

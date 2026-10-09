@@ -48,13 +48,20 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	at := tftypes.NewAttributePath().WithAttributeName("spec").WithElementKeyInt(0).WithAttributeName("template")
 	planned, plannedOK := valueAt(resp.Plan.Raw, at)
 	prior, priorOK := valueAt(req.State.Raw, at)
-	if !plannedOK || !priorOK || planned.Equal(prior) {
+	templateChanged := plannedOK && priorOK && !planned.Equal(prior)
+	controllerPath := path.Root("spec").AtListIndex(0).AtName("managed_by")
+	var priorController, configuredController types.String
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, controllerPath, &priorController)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, controllerPath, &configuredController)...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	apiDefaulted := apiDefaultedStrings(ctx, req.Plan.Schema)
-	initialized, keyDiags := req.Private.GetKey(ctx, podTemplateMetadataOwnershipInitialized)
-	resp.Diagnostics.Append(keyDiags...)
-	owned := string(initialized) == "true"
+	// Legacy null state does not establish which controller owns the live Job.
+	// Changes from known controller state already require replacement in the schema.
+	adoptingController := priorController.IsNull() && !configuredController.IsNull() && !configuredController.IsUnknown()
+	if !templateChanged && !adoptingController {
+		return
+	}
 	// Decide against the Job as it is now: state written without a refresh can
 	// be stale, and the API comparison reads a zero value as unset, so it cannot
 	// see a removed block that Kubernetes holds with zero values. The state
@@ -64,6 +71,22 @@ func (r *JobV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if adoptingController && job != nil {
+		controller := batchapi.JobControllerName
+		if job.Spec.ManagedBy != nil {
+			controller = *job.Spec.ManagedBy
+		}
+		if controller != configuredController.ValueString() {
+			resp.RequiresReplace = append(resp.RequiresReplace, controllerPath)
+		}
+	}
+	if !templateChanged {
+		return
+	}
+	apiDefaulted := apiDefaultedStrings(ctx, req.Plan.Schema)
+	initialized, keyDiags := req.Private.GetKey(ctx, podTemplateMetadataOwnershipInitialized)
+	resp.Diagnostics.Append(keyDiags...)
+	owned := string(initialized) == "true"
 	replace, diags := jobTemplateChanged(ctx, req.Config.Raw, resp.Plan.Raw, req.State.Raw, apiDefaulted, owned)
 	if job != nil {
 		if replace {
@@ -109,7 +132,7 @@ func (r *JobV1) liveJob(ctx context.Context, state tfsdk.State) (*batchapi.Job, 
 	}
 	if err != nil {
 		diags.AddError("Error reading Job",
-			fmt.Sprintf("Planning a change to the pod template of Job %q requires reading it from Kubernetes: %s", id.ValueString(), err))
+			fmt.Sprintf("Planning a change to the specification of Job %q requires reading it from Kubernetes: %s", id.ValueString(), err))
 		return nil, nil, diags
 	}
 	return job, filters, diags
@@ -519,4 +542,30 @@ func (jobPolicyRequiresReplace) PlanModifyList(ctx context.Context, req planmodi
 func fullyKnown(ctx context.Context, value attr.Value) bool {
 	raw, err := value.ToTerraformValue(ctx)
 	return err == nil && raw.IsFullyKnown()
+}
+
+// Omitting a previously managed controller restores the built-in controller.
+// ModifyPlan checks the live controller when adopting it from legacy null state.
+type jobManagedByRequiresReplace struct{}
+
+func (jobManagedByRequiresReplace) Description(context.Context) string {
+	return "Changing the Job controller requires replacement."
+}
+func (m jobManagedByRequiresReplace) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (jobManagedByRequiresReplace) PlanModifyString(_ context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.PlanValue.Equal(req.StateValue) {
+		return
+	}
+	if req.StateValue.IsNull() && !req.PlanValue.IsUnknown() {
+		return // ModifyPlan compares adoption against the live controller.
+	}
+	effective := func(v types.String) string {
+		if v.IsNull() {
+			return "kubernetes.io/job-controller"
+		}
+		return v.ValueString()
+	}
+	resp.RequiresReplace = req.PlanValue.IsUnknown() || req.StateValue.IsUnknown() || effective(req.PlanValue) != effective(req.StateValue)
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -146,9 +148,11 @@ func TestPodFeatureStateMigration(t *testing.T) {
 					t.Fatal(d)
 				}
 				at := path.Root("spec").AtListIndex(0)
-				paths := []path.Path{at.AtName("host_users"), at.AtName("volume").AtListIndex(0).AtName("image")}
+				paths := []path.Path{at.AtName("host_users"), at.AtName("set_hostname_as_fqdn"), at.AtName("volume").AtListIndex(0).AtName("image")}
 				for _, kind := range []string{"container", "init_container"} {
-					paths = append(paths, at.AtName(kind).AtListIndex(0).AtName("security_context").AtListIndex(0).AtName("proc_mount"))
+					for _, name := range []string{"proc_mount", "app_armor_profile", "windows_options"} {
+						paths = append(paths, at.AtName(kind).AtListIndex(0).AtName("security_context").AtListIndex(0).AtName(name))
+					}
 				}
 				for _, at := range paths {
 					var before, after attr.Value
@@ -302,5 +306,220 @@ func TestResourcesUpgradeMatchesRefresh(t *testing.T) {
 				t.Fatal("unrelated block presence policy changed")
 			}
 		})
+	}
+}
+
+func TestOptionalPodFeaturesRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	for _, option := range []Options{Pod(), Deployment(), DaemonSet(), StatefulSet(), Job(), CronJob()} {
+		b := For(option)
+		for name, raw := range map[string]string{
+			"linux":   `{"spec":[{"set_hostname_as_fqdn":true,"security_context":[{"supplemental_groups_policy":"Strict","se_linux_change_policy":"Recursive","app_armor_profile":{"type":"RuntimeDefault"}}],"container":[{"name":"app","security_context":[{"app_armor_profile":{"type":"Localhost","localhost_profile":"example"}}],"liveness_probe":[{"tcp_socket":[{"host":"127.0.0.1","port":"8080"}],"termination_grace_period_seconds":5}],"startup_probe":[{"termination_grace_period_seconds":7}],"lifecycle":[{"pre_stop":[{"sleep":{"seconds":0}}]}],"volume_mount":[{"name":"data","mount_path":"/data","read_only":true,"recursive_read_only":"Enabled"}],"port":[{"container_port":5000,"protocol":"SCTP"}]}]}]}`,
+			"empty":   `{"spec":[{"container":[{"name":"app","liveness_probe":[{"tcp_socket":[{"port":"80","host":""}]}]}],"affinity":[{"pod_affinity":[{"required_during_scheduling_ignored_during_execution":[{"topology_key":"zone","match_label_keys":[],"mismatch_label_keys":[],"label_selector":[{"match_labels":{"app":"test"}}]}]}]}]}]}`,
+			"windows": `{"spec":[{"container":[{"name":"app","security_context":[{"windows_options":{"run_as_username":"ContainerUser","host_process":false}}]}],"init_container":[{"name":"init","security_context":[{"windows_options":{"gmsa_credential_spec_name":"domain"}}]}]}]}`,
+		} {
+			t.Run(name, func(t *testing.T) {
+				s := schema.Schema{Blocks: map[string]schema.Block{"spec": b.Spec}}
+				decoded, err := (&tfprotov6.RawState{JSON: []byte(raw)}).Unmarshal(s.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				state := tfsdk.State{Schema: s, Raw: decoded}
+				var baseline types.List
+				if d := state.GetAttribute(ctx, path.Root("spec"), &baseline); d.HasError() {
+					t.Fatal(d)
+				}
+				api, d := b.ExpandSpec(ctx, baseline, nil, path.Root("spec"))
+				if d.HasError() {
+					t.Fatal(d)
+				}
+				if name == "linux" {
+					c := api.Containers[0]
+					if api.SetHostnameAsFQDN == nil || !*api.SetHostnameAsFQDN || api.SecurityContext.AppArmorProfile == nil || api.SecurityContext.SupplementalGroupsPolicy == nil || api.SecurityContext.SELinuxChangePolicy == nil || c.SecurityContext.AppArmorProfile == nil || c.LivenessProbe.TCPSocket.Host != "127.0.0.1" || c.LivenessProbe.TerminationGracePeriodSeconds == nil || c.StartupProbe.TerminationGracePeriodSeconds == nil || c.Lifecycle.PreStop.Sleep == nil || c.Lifecycle.PreStop.Sleep.Seconds != 0 || c.VolumeMounts[0].RecursiveReadOnly == nil || c.Ports[0].Protocol != corev1.ProtocolSCTP {
+						t.Fatalf("features lost in API request: %#v", api)
+					}
+				} else if name == "windows" && (api.Containers[0].SecurityContext.WindowsOptions == nil || api.Containers[0].SecurityContext.WindowsOptions.HostProcess == nil || *api.Containers[0].SecurityContext.WindowsOptions.HostProcess || api.InitContainers[0].SecurityContext.WindowsOptions == nil) {
+					t.Fatal("Windows inheritance or explicit false lost")
+				}
+				wire, err := json.Marshal(api)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var observed corev1.PodSpec
+				if err := json.Unmarshal(wire, &observed); err != nil {
+					t.Fatal(err)
+				}
+				refreshed, d := b.RefreshSpec(ctx, observed, baseline, path.Root("spec"))
+				if d.HasError() {
+					t.Fatal(d)
+				}
+				var check func(attr.Value, attr.Value, string)
+				check = func(before, after attr.Value, key string) {
+					if podOptionalFeaturePath(key) {
+						if !before.Equal(after) {
+							t.Errorf("%s changed across refresh: %s -> %s", key, before, after)
+						}
+						return
+					}
+					switch v := before.(type) {
+					case types.Object:
+						if v.IsNull() {
+							return
+						}
+						for field, child := range v.Attributes() {
+							check(child, after.(types.Object).Attributes()[field], key+"."+field)
+						}
+					case types.List:
+						if len(v.Elements()) > len(after.(types.List).Elements()) {
+							t.Fatalf("%s lost list elements after refresh", key)
+						}
+						for i, child := range v.Elements() {
+							if i < len(after.(types.List).Elements()) {
+								check(child, after.(types.List).Elements()[i], key)
+							}
+						}
+					}
+				}
+				check(baseline, refreshed, "spec")
+			})
+		}
+	}
+}
+
+func TestAffinityLabelKeysRefresh(t *testing.T) {
+	ctx := context.Background()
+	b := For(Pod())
+	term := corev1.PodAffinityTerm{TopologyKey: "kubernetes.io/hostname", MatchLabelKeys: []string{"revision"}, MismatchLabelKeys: []string{"tenant"}, LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "tier", Operator: metav1.LabelSelectorOpExists}, {Key: "tenant", Operator: metav1.LabelSelectorOpExists}}}}
+	live := corev1.PodSpec{Containers: []corev1.Container{{Name: "app"}}, Affinity: &corev1.Affinity{
+		PodAffinity:     &corev1.PodAffinity{RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{term}, PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{Weight: 1, PodAffinityTerm: term}}},
+		PodAntiAffinity: &corev1.PodAntiAffinity{RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{term}, PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{Weight: 1, PodAffinityTerm: term}}},
+	}}
+	baseline, d := b.RefreshSpec(ctx, live, types.ListNull(b.ObjectType()), path.Root("spec"))
+	if d.HasError() {
+		t.Fatal(d)
+	}
+	live = *live.DeepCopy()
+	for _, term := range podAffinityTerms(live.Affinity) {
+		term.LabelSelector.MatchExpressions = append(term.LabelSelector.MatchExpressions,
+			metav1.LabelSelectorRequirement{Key: "revision", Operator: metav1.LabelSelectorOpIn, Values: []string{"original-revision"}},
+			metav1.LabelSelectorRequirement{Key: "tenant", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"original-tenant"}},
+		)
+	}
+	refreshed, d := b.RefreshSpec(ctx, live, baseline, path.Root("spec"))
+	if d.HasError() || !refreshed.Equal(baseline) {
+		t.Fatalf("generated affinity expressions changed state: %s", d)
+	}
+	flattened, d := b.FlattenSpec(ctx, live, baseline, path.Root("spec"))
+	if d.HasError() || !Satisfies(flattened, baseline) {
+		t.Fatalf("generated affinity expressions require Pod replacement: %s", d)
+	}
+	for _, term := range podAffinityTerms(live.Affinity) {
+		term.LabelSelector.MatchExpressions = append(term.LabelSelector.MatchExpressions,
+			metav1.LabelSelectorRequirement{Key: "external", Operator: metav1.LabelSelectorOpIn, Values: []string{"admission"}})
+	}
+	for _, affinity := range []string{"pod_affinity", "pod_anti_affinity"} {
+		for _, preferred := range []bool{false, true} {
+			at := []interface{}{0, "affinity", 0, affinity, 0, "required_during_scheduling_ignored_during_execution", 0}
+			if preferred {
+				at[5] = "preferred_during_scheduling_ignored_during_execution"
+				at = append(at, "pod_affinity_term", 0)
+			}
+			for _, owned := range []bool{true, false} {
+				prior := baseline
+				if !owned {
+					for _, field := range []string{"match_label_keys", "mismatch_label_keys"} {
+						prior = with(t, prior, types.SetNull(types.StringType), append(at, field)...).(types.List)
+					}
+				}
+				refreshed, d := b.RefreshSpec(ctx, live, prior, path.Root("spec"))
+				if d.HasError() {
+					t.Fatal(d)
+				}
+				expressions := get(refreshed, append(at, "label_selector", 0, "match_expressions")...).(types.List)
+				want := 3
+				if !owned {
+					want = 5
+				}
+				if len(expressions.Elements()) != want {
+					t.Fatalf("%s preferred=%t owned=%t: %s", affinity, preferred, owned, expressions)
+				}
+				if get(expressions, 0, "key").(types.String).ValueString() != "tier" {
+					t.Fatal("configured selector expression removed")
+				}
+				if get(expressions, 1, "operator").(types.String).ValueString() != "Exists" {
+					t.Fatal("configured same-key selector expression removed")
+				}
+			}
+			// Preserve the exact configured predicates, including duplicates,
+			// when admission appends a different or identical predicate.
+			for _, tc := range []struct {
+				value string
+				count int
+			}{{"configured-tenant", 1}, {"original-tenant", 1}, {"original-tenant", 2}} {
+				expressionPath := append(at, "label_selector", 0, "match_expressions")
+				expressions := get(baseline, expressionPath...).(types.List)
+				predicate := with(t, expressions.Elements()[1], types.StringValue("NotIn"), "operator")
+				predicate = with(t, predicate, types.SetValueMust(types.StringType, []attr.Value{types.StringValue(tc.value)}), "values")
+				configured := expressions.Elements()
+				withPriorPredicate := live.DeepCopy()
+				for range tc.count {
+					configured = append(configured, predicate)
+					for _, term := range podAffinityTerms(withPriorPredicate.Affinity) {
+						term.LabelSelector.MatchExpressions = slices.Insert(term.LabelSelector.MatchExpressions, 2,
+							metav1.LabelSelectorRequirement{Key: "tenant", Operator: metav1.LabelSelectorOpNotIn, Values: []string{tc.value}})
+					}
+				}
+				prior := with(t, baseline, types.ListValueMust(expressions.ElementType(ctx), configured), expressionPath...).(types.List)
+				refreshed, d := b.RefreshSpec(ctx, *withPriorPredicate, prior, path.Root("spec"))
+				if d.HasError() {
+					t.Fatal(d)
+				}
+				got := get(refreshed, expressionPath...).(types.List)
+				if len(got.Elements()) != 3+tc.count || !slices.EqualFunc(got.Elements()[:2+tc.count], configured, func(a, b attr.Value) bool { return a.Equal(b) }) {
+					t.Fatalf("%s preferred=%t value=%s count=%d: configured predicate lost or generated predicate retained: %s", affinity, preferred, tc.value, tc.count, got)
+				}
+			}
+		}
+	}
+}
+
+func TestOptionalPodFeatureRuntimeDefaults(t *testing.T) {
+	ctx := context.Background()
+	b := For(Pod())
+	api := corev1.PodSpec{Containers: []corev1.Container{{Name: "app", VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data", ReadOnly: true}}}}, SecurityContext: &corev1.PodSecurityContext{RunAsUser: ptr.To(int64(1000))}}
+	baseline, d := b.RefreshSpec(ctx, api, types.ListNull(b.ObjectType()), path.Root("spec"))
+	if d.HasError() {
+		t.Fatal(d)
+	}
+	for _, tc := range []struct {
+		at                       []interface{}
+		defaultValue, nondefault attr.Value
+	}{
+		{[]interface{}{0, "set_hostname_as_fqdn"}, types.BoolValue(false), types.BoolValue(true)},
+		{[]interface{}{0, "security_context", 0, "supplemental_groups_policy"}, types.StringValue("Merge"), types.StringValue("Strict")},
+		{[]interface{}{0, "container", 0, "volume_mount", 0, "recursive_read_only"}, types.StringValue("Disabled"), types.StringValue("Enabled")},
+	} {
+		for _, value := range []attr.Value{tc.defaultValue, tc.nondefault} {
+			prior := with(t, baseline, value, tc.at...).(types.List)
+			wire, err := json.Marshal(api)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var observed corev1.PodSpec
+			if err := json.Unmarshal(wire, &observed); err != nil {
+				t.Fatal(err)
+			}
+			refreshed, d := b.RefreshSpec(ctx, observed, prior, path.Root("spec"))
+			if d.HasError() {
+				t.Fatal(d)
+			}
+			got := get(refreshed, tc.at...)
+			if value.Equal(tc.defaultValue) && !got.Equal(value) {
+				t.Fatalf("runtime default lost: %v: %s -> %s", tc.at, value, got)
+			}
+			if value.Equal(tc.nondefault) && !got.IsNull() {
+				t.Fatalf("API dropped nondefault without drift: %v: %s", tc.at, got)
+			}
+		}
 	}
 }

@@ -34,6 +34,7 @@ type StatefulSetV1Model struct {
 }
 
 type StatefulSetSpecModel struct {
+	Ordinals                             types.Object                     `tfsdk:"ordinals"`
 	PodManagementPolicy                  types.String                     `tfsdk:"pod_management_policy"`
 	Replicas                             types.String                     `tfsdk:"replicas"`
 	RevisionHistoryLimit                 types.Int64                      `tfsdk:"revision_history_limit"`
@@ -89,6 +90,12 @@ type statefulSetIdentityModel struct {
 func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel, config *tfsdk.Config) (*appsv1.StatefulSetSpec, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := &appsv1.StatefulSetSpec{}
+	if !spec.Ordinals.IsNull() && !spec.Ordinals.IsUnknown() {
+		start, ok := spec.Ordinals.Attributes()["start"].(types.Int64)
+		if ok && !start.IsNull() && !start.IsUnknown() {
+			out.Ordinals = &appsv1.StatefulSetOrdinals{Start: int32(start.ValueInt64())}
+		}
+	}
 
 	if !spec.PodManagementPolicy.IsNull() && !spec.PodManagementPolicy.IsUnknown() {
 		out.PodManagementPolicy = appsv1.PodManagementPolicyType(spec.PodManagementPolicy.ValueString())
@@ -167,6 +174,7 @@ func expandStatefulSetSpec(ctx context.Context, spec StatefulSetSpecModel, confi
 func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, baseline *StatefulSetSpecModel, refresh bool) (StatefulSetSpecModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := StatefulSetSpecModel{
+		Ordinals:                             types.ObjectNull(map[string]attr.Type{"start": types.Int64Type}),
 		PodManagementPolicy:                  types.StringNull(),
 		Replicas:                             types.StringNull(),
 		RevisionHistoryLimit:                 types.Int64Null(),
@@ -175,6 +183,13 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 		MinReadySeconds:                      types.Int64Value(int64(spec.MinReadySeconds)),
 	}
 
+	start := int32(0)
+	if spec.Ordinals != nil {
+		start = spec.Ordinals.Start
+	}
+	if (baseline != nil && !baseline.Ordinals.IsNull()) || (baseline == nil && spec.Ordinals != nil) {
+		out.Ordinals = types.ObjectValueMust(map[string]attr.Type{"start": types.Int64Type}, map[string]attr.Value{"start": types.Int64Value(int64(start))})
+	}
 	if spec.PodManagementPolicy != "" {
 		out.PodManagementPolicy = types.StringValue(string(spec.PodManagementPolicy))
 	}

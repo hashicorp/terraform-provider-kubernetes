@@ -465,6 +465,65 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 	return att, nil
 }
 
+// Add Framework-only fields after the SDKv2 flattener has filtered injected mounts.
+func flattenFrameworkContainerFields(in v1.Container, out map[string]interface{}) {
+	if in.SecurityContext != nil {
+		securityContext := out["security_context"].([]interface{})[0].(map[string]interface{})
+		if in.SecurityContext.ProcMount != nil {
+			securityContext["proc_mount"] = string(*in.SecurityContext.ProcMount)
+		}
+		if in.SecurityContext.AppArmorProfile != nil {
+			securityContext["app_armor_profile"] = flattenFrameworkAppArmorProfile(in.SecurityContext.AppArmorProfile)
+		}
+		if in.SecurityContext.WindowsOptions != nil {
+			securityContext["windows_options"] = flattenWindowsOptions(*in.SecurityContext.WindowsOptions)[0]
+		}
+	}
+	for name, probe := range map[string]*v1.Probe{
+		"liveness_probe": in.LivenessProbe, "readiness_probe": in.ReadinessProbe, "startup_probe": in.StartupProbe,
+	} {
+		if probe == nil {
+			continue
+		}
+		value := out[name].([]interface{})[0].(map[string]interface{})
+		if name != "readiness_probe" && probe.TerminationGracePeriodSeconds != nil {
+			value["termination_grace_period_seconds"] = *probe.TerminationGracePeriodSeconds
+		}
+		if probe.TCPSocket != nil && probe.TCPSocket.Host != "" {
+			value["tcp_socket"].([]interface{})[0].(map[string]interface{})["host"] = probe.TCPSocket.Host
+		}
+	}
+	if in.Lifecycle != nil {
+		lifecycle := out["lifecycle"].([]interface{})[0].(map[string]interface{})
+		for name, handler := range map[string]*v1.LifecycleHandler{"post_start": in.Lifecycle.PostStart, "pre_stop": in.Lifecycle.PreStop} {
+			if handler == nil {
+				continue
+			}
+			value := lifecycle[name].([]interface{})[0].(map[string]interface{})
+			if handler.Sleep != nil {
+				value["sleep"] = map[string]interface{}{"seconds": handler.Sleep.Seconds}
+			}
+			if handler.TCPSocket != nil && handler.TCPSocket.Host != "" {
+				value["tcp_socket"].([]interface{})[0].(map[string]interface{})["host"] = handler.TCPSocket.Host
+			}
+		}
+	}
+	readOnlyModes := make(map[string]v1.RecursiveReadOnlyMode)
+	for _, mount := range in.VolumeMounts {
+		if mount.RecursiveReadOnly != nil {
+			readOnlyModes[mount.MountPath] = *mount.RecursiveReadOnly
+		}
+	}
+	mounts, _ := out["volume_mount"].([]interface{})
+	for _, raw := range mounts {
+		mount := raw.(map[string]interface{})
+		mountPath, _ := mount["mount_path"].(string)
+		if mode, ok := readOnlyModes[mountPath]; ok {
+			mount["recursive_read_only"] = string(mode)
+		}
+	}
+}
+
 // removeVolumeMountFromContainer removes the specified VolumeMount index (i) from the given list of VolumeMounts.
 func removeVolumeMountFromContainer(i int, v []v1.VolumeMount) []v1.VolumeMount {
 	return append(v[:i], v[i+1:]...)
@@ -636,6 +695,12 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 	if v, ok := in["proc_mount"].(string); ok && v != "" {
 		obj.ProcMount = ptr.To(v1.ProcMountType(v))
 	}
+	if v, ok := in["app_armor_profile"].(map[string]interface{}); ok {
+		obj.AppArmorProfile = expandAppArmorProfile(v)
+	}
+	if v, ok := in["windows_options"].(map[string]interface{}); ok {
+		obj.WindowsOptions = expandWindowsOptions([]interface{}{v})
+	}
 	if v, ok := in["read_only_root_filesystem"]; ok {
 		obj.ReadOnlyRootFilesystem = ptr.To(v.(bool))
 	}
@@ -697,6 +762,9 @@ func expandTCPSocket(l []interface{}) *v1.TCPSocketAction {
 	obj := v1.TCPSocketAction{}
 	if v, ok := in["port"].(string); ok && len(v) > 0 {
 		obj.Port = intstr.Parse(v)
+	}
+	if v, ok := in["host"].(string); ok {
+		obj.Host = v
 	}
 	return &obj
 }
@@ -775,6 +843,9 @@ func expandProbe(l []interface{}) *v1.Probe {
 	if v, ok := in["timeout_seconds"].(int); ok {
 		obj.TimeoutSeconds = int32(v)
 	}
+	if v, ok := in["termination_grace_period_seconds"].(int); ok {
+		obj.TerminationGracePeriodSeconds = ptr.To(int64(v))
+	}
 
 	return &obj
 }
@@ -793,6 +864,11 @@ func expandLifecycleHandlers(l []interface{}) *v1.LifecycleHandler {
 	}
 	if v, ok := in["tcp_socket"].([]interface{}); ok && len(v) > 0 {
 		obj.TCPSocket = expandTCPSocket(v)
+	}
+	if v, ok := in["sleep"].(map[string]interface{}); ok {
+		if seconds, ok := v["seconds"].(int); ok {
+			obj.Sleep = &v1.SleepAction{Seconds: int64(seconds)}
+		}
 	}
 	return &obj
 }
@@ -827,6 +903,9 @@ func expandContainerVolumeMounts(in []interface{}) []v1.VolumeMount {
 		}
 		if readOnly, ok := p["read_only"]; ok {
 			vmp[i].ReadOnly = readOnly.(bool)
+		}
+		if recursiveReadOnly, ok := p["recursive_read_only"].(string); ok && recursiveReadOnly != "" {
+			vmp[i].RecursiveReadOnly = ptr.To(v1.RecursiveReadOnlyMode(recursiveReadOnly))
 		}
 		if subPath, ok := p["sub_path"]; ok {
 			vmp[i].SubPath = subPath.(string)

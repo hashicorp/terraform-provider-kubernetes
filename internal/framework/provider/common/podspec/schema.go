@@ -103,6 +103,15 @@ func (b builder) str(required, computed bool, f forceNew, fallback string, valid
 	return a
 }
 
+// New optional fields retain absence instead of inheriting SDKv2's zero defaults.
+func (b builder) optionalString(f forceNew, validators ...validator.String) schema.StringAttribute {
+	a := schema.StringAttribute{Optional: true, Validators: validators}
+	if b.replace(f) {
+		a.PlanModifiers = []planmodifier.String{podStringRequiresReplace{stringplanmodifier.RequiresReplace()}}
+	}
+	return a
+}
+
 func (b builder) boolean(computed bool, f forceNew, fallback bool) schema.BoolAttribute {
 	a := schema.BoolAttribute{Optional: true, Computed: true}
 	if !computed {
@@ -115,6 +124,13 @@ func (b builder) boolean(computed bool, f forceNew, fallback bool) schema.BoolAt
 		a.PlanModifiers = append(a.PlanModifiers, podBoolRequiresReplace{boolplanmodifier.RequiresReplace()})
 	}
 	return a
+}
+
+func (b builder) optionalBoolReplacement() []planmodifier.Bool {
+	if b.replace(immutable) {
+		return []planmodifier.Bool{podBoolRequiresReplace{boolplanmodifier.RequiresReplace()}}
+	}
+	return nil
 }
 
 func (b builder) integer(required, computed bool, f forceNew, fallback int64, validators ...validator.Int64) schema.Int64Attribute {
@@ -211,24 +227,29 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 	}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"active_deadline_seconds":          b.integer(false, false, updatable, 0, int64validator.AtLeast(1)),
-			"automount_service_account_token":  b.boolean(false, immutable, true),
-			"dns_policy":                       b.str(false, false, immutable, "ClusterFirst", stringvalidator.OneOf("ClusterFirst", "ClusterFirstWithHostNet", "Default", "None")),
-			"enable_service_links":             b.boolean(false, immutable, true),
-			"host_ipc":                         b.boolean(false, immutable, false),
-			"host_network":                     b.boolean(false, immutable, false),
-			"host_pid":                         b.boolean(false, immutable, false),
-			"host_users":                       hostUsers,
-			"hostname":                         b.str(false, true, immutable, ""),
-			"image_pull_secrets":               b.references("name", immutable),
-			"node_name":                        b.str(false, true, immutable, ""),
-			"node_selector":                    b.emptyCompatibleMap(immutable),
-			"priority_class_name":              b.str(false, !b.o.Template, immutable, ""), // admission sets a Pod's default class
-			"readiness_gate":                   b.references("condition_type", immutable),
-			"restart_policy":                   b.str(false, false, immutable, b.o.RestartPolicy, stringvalidator.OneOf(restartPolicy...)),
-			"runtime_class_name":               b.str(false, false, immutable, ""),
-			"scheduler_name":                   b.str(false, true, immutable, ""),
-			"service_account_name":             b.str(false, true, immutable, ""),
+			"active_deadline_seconds":         b.integer(false, false, updatable, 0, int64validator.AtLeast(1)),
+			"automount_service_account_token": b.boolean(false, immutable, true),
+			"dns_policy":                      b.str(false, false, immutable, "ClusterFirst", stringvalidator.OneOf("ClusterFirst", "ClusterFirstWithHostNet", "Default", "None")),
+			"enable_service_links":            b.boolean(false, immutable, true),
+			"host_ipc":                        b.boolean(false, immutable, false),
+			"host_network":                    b.boolean(false, immutable, false),
+			"host_pid":                        b.boolean(false, immutable, false),
+			"host_users":                      hostUsers,
+			"hostname":                        b.str(false, true, immutable, ""),
+			"image_pull_secrets":              b.references("name", immutable),
+			"node_name":                       b.str(false, true, immutable, ""),
+			"node_selector":                   b.emptyCompatibleMap(immutable),
+			"priority_class_name":             b.str(false, !b.o.Template, immutable, ""), // admission sets a Pod's default class
+			"readiness_gate":                  b.references("condition_type", immutable),
+			"restart_policy":                  b.str(false, false, immutable, b.o.RestartPolicy, stringvalidator.OneOf(restartPolicy...)),
+			"runtime_class_name":              b.str(false, false, immutable, ""),
+			"scheduler_name":                  b.str(false, true, immutable, ""),
+			"service_account_name":            b.str(false, true, immutable, ""),
+			"set_hostname_as_fqdn": schema.BoolAttribute{
+				Optional:      true,
+				Description:   "Set the Pod hostname to its fully qualified domain name. Omission uses the short hostname. Requires Linux; the resulting hostname must fit the kernel's 64-byte limit.",
+				PlanModifiers: b.optionalBoolReplacement(),
+			},
 			"share_process_namespace":          b.boolean(false, immutable, false),
 			"subdomain":                        b.str(false, false, immutable, ""),
 			"termination_grace_period_seconds": b.integer(false, false, immutable, 30, int64validator.AtLeast(0)),
@@ -344,10 +365,16 @@ func (b builder) podAffinityObject() schema.NestedBlockObject {
 }
 
 func (b builder) podAffinityTermObject() schema.NestedBlockObject {
+	match := b.set(immutable, types.StringType)
+	match.Description = "Pod label keys whose values are combined with label_selector using In. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated."
+	mismatch := b.set(immutable, types.StringType)
+	mismatch.Description = "Pod label keys whose values are combined with label_selector using NotIn. Kubernetes resolves these labels when creating a Pod; later label edits do not update that predicate. Requires MatchLabelKeysInPodAffinity on Kubernetes versions where it is gated."
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"namespaces":   b.set(updatable, types.StringType),
-			"topology_key": b.str(true, false, updatable, ""),
+			"match_label_keys":    match,
+			"mismatch_label_keys": mismatch,
+			"namespaces":          b.set(updatable, types.StringType),
+			"topology_key":        b.str(true, false, updatable, ""),
 		},
 		Blocks: map[string]schema.Block{
 			"label_selector":     b.block(b.podLabelSelectorObject(), 0, 0, updatable),
@@ -418,6 +445,13 @@ func (v podStringRule) ValidateString(_ context.Context, req validator.StringReq
 	case "quantity":
 		if _, err := kquantity.ParseQuantity(s); err != nil {
 			messages = append(messages, err.Error())
+		}
+	case "empty-dir-medium":
+		if s != "" && s != "Memory" && s != "HugePages" {
+			quantity, err := kquantity.ParseQuantity(strings.TrimPrefix(s, "HugePages-"))
+			if !strings.HasPrefix(s, "HugePages-") || err != nil || quantity.Sign() <= 0 {
+				messages = append(messages, "must be empty, Memory, HugePages, or HugePages- followed by a positive page-size quantity")
+			}
 		}
 	case "restart-policy-always":
 		if s != "Always" {

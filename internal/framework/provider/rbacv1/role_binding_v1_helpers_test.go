@@ -111,8 +111,8 @@ func TestApplySubjectComputedFields_knownAPIGroupPreserved(t *testing.T) {
 }
 
 // TestApplySubjectComputedFields_unknownNamespaceResolved verifies that an
-// unknown namespace is resolved from the API response with the same
-// empty-string → "default" normalisation used by flattenSubjects.
+// unknown namespace is resolved from the API response verbatim; an empty
+// namespace is NOT rewritten to "default".
 func TestApplySubjectComputedFields_unknownNamespaceResolved(t *testing.T) {
 	t.Parallel()
 
@@ -136,9 +136,8 @@ func TestApplySubjectComputedFields_unknownNamespaceResolved(t *testing.T) {
 	if got.Namespace.IsUnknown() {
 		t.Fatal("namespace is still unknown after applySubjectComputedFields")
 	}
-	// Empty string from API → "default" per flattenSubjects convention.
-	if got.Namespace.ValueString() != "default" {
-		t.Errorf("namespace = %q, want %q", got.Namespace.ValueString(), "default")
+	if got.Namespace.IsNull() || got.Namespace.ValueString() != "" {
+		t.Errorf("namespace = %v, want known empty string", got.Namespace)
 	}
 }
 
@@ -242,34 +241,89 @@ func TestApplySubjectComputedFields_groupSubjectNonEmptyAPIGroup(t *testing.T) {
 
 // ── flattenSubjects ────────────────────────────────────────────────────────────
 
-// TestFlattenSubjects_emptyNamespaceNormalizedToDefault verifies that
-// flattenSubjects writes "default" whenever the Kubernetes API returns an
-// empty namespace string, and preserves non-empty namespaces unchanged.
-func TestFlattenSubjects_emptyNamespaceNormalizedToDefault(t *testing.T) {
+// TestFlattenSubjects_preservesNamespace verifies that flattenSubjects writes the
+// namespace exactly as the Kubernetes API returns it: an empty namespace stays a
+// known empty string (not null, not "default") so that an explicitly configured
+// namespace = "" does not produce a diff after refresh.
+func TestFlattenSubjects_preservesNamespace(t *testing.T) {
 	t.Parallel()
 
-	// User and Group subjects: Kubernetes stores no namespace, returns "".
 	in := []rbacv1api.Subject{
 		{Kind: "User", Name: "alice", APIGroup: "rbac.authorization.k8s.io", Namespace: ""},
-		{Kind: "Group", Name: "dev-team", APIGroup: "rbac.authorization.k8s.io", Namespace: ""},
+		{Kind: "Group", Name: "dev-team", APIGroup: "rbac.authorization.k8s.io", Namespace: "default"},
 		{Kind: "ServiceAccount", Name: "sa", APIGroup: "", Namespace: "kube-system"},
 	}
 
 	got := flattenSubjects(in)
 
-	if len(got) != 3 {
-		t.Fatalf("got %d subjects, want 3", len(got))
+	if len(got) != len(in) {
+		t.Fatalf("got %d subjects, want %d", len(got), len(in))
 	}
-	// "" → "default" for User.
-	if got[0].Namespace.ValueString() != "default" {
-		t.Errorf("User namespace = %q, want %q", got[0].Namespace.ValueString(), "default")
+	for i, want := range []string{"", "default", "kube-system"} {
+		ns := got[i].Namespace
+		if ns.IsNull() || ns.IsUnknown() || ns.ValueString() != want {
+			t.Errorf("subject[%d] namespace = %v, want known %q", i, ns, want)
+		}
 	}
-	// "" → "default" for Group.
-	if got[1].Namespace.ValueString() != "default" {
-		t.Errorf("Group namespace = %q, want %q", got[1].Namespace.ValueString(), "default")
+}
+
+// TestApplySubjectComputedFields_doesNotChangeBlockCount verifies that extra API
+// subjects are never appended: the planned block count must equal the applied
+// count, and a configured empty namespace is kept.
+func TestApplySubjectComputedFields_doesNotChangeBlockCount(t *testing.T) {
+	t.Parallel()
+
+	plan := []SubjectModel{
+		{
+			Kind:      types.StringValue("User"),
+			Name:      types.StringValue("alice"),
+			APIGroup:  types.StringValue("rbac.authorization.k8s.io"),
+			Namespace: types.StringValue(""),
+		},
 	}
-	// Non-empty namespace is preserved as-is.
-	if got[2].Namespace.ValueString() != "kube-system" {
-		t.Errorf("ServiceAccount namespace = %q, want %q", got[2].Namespace.ValueString(), "kube-system")
+	apiResponse := []rbacv1api.Subject{
+		{Kind: "User", Name: "alice", APIGroup: "rbac.authorization.k8s.io", Namespace: ""},
+		{Kind: "User", Name: "bob", APIGroup: "rbac.authorization.k8s.io", Namespace: ""},
+	}
+
+	applySubjectComputedFields(&plan, apiResponse)
+
+	if len(plan) != 1 {
+		t.Fatalf("got %d subjects, want 1 (planned count must not change)", len(plan))
+	}
+	if plan[0].Namespace.IsNull() || plan[0].Namespace.ValueString() != "" {
+		t.Errorf("namespace = %v, want known empty string", plan[0].Namespace)
+	}
+}
+
+// TestFlattenSubjectsWithPrior_emptyAPIGroupPreserved verifies that a configured
+// api_group = "" on a User/Group subject survives Read even though the API server
+// returns the defaulted rbac.authorization.k8s.io, while other cases follow the API.
+func TestFlattenSubjectsWithPrior_emptyAPIGroupPreserved(t *testing.T) {
+	t.Parallel()
+
+	prior := []SubjectModel{
+		{Kind: types.StringValue("User"), Name: types.StringValue("alice"), APIGroup: types.StringValue(""), Namespace: types.StringValue("default")},
+		{Kind: types.StringValue("Group"), Name: types.StringValue("dev"), APIGroup: types.StringValue("rbac.authorization.k8s.io"), Namespace: types.StringValue("default")},
+		{Kind: types.StringValue("User"), Name: types.StringValue("old"), APIGroup: types.StringValue(""), Namespace: types.StringValue("default")},
+		{Kind: types.StringValue("ServiceAccount"), Name: types.StringValue("sa"), APIGroup: types.StringValue(""), Namespace: types.StringValue("kube-system")},
+	}
+	in := []rbacv1api.Subject{
+		{Kind: "User", Name: "alice", APIGroup: "rbac.authorization.k8s.io"},
+		{Kind: "Group", Name: "dev", APIGroup: "rbac.authorization.k8s.io"},
+		{Kind: "User", Name: "changed", APIGroup: "rbac.authorization.k8s.io"}, // name differs: follow API
+		{Kind: "ServiceAccount", Name: "sa", APIGroup: "", Namespace: "kube-system"},
+	}
+
+	got := flattenSubjectsWithPrior(in, prior)
+
+	want := []string{"", "rbac.authorization.k8s.io", "rbac.authorization.k8s.io", ""}
+	if len(got) != len(want) {
+		t.Fatalf("got %d subjects, want %d", len(got), len(want))
+	}
+	for i, w := range want {
+		if got[i].APIGroup.IsNull() || got[i].APIGroup.ValueString() != w {
+			t.Errorf("subject[%d] api_group = %v, want %q", i, got[i].APIGroup, w)
+		}
 	}
 }

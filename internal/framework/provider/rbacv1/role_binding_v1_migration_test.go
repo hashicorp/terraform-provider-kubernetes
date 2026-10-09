@@ -130,6 +130,16 @@ func TestAccMigrateRoleBinding_basic(t *testing.T) {
 	})
 }
 
+// TestAccMigrateRoleBinding_emptySubjectNamespace verifies that state written by
+// the SDKv2 provider for a subject with an explicitly empty namespace migrates
+// with no diff.
+func TestAccMigrateRoleBinding_emptySubjectNamespace(t *testing.T) {
+	name := "tf-acc-migrate-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	roleBindingMigrationTestCase(t, testAccRoleBindingV1Config_emptySubjectNamespace(name),
+		tfresource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.namespace", ""),
+	)
+}
+
 // TestAccMigrateRoleBinding_complete_name verifies that a RoleBinding with
 // metadata.name and multiple subject kinds (User, ServiceAccount, Group)
 // migrates with no diff, exercising the computed subject.api_group and

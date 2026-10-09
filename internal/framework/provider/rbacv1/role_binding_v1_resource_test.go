@@ -243,6 +243,72 @@ func TestAccRoleBinding_groupSubject(t *testing.T) {
 	})
 }
 
+// TestAccRoleBinding_emptySubjectNamespace verifies that an explicitly empty
+// subject namespace is preserved: apply -> refresh -> empty plan, and import
+// round-trips without drift.
+func TestAccRoleBinding_emptySubjectNamespace(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccRoleBindingV1Config_emptySubjectNamespace(name),
+				Check: tfresource.ComposeAggregateTestCheckFunc(
+					tfresource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
+					tfresource.TestCheckResourceAttr(resourceName, "subject.0.namespace", ""),
+				),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				Config: testAccRoleBindingV1Config_emptySubjectNamespace(name),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"metadata.0.resource_version",
+					"metadata.0.generation",
+				},
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_emptyUserAPIGroup verifies that api_group = "" on a User subject
+// (which the API server defaults to rbac.authorization.k8s.io) does not drift:
+// apply -> refresh -> empty plan.
+func TestAccRoleBinding_emptyUserAPIGroup(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccRoleBindingV1Config_emptyUserAPIGroup(name),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				Config: testAccRoleBindingV1Config_emptyUserAPIGroup(name),
+				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 // TestAccRoleBinding_roleRefRequiresReplace verifies that changing role_ref
 // destroys the existing RoleBinding and creates a new one (RequiresReplace).
 func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
@@ -597,6 +663,53 @@ resource "kubernetes_role_binding_v1" "test" {
     kind      = "Group"
     name      = "dev-team"
     api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_emptySubjectNamespace(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = "default"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+    namespace = ""
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_emptyUserAPIGroup(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = "default"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = ""
   }
 }
 `, name)

@@ -49,27 +49,54 @@ func expandSubjects(in []SubjectModel) []rbacv1api.Subject {
 }
 
 // flattenSubjects converts Kubernetes Subject API objects to a slice of SubjectModel.
-// When a subject has no namespace (e.g. User or Group kinds), the Kubernetes API
-// returns an empty string. The schema declares Default: "default" for namespace, which
-// Terraform applies during planning but not during Read. To keep state consistent with
-// the plan default — and to match SDKv2 behaviour (Default: "default" in schema_rbac.go)
-// — we write "default" whenever the API returns an empty namespace.
+//
+// Namespace is written exactly as the API returns it. The schema default ("default")
+// is applied by Terraform at plan time when namespace is omitted, so the API then
+// stores and returns "default". An empty namespace coming back from the API therefore
+// means the user explicitly configured "" (or the object was created outside Terraform);
+// rewriting it to "default" would make the next plan differ from state. This matches the
+// SDKv2 flatten, which kept an empty namespace empty.
 func flattenSubjects(in []rbacv1api.Subject) []SubjectModel {
 	result := make([]SubjectModel, 0, len(in))
 	for _, s := range in {
-		ns := s.Namespace
-		if ns == "" {
-			ns = "default"
-		}
-		m := SubjectModel{
-			Kind:      types.StringValue(s.Kind),
-			Name:      types.StringValue(s.Name),
-			APIGroup:  types.StringValue(s.APIGroup),
-			Namespace: types.StringValue(ns),
-		}
-		result = append(result, m)
+		result = append(result, flattenSubject(s))
 	}
 	return result
+}
+
+// flattenSubjectsWithPrior is flattenSubjects for Read. It keeps a prior-state
+// api_group of "" when the API returns the canonical rbac.authorization.k8s.io for a
+// User or Group subject: the API server defaults an empty api_group for those kinds,
+// so the two values are equivalent and rewriting the configured "" would cause a
+// perpetual diff.
+func flattenSubjectsWithPrior(in []rbacv1api.Subject, prior []SubjectModel) []SubjectModel {
+	result := flattenSubjects(in)
+	for i := range result {
+		if i >= len(prior) {
+			break
+		}
+		p := prior[i]
+		if p.APIGroup.IsNull() || p.APIGroup.IsUnknown() || p.APIGroup.ValueString() != "" {
+			continue
+		}
+		if p.Kind.ValueString() != in[i].Kind || p.Name.ValueString() != in[i].Name {
+			continue
+		}
+		if (in[i].Kind == rbacv1api.UserKind || in[i].Kind == rbacv1api.GroupKind) &&
+			in[i].APIGroup == rbacv1api.GroupName {
+			result[i].APIGroup = types.StringValue("")
+		}
+	}
+	return result
+}
+
+func flattenSubject(s rbacv1api.Subject) SubjectModel {
+	return SubjectModel{
+		Kind:      types.StringValue(s.Kind),
+		Name:      types.StringValue(s.Name),
+		APIGroup:  types.StringValue(s.APIGroup),
+		Namespace: types.StringValue(s.Namespace),
+	}
 }
 
 // applySubjectComputedFields resolves unknown computed fields in plan subjects from the
@@ -80,9 +107,9 @@ func flattenSubjects(in []rbacv1api.Subject) []SubjectModel {
 // field. After the API call succeeds, Kubernetes returns a concrete value. This helper
 // fills in only those unknown slots; configured (known) values are left untouched.
 //
-// If the response has a different number of subjects than the plan — which should not
-// happen in practice but is possible if the server normalised the request — we fall back
-// to a full flatten for the mismatched tail so the state is still consistent.
+// The number of subject blocks is never changed: Terraform requires the applied block
+// count to equal the planned count, so any extra API subjects are ignored here and
+// surface as drift on the next Read instead.
 func applySubjectComputedFields(plan *[]SubjectModel, apiSubjects []rbacv1api.Subject) {
 	for i := range *plan {
 		if i >= len(apiSubjects) {
@@ -95,29 +122,10 @@ func applySubjectComputedFields(plan *[]SubjectModel, apiSubjects []rbacv1api.Su
 		if s.APIGroup.IsUnknown() {
 			s.APIGroup = types.StringValue(api.APIGroup)
 		}
-		// Resolve namespace only when the plan left it unknown.
+		// Resolve namespace only when the plan left it unknown; keep the API value as-is.
 		if s.Namespace.IsUnknown() {
-			ns := api.Namespace
-			if ns == "" {
-				ns = "default"
-			}
-			s.Namespace = types.StringValue(ns)
+			s.Namespace = types.StringValue(api.Namespace)
 		}
-	}
-
-	// Append any extra API subjects that have no matching plan entry.
-	for i := len(*plan); i < len(apiSubjects); i++ {
-		api := apiSubjects[i]
-		ns := api.Namespace
-		if ns == "" {
-			ns = "default"
-		}
-		*plan = append(*plan, SubjectModel{
-			Kind:      types.StringValue(api.Kind),
-			Name:      types.StringValue(api.Name),
-			APIGroup:  types.StringValue(api.APIGroup),
-			Namespace: types.StringValue(ns),
-		})
 	}
 }
 

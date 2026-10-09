@@ -139,7 +139,7 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	state.Metadata = metadata
 	state.RoleRef = []RoleRefModel{flattenRoleRef(out.RoleRef)}
-	state.Subject = flattenSubjects(out.Subjects)
+	state.Subject = flattenSubjectsWithPrior(out.Subjects, state.Subject)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{

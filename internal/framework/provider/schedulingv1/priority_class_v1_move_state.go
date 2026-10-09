@@ -1,0 +1,162 @@
+// Copyright IBM Corp. 2017, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package schedulingv1
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+)
+
+// ---------------------------------------------------------------------------
+// MoveState support — moved block from kubernetes_priority_class
+// ---------------------------------------------------------------------------
+
+// moveStateHandlers returns the StateMover list for PriorityClassV1.
+// Handles: kubernetes_priority_class (deprecated alias without version suffix).
+func moveStateHandlers() []resource.StateMover {
+	return []resource.StateMover{
+		{
+			// No SourceSchema: raw JSON is parsed manually so we stay decoupled
+			// from the SDK v2 schema definition.
+			StateMover: moveStateFromKubernetesPriorityClassHandler,
+		},
+	}
+}
+
+// sdkv2PCMetadataElement is the JSON shape of one element in the SDKv2
+// TypeList metadata for kubernetes_priority_class (schema version 0).
+type sdkv2PCMetadataElement struct {
+	Name            string            `json:"name"`
+	GenerateName    string            `json:"generate_name"`
+	Annotations     map[string]string `json:"annotations"`
+	Labels          map[string]string `json:"labels"`
+	ResourceVersion string            `json:"resource_version"`
+	UID             string            `json:"uid"`
+	Generation      int64             `json:"generation"`
+}
+
+// sdkv2PriorityClassStateV0 is the raw JSON shape of an SDKv2
+// kubernetes_priority_class state (schema version 0).
+type sdkv2PriorityClassStateV0 struct {
+	ID               string                   `json:"id"`
+	Metadata         []sdkv2PCMetadataElement `json:"metadata"`
+	Value            int64                    `json:"value"`
+	Description      string                   `json:"description"`
+	GlobalDefault    bool                     `json:"global_default"`
+	PreemptionPolicy string                   `json:"preemption_policy"`
+}
+
+// moveStateFromKubernetesPriorityClassHandler is the MoveState handler that
+// converts kubernetes_priority_class state into kubernetes_priority_class_v1 state.
+// The user adds a moved block in their configuration:
+//
+//	moved {
+//	  from = kubernetes_priority_class.example
+//	  to   = kubernetes_priority_class_v1.example
+//	}
+func moveStateFromKubernetesPriorityClassHandler(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+	// Guard on all three fields before decoding.  An under-gated handler would
+	// silently accept a future schema-version state and decode it with the v0
+	// struct, producing zeroed/dropped fields with no error.
+	const sdkv2ProviderAddressSuffix = "/hashicorp/kubernetes"
+	if req.SourceTypeName != "kubernetes_priority_class" ||
+		req.SourceSchemaVersion != 0 ||
+		(req.SourceProviderAddress != "" && !strings.HasSuffix(req.SourceProviderAddress, sdkv2ProviderAddressSuffix)) {
+		return
+	}
+
+	if req.SourceRawState == nil {
+		resp.Diagnostics.AddError("state move failed", "source raw state is nil")
+		return
+	}
+
+	var raw sdkv2PriorityClassStateV0
+	if err := json.Unmarshal(req.SourceRawState.JSON, &raw); err != nil {
+		resp.Diagnostics.AddError(
+			"state move failed",
+			fmt.Sprintf("failed to unmarshal kubernetes_priority_class state: %s", err),
+		)
+		return
+	}
+
+	if len(raw.Metadata) != 1 {
+		resp.Diagnostics.AddError(
+			"state move failed",
+			fmt.Sprintf("expected exactly 1 metadata element in source state, got %d", len(raw.Metadata)),
+		)
+		return
+	}
+	if raw.ID == "" {
+		resp.Diagnostics.AddError("state move failed", "empty 'id' in source state")
+		return
+	}
+
+	m := raw.Metadata[0]
+
+	meta := common.MetadataModel{
+		MetadataBase: common.MetadataBase{
+			Name:            types.StringValue(m.Name),
+			Generation:      types.Int64Value(m.Generation),
+			ResourceVersion: types.StringValue(m.ResourceVersion),
+			UID:             types.StringValue(m.UID),
+			// Empty maps → null to avoid perpetual plan diff.
+			// SDKv2 stored null for absent maps; if they're empty here they were also absent.
+			Annotations: buildMovedMap(ctx, m.Annotations, resp),
+			Labels:      buildMovedMap(ctx, m.Labels, resp),
+		},
+		// generate_name: empty string → null to avoid perpetual plan diff
+		GenerateName: types.StringNull(),
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if m.GenerateName != "" {
+		meta.GenerateName = types.StringValue(m.GenerateName)
+	}
+
+	// preemption_policy: default to PreemptLowerPriority if empty (SDKv2 stores the default)
+	preemptionPolicy := raw.PreemptionPolicy
+	if preemptionPolicy == "" {
+		preemptionPolicy = "PreemptLowerPriority"
+	}
+
+	moved := PriorityClassModel{
+		ID:               types.StringValue(raw.ID),
+		Metadata:         []common.MetadataModel{meta},
+		Value:            types.Int64Value(raw.Value),
+		Description:      types.StringValue(raw.Description),
+		GlobalDefault:    types.BoolValue(raw.GlobalDefault),
+		PreemptionPolicy: types.StringValue(preemptionPolicy),
+	}
+
+	resp.Diagnostics.Append(resp.TargetState.Set(ctx, &moved)...)
+	if resp.Diagnostics.HasError() || resp.TargetIdentity == nil {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, common.ResourceIdentity{
+		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
+		Kind:       types.StringValue("PriorityClass"),
+		Name:       types.StringValue(m.Name),
+	})...)
+}
+
+// buildMovedMap converts a map[string]string from SDKv2 state into a types.Map.
+// Empty maps become types.MapNull — SDKv2 wrote null for absent maps, so an empty
+// map in SDKv2 state represents "not set" and should not become an empty {} in
+// Framework state (which would differ from a null and cause a perpetual diff).
+func buildMovedMap(ctx context.Context, m map[string]string, resp *resource.MoveStateResponse) types.Map {
+	if len(m) == 0 {
+		return types.MapNull(types.StringType)
+	}
+	val, diags := types.MapValueFrom(ctx, types.StringType, m)
+	resp.Diagnostics.Append(diags...)
+	return val
+}

@@ -156,7 +156,7 @@ func TestAccKubernetesDataSourceSecretV1_nameAndGenerateNameConflict(t *testing.
     generate_name = "tf-acc-conflict-"
   }
 }`,
-				ExpectError: regexp.MustCompile(`(?i)conflicts with`),
+				ExpectError: regexp.MustCompile(`(?i)cannot be specified when`),
 			},
 		},
 	})

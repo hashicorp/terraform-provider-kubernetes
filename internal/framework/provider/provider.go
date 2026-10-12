@@ -204,6 +204,7 @@ func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasourc
 	return []func() datasource.DataSource{
 		corev1.NewAllNamespacesDataSource,
 		corev1.NewNamespaceV1DataSource,
+		corev1.NewSecretV1DataSource,
 	}
 }
 

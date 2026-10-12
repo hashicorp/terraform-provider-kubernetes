@@ -15,18 +15,8 @@ import (
 )
 
 // flattenSecretV1Metadata converts a Kubernetes ObjectMeta into a
-// common.NamespacedMetadataModel.
-//
-// It is the Framework equivalent of the SDKv2 flattenMetadataFields (used by the
-// SDKv2 secret data source), and is intentionally UNFILTERED: unlike
-// common.FlattenNamespacedMetadata — which runs RemoveInternalKeys / RemoveKeys to
-// drop control-plane and ignore-listed keys for the resource Read path — the secret
-// data source surfaces every annotation and label exactly as the API returns them.
-// This matches the SDKv2 data source, which never applied ignore_annotations /
-// ignore_labels.
-//
-// nil maps become null (not {}), matching flattenMetadataFields, which stored the raw
-// map and left SDKv2 to serialise a nil map as null.
+// common.NamespacedMetadataModel. Annotations and labels are surfaced unfiltered;
+// nil maps become null.
 func flattenSecretV1Metadata(ctx context.Context, meta metav1.ObjectMeta) (common.NamespacedMetadataModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -58,9 +48,8 @@ func flattenSecretV1Metadata(ctx context.Context, meta metav1.ObjectMeta) (commo
 	}, diags
 }
 
-// stringMapToTypesMap converts a plain Go map into a types.Map of strings. A nil map
-// yields a null Map so the state matches the SDKv2 data source, which stored null for
-// absent annotations / labels.
+// stringMapToTypesMap converts a plain Go map into a types.Map of strings.
+// A nil map yields a null Map.
 func stringMapToTypesMap(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
 	if m == nil {
 		return types.MapNull(types.StringType), nil
@@ -69,7 +58,6 @@ func stringMapToTypesMap(ctx context.Context, m map[string]string) (types.Map, d
 }
 
 // flattenByteMapToStringMap decodes each byte slice as a UTF-8 string.
-// This mirrors the SDKv2 flattenByteMapToStringMap in kubernetes/structures.go.
 func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 	result := make(map[string]string, len(m))
 	for k, v := range m {
@@ -79,7 +67,6 @@ func flattenByteMapToStringMap(m map[string][]byte) map[string]string {
 }
 
 // base64EncodeByteMap base64-encodes each byte slice value.
-// This mirrors the SDKv2 base64EncodeByteMap in kubernetes/structures.go.
 func base64EncodeByteMap(m map[string][]byte) map[string]string {
 	result := make(map[string]string, len(m))
 	for k, v := range m {

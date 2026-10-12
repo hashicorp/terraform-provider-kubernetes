@@ -142,6 +142,26 @@ func TestAccKubernetesDataSourceSecretV1_metadataMaxItems(t *testing.T) {
 	})
 }
 
+// TestAccKubernetesDataSourceSecretV1_nameAndGenerateNameConflict verifies that
+// setting both name and generate_name in the same metadata block is rejected at
+// plan time due to the ConflictsWith constraint on each attribute.
+func TestAccKubernetesDataSourceSecretV1_nameAndGenerateNameConflict(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccMuxProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `data "kubernetes_secret_v1" "test" {
+  metadata {
+    name          = "tf-acc-conflict"
+    generate_name = "tf-acc-conflict-"
+  }
+}`,
+				ExpectError: regexp.MustCompile(`(?i)conflicts with`),
+			},
+		},
+	})
+}
+
 // TestAccKubernetesDataSourceSecretV1_nullAnnotation preserves SDKv2's
 // validateAnnotations quirk: annotation values are not validated, so a null
 // value is accepted at plan time.

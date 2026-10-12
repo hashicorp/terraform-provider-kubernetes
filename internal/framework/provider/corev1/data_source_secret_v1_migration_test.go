@@ -9,12 +9,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 )
-
-// providerVersion is the last released version of hashicorp/kubernetes that served
-// kubernetes_secret_v1 as an SDKv2 data source. Pinned to an exact version (no ~> or >=)
-// so the migration baseline is deterministic across CI runs (K8S-MIGRATE-017).
-const providerVersion = "3.2.1"
 
 // TestAccKubernetesDataSourceSecretV1_migration is a two-step migration test that proves
 // identical HCL works across the last released SDKv2-backed provider and the local
@@ -33,11 +29,10 @@ func TestAccKubernetesDataSourceSecretV1_migration(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Step 1: apply with the exact released provider (K8S-MIGRATE-017).
-				// providerVersion is the last release that served kubernetes_secret_v1 via SDKv2.
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
-						VersionConstraint: providerVersion,
+						VersionConstraint: sdkv2ProviderVersion,
 					},
 				},
 				Config: testAccKubernetesDataSourceSecretV1MigrationConfig(name),
@@ -52,7 +47,9 @@ func TestAccKubernetesDataSourceSecretV1_migration(t *testing.T) {
 				// Data sources carry no persisted state, so the plan must be empty.
 				ProtoV6ProviderFactories: testAccMuxProviderFactories,
 				Config:                   testAccKubernetesDataSourceSecretV1MigrationConfig(name),
-				ExpectNonEmptyPlan:       false,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "metadata.0.name", name),
 					resource.TestCheckResourceAttr(datasourceName, "data.one", "first"),

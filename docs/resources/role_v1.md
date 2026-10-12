@@ -118,6 +118,14 @@ An unset `generate_name` is represented by null rather than the SDKv2 empty stri
 Explicit empty metadata maps may require a one-time in-place update. Removing
 previously configured labels, annotations, or resource names clears those values.
 
+### Null elements in rules
+
+The `api_groups`, `resources`, `resource_names`, and `verbs` sets must not contain
+`null` elements. These are rejected during configuration validation, preserving
+the SDKv2 provider's rejection during planning. The empty string in
+`api_groups = [""]` remains valid and identifies the core API group.
+Omitting `resource_names` still defaults to an empty set.
+
 ### Null-valued metadata entries
 
 An individual label or annotation value of `null` is rejected during planning.

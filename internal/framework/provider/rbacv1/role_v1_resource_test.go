@@ -19,6 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	frameworkschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -45,8 +47,111 @@ type roleUpdateClientsets struct {
 	client *client.Clientset
 }
 
+func TestRoleRuleSetValidation(t *testing.T) {
+	ctx := context.Background()
+	var response frameworkresource.SchemaResponse
+	(&rbacv1.RoleV1{}).Schema(ctx, frameworkresource.SchemaRequest{}, &response)
+	rule := response.Schema.Blocks["rule"].(frameworkschema.ListNestedBlock)
+	for _, field := range []string{"api_groups", "resources", "resource_names", "verbs"} {
+		attribute := rule.NestedObject.Attributes[field].(frameworkschema.SetAttribute)
+		for _, tc := range []struct {
+			name      string
+			value     types.Set
+			wantError bool
+		}{
+			{"mixedNull", types.SetValueMust(types.StringType, []attr.Value{types.StringValue("value"), types.StringNull()}), true},
+			{"onlyNull", types.SetValueMust(types.StringType, []attr.Value{types.StringNull()}), true},
+			{"known", types.SetValueMust(types.StringType, []attr.Value{types.StringValue("value")}), false},
+			{"emptyString", types.SetValueMust(types.StringType, []attr.Value{types.StringValue("")}), false},
+			{"emptySet", types.SetValueMust(types.StringType, []attr.Value{}), false},
+			{"unknownElement", types.SetValueMust(types.StringType, []attr.Value{types.StringValue("value"), types.StringUnknown()}), false},
+			{"unknownSet", types.SetUnknown(types.StringType), false},
+			{"nullSet", types.SetNull(types.StringType), false},
+		} {
+			t.Run(field+"/"+tc.name, func(t *testing.T) {
+				var result validator.SetResponse
+				for _, v := range attribute.Validators {
+					v.ValidateSet(ctx, validator.SetRequest{
+						Path: path.Root("rule").AtListIndex(0).AtName(field), ConfigValue: tc.value,
+					}, &result)
+				}
+				if result.Diagnostics.HasError() != tc.wantError {
+					t.Fatalf("expected error %t, got %v", tc.wantError, result.Diagnostics)
+				}
+				if tc.wantError && (len(result.Diagnostics) != 1 || result.Diagnostics[0].Summary() != "Null Set Value") {
+					t.Fatalf("unexpected null-element diagnostic: %v", result.Diagnostics)
+				}
+			})
+		}
+	}
+}
+
 func (c roleUpdateClientsets) MainClientset() (*client.Clientset, error) {
 	return c.client, nil
+}
+
+func TestRoleReadErrors(t *testing.T) {
+	ctx := context.Background()
+	for _, status := range []int{http.StatusForbidden, http.StatusInternalServerError} {
+		for _, storedIdentity := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%d/identity=%t", status, storedIdentity), func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					if req.Method != http.MethodGet || req.URL.Path != "/apis/rbac.authorization.k8s.io/v1/namespaces/team/roles/reader" {
+						t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(status)
+					if err := json.NewEncoder(w).Encode(metav1.Status{
+						TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"},
+						Status:   "Failure", Code: int32(status), Message: http.StatusText(status),
+					}); err != nil {
+						t.Error(err)
+					}
+				}))
+				defer server.Close()
+				conn, err := client.NewForConfig(&rest.Config{Host: server.URL})
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := &rbacv1.RoleV1{SDKv2Meta: func() any { return roleUpdateClientsets{client: conn} }}
+				var schema frameworkresource.SchemaResponse
+				r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
+				raw := tfprotov6.RawState{JSON: []byte(`{
+					"id":"team/reader",
+					"metadata":[{"name":"reader","namespace":"team","uid":"uid-1","resource_version":"10",
+					"generation":1,"labels":null,"annotations":null,"generate_name":null}],
+					"rule":[{"api_groups":[""],"resources":["pods"],"verbs":["get"],"resource_names":[]}]
+				}`)}
+				value, err := raw.Unmarshal(schema.Schema.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				state := tfsdk.State{Schema: schema.Schema, Raw: value}
+				identitySchema := common.NamespacedIdentitySchema()
+				identity := tfsdk.ResourceIdentity{
+					Schema: identitySchema, Raw: tftypes.NewValue(identitySchema.Type().TerraformType(ctx), nil),
+				}
+				wantIdentity := common.NamespacedResourceIdentity{
+					ResourceIdentity: common.ResourceIdentity{
+						Name: types.StringValue("reader"), Kind: types.StringValue("Role"),
+						APIVersion: types.StringValue("rbac.authorization.k8s.io/v1"),
+					},
+					Namespace: types.StringValue("team"),
+				}
+				if storedIdentity {
+					if diags := identity.Set(ctx, wantIdentity); diags.HasError() {
+						t.Fatal(diags)
+					}
+				}
+				responseIdentity := identity
+				response := frameworkresource.ReadResponse{State: state, Identity: &responseIdentity}
+				r.Read(ctx, frameworkresource.ReadRequest{State: state, Identity: &identity}, &response)
+				if !response.Diagnostics.HasError() || !response.State.Raw.Equal(state.Raw) || !response.Identity.Raw.Equal(identity.Raw) {
+					t.Fatalf("API failure must preserve state and identity: %v", response.Diagnostics)
+				}
+			})
+		}
+	}
 }
 
 func TestRoleUpdateIdentity(t *testing.T) {
@@ -798,6 +903,7 @@ func TestAccRole_duplicateMetadata(t *testing.T) {
 func TestAccRole_disappears(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_role_v1.test"
+	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleCheckDestroy,
@@ -810,6 +916,17 @@ func TestAccRole_disappears(t *testing.T) {
 					testAccRoleDeleteOutOfBand(name),
 				),
 				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccRoleConfig_noResourceNames(name),
+				Check:  testAccRoleCheckExists(resourceName, &uid),
+			},
+			{
+				Config: testAccRoleConfig_noResourceNames(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: testAccRoleCheckExists(resourceName, &uid),
 			},
 		},
 	})

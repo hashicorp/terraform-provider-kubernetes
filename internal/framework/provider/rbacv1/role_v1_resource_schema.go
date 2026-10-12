@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -44,11 +45,13 @@ func (r *RoleV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resou
 							MarkdownDescription: "Name of the APIGroup that contains the resources",
 							ElementType:         types.StringType,
 							Required:            true,
+							Validators:          []validator.Set{setvalidator.NoNullValues()},
 						},
 						"resources": schema.SetAttribute{
 							MarkdownDescription: "List of resources that the rule applies to",
 							ElementType:         types.StringType,
 							Required:            true,
+							Validators:          []validator.Set{setvalidator.NoNullValues()},
 						},
 						"resource_names": schema.SetAttribute{
 							MarkdownDescription: "White list of names that the rule applies to",
@@ -56,11 +59,13 @@ func (r *RoleV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resou
 							Optional:            true,
 							Computed:            true,
 							Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
+							Validators:          []validator.Set{setvalidator.NoNullValues()},
 						},
 						"verbs": schema.SetAttribute{
 							MarkdownDescription: "List of Verbs that apply to ALL the ResourceKinds and AttributeRestrictions contained in this rule",
 							ElementType:         types.StringType,
 							Required:            true,
+							Validators:          []validator.Set{setvalidator.NoNullValues()},
 						},
 					},
 				},

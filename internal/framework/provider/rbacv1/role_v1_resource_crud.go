@@ -189,6 +189,15 @@ func (r *RoleV1) Update(ctx context.Context, req resource.UpdateRequest, resp *r
 		}
 		populateIDAndMetadataFromResponse(&plan, out)
 		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+		identity := common.NamespacedResourceIdentity{
+			ResourceIdentity: common.ResourceIdentity{
+				APIVersion: types.StringValue(rbacAPIVersion),
+				Kind:       types.StringValue(roleKind),
+				Name:       types.StringValue(out.Name),
+			},
+			Namespace: types.StringValue(out.Namespace),
+		}
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 		return
 	}
 
@@ -209,6 +218,15 @@ func (r *RoleV1) Update(ctx context.Context, req resource.UpdateRequest, resp *r
 
 	populateIDAndMetadataFromResponse(&plan, out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	identity := common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(rbacAPIVersion),
+			Kind:       types.StringValue(roleKind),
+			Name:       types.StringValue(out.Name),
+		},
+		Namespace: types.StringValue(out.Namespace),
+	}
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, identity)...)
 }
 
 func populateIDAndMetadataFromResponse(plan *RoleModel, out *rbacv1api.Role) {
@@ -218,11 +236,7 @@ func populateIDAndMetadataFromResponse(plan *RoleModel, out *rbacv1api.Role) {
 	// would not match the plan, which Terraform rejects as an inconsistent result.
 	// Filtering them is Read's job.
 	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
-	plan.Metadata[0].Name = types.StringValue(out.Name)
-	plan.Metadata[0].Namespace = types.StringValue(out.Namespace)
-	plan.Metadata[0].UID = types.StringValue(string(out.UID))
-	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
-	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
+	common.PopulateNamespacedMetadataFromResponse(&plan.Metadata[0], out.ObjectMeta)
 }
 
 func (r *RoleV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -260,10 +274,10 @@ func (r *RoleV1) ImportState(ctx context.Context, req resource.ImportStateReques
 	if req.ID != "" {
 		var err error
 		namespace, name, err = kubernetes.IdParts(req.ID)
-		if err != nil {
+		if err != nil || namespace == "" || name == "" {
 			resp.Diagnostics.AddError(
 				"invalid import ID",
-				fmt.Sprintf("Expected format: namespace/name, got: %s", req.ID),
+				fmt.Sprintf("Expected format: namespace/name with a non-empty namespace and name, got: %s", req.ID),
 			)
 			return
 		}
@@ -275,6 +289,12 @@ func (r *RoleV1) ImportState(ctx context.Context, req resource.ImportStateReques
 		var identityData common.NamespacedResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
+			return
+		}
+		if identityData.Kind.ValueString() != roleKind || identityData.APIVersion.ValueString() != rbacAPIVersion {
+			resp.Diagnostics.AddError("invalid identity import",
+				fmt.Sprintf("Expected kind %q and api_version %q, got kind %q and api_version %q.",
+					roleKind, rbacAPIVersion, identityData.Kind.ValueString(), identityData.APIVersion.ValueString()))
 			return
 		}
 		namespace = identityData.Namespace.ValueString()

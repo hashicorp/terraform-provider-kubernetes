@@ -5,7 +5,10 @@ package rbacv1_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"slices"
 	"strings"
@@ -13,6 +16,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -29,10 +33,129 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	rbacapi "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	client "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
+
+type roleUpdateClientsets struct {
+	kubernetes.KubeClientsets
+	client *client.Clientset
+}
+
+func (c roleUpdateClientsets) MainClientset() (*client.Clientset, error) {
+	return c.client, nil
+}
+
+func TestRoleUpdateIdentity(t *testing.T) {
+	ctx := context.Background()
+	for _, method := range []string{http.MethodGet, http.MethodPatch} {
+		for _, storedIdentity := range []bool{false, true} {
+			name := method + "/absent"
+			if storedIdentity {
+				name = method + "/existing"
+			}
+			t.Run(name, func(t *testing.T) {
+				requests := make(chan string, 4)
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					requests <- req.Method
+					if req.Method != method || req.URL.Path != "/apis/rbac.authorization.k8s.io/v1/namespaces/team/roles/reader" {
+						t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+						http.Error(w, "unexpected request", http.StatusBadRequest)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					if err := json.NewEncoder(w).Encode(&rbacapi.Role{
+						TypeMeta: metav1.TypeMeta{APIVersion: "rbac.authorization.k8s.io/v1", Kind: "Role"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "reader", Namespace: "team", UID: "uid-1", ResourceVersion: "20", Generation: 2,
+							Labels: map[string]string{"external": "label"}, Annotations: map[string]string{"external": "annotation"},
+							GenerateName: "server-",
+						},
+					}); err != nil {
+						t.Error(err)
+					}
+				}))
+				defer server.Close()
+				conn, err := client.NewForConfig(&rest.Config{Host: server.URL})
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := &rbacv1.RoleV1{SDKv2Meta: func() any { return roleUpdateClientsets{client: conn} }}
+				var schema frameworkresource.SchemaResponse
+				r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
+				raw := tfprotov6.RawState{JSON: []byte(`{
+					"id":"team/reader",
+					"metadata":[{"name":"reader","namespace":"team","uid":"uid-1","resource_version":"10",
+					"generation":1,"labels":null,"annotations":null,"generate_name":null}],
+					"rule":[{"api_groups":[""],"resources":["pods"],"verbs":["get"],"resource_names":[]}]
+				}`)}
+				value, err := raw.Unmarshal(schema.Schema.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				state := tfsdk.State{Schema: schema.Schema, Raw: value}
+				var plan rbacv1.RoleModel
+				if diags := state.Get(ctx, &plan); diags.HasError() {
+					t.Fatal(diags)
+				}
+				if method == http.MethodPatch {
+					plan.Metadata[0].Labels = types.MapValueMust(types.StringType, map[string]attr.Value{"managed": types.StringValue("value")})
+				}
+				plan.Metadata[0].ResourceVersion = types.StringUnknown()
+				plan.Metadata[0].Generation = types.Int64Unknown()
+				planState := tfsdk.State{Schema: schema.Schema}
+				if diags := planState.Set(ctx, &plan); diags.HasError() {
+					t.Fatal(diags)
+				}
+				identitySchema := common.NamespacedIdentitySchema()
+				identity := &tfsdk.ResourceIdentity{
+					Schema: identitySchema, Raw: tftypes.NewValue(identitySchema.Type().TerraformType(ctx), nil),
+				}
+				wantIdentity := common.NamespacedResourceIdentity{
+					ResourceIdentity: common.ResourceIdentity{
+						Name: types.StringValue("reader"), Kind: types.StringValue("Role"),
+						APIVersion: types.StringValue("rbac.authorization.k8s.io/v1"),
+					},
+					Namespace: types.StringValue("team"),
+				}
+				if storedIdentity {
+					if diags := identity.Set(ctx, wantIdentity); diags.HasError() {
+						t.Fatal(diags)
+					}
+				}
+				responseIdentity := *identity
+				response := frameworkresource.UpdateResponse{State: state, Identity: &responseIdentity}
+				r.Update(ctx, frameworkresource.UpdateRequest{
+					State: state, Plan: tfsdk.Plan{Schema: schema.Schema, Raw: planState.Raw}, Identity: identity,
+				}, &response)
+				if response.Diagnostics.HasError() {
+					t.Fatal(response.Diagnostics)
+				}
+				if len(requests) != 1 {
+					t.Fatalf("got %d requests, want 1", len(requests))
+				}
+				var gotIdentity common.NamespacedResourceIdentity
+				if diags := response.Identity.Get(ctx, &gotIdentity); diags.HasError() {
+					t.Fatal(diags)
+				}
+				if gotIdentity != wantIdentity {
+					t.Fatalf("identity = %#v, want %#v", gotIdentity, wantIdentity)
+				}
+				plan.Metadata[0].ResourceVersion = types.StringValue("20")
+				plan.Metadata[0].Generation = types.Int64Value(2)
+				if diags := planState.Set(ctx, &plan); diags.HasError() {
+					t.Fatal(diags)
+				}
+				if !response.State.Raw.Equal(planState.Raw) {
+					t.Fatalf("response changed planned fields: %s", response.State.Raw)
+				}
+			})
+		}
+	}
+}
 
 // Keep imports on the same provider release as the preceding apply. In particular,
 // importing the baseline with the local provider would invalidate the migration test.
@@ -66,15 +189,23 @@ func roleImportSteps(resourceName string, steps []resource.TestStep, internalMet
 			prefix := "metadata.0." + field + "."
 			importStep.ImportStateVerifyIgnore = append(importStep.ImportStateVerifyIgnore,
 				prefix+"%", prefix+"example.kubernetes.io/owner")
+		}
+		if len(importStep.ImportStateVerifyIgnore) > 0 {
 			importStep.ImportStateCheck = func(states []*terraform.InstanceState) error {
 				if len(states) != 1 {
 					return fmt.Errorf("expected one imported Role, got %d", len(states))
 				}
-				if _, ok := states[0].Attributes[prefix+"example.kubernetes.io/owner"]; ok {
-					return fmt.Errorf("import unexpectedly claimed ownership of internal %s", field)
-				}
-				if count := states[0].Attributes[prefix+"%"]; count != "" && count != "0" {
-					return fmt.Errorf("imported %s count = %q, want empty", field, count)
+				for _, field := range internalMetadata {
+					if field == "" {
+						continue
+					}
+					prefix := "metadata.0." + field + "."
+					if _, ok := states[0].Attributes[prefix+"example.kubernetes.io/owner"]; ok {
+						return fmt.Errorf("import unexpectedly claimed ownership of internal %s", field)
+					}
+					if count := states[0].Attributes[prefix+"%"]; count != "" && count != "0" {
+						return fmt.Errorf("imported %s count = %q, want empty", field, count)
+					}
 				}
 				conn, err := testAccRoleClient()
 				if err != nil {
@@ -85,12 +216,17 @@ func roleImportSteps(resourceName string, steps []resource.TestStep, internalMet
 				if err != nil {
 					return err
 				}
-				values := role.Labels
-				if field == "annotations" {
-					values = role.Annotations
-				}
-				if values["example.kubernetes.io/owner"] != "terraform" || string(role.UID) != states[0].Attributes["metadata.0.uid"] {
-					return fmt.Errorf("import changed live Role identity or internal %s", field)
+				for _, field := range internalMetadata {
+					if field == "" {
+						continue
+					}
+					values := role.Labels
+					if field == "annotations" {
+						values = role.Annotations
+					}
+					if values["example.kubernetes.io/owner"] != "terraform" || string(role.UID) != states[0].Attributes["metadata.0.uid"] {
+						return fmt.Errorf("import changed live Role identity or internal %s", field)
+					}
 				}
 				return nil
 			}
@@ -201,6 +337,22 @@ func TestRoleProviderFactories(t *testing.T) {
 	})
 }
 
+func TestRoleImportStepsMultipleInternalMetadata(t *testing.T) {
+	for _, fields := range [][]string{{"labels", "annotations"}, {"annotations", "labels"}} {
+		steps := roleImportSteps("kubernetes_role_v1.test", []resource.TestStep{
+			{Config: `resource "kubernetes_role_v1" "test" {}`},
+		}, fields...)
+		attrs := map[string]string{
+			"metadata.0.labels.example.kubernetes.io/owner":      "terraform",
+			"metadata.0.annotations.example.kubernetes.io/owner": "terraform",
+		}
+		err := steps[1].ImportStateCheck([]*terraform.InstanceState{{Attributes: attrs}})
+		if err == nil || !strings.Contains(err.Error(), "internal "+fields[0]) {
+			t.Fatalf("first field %s was not checked: %v", fields[0], err)
+		}
+	}
+}
+
 func testRoleProviderSchema(t *testing.T, factories map[string]func() (tfprotov6.ProviderServer, error), alias bool) {
 	t.Helper()
 	for _, key := range []string{"KUBE_CONFIG_PATH", "KUBE_CONFIG_PATHS", "KUBE_CTX", "KUBE_CTX_AUTH_INFO", "KUBE_CTX_CLUSTER", "KUBE_HOST", "KUBE_CLIENT_CERT_DATA", "KUBE_CLIENT_KEY_DATA", "KUBE_CLUSTER_CA_CERT_DATA"} {
@@ -244,14 +396,18 @@ func TestRoleImportState(t *testing.T) {
 	r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
 	for _, tc := range []struct {
 		name, id, namespace, want string
+		kind, apiVersion          string
 		identity, wantError       bool
 	}{
 		{name: "id", id: "team/reader", want: "team/reader"},
-		{name: "emptyNamespaceID", id: "/reader", want: "/reader"},
+		{name: "emptyNamespaceID", id: "/reader", wantError: true},
+		{name: "emptyNameID", id: "team/", wantError: true},
 		{name: "invalidID", id: "reader", wantError: true},
 		{name: "missingImport", wantError: true},
 		{name: "identity", identity: true, namespace: "team", want: "team/reader"},
 		{name: "defaultNamespace", identity: true, want: "default/reader"},
+		{name: "wrongKind", identity: true, kind: "ClusterRole", wantError: true},
+		{name: "wrongAPIVersion", identity: true, apiVersion: "rbac.authorization.k8s.io/v1beta1", wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := frameworkresource.ImportStateRequest{ID: tc.id}
@@ -262,8 +418,15 @@ func TestRoleImportState(t *testing.T) {
 				if tc.namespace != "" {
 					namespace = types.StringValue(tc.namespace)
 				}
+				kind, apiVersion := "Role", "rbac.authorization.k8s.io/v1"
+				if tc.kind != "" {
+					kind = tc.kind
+				}
+				if tc.apiVersion != "" {
+					apiVersion = tc.apiVersion
+				}
 				diags := req.Identity.Set(ctx, common.NamespacedResourceIdentity{
-					ResourceIdentity: common.ResourceIdentity{Name: types.StringValue("reader"), Kind: types.StringValue("Role"), APIVersion: types.StringValue("rbac.authorization.k8s.io/v1")},
+					ResourceIdentity: common.ResourceIdentity{Name: types.StringValue("reader"), Kind: types.StringValue(kind), APIVersion: types.StringValue(apiVersion)},
 					Namespace:        namespace,
 				})
 				if diags.HasError() {
@@ -932,11 +1095,13 @@ func TestAccRole_identityImportDefaultNamespace(t *testing.T) {
 					testAccRoleCheckExists(resourceName, &uid),
 				),
 			},
-			// Import by identity WITH explicit namespace — must succeed.
+			// Use exact configuration so the harness cannot reuse the stored namespace.
 			{
-				ResourceName:    resourceName,
-				ImportState:     true,
-				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+				ResourceName:           resourceName,
+				ImportState:            true,
+				ImportStateKind:        resource.ImportBlockWithResourceIdentity,
+				ImportStateConfigExact: true,
+				Config:                 testAccRoleConfig_identityImportDefaultNamespace(name),
 			},
 			{
 				Config: testAccRoleConfig_noResourceNames(name),
@@ -944,12 +1109,64 @@ func TestAccRole_identityImportDefaultNamespace(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "id", "default/"+name),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.namespace", "default"),
 					testAccRoleCheckExists(resourceName, &uid),
 				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(resourceName, map[string]knownvalue.Check{
+						"namespace":   knownvalue.StringExact("default"),
+						"name":        knownvalue.StringExact(name),
+						"kind":        knownvalue.StringExact("Role"),
+						"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
+					}),
+				},
 			},
 		},
 	})
+}
+
+func testAccRoleConfig_identityImportDefaultNamespace(name string) string {
+	return testAccRoleConfig_noResourceNames(name) + fmt.Sprintf(`
+import {
+  to = kubernetes_role_v1.test
+  identity = {
+    name        = %q
+    kind        = "Role"
+    api_version = "rbac.authorization.k8s.io/v1"
+  }
+}
+`, name)
+}
+
+func TestRoleIdentityImportDefaultNamespaceConfig(t *testing.T) {
+	file, diags := hclsyntax.ParseConfig([]byte(testAccRoleConfig_identityImportDefaultNamespace("reader")), "role.tf", hcl.InitialPos)
+	if diags.HasErrors() {
+		t.Fatal(diags)
+	}
+	body, ok := file.Body.(*hclsyntax.Body)
+	if !ok {
+		t.Fatalf("unexpected HCL body: %T", file.Body)
+	}
+	for _, block := range body.Blocks {
+		if block.Type != "import" {
+			continue
+		}
+		identity, diags := block.Body.Attributes["identity"].Expr.Value(nil)
+		if diags.HasErrors() {
+			t.Fatal(diags)
+		}
+		if identity.Type().HasAttribute("namespace") {
+			t.Fatal("identity import must omit namespace to exercise the default")
+		}
+		for field, want := range map[string]string{"name": "reader", "kind": "Role", "api_version": "rbac.authorization.k8s.io/v1"} {
+			if !identity.Type().HasAttribute(field) || identity.GetAttr(field).AsString() != want {
+				t.Fatalf("incorrect identity field %s: %s", field, identity.GoString())
+			}
+		}
+		return
+	}
+	t.Fatal("missing import block")
 }
 
 func TestAccRole_invalidAnnotationKey(t *testing.T) {

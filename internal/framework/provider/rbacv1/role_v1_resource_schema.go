@@ -39,7 +39,30 @@ func (r *RoleV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resou
 			"rule": schema.ListNestedBlock{
 				MarkdownDescription: "(Required) Rule defining a set of permissions for the role. At least one `rule` block must be present.",
 				NestedObject: schema.NestedBlockObject{
-					Attributes: policyRuleSchemaAttributes(),
+					Attributes: map[string]schema.Attribute{
+						"api_groups": schema.SetAttribute{
+							MarkdownDescription: "Name of the APIGroup that contains the resources",
+							ElementType:         types.StringType,
+							Required:            true,
+						},
+						"resources": schema.SetAttribute{
+							MarkdownDescription: "List of resources that the rule applies to",
+							ElementType:         types.StringType,
+							Required:            true,
+						},
+						"resource_names": schema.SetAttribute{
+							MarkdownDescription: "White list of names that the rule applies to",
+							ElementType:         types.StringType,
+							Optional:            true,
+							Computed:            true,
+							Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
+						},
+						"verbs": schema.SetAttribute{
+							MarkdownDescription: "List of Verbs that apply to ALL the ResourceKinds and AttributeRestrictions contained in this rule",
+							ElementType:         types.StringType,
+							Required:            true,
+						},
+					},
 				},
 				Validators: []validator.List{
 					listvalidator.IsRequired(),
@@ -50,29 +73,9 @@ func (r *RoleV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resou
 	}
 }
 
-func policyRuleSchemaAttributes() map[string]schema.Attribute {
-	return map[string]schema.Attribute{
-		"api_groups": schema.SetAttribute{
-			MarkdownDescription: "Name of the APIGroup that contains the resources",
-			ElementType:         types.StringType,
-			Required:            true,
-		},
-		"resources": schema.SetAttribute{
-			MarkdownDescription: "List of resources that the rule applies to",
-			ElementType:         types.StringType,
-			Required:            true,
-		},
-		"resource_names": schema.SetAttribute{
-			MarkdownDescription: "White list of names that the rule applies to",
-			ElementType:         types.StringType,
-			Optional:            true,
-			Computed:            true,
-			Default:             setdefault.StaticValue(types.SetValueMust(types.StringType, []attr.Value{})),
-		},
-		"verbs": schema.SetAttribute{
-			MarkdownDescription: "List of Verbs that apply to ALL the ResourceKinds and AttributeRestrictions contained in this rule",
-			ElementType:         types.StringType,
-			Required:            true,
-		},
-	}
+func (r *RoleV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	// common.NamespacedIdentitySchema reproduces resourceIdentitySchemaNamespaced() from
+	// kubernetes/resourceidentity.go, including Version 1 and namespace being
+	// OptionalForImport rather than required.
+	resp.IdentitySchema = common.NamespacedIdentitySchema()
 }

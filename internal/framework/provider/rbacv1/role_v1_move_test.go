@@ -188,8 +188,13 @@ func TestRoleMoveState(t *testing.T) {
 		name, sourceType, provider, raw string
 		version                         int64
 		wantError, wantSkip, noIdentity bool
+		wantDetail                      string
+		nullLabels, emptyAnnotations    bool
 	}{
 		{name: "valid", raw: valid},
+		{name: "bothNullMaps", raw: strings.Replace(valid, `"labels":{}`, `"labels":null`, 1), nullLabels: true},
+		{name: "bothEmptyMaps", raw: strings.Replace(valid, `"annotations":null`, `"annotations":{}`, 1), emptyAnnotations: true},
+		{name: "omittedMaps", raw: strings.ReplaceAll(strings.ReplaceAll(valid, `"labels":{},`, ""), `"annotations":null,`, ""), nullLabels: true},
 		{name: "generatedName", raw: strings.Replace(valid, `"generate_name":""`, `"generate_name":"reader-"`, 1)},
 		{name: "withoutTargetIdentity", raw: valid, noIdentity: true},
 		{name: "privateRegistry", provider: "registry.example.com/hashicorp/kubernetes", raw: valid},
@@ -199,9 +204,9 @@ func TestRoleMoveState(t *testing.T) {
 		{name: "wrongVersion", version: 1, raw: valid, wantSkip: true},
 		{name: "missingJSON", wantError: true},
 		{name: "malformedJSON", raw: "{", wantError: true},
-		{name: "emptyID", raw: `{"metadata":[{}]}`, wantError: true},
-		{name: "missingMetadata", raw: `{"id":"team/reader"}`, wantError: true},
-		{name: "multipleMetadata", raw: `{"id":"team/reader","metadata":[{},{}]}`, wantError: true},
+		{name: "emptyID", raw: `{"metadata":[{}]}`, wantError: true, wantDetail: "The source state must have a non-empty id."},
+		{name: "missingMetadata", raw: `{"id":"team/reader"}`, wantError: true, wantDetail: "Expected exactly 1 metadata element in the source state, got 0."},
+		{name: "multipleMetadata", raw: `{"id":"team/reader","metadata":[{},{}]}`, wantError: true, wantDetail: "Expected exactly 1 metadata element in the source state, got 2."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := frameworkresource.MoveStateRequest{
@@ -227,6 +232,9 @@ func TestRoleMoveState(t *testing.T) {
 			if resp.Diagnostics.HasError() != tc.wantError {
 				t.Fatalf("diagnostics: %v", resp.Diagnostics)
 			}
+			if tc.wantDetail != "" && (len(resp.Diagnostics) != 1 || resp.Diagnostics[0].Detail() != tc.wantDetail) {
+				t.Fatalf("expected diagnostic detail %q, got %v", tc.wantDetail, resp.Diagnostics)
+			}
 			if tc.wantError || tc.wantSkip {
 				if !resp.TargetState.Raw.IsNull() {
 					t.Fatal("unexpected target state")
@@ -242,7 +250,7 @@ func TestRoleMoveState(t *testing.T) {
 			}
 			if state.ID.ValueString() != "team/reader" || state.Metadata[0].Namespace.ValueString() != "team" ||
 				state.Metadata[0].UID.ValueString() != "retained" ||
-				!state.Metadata[0].Annotations.IsNull() || state.Metadata[0].Labels.IsNull() ||
+				state.Metadata[0].Annotations.IsNull() == tc.emptyAnnotations || state.Metadata[0].Labels.IsNull() != tc.nullLabels ||
 				len(state.Rule) != 1 || len(state.Rule[0].Verbs.Elements()) != 1 {
 				t.Fatalf("incorrect state: %#v", state)
 			}

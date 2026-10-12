@@ -9,3 +9,7 @@
 ```release-note:breaking-change
 `resource/kubernetes_role_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry.
 ```
+
+```release-note:note
+`resource/kubernetes_role_v1`: Import IDs require a non-empty namespace and name. Identity imports reject a kind other than `Role` or an API version other than `rbac.authorization.k8s.io/v1`.
+```

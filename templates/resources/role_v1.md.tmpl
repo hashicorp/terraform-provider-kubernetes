@@ -17,7 +17,7 @@ description: |-
 
 ## Import
 
-Role can be imported using the namespace and name, e.g.
+Role can be imported using the namespace and name. Both components must be non-empty, e.g.
 
 ```
 $ terraform import kubernetes_role_v1.example default/terraform-example
@@ -25,6 +25,7 @@ $ terraform import kubernetes_role_v1.example default/terraform-example
 
 Identity imports use `api_version = "rbac.authorization.k8s.io/v1"`, `kind = "Role"`,
 and `name`. The optional identity `namespace` defaults to `default` when omitted.
+An identity with a different `kind` or `api_version` is rejected.
 
 ## Migrating from `kubernetes_role`
 

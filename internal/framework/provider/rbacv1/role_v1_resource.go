@@ -6,6 +6,7 @@ package rbacv1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -41,13 +42,6 @@ func (r *RoleV1) Configure(_ context.Context, req resource.ConfigureRequest, res
 		return
 	}
 	r.SDKv2Meta = req.ProviderData.(func() any)
-}
-
-func (r *RoleV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	// common.NamespacedIdentitySchema reproduces resourceIdentitySchemaNamespaced() from
-	// kubernetes/resourceidentity.go, including Version 1 and namespace being
-	// OptionalForImport rather than required.
-	resp.IdentitySchema = common.NamespacedIdentitySchema()
 }
 
 // UpgradeIdentity implements [resource.ResourceWithUpgradeIdentity].
@@ -89,7 +83,7 @@ func (r *RoleV1) moveFromDeprecatedRole(ctx context.Context, req resource.MoveSt
 		return
 	}
 
-	var src RoleSourceState
+	var src sdkv2RoleStateV0
 	if err := json.Unmarshal(req.SourceRawState.JSON, &src); err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to move kubernetes_role state",
@@ -97,46 +91,48 @@ func (r *RoleV1) moveFromDeprecatedRole(ctx context.Context, req resource.MoveSt
 		)
 		return
 	}
-	if src.ID == "" || len(src.Metadata) != 1 {
-		resp.Diagnostics.AddError("Unable to move kubernetes_role state", "The source state must have a non-empty id and exactly one metadata element.")
+	if src.ID == "" {
+		resp.Diagnostics.AddError("Unable to move kubernetes_role state", "The source state must have a non-empty id.")
+		return
+	}
+	if len(src.Metadata) != 1 {
+		resp.Diagnostics.AddError("Unable to move kubernetes_role state",
+			fmt.Sprintf("Expected exactly 1 metadata element in the source state, got %d.", len(src.Metadata)))
 		return
 	}
 
-	var metaModel common.NamespacedMetadataModel
-	if len(src.Metadata) > 0 {
-		m := src.Metadata[0]
+	m := src.Metadata[0]
 
-		annotations, annDiags := types.MapValueFrom(ctx, types.StringType, m.Annotations)
-		resp.Diagnostics.Append(annDiags...)
-		labels, labelDiags := types.MapValueFrom(ctx, types.StringType, m.Labels)
-		resp.Diagnostics.Append(labelDiags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	annotations, annDiags := types.MapValueFrom(ctx, types.StringType, m.Annotations)
+	resp.Diagnostics.Append(annDiags...)
+	labels, labelDiags := types.MapValueFrom(ctx, types.StringType, m.Labels)
+	resp.Diagnostics.Append(labelDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-		// SDKv2 has no null for primitives, so it stores an unset generate_name as "".
-		// Carrying that across verbatim leaves state holding "" where the framework would
-		// hold null, and a plan that skips refresh then sees a change on a ForceNew
-		// attribute. Normalise here, as the namespace mover does.
-		generateName := types.StringNull()
-		if m.GenerateName != "" {
-			generateName = types.StringValue(m.GenerateName)
-		}
+	// SDKv2 has no null for primitives, so it stores an unset generate_name as "".
+	// Carrying that across verbatim leaves state holding "" where the framework would
+	// hold null, and a plan that skips refresh then sees a change on a ForceNew
+	// attribute. Normalise here, as the namespace mover does.
+	generateName := types.StringNull()
+	if m.GenerateName != "" {
+		generateName = types.StringValue(m.GenerateName)
+	}
 
-		metaModel = common.NamespacedMetadataModel{
-			MetadataModel: common.MetadataModel{
-				MetadataBase: common.MetadataBase{
-					Generation:      types.Int64Value(m.Generation),
-					Name:            types.StringValue(m.Name),
-					ResourceVersion: types.StringValue(m.ResourceVersion),
-					UID:             types.StringValue(m.UID),
-					Annotations:     annotations,
-					Labels:          labels,
-				},
-				GenerateName: generateName,
+	metaModel := common.NamespacedMetadataModel{
+		MetadataModel: common.MetadataModel{
+			MetadataBase: common.MetadataBase{
+				Generation:      types.Int64Value(m.Generation),
+				Name:            types.StringValue(m.Name),
+				ResourceVersion: types.StringValue(m.ResourceVersion),
+				UID:             types.StringValue(m.UID),
+				Annotations:     annotations,
+				Labels:          labels,
 			},
-			Namespace: types.StringValue(m.Namespace),
-		}
+			GenerateName: generateName,
+		},
+		Namespace: types.StringValue(m.Namespace),
 	}
 
 	rules := make([]RuleModel, len(src.Rule))
@@ -173,18 +169,13 @@ func (r *RoleV1) moveFromDeprecatedRole(ctx context.Context, req resource.MoveSt
 	}
 
 	if resp.TargetIdentity != nil {
-		var ns, name string
-		if len(src.Metadata) > 0 {
-			ns = src.Metadata[0].Namespace
-			name = src.Metadata[0].Name
-		}
 		identity := common.NamespacedResourceIdentity{
 			ResourceIdentity: common.ResourceIdentity{
 				APIVersion: types.StringValue(rbacAPIVersion),
 				Kind:       types.StringValue(roleKind),
-				Name:       types.StringValue(name),
+				Name:       types.StringValue(m.Name),
 			},
-			Namespace: types.StringValue(ns),
+			Namespace: types.StringValue(m.Namespace),
 		}
 		resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, identity)...)
 	}

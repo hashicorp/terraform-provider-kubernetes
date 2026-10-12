@@ -105,10 +105,21 @@ func upgradeIdentity(kind, apiVersion string, namespaced bool) map[int64]resourc
 						)
 						return
 					}
-					identity.Name = types.StringValue(prior.Name)
-					identity.Kind = types.StringValue(kind)
-					identity.APIVersion = types.StringValue(apiVersion)
-					identity.Namespace = types.StringValue(prior.Namespace)
+					// Only populate identity when we have a real name. An empty
+					// string is not a valid resource name; it means the stored
+					// identity JSON was present but the name field was absent or
+					// zeroed. Keeping the fields null lets Read populate the full
+					// identity on the first refresh, matching the absent-identity
+					// (pre-2.38.0) behaviour. A non-empty string name means the
+					// identity was stored correctly and must be carried across.
+					if prior.Name != "" {
+						identity.Name = types.StringValue(prior.Name)
+						identity.Kind = types.StringValue(kind)
+						identity.APIVersion = types.StringValue(apiVersion)
+						if prior.Namespace != "" {
+							identity.Namespace = types.StringValue(prior.Namespace)
+						}
+					}
 				}
 
 				if namespaced {

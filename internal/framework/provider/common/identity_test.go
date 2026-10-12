@@ -149,12 +149,39 @@ func TestUpgradeNamespacedIdentity(t *testing.T) {
 		stored        string
 		wantName      types.String
 		wantNamespace types.String
+		wantFullyNull bool // true when all fields must be null (Read must populate)
 	}{
-		{"nothing stored", "", types.StringNull(), types.StringNull()},
 		{
-			"name and namespace stored",
-			`{"name":"my-role","namespace":"team-a"}`,
-			types.StringValue("my-role"), types.StringValue("team-a"),
+			name:          "nothing stored",
+			stored:        "",
+			wantName:      types.StringNull(),
+			wantNamespace: types.StringNull(),
+			wantFullyNull: true,
+		},
+		{
+			name:          "name and namespace stored",
+			stored:        `{"name":"my-role","namespace":"team-a"}`,
+			wantName:      types.StringValue("my-role"),
+			wantNamespace: types.StringValue("team-a"),
+		},
+		// An empty name in the stored JSON (corrupt / zeroed identity) must
+		// produce a fully-null result so that Read can populate the real name
+		// and IsFullyNull() returns true, bypassing the "Unexpected Identity
+		// Change" guard in server_readresource.go.
+		{
+			name:          "empty name in stored JSON treated as absent",
+			stored:        `{"name":"","namespace":"default"}`,
+			wantName:      types.StringNull(),
+			wantNamespace: types.StringNull(),
+			wantFullyNull: true,
+		},
+		// Namespace absent (cluster-scoped-like JSON, no namespace field) with
+		// a real name: name is preserved, namespace stays null.
+		{
+			name:          "name present namespace absent",
+			stored:        `{"name":"my-role"}`,
+			wantName:      types.StringValue("my-role"),
+			wantNamespace: types.StringNull(),
 		},
 	}
 
@@ -162,6 +189,16 @@ func TestUpgradeNamespacedIdentity(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			identity := runUpgrade(t, UpgradeNamespacedIdentity("Role", "rbac.authorization.k8s.io/v1"),
 				NamespacedIdentitySchema(), tc.stored)
+
+			// For the fully-null cases, verify IsFullyNull() directly so the
+			// test captures the exact property that prevents "Unexpected
+			// Identity Change" errors during Read.
+			if tc.wantFullyNull {
+				if !identity.Raw.IsFullyNull() {
+					t.Fatalf("expected fully-null identity so Read can populate it, got: %s", identity.Raw)
+				}
+				return
+			}
 
 			var got NamespacedResourceIdentity
 			if diags := identity.Get(context.Background(), &got); diags.HasError() {
@@ -173,13 +210,51 @@ func TestUpgradeNamespacedIdentity(t *testing.T) {
 			if !got.Namespace.Equal(tc.wantNamespace) {
 				t.Errorf("Namespace = %v, want %v", got.Namespace, tc.wantNamespace)
 			}
-			wantAPIVersion, wantKind := types.StringNull(), types.StringNull()
-			if tc.stored != "" {
-				wantAPIVersion = types.StringValue("rbac.authorization.k8s.io/v1")
-				wantKind = types.StringValue("Role")
-			}
+			wantAPIVersion := types.StringValue("rbac.authorization.k8s.io/v1")
+			wantKind := types.StringValue("Role")
 			if !got.APIVersion.Equal(wantAPIVersion) || !got.Kind.Equal(wantKind) {
 				t.Errorf("api_version/kind = %v/%v, want %v/%v", got.APIVersion, got.Kind, wantAPIVersion, wantKind)
+			}
+		})
+	}
+}
+
+// TestUpgradeIdentityWithEmptyName verifies that a stored identity JSON with
+// name="" is treated the same as no identity at all: all fields are null so
+// that Read can populate the correct name. This prevents the
+// "Unexpected Identity Change" error that would fire when name="" (non-null
+// empty string) is stored but Read returns the real name.
+func TestUpgradeIdentityWithEmptyName(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		upgraders map[int64]resource.IdentityUpgrader
+		schema    identityschema.Schema
+		json      string
+	}{
+		{
+			name:      "cluster-scoped empty name",
+			upgraders: UpgradeIdentity("Namespace", "v1"),
+			schema:    IdentitySchema(),
+			json:      `{"name":""}`,
+		},
+		{
+			name:      "namespaced empty name with namespace",
+			upgraders: UpgradeNamespacedIdentity("RoleBinding", "rbac.authorization.k8s.io/v1"),
+			schema:    NamespacedIdentitySchema(),
+			json:      `{"name":"","namespace":"default"}`,
+		},
+		{
+			name:      "namespaced empty name no namespace",
+			upgraders: UpgradeNamespacedIdentity("RoleBinding", "rbac.authorization.k8s.io/v1"),
+			schema:    NamespacedIdentitySchema(),
+			json:      `{"name":""}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			identity := runUpgrade(t, tc.upgraders, tc.schema, tc.json)
+			if !identity.Raw.IsFullyNull() {
+				t.Errorf("expected fully-null identity for empty name JSON %q, got: %s",
+					tc.json, identity.Raw)
 			}
 		})
 	}

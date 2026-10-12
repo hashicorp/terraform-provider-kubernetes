@@ -126,6 +126,7 @@ func TestClusterRoleBindingMoveState(t *testing.T) {
 		providerAddress string
 	}{
 		{name: "wrong resource type", sourceType: "kubernetes_role_binding", sourceVersion: 0, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
+		{name: "unexpected resource type prefix", sourceType: "other_kubernetes_cluster_role_binding", sourceVersion: 0, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
 		{name: "v1 suffix skipped", sourceType: "kubernetes_cluster_role_binding_v1", sourceVersion: 0, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
 		{name: "wrong schema version", sourceType: "kubernetes_cluster_role_binding", sourceVersion: 1, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
 		{name: "wrong provider address", sourceType: "kubernetes_cluster_role_binding", sourceVersion: 0, providerAddress: "registry.terraform.io/other/kubernetes"},

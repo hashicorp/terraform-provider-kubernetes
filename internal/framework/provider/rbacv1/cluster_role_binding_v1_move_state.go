@@ -68,14 +68,10 @@ func moveFromClusterRoleBinding(
 	resp *resource.MoveStateResponse,
 ) {
 	// Only handle moves from the deprecated non-v1 alias.
-	// We match the suffix so the check is robust across provider FQDNs.
-	// The bare name ends in "kubernetes_cluster_role_binding" but NOT
-	// "kubernetes_cluster_role_binding_v1" — check the v1 suffix first.
 	//
 	// Additionally require SourceSchemaVersion == 0 (the SDKv2 resource never
 	// sets a schema version) and a hashicorp/kubernetes source provider.
-	if strings.HasSuffix(req.SourceTypeName, "kubernetes_cluster_role_binding_v1") ||
-		!strings.HasSuffix(req.SourceTypeName, "kubernetes_cluster_role_binding") ||
+	if req.SourceTypeName != "kubernetes_cluster_role_binding" ||
 		req.SourceSchemaVersion != 0 ||
 		!strings.HasSuffix(req.SourceProviderAddress, sdkv2CRBProviderAddressSuffix) {
 		return

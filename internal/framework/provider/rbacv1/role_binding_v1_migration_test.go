@@ -22,6 +22,8 @@ package rbacv1_test
 // ---------------------------------------------------------------------------
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -29,6 +31,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // migratedRoleBindingProviderVersion is the last released version that ships
@@ -56,33 +62,39 @@ func releasedRoleBindingProvider() map[string]tfresource.ExternalProvider {
 func roleBindingMigrationTestCase(t *testing.T, config string, extraChecks ...tfresource.TestCheckFunc) {
 	t.Helper()
 
-	tfresource.Test(t, tfresource.TestCase{
-		Steps: []tfresource.TestStep{
-			{
-				ExternalProviders: releasedRoleBindingProvider(),
-				Config:            config,
-				Check:             tfresource.ComposeAggregateTestCheckFunc(extraChecks...),
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   config,
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   config,
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PostApplyPostRefresh: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
+	steps := roleBindingMigrationSteps(config)
+	steps[0].Check = tfresource.ComposeAggregateTestCheckFunc(extraChecks...)
+	tfresource.Test(t, tfresource.TestCase{Steps: steps})
+}
+
+// frameworkChecks run after both Framework steps, independently of SDKv2 checks.
+func roleBindingMigrationSteps(config string, frameworkChecks ...tfresource.TestCheckFunc) []tfresource.TestStep {
+	return []tfresource.TestStep{
+		{
+			ExternalProviders: releasedRoleBindingProvider(),
+			Config:            config,
+		},
+		{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Config:                   config,
+			Check:                    tfresource.ComposeAggregateTestCheckFunc(frameworkChecks...),
+			ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
 				},
 			},
 		},
-	})
+		{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Config:                   config,
+			Check:                    tfresource.ComposeAggregateTestCheckFunc(frameworkChecks...),
+			ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				PostApplyPostRefresh: []plancheck.PlanCheck{
+					plancheck.ExpectEmptyPlan(),
+				},
+			},
+		},
+	}
 }
 
 // TestAccMigrateRoleBinding_basic verifies that the simplest RoleBinding
@@ -138,6 +150,50 @@ func TestAccMigrateRoleBinding_emptySubjectNamespace(t *testing.T) {
 	roleBindingMigrationTestCase(t, testAccRoleBindingV1Config_emptySubjectNamespace(name),
 		tfresource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.namespace", ""),
 	)
+}
+
+// SDKv2 stores the canonical API group despite api_group = "". Framework must
+// reconcile it once, then preserve the configured empty value across refreshes.
+func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
+	name := "tf-acc-migrate-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	resourceName := "kubernetes_role_binding_v1.test"
+	steps := roleBindingMigrationSteps(testAccRoleBindingV1Config_emptyUserAPIGroup(name),
+		tfresource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+	)
+	steps[0].Check = tfresource.ComposeAggregateTestCheckFunc(
+		tfresource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
+		tfresource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+	)
+	steps[1].ConfigPlanChecks = tfresource.ConfigPlanChecks{
+		PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+		},
+		PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+		PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+	}
+	steps[2].ConfigPlanChecks.PreApply = []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}
+	tfresource.Test(t, tfresource.TestCase{
+		Steps: steps,
+		CheckDestroy: func(_ *terraform.State) error {
+			meta := sdkv2providerMeta()()
+			clients, ok := meta.(kubernetes.KubeClientsets)
+			if !ok {
+				return fmt.Errorf("expected kubernetes.KubeClientsets, got %T", meta)
+			}
+			client, err := clients.MainClientset()
+			if err != nil {
+				return err
+			}
+			_, err = client.RbacV1().RoleBindings("default").Get(context.Background(), name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("RoleBinding default/%s still exists after destroy", name)
+		},
+	})
 }
 
 // TestAccMigrateRoleBinding_complete_name verifies that a RoleBinding with

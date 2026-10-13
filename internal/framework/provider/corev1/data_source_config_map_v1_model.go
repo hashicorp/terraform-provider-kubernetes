@@ -5,22 +5,13 @@ package corev1
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 type ConfigMapV1Model struct {
-	ID         types.String             `tfsdk:"id"`
-	Metadata   []ConfigMapMetadataModel `tfsdk:"metadata"`
-	Data       types.Map                `tfsdk:"data"`
-	BinaryData types.Map                `tfsdk:"binary_data"`
-	Immutable  types.Bool               `tfsdk:"immutable"`
-}
-
-type ConfigMapMetadataModel struct {
-	Name            types.String            `tfsdk:"name"`
-	Namespace       types.String            `tfsdk:"namespace"`
-	Annotations     map[string]types.String `tfsdk:"annotations"`
-	Labels          map[string]types.String `tfsdk:"labels"`
-	ResourceVersion types.String            `tfsdk:"resource_version"`
-	UID             types.String            `tfsdk:"uid"`
-	Generation      types.Int64             `tfsdk:"generation"`
+	ID         types.String                    `tfsdk:"id"`
+	Metadata   []common.NamespacedMetadataBase `tfsdk:"metadata"`
+	Data       types.Map                       `tfsdk:"data"`
+	BinaryData types.Map                       `tfsdk:"binary_data"`
+	Immutable  types.Bool                      `tfsdk:"immutable"`
 }

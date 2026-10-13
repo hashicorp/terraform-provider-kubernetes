@@ -67,7 +67,7 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_withAnnotations(t *
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
-				Check:             check,
+				Check: check,
 			},
 		},
 	})

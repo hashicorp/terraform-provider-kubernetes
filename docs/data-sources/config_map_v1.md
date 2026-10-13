@@ -29,11 +29,14 @@ Config Maps are key-value pairs containing configuration data. The Config Map da
 <a id="nestedblock--metadata"></a>
 ### Nested Schema for `metadata`
 
+Required:
+
+- `name` (String) Name of the config_map, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+
 Optional:
 
 - `annotations` (Map of String) An unstructured key value map stored with the config_map that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 - `labels` (Map of String) Map of string keys and values that can be used to organize and categorize (scope and select) the config_map. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-- `name` (String) Name of the config_map, must be unique. Cannot be updated. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 - `namespace` (String) Namespace defines the space within which name of the config_map must be unique.
 
 Read-Only:
@@ -56,3 +59,13 @@ data "kubernetes_config_map_v1" "example" {
   }
 }
 ```
+
+## Migration to Plugin Framework
+
+`kubernetes_config_map_v1` is implemented using the Terraform Plugin Framework. Existing state written by the SDKv2 implementation is supported without re-importing or manually editing state, and references such as `data.kubernetes_config_map_v1.example.metadata[0].data` remain valid.
+
+This data source has one behavior change, described below. Run `terraform plan` with your current provider version before upgrading.
+
+## Behavior notes
+
+- **`metadata.name` is required.** Earlier versions accepted a configuration that omitted it and then failed during the read, since there is nothing to look up without a name. The error now appears during plan.

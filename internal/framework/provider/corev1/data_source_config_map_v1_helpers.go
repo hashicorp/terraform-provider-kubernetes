@@ -12,30 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func expandStringMap(m map[string]types.String) map[string]string {
-	if m == nil {
-		return nil
-	}
-	result := make(map[string]string, len(m))
-	for k, v := range m {
-		if !v.IsNull() && !v.IsUnknown() {
-			result[k] = v.ValueString()
-		}
-	}
-	return result
-}
-
-func flattenStringMap(m map[string]string) map[string]types.String {
-	if m == nil {
-		return nil
-	}
-	result := make(map[string]types.String, len(m))
-	for k, v := range m {
-		result[k] = types.StringValue(v)
-	}
-	return result
-}
-
 func flattenByteMapToBase64Map(m map[string][]byte) map[string]types.String {
 	if m == nil {
 		return nil

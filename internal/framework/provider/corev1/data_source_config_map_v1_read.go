@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,11 +28,13 @@ func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 
 	name := model.Metadata[0].Name.ValueString()
+	model.Metadata[0].Namespace = common.ResolveDataSourceNamespace(model.Metadata[0].Namespace)
 	namespace := model.Metadata[0].Namespace.ValueString()
-	if namespace == "" {
-		namespace = "default"
-	}
-	model.Metadata[0].Namespace = types.StringValue(namespace)
+
+	// Set the synthetic ID now — before the API call — so that if the ConfigMap
+	// is not found (404) we still persist the requested identity as the ID.
+	// This matches the SDKv2 behaviour (d.SetId before the Get call).
+	model.ID = types.StringValue(namespace + "/" + name)
 
 	conn, err := d.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
@@ -46,6 +49,7 @@ func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadReq
 			log.Printf("[DEBUG] Received error: %#v", err)
 			model.Data = types.MapValueMust(types.StringType, map[string]attr.Value{})
 			model.BinaryData = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			model.Metadata[0].MetadataBase = common.NormalizeNotFoundMetadata(model.Metadata[0].MetadataBase)
 			resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 			return
 		}
@@ -58,17 +62,14 @@ func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadReq
 	}
 	log.Printf("[INFO] Received config map: %#v", cfgMap)
 
-	// Populate server-set metadata fields
-	model.Metadata[0].UID = types.StringValue(string(cfgMap.UID))
-	model.Metadata[0].ResourceVersion = types.StringValue(cfgMap.ResourceVersion)
-	model.Metadata[0].Generation = types.Int64Value(cfgMap.Generation)
-
-	if len(cfgMap.Annotations) > 0 {
-		model.Metadata[0].Annotations = flattenStringMap(cfgMap.Annotations)
+	// Populate server-set metadata fields using the shared helper, which normalises
+	// nil annotations/labels to {} — matching SDKv2 data source behaviour.
+	meta, metaDiags := common.FlattenNamespacedMetadataFields(ctx, cfgMap.ObjectMeta)
+	resp.Diagnostics.Append(metaDiags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	if len(cfgMap.Labels) > 0 {
-		model.Metadata[0].Labels = flattenStringMap(cfgMap.Labels)
-	}
+	model.Metadata[0] = meta
 
 	// Populate data
 	dataMap, diags := stringMapToAttrMap(ctx, cfgMap.Data)
@@ -93,8 +94,6 @@ func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadReq
 		immutable = *cfgMap.Immutable
 	}
 	model.Immutable = types.BoolValue(immutable)
-
-	model.ID = types.StringValue(namespace + "/" + name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 }

@@ -61,7 +61,7 @@ func (r *PriorityClassV1) Create(ctx context.Context, req resource.CreateRequest
 
 	// Build state from plan, overwriting only server-assigned fields.
 	// Create must echo the plan — not filter the API response — to satisfy
-	// the apply-consistency contract (§2.3 of the migration guide).
+	// the apply-consistency contract.
 	plan.ID = types.StringValue(out.Name)
 	populateMetadataFromResponse(&plan, out)
 
@@ -120,8 +120,8 @@ func (r *PriorityClassV1) Read(ctx context.Context, req resource.ReadRequest, re
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
-	// Framework v1.16.1+: Read must always write identity unconditionally.
-	// The framework handles the "unexpected identity change" guard internally.
+	// Read must always write identity unconditionally; the framework handles
+	// the unexpected identity change guard internally.
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.ResourceIdentity{
 		APIVersion: types.StringValue("scheduling.k8s.io/v1"),
 		Kind:       types.StringValue("PriorityClass"),
@@ -186,7 +186,7 @@ func (r *PriorityClassV1) Update(ctx context.Context, req resource.UpdateRequest
 
 	// Build state from plan, overwriting only server-assigned fields.
 	// Update must echo the plan — not filter the API response — to satisfy
-	// the apply-consistency contract (§2.3 of the migration guide).
+	// the apply-consistency contract.
 	plan.ID = types.StringValue(out.Name)
 	populateMetadataFromResponse(&plan, out)
 
@@ -286,7 +286,7 @@ func (r *PriorityClassV1) ImportState(ctx context.Context, req resource.ImportSt
 // the API response. All other metadata fields are left as planned.
 //
 // The plan pointer is required: assignments to a value receiver's fields are
-// silently discarded for non-slice fields like ID (§4 of MIGRATION_CONVERGENCE_GUIDE.md).
+// silently discarded for non-slice fields like ID.
 func populateMetadataFromResponse(plan *PriorityClassModel, out *schedulingv1.PriorityClass) {
 	if len(plan.Metadata) == 0 {
 		return

@@ -62,34 +62,33 @@ func (r *PriorityClassV1) MoveState(_ context.Context) []resource.StateMover {
 	return moveStateHandlers()
 }
 
-// ConfigValidators enforces that exactly one metadata block is present at plan
-// time, and that user-defined PriorityClasses do not exceed the Kubernetes
-// maximum of 1,000,000,000.
+// ConfigValidators enforces that user-defined PriorityClasses do not exceed the
+// Kubernetes maximum of 1,000,000,000 and all classes fit within the int32 range.
 //
 // The value cap is applied as a ConfigValidator (not an attribute validator) so
 // that it can inspect the name: built-in system classes (system-cluster-critical,
-// system-node-critical) use values above the cap and must be importable.
+// system-node-critical) use values above 1,000,000,000 and must remain valid and importable.
 func (r *PriorityClassV1) ConfigValidators(_ context.Context) []resource.ConfigValidator {
 	return []resource.ConfigValidator{
 		&userDefinedValueValidator{},
 	}
 }
 
-// userDefinedValueValidator enforces the Kubernetes HighestUserDefinablePriority
-// cap (1,000,000,000) for user-defined PriorityClasses. Built-in system classes
-// whose names start with "system-" are exempt because they legitimately use values
-// above the cap (system-cluster-critical = 2,000,000,000).
-//
-// The lower bound is math.MinInt32: the Kubernetes API field is int32, so values
-// below −2,147,483,648 are rejected by the API anyway.
+// userDefinedValueValidator enforces the Kubernetes PriorityClass value constraints:
+//   - All PriorityClasses must fit in an int32 (math.MinInt32 to math.MaxInt32)
+//     to prevent integer overflow when sending to the Kubernetes API.
+//   - User-defined PriorityClasses (names not starting with "system-") are capped at
+//     HighestUserDefinablePriority (1,000,000,000).
+//   - Built-in system classes (names starting with "system-") may use values up to
+//     math.MaxInt32 (e.g. system-node-critical = 2,000,001,000).
 type userDefinedValueValidator struct{}
 
 func (v *userDefinedValueValidator) Description(_ context.Context) string {
-	return "user-defined priority class value must be between -2147483648 and 1000000000"
+	return "priority class value must be between -2147483648 and 2147483647 (and at most 1000000000 for user-defined classes)"
 }
 
 func (v *userDefinedValueValidator) MarkdownDescription(_ context.Context) string {
-	return "user-defined priority class `value` must be between `-2147483648` and `1000000000`"
+	return "priority class `value` must be between `-2147483648` and `2147483647` (and at most `1000000000` for user-defined classes)"
 }
 
 func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -106,7 +105,7 @@ func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req re
 
 	val := config.Value.ValueInt64()
 
-	// Lower bound: int32 minimum — the Kubernetes API uses an int32 field.
+	// Bounds check: value must fit in an int32 because the Kubernetes API field is int32.
 	if val < math.MinInt32 {
 		resp.Diagnostics.AddError(
 			"Invalid Priority Class Value",
@@ -114,10 +113,17 @@ func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req re
 		)
 		return
 	}
+	if val > math.MaxInt32 {
+		resp.Diagnostics.AddError(
+			"Invalid Priority Class Value",
+			fmt.Sprintf("value must be at most %d (int32 maximum), got: %d", math.MaxInt32, val),
+		)
+		return
+	}
 
-	// Upper bound: only enforced for user-defined classes.
-	// System classes (system-cluster-critical, system-node-critical) exceed the cap
-	// and must remain importable. Skip the check when name starts with "system-".
+	// Upper bound: user-defined classes are capped at 1,000,000,000.
+	// System classes (system-cluster-critical, system-node-critical) exceed this cap
+	// and must remain valid/importable.
 	if val > 1_000_000_000 {
 		// Determine the effective name: use name if set, fall back to generate_name prefix.
 		name := ""

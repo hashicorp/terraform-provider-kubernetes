@@ -53,7 +53,7 @@ func testAccPreCheck(t *testing.T) {
 }
 
 // sdkv2ProviderVersion is the last release that served kubernetes_priority_class_v1 from
-// the SDKv2 implementation. Step 1 of most migration tests runs against it.
+// the SDKv2 implementation. The initial step of most migration tests runs against it.
 const sdkv2ProviderVersion = "3.2.1"
 
 // sdkv2PreIdentityProviderVersion predates resource identity, which shipped in 2.38.0.
@@ -125,7 +125,7 @@ func testAccPriorityClassV1MigrationExpectingUpdate(t *testing.T, config string)
 	})
 }
 
-// ─── Upgrade from SDKv2 (v3.2.1) ─────────────────────────────────────────────
+// Upgrade from SDKv2 (v3.2.1)
 
 func TestAccPriorityClassV1_UpgradeFromSDKV2_basicName(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -167,7 +167,7 @@ func TestAccPriorityClassV1_UpgradeFromSDKV2_completeGenerateName(t *testing.T) 
 	testAccPriorityClassV1Migration(t, testAccKubernetesPriorityClassV1Config_completeGenerateName(prefix))
 }
 
-// ─── Upgrade from SDKv2 Pre-Identity (v2.37.1) ───────────────────────────────
+// Upgrade from SDKv2 Pre-Identity (v2.37.1)
 
 func TestAccPriorityClassV1_UpgradeFromSDKV2PreIdentity_basicName(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -193,7 +193,7 @@ func TestAccPriorityClassV1_UpgradeFromSDKV2PreIdentity_completeGenerateName(t *
 		testAccKubernetesPriorityClassV1Config_completeGenerateName(prefix))
 }
 
-// ─── HCL configs shared between migration and move tests ─────────────────────
+// HCL configs shared between migration and move tests
 
 func testAccKubernetesPriorityClassV1Config_basic(name string) string {
 	return fmt.Sprintf(`

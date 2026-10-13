@@ -7,7 +7,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
@@ -47,8 +46,10 @@ func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadReq
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Printf("[DEBUG] Received error: %#v", err)
-			model.Data = types.MapValueMust(types.StringType, map[string]attr.Value{})
-			model.BinaryData = types.MapValueMust(types.StringType, map[string]attr.Value{})
+			// ConfigMap does not exist. Return without an error and record the same state
+			// as SDKv2: configured values kept, unset metadata as zero values ({}, "", 0).
+			// data, binary_data and immutable come only from the API response, so they
+			// stay null, as SDKv2 never set them on a 404.
 			model.Metadata[0].MetadataBase = common.NormalizeNotFoundMetadata(model.Metadata[0].MetadataBase)
 			resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
 			return

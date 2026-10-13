@@ -22,7 +22,7 @@ import (
 	schedulingv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/schedulingv1"
 )
 
-// ─── Acceptance Move Tests (moved block) ────────────────────────────────────
+// Acceptance Move Tests (moved block)
 
 func testAccPriorityClassMoveStateSource(config string) string {
 	return strings.ReplaceAll(config, `"kubernetes_priority_class_v1"`, `"kubernetes_priority_class"`)
@@ -68,7 +68,7 @@ func testAccPriorityClassMoveState(t *testing.T, sdkv2Version, config string) {
 	})
 }
 
-// ─── Moved from SDKv2 (v3.2.1) ───────────────────────────────────────────────
+// Moved from SDKv2 (v3.2.1)
 
 func TestAccPriorityClassV1_MoveStateFromUnversioned_basicName(t *testing.T) {
 	name := fmt.Sprintf("tf-move-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -100,7 +100,7 @@ func TestAccPriorityClassV1_MoveStateFromUnversioned_completeGenerateName(t *tes
 	testAccPriorityClassMoveState(t, sdkv2ProviderVersion, testAccKubernetesPriorityClassV1Config_completeGenerateName(prefix))
 }
 
-// ─── Moved from SDKv2 Pre-Identity (v2.37.1) ─────────────────────────────────
+// Moved from SDKv2 Pre-Identity (v2.37.1)
 
 func TestAccPriorityClassV1_MoveStateFromUnversionedPreIdentity_basicName(t *testing.T) {
 	name := fmt.Sprintf("tf-move-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -126,7 +126,7 @@ func TestAccPriorityClassV1_MoveStateFromUnversionedPreIdentity_completeGenerate
 		testAccKubernetesPriorityClassV1Config_completeGenerateName(prefix))
 }
 
-// ─── MoveState Unit Tests ───────────────────────────────────────────────────
+// MoveState Unit Tests
 
 func sdkv2RawJSON(id, name, generateName, description, preemptionPolicy string,
 	value int, globalDefault bool,

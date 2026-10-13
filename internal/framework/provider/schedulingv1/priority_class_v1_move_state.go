@@ -14,10 +14,6 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
-// ---------------------------------------------------------------------------
-// MoveState support — moved block from kubernetes_priority_class
-// ---------------------------------------------------------------------------
-
 // moveStateHandlers returns the StateMover list for PriorityClassV1.
 // Handles: kubernetes_priority_class (deprecated alias without version suffix).
 func moveStateHandlers() []resource.StateMover {

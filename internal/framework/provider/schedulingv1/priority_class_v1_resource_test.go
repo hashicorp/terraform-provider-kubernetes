@@ -101,7 +101,7 @@ func TestAccPriorityClassV1_update(t *testing.T) {
 	tfresource.ParallelTest(t, tfresource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
-			// Step 1: create with defaults.
+			// Create with defaults.
 			{
 				Config: testAccPriorityClassV1Config_basic(name),
 				Check: tfresource.ComposeAggregateTestCheckFunc(
@@ -115,7 +115,7 @@ func TestAccPriorityClassV1_update(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.generation"},
 			},
-			// Step 2: add description, labels and annotations — no replace.
+			// Add description, labels and annotations — no replace.
 			{
 				Config: testAccPriorityClassV1Config_updated(name),
 				Check: tfresource.ComposeAggregateTestCheckFunc(
@@ -131,7 +131,7 @@ func TestAccPriorityClassV1_update(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "metadata.0.generation"},
 			},
-			// Step 3: remove labels and annotations — verify clean removal.
+			// Remove labels and annotations — verify clean removal.
 			{
 				Config: testAccPriorityClassV1Config_basic(name),
 				Check: tfresource.ComposeAggregateTestCheckFunc(
@@ -284,12 +284,12 @@ func TestAccPriorityClassV1_disappears(t *testing.T) {
 	tfresource.ParallelTest(t, tfresource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []tfresource.TestStep{
-			// Step 1: create the resource.
+			// Create the resource.
 			{
 				Config: testAccPriorityClassV1Config_basic(name),
 				Check:  tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 			},
-			// Step 2: delete out-of-band, then refresh state.
+			// Delete out-of-band, then refresh state.
 			// RefreshState: true triggers a Read without applying config.
 			// Read returns 404 → provider calls RemoveResource → state cleared.
 			// The subsequent plan (ExpectNonEmptyPlan) then shows a create.
@@ -339,7 +339,81 @@ func TestAccPriorityClassV1_nameAndGenerateNameConflict(t *testing.T) {
 	})
 }
 
-// ─── HCL config helpers ───────────────────────────────────────────────────────
+// TestAccPriorityClassV1_missingMetadata verifies that omitting the metadata block
+// is rejected at plan time.
+func TestAccPriorityClassV1_missingMetadata(t *testing.T) {
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccPriorityClassV1Config_missingMetadata(),
+				ExpectError: regexp.MustCompile(`(?s)(metadata.*required|Missing required argument|Missing Configuration for Required Attribute|Invalid Block|at least 1 elements)`),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_missingValue verifies that omitting the required value attribute
+// is rejected at plan time.
+func TestAccPriorityClassV1_missingValue(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccPriorityClassV1Config_missingValue(name),
+				ExpectError: regexp.MustCompile(`(?s)(Missing required argument|argument "value" is required|Missing Configuration for Required Attribute)`),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_invalidPreemptionPolicy verifies that an invalid preemption_policy
+// is rejected at plan time by the stringvalidator.OneOf validator.
+func TestAccPriorityClassV1_invalidPreemptionPolicy(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccPriorityClassV1Config_withPreemptionPolicy(name, "InvalidPolicy"),
+				ExpectError: regexp.MustCompile(`(?s)(Invalid Attribute Value Match|value must be one of)`),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_systemNameValueExceedsMaxInt32 verifies that system-prefixed
+// priority classes with values exceeding math.MaxInt32 are rejected at plan time.
+func TestAccPriorityClassV1_systemNameValueExceedsMaxInt32(t *testing.T) {
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccPriorityClassV1Config_withValue("system-overflow", 3_000_000_000),
+				ExpectError: regexp.MustCompile(`(?s)(Invalid Priority Class Value|int32 maximum)`),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_invalidMetadataName verifies that an invalid metadata.name
+// (not complying with DNS subdomain RFC 1123) is rejected at plan time.
+func TestAccPriorityClassV1_invalidMetadataName(t *testing.T) {
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:      testAccPriorityClassV1Config_basic("INVALID_NAME_UPPERCASE"),
+				ExpectError: regexp.MustCompile(`(?s)(Invalid Attribute Value Match|DNS-1123|subdomain)`),
+			},
+		},
+	})
+}
+
+// HCL config helpers
 
 func testAccPriorityClassV1Config_basic(name string) string {
 	return fmt.Sprintf(`
@@ -438,4 +512,22 @@ resource "kubernetes_priority_class_v1" "test" {
   value = 100
 }
 `, name, prefix)
+}
+
+func testAccPriorityClassV1Config_missingMetadata() string {
+	return `
+resource "kubernetes_priority_class_v1" "test" {
+  value = 100
+}
+`
+}
+
+func testAccPriorityClassV1Config_missingValue(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+`, name)
 }

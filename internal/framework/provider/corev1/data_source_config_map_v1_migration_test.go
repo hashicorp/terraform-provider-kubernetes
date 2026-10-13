@@ -17,20 +17,25 @@ import (
 
 const configMapDataSourceName = "data.kubernetes_config_map_v1.test"
 
-// TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2 — basic ConfigMap, no annotations/labels.
+// kubeRootCAConfigMapName is published into every namespace by the root-ca-cert-publisher
+// controller. The found-case tests read it, as the namespace tests read kube-system,
+// instead of creating a ConfigMap in the same config: that makes Terraform read the data
+// source at plan time, before the ConfigMap exists, and the apply then fails with
+// "Provider produced inconsistent final plan".
+const kubeRootCAConfigMapName = "kube-root-ca.crt"
+
+// TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2 — an existing ConfigMap.
 // The terraform_data anchor makes any data source attribute change visible as a planned update.
 func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
 	resource.ParallelTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: sdkv2ExternalProvider(),
-				Config:            testAccConfigMapDataSourceAnchoredConfig(name),
+				Config:            testAccConfigMapDataSourceAnchoredConfig(kubeRootCAConfigMapName),
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccConfigMapDataSourceAnchoredConfig(name),
+				Config:                   testAccConfigMapDataSourceAnchoredConfig(kubeRootCAConfigMapName),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -41,27 +46,29 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2(t *testing.T) {
 	})
 }
 
-// TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_withAnnotations — ConfigMap with annotations and labels.
-func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_withAnnotations(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
+// TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_withInputs — an existing ConfigMap
+// with annotations and labels set in configuration, one label null, which SDKv2 accepted.
+// The read reports what the ConfigMap carries, not what was configured.
+func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_withInputs(t *testing.T) {
 	check := resource.ComposeAggregateTestCheckFunc(
-		resource.TestCheckResourceAttr(configMapDataSourceName, "metadata.0.name", name),
-		resource.TestCheckResourceAttr(configMapDataSourceName, "metadata.0.annotations.TestAnnotation", "value"),
-		resource.TestCheckResourceAttr(configMapDataSourceName, "metadata.0.labels.TestLabel", "value"),
-		resource.TestCheckResourceAttr(configMapDataSourceName, "data.one", "first"),
+		resource.TestCheckResourceAttr(configMapDataSourceName, "metadata.0.name", kubeRootCAConfigMapName),
+		resource.TestCheckResourceAttrSet(configMapDataSourceName, "metadata.0.annotations.kubernetes.io/description"),
+		resource.TestCheckResourceAttrSet(configMapDataSourceName, "data.ca.crt"),
+		resource.TestCheckNoResourceAttr(configMapDataSourceName, "metadata.0.annotations.anno-key"),
+		resource.TestCheckNoResourceAttr(configMapDataSourceName, "metadata.0.labels.label-key"),
+		resource.TestCheckNoResourceAttr(configMapDataSourceName, "metadata.0.labels.null-key"),
 	)
 
 	resource.ParallelTest(t, resource.TestCase{
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: sdkv2ExternalProvider(),
-				Config:            testAccConfigMapDataSourceAnchoredWithAnnotationsConfig(name),
+				Config:            testAccConfigMapDataSourceAnchoredWithInputsConfig(kubeRootCAConfigMapName),
 				Check:             check,
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccConfigMapDataSourceAnchoredWithAnnotationsConfig(name),
+				Config:                   testAccConfigMapDataSourceAnchoredWithInputsConfig(kubeRootCAConfigMapName),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -91,9 +98,9 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFound(t *testing
 		statecheck.ExpectKnownValue(configMapDataSourceName, meta("generation"), knownvalue.Int64Exact(0)),
 		statecheck.ExpectKnownValue(configMapDataSourceName, meta("annotations"), knownvalue.MapSizeExact(0)),
 		statecheck.ExpectKnownValue(configMapDataSourceName, meta("labels"), knownvalue.MapSizeExact(0)),
-		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("data"), knownvalue.MapSizeExact(0)),
-		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("binary_data"), knownvalue.MapSizeExact(0)),
-		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("immutable"), knownvalue.Bool(false)),
+		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("data"), knownvalue.Null()),
+		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("binary_data"), knownvalue.Null()),
+		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("immutable"), knownvalue.Null()),
 	}
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -156,19 +163,9 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFoundWithAnnotat
 
 func testAccConfigMapDataSourceAnchoredConfig(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_config_map_v1" "test" {
-  metadata {
-    name = %q
-  }
-
-  data = {
-    one = "first"
-  }
-}
-
 data "kubernetes_config_map_v1" "test" {
   metadata {
-    name = kubernetes_config_map_v1.test.metadata[0].name
+    name = %q
   }
 }
 
@@ -190,27 +187,15 @@ resource "terraform_data" "anchor" {
 `, name)
 }
 
-func testAccConfigMapDataSourceAnchoredWithAnnotationsConfig(name string) string {
+// testAccConfigMapDataSourceAnchoredWithInputsConfig is testAccConfigMapDataSourceAnchoredConfig
+// with both settable metadata maps set, one label null, which SDKv2 accepted on data sources.
+func testAccConfigMapDataSourceAnchoredWithInputsConfig(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_config_map_v1" "test" {
-  metadata {
-    name = %q
-    annotations = {
-      TestAnnotation = "value"
-    }
-    labels = {
-      TestLabel = "value"
-    }
-  }
-
-  data = {
-    one = "first"
-  }
-}
-
 data "kubernetes_config_map_v1" "test" {
   metadata {
-    name = kubernetes_config_map_v1.test.metadata[0].name
+    name        = %q
+    annotations = { "anno-key" = "anno-value" }
+    labels      = { "label-key" = "label-value", "null-key" = null }
   }
 }
 

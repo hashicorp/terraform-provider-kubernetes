@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -286,6 +287,54 @@ func TestFlattenMetadata(t *testing.T) {
 			out := flattenMetadata(c.meta, d, c.providerMeta)
 			if !reflect.DeepEqual(out, c.expected) {
 				t.Fatalf("Error matching output and expected: %#v vs %#v", out, c.expected)
+			}
+		})
+	}
+}
+
+func TestExpandLocalObjectReferenceArray(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]struct {
+		in       []interface{}
+		expected []api.LocalObjectReference
+	}{
+		"empty": {
+			in:       []interface{}{},
+			expected: []api.LocalObjectReference{},
+		},
+		"single": {
+			in: []interface{}{
+				map[string]interface{}{"name": "my-secret"},
+			},
+			expected: []api.LocalObjectReference{{Name: "my-secret"}},
+		},
+		"multiple": {
+			in: []interface{}{
+				map[string]interface{}{"name": "secret-a"},
+				map[string]interface{}{"name": "secret-b"},
+			},
+			expected: []api.LocalObjectReference{{Name: "secret-a"}, {Name: "secret-b"}},
+		},
+		// Regression: name = null causes the SDK to pass a nil element; must not panic.
+		"nil element (name = null workaround)": {
+			in:       []interface{}{nil},
+			expected: []api.LocalObjectReference{{}},
+		},
+		// Regression: nil name value inside the map must not panic.
+		"nil name value": {
+			in: []interface{}{
+				map[string]interface{}{"name": nil},
+			},
+			expected: []api.LocalObjectReference{{}},
+		},
+	}
+
+	for n, c := range cases {
+		t.Run(n, func(t *testing.T) {
+			out := expandLocalObjectReferenceArray(c.in)
+			if !reflect.DeepEqual(out, c.expected) {
+				t.Fatalf("Expected %#v, got %#v", c.expected, out)
 			}
 		})
 	}

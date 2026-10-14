@@ -509,6 +509,105 @@ func TestMorphValueToType(t *testing.T) {
 					}),
 			}),
 		},
+		// morphing with null-valued attributes
+		"object -> object (null)": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"two":   tftypes.String,
+					"three": tftypes.String,
+				}}, map[string]tftypes.Value{
+					"two":   tftypes.NewValue(tftypes.String, "stuff"),
+					"three": tftypes.NewValue(tftypes.String, nil),
+				}),
+				T: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"one": tftypes.Number,
+					"two": tftypes.String,
+				}},
+			},
+			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"one": tftypes.Number,
+				"two": tftypes.String,
+			}}, map[string]tftypes.Value{
+				"one": tftypes.NewValue(tftypes.Number, nil),
+				"two": tftypes.NewValue(tftypes.String, "stuff"),
+			}),
+		},
+		"object -> object (deep null)": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"two": tftypes.String,
+					"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"foo": tftypes.String,
+						"bar": tftypes.String,
+					}},
+				}}, map[string]tftypes.Value{
+					"two": tftypes.NewValue(tftypes.String, "stuff"),
+					"three": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"foo": tftypes.String,
+						"bar": tftypes.String,
+					}}, map[string]tftypes.Value{
+						"foo": tftypes.NewValue(tftypes.String, "fourtytwo"),
+						"bar": tftypes.NewValue(tftypes.String, nil),
+					}),
+				}),
+				T: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"one":   tftypes.Number,
+					"two":   tftypes.String,
+					"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+				}},
+			},
+			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"one":   tftypes.Number,
+				"two":   tftypes.String,
+				"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+			}}, map[string]tftypes.Value{
+				"one": tftypes.NewValue(tftypes.Number, nil),
+				"two": tftypes.NewValue(tftypes.String, "stuff"),
+				"three": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"foo": tftypes.String,
+				}}, map[string]tftypes.Value{
+					"foo": tftypes.NewValue(tftypes.String, "fourtytwo"),
+				}),
+			}),
+		},
+		"object -> object (aggregate null)": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"two": tftypes.String,
+					"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"foo": tftypes.String,
+						"bar": tftypes.String,
+					}},
+				}}, map[string]tftypes.Value{
+					"two": tftypes.NewValue(tftypes.String, "stuff"),
+					"three": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"foo": tftypes.String,
+						"bar": tftypes.String,
+					}}, map[string]tftypes.Value{
+						"foo": tftypes.NewValue(tftypes.String, nil),
+						"bar": tftypes.NewValue(tftypes.String, nil),
+					}),
+				}),
+				T: tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"one":   tftypes.Number,
+					"two":   tftypes.String,
+					"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+				}},
+			},
+			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"one":   tftypes.Number,
+				"two":   tftypes.String,
+				"three": tftypes.Object{AttributeTypes: map[string]tftypes.Type{"foo": tftypes.String}},
+			}}, map[string]tftypes.Value{
+				"one": tftypes.NewValue(tftypes.Number, nil),
+				"two": tftypes.NewValue(tftypes.String, "stuff"),
+				"three": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"foo": tftypes.String,
+				}}, map[string]tftypes.Value{
+					"foo": tftypes.NewValue(tftypes.String, nil),
+				}),
+			}),
+		},
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {

@@ -54,14 +54,27 @@ func testAccRoleMoveRunner(version string) roleScenarioRunner {
 			resource.TestCheckResourceAttr("kubernetes_role_v1.test", "metadata.0.namespace", "default"),
 			resource.TestCheckResourceAttr("kubernetes_role_v1.test", "rule.#", "1"),
 			resource.TestCheckTypeSetElemAttr("kubernetes_role_v1.test", "rule.0.resources.*", "pods"))
-		testAccRoleValidateAndRun(t, resource.TestCase{
+		var importIgnore []string
+		if internalMetadata != "" {
+			prefix := "metadata.0." + internalMetadata + "."
+			importIgnore = []string{prefix + "%", prefix + "example.kubernetes.io/owner"}
+		}
+		resource.ParallelTest(t, resource.TestCase{
 			CheckDestroy:           testAccRoleCheckDestroy,
 			TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
-			Steps: roleImportSteps("kubernetes_role_v1.test", []resource.TestStep{
+			Steps: []resource.TestStep{
 				{
 					ExternalProviders: roleExternalProvider(version),
 					Config:            strings.ReplaceAll(config, `"kubernetes_role_v1"`, `"kubernetes_role"`),
 					Check:             testAccRoleCheckExists("kubernetes_role.test", &uid),
+				},
+				{
+					ResourceName:            "kubernetes_role.test",
+					ImportState:             true,
+					ImportStateVerify:       true,
+					ExternalProviders:       roleExternalProvider(version),
+					ImportStateVerifyIgnore: importIgnore,
+					ImportStateCheck:        testAccRoleCheckImportOwnership(internalMetadata),
 				},
 				{
 					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -70,11 +83,27 @@ func testAccRoleMoveRunner(version string) roleScenarioRunner {
 					Check:                    resource.ComposeAggregateTestCheckFunc(checks...),
 				},
 				{
+					ResourceName:             "kubernetes_role_v1.test",
+					ImportState:              true,
+					ImportStateVerify:        true,
+					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+					ImportStateVerifyIgnore:  importIgnore,
+					ImportStateCheck:         testAccRoleCheckImportOwnership(internalMetadata),
+				},
+				{
 					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 					Config:                   config,
 					ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 				},
-			}, internalMetadata),
+				{
+					ResourceName:             "kubernetes_role_v1.test",
+					ImportState:              true,
+					ImportStateVerify:        true,
+					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+					ImportStateVerifyIgnore:  importIgnore,
+					ImportStateCheck:         testAccRoleCheckImportOwnership(internalMetadata),
+				},
+			},
 		})
 	}
 }
@@ -148,11 +177,18 @@ func testAccRoleMoveWithUpdate(t *testing.T, name, config, updated, verb string,
 		resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
 	}
 	updateChecks = append(updateChecks, resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", verb))
-	testAccRoleValidateAndRun(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:           testAccRoleCheckDestroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
-		Steps: roleImportSteps(resourceName, []resource.TestStep{
+		Steps: []resource.TestStep{
 			source,
+			{
+				ResourceName:             "kubernetes_role.test",
+				ImportState:              true,
+				ImportStateVerify:        true,
+				ExternalProviders:        source.ExternalProviders,
+				ProtoV6ProviderFactories: source.ProtoV6ProviderFactories,
+			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccRoleMoveTarget(config),
@@ -163,17 +199,35 @@ func testAccRoleMoveWithUpdate(t *testing.T, name, config, updated, verb string,
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid")),
 			},
 			{
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			},
+			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   updated,
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)}},
 				Check:                    resource.ComposeAggregateTestCheckFunc(updateChecks...),
 			},
 			{
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			},
+			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   updated,
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 			},
-		}),
+			{
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			},
+		},
 	})
 }
 

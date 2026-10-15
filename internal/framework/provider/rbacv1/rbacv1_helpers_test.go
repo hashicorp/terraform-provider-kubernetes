@@ -4,7 +4,6 @@
 package rbacv1
 
 import (
-	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -24,8 +23,6 @@ func makeStringSet(values []string) types.Set {
 }
 
 func TestExpandStringSet(t *testing.T) {
-	ctx := context.Background()
-
 	tests := []struct {
 		name     string
 		input    types.Set
@@ -33,12 +30,16 @@ func TestExpandStringSet(t *testing.T) {
 	}{
 		{"normal set", makeStringSet([]string{"a", "b", "c"}), []string{"a", "b", "c"}},
 		{"null set", types.SetNull(types.StringType), nil},
+		{"unknown set", types.SetUnknown(types.StringType), nil},
+		{"null and unknown elements", types.SetValueMust(types.StringType, []attr.Value{
+			types.StringNull(), types.StringUnknown(), types.StringValue(""),
+		}), []string{""}},
 		{"empty set", makeStringSet([]string{}), []string{}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, diags := expandStringSet(ctx, tt.input)
+			got, diags := expandStringSet(tt.input)
 			if diags.HasError() {
 				t.Fatalf("unexpected diagnostics: %v", diags)
 			}
@@ -46,6 +47,14 @@ func TestExpandStringSet(t *testing.T) {
 				t.Errorf("expandStringSet() mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestExpandStringSetUnexpectedType(t *testing.T) {
+	set := types.SetValueMust(types.Int64Type, []attr.Value{types.Int64Value(1)})
+	values, diags := expandStringSet(set)
+	if values != nil || len(diags) != 1 || diags[0].Summary() != "Unexpected Set Element Type" {
+		t.Fatalf("expected string type diagnostic, got values %v, diagnostics %v", values, diags)
 	}
 }
 
@@ -74,8 +83,6 @@ func TestFlattenStringSet(t *testing.T) {
 }
 
 func TestExpandFlattenPolicyRules(t *testing.T) {
-	ctx := context.Background()
-
 	input := []RuleModel{
 		{
 			APIGroups: makeStringSet([]string{""}),
@@ -84,7 +91,7 @@ func TestExpandFlattenPolicyRules(t *testing.T) {
 		},
 	}
 
-	got, diags := expandPolicyRules(ctx, input)
+	got, diags := expandPolicyRules(input)
 	if diags.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}

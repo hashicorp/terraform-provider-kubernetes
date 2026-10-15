@@ -84,25 +84,6 @@ const roleSDKv2ProviderVersion = "3.2.1"
 
 const rolePreIdentityProviderVersion = "2.37.1"
 
-func testAccRoleMigration(t *testing.T, config string, checks ...resource.TestCheckFunc) {
-	t.Helper()
-	testAccRoleMigrationWithPlanCheck(t, config, plancheck.ExpectEmptyPlan(), checks...)
-}
-
-// testAccRoleMigrationExpectingUpdate is for shapes that cannot migrate to an empty plan.
-// SDKv2 stored null where a config said {}, so the first framework plan reconciles the two.
-// The update is non-destructive and settles after one apply; asserting the specific action
-// keeps a replacement from slipping in under the same expectation.
-func testAccRoleMigrationExpectingUpdate(t *testing.T, config string, checks ...resource.TestCheckFunc) {
-	t.Helper()
-	testAccRoleMigrationWithPlanCheck(t, config,
-		plancheck.ExpectResourceAction("kubernetes_role_v1.test", plancheck.ResourceActionUpdate), checks...)
-}
-
-func testAccRoleMigrationWithPlanCheck(t *testing.T, config string, planCheck plancheck.PlanCheck, checks ...resource.TestCheckFunc) {
-	testAccRoleMigrationFrom(t, roleSDKv2ProviderVersion, config, planCheck, "", checks...)
-}
-
 func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck plancheck.PlanCheck, internalMetadata string, checks ...resource.TestCheckFunc) {
 	t.Helper()
 
@@ -115,7 +96,13 @@ func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck pl
 		resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.resources.*", "pods"),
 	}, checks...)
 
-	testAccRoleWithImports(t, resource.TestCase{
+	// Import has no prior ownership state for internal Kubernetes metadata.
+	var importIgnore []string
+	if internalMetadata != "" {
+		prefix := "metadata.0." + internalMetadata + "."
+		importIgnore = []string{prefix + "%", prefix + "example.kubernetes.io/owner"}
+	}
+	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy: testAccRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -129,6 +116,14 @@ func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck pl
 				Check:  testAccRoleCheckExists(resourceName, &uid),
 			},
 			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ExternalProviders:       roleExternalProvider(version),
+				ImportStateVerifyIgnore: importIgnore,
+				ImportStateCheck:        testAccRoleCheckImportOwnership(internalMetadata),
+			},
+			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   config,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -138,8 +133,16 @@ func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck pl
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(checks...),
 			},
+			{
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ImportStateVerifyIgnore:  importIgnore,
+				ImportStateCheck:         testAccRoleCheckImportOwnership(internalMetadata),
+			},
 		},
-	}, internalMetadata)
+	})
 }
 
 func TestAccRole_UpgradeFromSDKv2_scenarios(t *testing.T) {
@@ -307,7 +310,7 @@ func TestAccRole_UpgradeFromSDKv2(t *testing.T) {
 	resourceName := "kubernetes_role_v1.test"
 	var uid string
 
-	testAccRoleWithImports(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy: testAccRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -325,6 +328,12 @@ func TestAccRole_UpgradeFromSDKv2(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ExternalProviders: roleExternalProvider(roleSDKv2ProviderVersion),
+			},
+			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccRoleConfig_basic(name),
 				Check:                    testAccRoleCheckExists(resourceName, &uid),
@@ -335,12 +344,24 @@ func TestAccRole_UpgradeFromSDKv2(t *testing.T) {
 				},
 			},
 			{
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			},
+			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccRoleConfig_modified(name),
 				Check: resource.ComposeTestCheckFunc(
 					testAccRoleCheckExists(resourceName, &uid),
 					resource.TestCheckResourceAttr(resourceName, "rule.#", "1"),
 				),
+			},
+			{
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 			},
 		},
 	})
@@ -366,7 +387,7 @@ func testAccRoleNullMetadataMigration(t *testing.T, sourceType string, targetCon
 		config = targetConfig(config)
 		var uid string
 
-		testAccRoleWithImports(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			CheckDestroy: testAccRoleCheckDestroy,
 			TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 				tfversion.SkipBelow(tfversion.Version1_8_0),
@@ -383,6 +404,12 @@ func testAccRoleNullMetadataMigration(t *testing.T, sourceType string, targetCon
 					Check:  testAccRoleCheckExists(sourceType+".test", &uid),
 				},
 				{
+					ResourceName:      sourceType + ".test",
+					ImportState:       true,
+					ImportStateVerify: true,
+					ExternalProviders: roleExternalProvider(roleSDKv2ProviderVersion),
+				},
+				{
 					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 					Config:                   config,
 					ExpectError:              regexp.MustCompile("(?s)Invalid Attribute Value.*value must be a string"),
@@ -397,6 +424,12 @@ func testAccRoleNullMetadataMigration(t *testing.T, sourceType string, targetCon
 						},
 					},
 					Config: strings.ReplaceAll(sourceConfig, ", optional = null", ""),
+				},
+				{
+					ResourceName:      sourceType + ".test",
+					ImportState:       true,
+					ImportStateVerify: true,
+					ExternalProviders: roleExternalProvider(roleSDKv2ProviderVersion),
 				},
 			},
 		})

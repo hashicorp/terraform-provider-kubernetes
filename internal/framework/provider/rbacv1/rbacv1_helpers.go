@@ -4,8 +4,6 @@
 package rbacv1
 
 import (
-	"context"
-
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -13,19 +11,20 @@ import (
 	rbacv1api "k8s.io/api/rbac/v1"
 )
 
-func expandStringSet(ctx context.Context, set types.Set) ([]string, diag.Diagnostics) {
+func expandStringSet(set types.Set) ([]string, diag.Diagnostics) {
 	if set.IsNull() || set.IsUnknown() {
 		return nil, nil
 	}
 
-	var values []types.String
-	diags := set.ElementsAs(ctx, &values, false)
-	if diags.HasError() {
-		return nil, diags
-	}
-
-	result := make([]string, 0, len(values))
-	for _, v := range values {
+	elements := set.Elements()
+	result := make([]string, 0, len(elements))
+	for _, element := range elements {
+		v, ok := element.(types.String)
+		if !ok {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+				"Unexpected Set Element Type", "Expected a string element.",
+			)}
+		}
 		if !v.IsNull() && !v.IsUnknown() {
 			result = append(result, v.ValueString())
 		}
@@ -42,21 +41,21 @@ func flattenStringSet(slice []string) (types.Set, diag.Diagnostics) {
 	return types.SetValue(types.StringType, elements)
 }
 
-func expandPolicyRules(ctx context.Context, rules []RuleModel) ([]rbacv1api.PolicyRule, diag.Diagnostics) {
+func expandPolicyRules(rules []RuleModel) ([]rbacv1api.PolicyRule, diag.Diagnostics) {
 	var allDiags diag.Diagnostics
 	result := make([]rbacv1api.PolicyRule, len(rules))
 
 	for i, rule := range rules {
-		apiGroups, diags := expandStringSet(ctx, rule.APIGroups)
+		apiGroups, diags := expandStringSet(rule.APIGroups)
 		allDiags.Append(diags...)
 
-		resources, diags := expandStringSet(ctx, rule.Resources)
+		resources, diags := expandStringSet(rule.Resources)
 		allDiags.Append(diags...)
 
-		resourceNames, diags := expandStringSet(ctx, rule.ResourceNames)
+		resourceNames, diags := expandStringSet(rule.ResourceNames)
 		allDiags.Append(diags...)
 
-		verbs, diags := expandStringSet(ctx, rule.Verbs)
+		verbs, diags := expandStringSet(rule.Verbs)
 		allDiags.Append(diags...)
 
 		result[i] = rbacv1api.PolicyRule{

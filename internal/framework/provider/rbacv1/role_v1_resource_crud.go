@@ -41,7 +41,7 @@ func (r *RoleV1) Create(ctx context.Context, req resource.CreateRequest, resp *r
 
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
-	rules, ruleDiags := expandPolicyRules(ctx, plan.Rule)
+	rules, ruleDiags := expandPolicyRules(plan.Rule)
 	resp.Diagnostics.Append(ruleDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -82,6 +82,14 @@ func (r *RoleV1) Read(ctx context.Context, req resource.ReadRequest, resp *resou
 		return
 	}
 
+	// IdParts checks separators, but permits an empty namespace or name.
+	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
+	if err != nil || namespace == "" || name == "" {
+		resp.Diagnostics.AddError("invalid resource ID",
+			fmt.Sprintf("Expected format: namespace/name with a non-empty namespace and name, got: %s", state.ID.ValueString()))
+		return
+	}
+
 	meta := r.SDKv2Meta().(kubernetes.KubeClientsets)
 	conn, err := meta.MainClientset()
 	if err != nil {
@@ -89,15 +97,24 @@ func (r *RoleV1) Read(ctx context.Context, req resource.ReadRequest, resp *resou
 		return
 	}
 
-	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("invalid resource ID", err.Error())
-		return
-	}
-
 	role, err := conn.RbacV1().Roles(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			// Terraform before 1.12 does not send identity on refresh, but the
+			// framework still requires it when Read removes a missing resource.
+			if resp.Identity.Raw.IsNull() {
+				resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
+					ResourceIdentity: common.ResourceIdentity{
+						APIVersion: types.StringValue(rbacAPIVersion),
+						Kind:       types.StringValue(roleKind),
+						Name:       types.StringValue(name),
+					},
+					Namespace: types.StringValue(namespace),
+				})...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+			}
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -158,15 +175,12 @@ func (r *RoleV1) Update(ctx context.Context, req resource.UpdateRequest, resp *r
 	}
 
 	planMeta := plan.Metadata[0]
-	var stateMeta common.NamespacedMetadataModel
-	if len(state.Metadata) > 0 {
-		stateMeta = state.Metadata[0]
-	}
+	stateMeta := state.Metadata[0]
 
 	ops := common.MetadataPatchOps("/metadata/", stateMeta.MetadataModel, planMeta.MetadataModel)
 
 	if !rulesEqual(plan.Rule, state.Rule) {
-		rules, diags := expandPolicyRules(ctx, plan.Rule)
+		rules, diags := expandPolicyRules(plan.Rule)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -269,23 +283,8 @@ func (r *RoleV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *r
 }
 
 func (r *RoleV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	var namespace, name string
-
-	if req.ID != "" {
-		var err error
-		namespace, name, err = kubernetes.IdParts(req.ID)
-		if err != nil || namespace == "" || name == "" {
-			resp.Diagnostics.AddError(
-				"invalid import ID",
-				fmt.Sprintf("Expected format: namespace/name with a non-empty namespace and name, got: %s", req.ID),
-			)
-			return
-		}
-	} else {
-		if req.Identity == nil {
-			resp.Diagnostics.AddError("invalid identity import", "Provide an identity or an import ID in namespace/name format.")
-			return
-		}
+	id := req.ID
+	if id == "" {
 		var identityData common.NamespacedResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
@@ -297,15 +296,13 @@ func (r *RoleV1) ImportState(ctx context.Context, req resource.ImportStateReques
 					roleKind, rbacAPIVersion, identityData.Kind.ValueString(), identityData.APIVersion.ValueString()))
 			return
 		}
-		namespace = identityData.Namespace.ValueString()
+		namespace := identityData.Namespace.ValueString()
 		if namespace == "" {
 			namespace = metav1.NamespaceDefault
 		}
-		name = identityData.Name.ValueString()
+		id = kubernetes.BuildId(metav1.ObjectMeta{Namespace: namespace, Name: identityData.Name.ValueString()})
 	}
 
-	// As with Namespace, Read populates state and identity after import. Unlike
-	// Namespace, the ID must contain both the namespace and the object name.
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"),
-		kubernetes.BuildId(metav1.ObjectMeta{Namespace: namespace, Name: name}))...)
+	// Read validates the namespaced ID and populates state and identity.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
 }

@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -86,9 +87,22 @@ func rbacSubjectSchema() map[string]*schema.Schema {
 		},
 		"namespace": {
 			Type:        schema.TypeString,
-			Description: "The Namespace of the subject resource.",
+			Description: "The Namespace of the subject resource. Only applicable to subjects of kind `ServiceAccount`, for which it defaults to `default`. Leave it unset for `User` and `Group` subjects, which are not namespaced.",
 			Optional:    true,
-			Default:     "default",
+			// This attribute used to default to "default" for every subject kind, so state
+			// written by earlier provider versions holds that value for User and Group
+			// subjects too. Treat an unset namespace and "default" as equivalent so that
+			// upgrading the provider does not produce a diff, but only while the element at
+			// this index is still the same subject: when a subject is removed and the ones
+			// after it shift down, the stale "default" must not be carried over to the
+			// subject that now occupies the index.
+			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
+				if !((old == "" && new == "default") || (old == "default" && new == "")) {
+					return false
+				}
+				prefix := strings.TrimSuffix(k, ".namespace")
+				return !d.HasChange(prefix+".kind") && !d.HasChange(prefix+".name")
+			},
 		},
 	}
 }

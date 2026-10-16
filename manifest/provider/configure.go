@@ -16,6 +16,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/useragent"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/mod/semver"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -586,6 +587,8 @@ func (s *RawProviderServer) ConfigureProvider(ctx context.Context, req *tfprotov
 		})
 		return response, nil
 	}
+
+	clientConfig.UserAgent = useragent.Build(req.TerraformVersion)
 
 	if s.logger.IsTrace() {
 		clientConfig.WrapTransport = loggingTransport

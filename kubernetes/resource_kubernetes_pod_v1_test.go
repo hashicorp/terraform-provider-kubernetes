@@ -753,6 +753,35 @@ func TestAccKubernetesPodV1_with_container_security_context(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPodV1_host_users(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_pod_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0") // User namespaces is beta in 1.25
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigHostUsers(name, imageName, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.host_users", "true"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigHostUsers(name, imageName, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "spec.0.host_users", "false"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPodV1_with_volume_mount(t *testing.T) {
 	var conf api.Pod
 
@@ -3671,4 +3700,21 @@ resource "kubernetes_pod_v1" "test" {
   }
 }
 `, secretName, podName, imageName)
+}
+
+func testAccKubernetesPodV1ConfigHostUsers(name, image string, hostUsers bool) string {
+	return fmt.Sprintf(`
+resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+  spec {
+    host_users = %t
+    container {
+      image = "%s"
+      name  = "test"
+    }
+  }
+}
+`, name, hostUsers, image)
 }

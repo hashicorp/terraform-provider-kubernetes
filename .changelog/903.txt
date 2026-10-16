@@ -1,0 +1,15 @@
+```release-note:bug
+`resource/kubernetes_role_binding`: Allow role_ref.api_group values other than rbac.authorization.k8s.io (e.g. OpenShift).
+```
+
+```release-note:bug
+`resource/kubernetes_role_binding_v1`: Allow role_ref.api_group values other than rbac.authorization.k8s.io (e.g. OpenShift).
+```
+
+```release-note:bug
+`resource/kubernetes_cluster_role_binding`: Allow role_ref.api_group values other than rbac.authorization.k8s.io (e.g. OpenShift).
+```
+
+```release-note:bug
+`resource/kubernetes_cluster_role_binding_v1`: Allow role_ref.api_group values other than rbac.authorization.k8s.io (e.g. OpenShift).
+```

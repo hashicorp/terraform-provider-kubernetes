@@ -92,6 +92,10 @@ Identity imports use `api_version = "rbac.authorization.k8s.io/v1"`, `kind = "Ro
 and `name`. The optional identity `namespace` defaults to `default` when omitted.
 An identity with a different `kind` or `api_version` is rejected.
 
+To import a Role that was created with `generateName`, configure `generate_name`
+with its original prefix and omit `name`. Configuring `name` instead plans a
+replacement.
+
 ## Migrating from `kubernetes_role`
 
 With Terraform 1.8 or later, rename the deprecated `kubernetes_role` resource type
@@ -109,7 +113,15 @@ plan may return exit code 2 with `-detailed-exitcode`, even with no infrastructu
 changes. After applying the move, an unchanged configuration plans no changes.
 
 Configurations specifying both `metadata.name` and `metadata.generate_name` are
-rejected during planning. Remove `generate_name` when an explicit name is configured.
+rejected during planning, including `generate_name = ""`. To keep the existing Role
+without replacement:
+
+- If `generate_name = ""`, remove `generate_name`.
+- Otherwise, remove `name` and keep `generate_name`. The Role keeps its current
+  name; if it is later replaced for another reason, Kubernetes generates a new
+  name from the `generate_name` prefix.
+
+Making the other change destroys and recreates the Role.
 
 Existing `kubernetes_role_v1` configurations do not need a `moved` block when
 upgrading the provider, including upgrades from provider 2.37.1 before resource
@@ -117,6 +129,14 @@ identity was introduced. Omitted `resource_names` defaults to an empty set.
 An unset `generate_name` is represented by null rather than the SDKv2 empty string.
 Explicit empty metadata maps may require a one-time in-place update. Removing
 previously configured labels, annotations, or resource names clears those values.
+
+After upgrading or moving, two further one-time in-place updates may appear, and
+neither replaces the Role:
+
+- A Role imported with an earlier provider version may show empty `labels` and
+  `annotations` changing to null. Applying it makes no change to the Role.
+- A `terraform plan -refresh=false` run immediately after upgrading may show
+  `resource_names = []` being added. A plan that refreshes does not show it.
 
 ### Null elements in rules
 

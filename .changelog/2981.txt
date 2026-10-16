@@ -1,0 +1,3 @@
+```release-note:enhancement
+`resource/kubernetes_persistent_volume_claim_v1`: Do not wait for the claim to be bound when its storage class uses `WaitForFirstConsumer` volume binding mode.
+```

@@ -73,7 +73,7 @@ func (f *foapiv2) GetTypeByGVK(gvk schema.GroupVersionKind) (tftypes.Type, map[s
 	ap := tftypes.AttributePath{}
 
 	// ObjectMeta isn't discoverable via the index because it's not tagged with "x-kubernetes-group-version-kind" in OpenAPI spec
-	// as top-level resouces schemas are. But we need ObjectMeta as a separate type when backfilling into CRD schemas.
+	// as top-level resources schemas are. But we need ObjectMeta as a separate type when backfilling into CRD schemas.
 	if gvk == ObjectMetaGVK {
 		t, err := f.getTypeByID("io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta", hints, ap)
 		return t, hints, err

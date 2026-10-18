@@ -459,7 +459,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Optional:    true,
 						ForceNew:    !isUpdatable,
-						Description: "An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.",
+						Description: "An optional identifier to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.",
 					},
 					"secret_ref": {
 						Type:        schema.TypeList,

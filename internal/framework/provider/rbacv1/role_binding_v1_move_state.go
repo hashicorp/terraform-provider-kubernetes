@@ -19,7 +19,6 @@ import (
 const (
 	deprecatedRoleBindingTypeName      = "kubernetes_role_binding"
 	deprecatedRoleBindingSchemaVersion = 0
-	providerAddressSuffix              = "hashicorp/kubernetes"
 )
 
 // ── MoveState support — moved block from kubernetes_role_binding ──────────────

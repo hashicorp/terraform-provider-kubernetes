@@ -175,7 +175,11 @@ func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		Steps: steps,
 		CheckDestroy: func(_ *terraform.State) error {
-			meta := sdkv2providerMeta()()
+			metaFunc, err := sdkv2providerMeta()
+			if err != nil {
+				return err
+			}
+			meta := metaFunc()
 			clients, ok := meta.(kubernetes.KubeClientsets)
 			if !ok {
 				return fmt.Errorf("expected kubernetes.KubeClientsets, got %T", meta)

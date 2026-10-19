@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -99,9 +100,11 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
+	// IdParts checks separators, but permits an empty namespace or name.
 	namespace, name, err := kubernetes.IdParts(state.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("invalid resource ID", err.Error())
+	if err != nil || namespace == "" || name == "" {
+		resp.Diagnostics.AddError("invalid resource ID",
+			fmt.Sprintf("Expected format: namespace/name with a non-empty namespace and name, got: %s", state.ID.ValueString()))
 		return
 	}
 
@@ -118,6 +121,21 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	out, err := conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
+		// Terraform before 1.12 does not send identity on refresh, but the
+		// framework still requires it when Read removes a missing resource.
+		if resp.Identity.Raw.IsNull() {
+			resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
+				ResourceIdentity: common.ResourceIdentity{
+					APIVersion: types.StringValue(roleBindingAPIVersion),
+					Kind:       types.StringValue(roleBindingKind),
+					Name:       types.StringValue(name),
+				},
+				Namespace: types.StringValue(namespace),
+			})...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -190,8 +208,20 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Build metadata patch ops via common helper — mirrors SDKv2 patchMetadata.
 	ops := common.MetadataPatchOps("/metadata/", stateMeta.MetadataModel, planMeta.MetadataModel)
-	// Add subject patch ops on top.
-	ops = append(ops, patchSubjects(state.Subject, plan.Subject)...)
+	// Patch subjects only when they changed, mirroring SDKv2 d.HasChange("subject").
+	// One replace of the whole list is simpler than index-based operations and yields
+	// the same final list.
+	subjectsChanged := !subjectsUnchanged(state.Subject, plan.Subject)
+	if subjectsChanged {
+		ops = append(ops, &kubernetes.ReplaceOperation{
+			Path:  "/subjects",
+			Value: expandSubjects(plan.Subject),
+		})
+	} else {
+		// Unchanged subjects keep their prior state values, including any computed
+		// field the plan left unknown.
+		plan.Subject = state.Subject
+	}
 
 	patchBytes, err := json.Marshal(ops)
 	if err != nil {
@@ -225,7 +255,9 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	// Preserve configured subject values; resolve only unknown computed fields
 	// (e.g. api_group omitted by the caller) from the Kubernetes response.
-	applySubjectComputedFields(&plan.Subject, out.Subjects)
+	if subjectsChanged {
+		applySubjectComputedFields(&plan.Subject, out.Subjects)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
@@ -276,68 +308,26 @@ func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 // ── ImportState ───────────────────────────────────────────────────────────────
 
 func (r *RoleBindingV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	var namespace, name string
-
-	// Accept either a plain "namespace/name" string ID or an identity object.
-	if req.ID != "" {
-		var err error
-		namespace, name, err = kubernetes.IdParts(req.ID)
-		if err != nil {
-			resp.Diagnostics.AddError("invalid import ID", err.Error())
-			return
-		}
-	} else {
+	id := req.ID
+	if id == "" {
 		var identityData common.NamespacedResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		namespace = identityData.Namespace.ValueString()
-		name = identityData.Name.ValueString()
+		if identityData.Kind.ValueString() != roleBindingKind || identityData.APIVersion.ValueString() != roleBindingAPIVersion {
+			resp.Diagnostics.AddError("invalid identity import",
+				fmt.Sprintf("Expected kind %q and api_version %q, got kind %q and api_version %q.",
+					roleBindingKind, roleBindingAPIVersion, identityData.Kind.ValueString(), identityData.APIVersion.ValueString()))
+			return
+		}
+		namespace := identityData.Namespace.ValueString()
+		if namespace == "" {
+			namespace = metav1.NamespaceDefault
+		}
+		id = kubernetes.BuildId(metav1.ObjectMeta{Namespace: namespace, Name: identityData.Name.ValueString()})
 	}
 
-	clients, filters, metaDiags := r.sdkv2Meta()
-	resp.Diagnostics.Append(metaDiags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	conn, err := clients.MainClientset()
-	if err != nil {
-		resp.Diagnostics.AddError("kubernetes client error", err.Error())
-		return
-	}
-
-	out, err := conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"error importing RoleBinding",
-			fmt.Sprintf("Failed to import RoleBinding %q/%q: %s", namespace, name, err.Error()),
-		)
-		return
-	}
-
-	// Import uses an empty prior state — nothing declared, so nothing is exempt from filtering.
-	flatMetadata, diags := common.FlattenNamespacedMetadata(ctx, out.ObjectMeta, nil,
-		filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	state := RoleBindingModel{
-		ID:       types.StringValue(kubernetes.BuildId(out.ObjectMeta)),
-		Metadata: flatMetadata,
-		RoleRef:  []RoleRefModel{flattenRoleRef(out.RoleRef)},
-		Subject:  flattenSubjects(out.Subjects),
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(roleBindingAPIVersion),
-			Kind:       types.StringValue(roleBindingKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
+	// Read validates the namespaced ID and populates state and identity.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
 }

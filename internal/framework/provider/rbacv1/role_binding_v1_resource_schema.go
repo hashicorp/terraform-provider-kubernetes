@@ -107,7 +107,7 @@ func RoleBindingV1Schema() schema.Schema {
 							Required:            true,
 						},
 						"namespace": schema.StringAttribute{
-							MarkdownDescription: "The namespace of the subject. Required and used only for `ServiceAccount` subjects.",
+							MarkdownDescription: "The namespace of the referenced ServiceAccount. Defaults to `default`. Used only for `ServiceAccount` subjects.",
 							Optional:            true,
 							Computed:            true,
 							Default:             stringdefault.StaticString("default"),

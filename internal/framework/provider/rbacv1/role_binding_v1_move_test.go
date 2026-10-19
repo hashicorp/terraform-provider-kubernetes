@@ -54,12 +54,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource"
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
-	testacctest "github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
@@ -72,27 +71,27 @@ import (
 func TestAccMoveRoleBinding_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
-	tfresource.Test(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				// Step 1 — create with the released SDKv2 provider using the
 				// deprecated kubernetes_role_binding resource type.
-				ExternalProviders: map[string]tfresource.ExternalProvider{
+				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
 						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccKubernetesRoleBindingConfig_deprecatedType(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding.test",
 						"metadata.0.name", name,
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding.test",
 						"subject.#", "1",
 					),
@@ -104,21 +103,21 @@ func TestAccMoveRoleBinding_basic(t *testing.T) {
 				// empty: MoveState copies state in place with no changes.
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"metadata.0.name", name,
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"subject.#", "1",
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"role_ref.0.name", "admin",
 					),
@@ -129,7 +128,7 @@ func TestAccMoveRoleBinding_basic(t *testing.T) {
 				// empty on the Framework provider.
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
@@ -145,25 +144,25 @@ func TestAccMoveRoleBinding_basic(t *testing.T) {
 func TestAccMoveRoleBinding_generateName(t *testing.T) {
 	prefix := "tf-acc-rb-"
 
-	tfresource.Test(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
+				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
 						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccKubernetesRoleBindingConfig_deprecatedTypeGenerateName(prefix),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding.test",
 						"metadata.0.generate_name", prefix,
 					),
-					tfresource.TestCheckResourceAttrSet(
+					resource.TestCheckResourceAttrSet(
 						"kubernetes_role_binding.test",
 						"metadata.0.name",
 					),
@@ -172,17 +171,17 @@ func TestAccMoveRoleBinding_generateName(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1GenerateName(prefix),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"metadata.0.generate_name", prefix,
 					),
-					tfresource.TestCheckResourceAttrSet(
+					resource.TestCheckResourceAttrSet(
 						"kubernetes_role_binding_v1.test",
 						"metadata.0.name",
 					),
@@ -191,7 +190,7 @@ func TestAccMoveRoleBinding_generateName(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1GenerateName(prefix),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
@@ -207,21 +206,21 @@ func TestAccMoveRoleBinding_generateName(t *testing.T) {
 func TestAccMoveRoleBinding_multipleSubjects(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
-	tfresource.Test(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
+				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
 						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccKubernetesRoleBindingConfig_deprecatedTypeMultiSubject(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding.test",
 						"subject.#", "3",
 					),
@@ -230,25 +229,25 @@ func TestAccMoveRoleBinding_multipleSubjects(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1MultiSubject(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"subject.#", "3",
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"subject.0.kind", "User",
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"subject.1.kind", "ServiceAccount",
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"subject.2.kind", "Group",
 					),
@@ -257,7 +256,7 @@ func TestAccMoveRoleBinding_multipleSubjects(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1MultiSubject(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
@@ -273,25 +272,25 @@ func TestAccMoveRoleBinding_multipleSubjects(t *testing.T) {
 func TestAccMoveRoleBinding_clusterRoleRef(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
-	tfresource.Test(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
+				ExternalProviders: map[string]resource.ExternalProvider{
 					"kubernetes": {
 						Source:            "hashicorp/kubernetes",
 						VersionConstraint: "3.2.1",
 					},
 				},
 				Config: testAccKubernetesRoleBindingConfig_deprecatedTypeClusterRoleRef(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding.test",
 						"role_ref.0.kind", "ClusterRole",
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding.test",
 						"role_ref.0.name", "cluster-admin",
 					),
@@ -300,17 +299,17 @@ func TestAccMoveRoleBinding_clusterRoleRef(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1ClusterRoleRef(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"role_ref.0.kind", "ClusterRole",
 					),
-					tfresource.TestCheckResourceAttr(
+					resource.TestCheckResourceAttr(
 						"kubernetes_role_binding_v1.test",
 						"role_ref.0.name", "cluster-admin",
 					),
@@ -319,7 +318,7 @@ func TestAccMoveRoleBinding_clusterRoleRef(t *testing.T) {
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccKubernetesRoleBindingConfig_movedToV1ClusterRoleRef(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
@@ -630,18 +629,18 @@ func sdkv2RawJSON(
 }
 
 // runMoveStateWithReq calls the MoveState handler with a full MoveStateRequest.
-func runMoveStateWithReq(t *testing.T, req resource.MoveStateRequest) *resource.MoveStateResponse {
+func runMoveStateWithReq(t *testing.T, req frameworkresource.MoveStateRequest) *frameworkresource.MoveStateResponse {
 	t.Helper()
 	r := rbacv1.NewRoleBindingV1()
 	movers := r.(interface {
-		MoveState(context.Context) []resource.StateMover
+		MoveState(context.Context) []frameworkresource.StateMover
 	}).MoveState(context.Background())
 
 	if len(movers) == 0 {
 		t.Fatal("expected at least 1 StateMover")
 	}
 
-	resp := &resource.MoveStateResponse{
+	resp := &frameworkresource.MoveStateResponse{
 		TargetState: tfsdk.State{Schema: rbacv1.RoleBindingV1Schema()},
 	}
 	movers[0].StateMover(context.Background(), req, resp)
@@ -650,13 +649,13 @@ func runMoveStateWithReq(t *testing.T, req resource.MoveStateRequest) *resource.
 
 // runMoveState calls the MoveState handler with the given source type and raw JSON,
 // using default provider address ("hashicorp/kubernetes") and schema version (0).
-func runMoveState(t *testing.T, sourceTypeName string, rawJSON []byte) *resource.MoveStateResponse {
+func runMoveState(t *testing.T, sourceTypeName string, rawJSON []byte) *frameworkresource.MoveStateResponse {
 	t.Helper()
 	var rawState *tfprotov6.RawState
 	if rawJSON != nil {
 		rawState = &tfprotov6.RawState{JSON: rawJSON}
 	}
-	req := resource.MoveStateRequest{
+	req := frameworkresource.MoveStateRequest{
 		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
 		SourceTypeName:        sourceTypeName,
 		SourceSchemaVersion:   0,
@@ -666,7 +665,7 @@ func runMoveState(t *testing.T, sourceTypeName string, rawJSON []byte) *resource
 }
 
 // readMovedModel reads the moved RoleBindingModel out of resp.TargetState.
-func readMovedModel(t *testing.T, resp *resource.MoveStateResponse) rbacv1.RoleBindingModel {
+func readMovedModel(t *testing.T, resp *frameworkresource.MoveStateResponse) rbacv1.RoleBindingModel {
 	t.Helper()
 	if resp.Diagnostics.HasError() {
 		t.Fatalf("move state produced errors: %s", resp.Diagnostics)
@@ -687,7 +686,7 @@ func TestMigration_MoveState_handlersRegistered(t *testing.T) {
 	t.Parallel()
 	r := rbacv1.NewRoleBindingV1()
 	movers := r.(interface {
-		MoveState(context.Context) []resource.StateMover
+		MoveState(context.Context) []frameworkresource.StateMover
 	}).MoveState(context.Background())
 
 	if len(movers) == 0 {
@@ -958,7 +957,7 @@ func TestMigration_MoveState_wrongProviderAddressIsIgnored(t *testing.T) {
 		},
 	)
 
-	req := resource.MoveStateRequest{
+	req := frameworkresource.MoveStateRequest{
 		SourceProviderAddress: "registry.terraform.io/other-org/other-provider",
 		SourceTypeName:        "kubernetes_role_binding",
 		SourceSchemaVersion:   0,
@@ -991,7 +990,7 @@ func TestMigration_MoveState_wrongSchemaVersionIsIgnored(t *testing.T) {
 		},
 	)
 
-	req := resource.MoveStateRequest{
+	req := frameworkresource.MoveStateRequest{
 		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
 		SourceTypeName:        "kubernetes_role_binding",
 		SourceSchemaVersion:   1, // not 0
@@ -1015,7 +1014,7 @@ func TestMigration_MoveState_wrongSchemaVersionIsIgnored(t *testing.T) {
 func TestMigration_MoveState_nilRawStateIsIgnored(t *testing.T) {
 	t.Parallel()
 
-	req := resource.MoveStateRequest{
+	req := frameworkresource.MoveStateRequest{
 		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
 		SourceTypeName:        "kubernetes_role_binding",
 		SourceSchemaVersion:   0,
@@ -1032,49 +1031,4 @@ func TestMigration_MoveState_nilRawStateIsIgnored(t *testing.T) {
 	if !diags.HasError() && m.ID.ValueString() != "" {
 		t.Errorf("expected empty target state for nil raw state, got id=%q", m.ID.ValueString())
 	}
-}
-
-// TestAccRoleBindingV1_moved provisions the deprecated kubernetes_role_binding
-// with the last SDKv2 release then uses a moved block to migrate state to
-// kubernetes_role_binding_v1 with the Framework provider. The plan must be
-// empty — proving MoveState translates the state without drift.
-//
-// Skipped in -short mode because it downloads from the Terraform registry.
-func TestAccRoleBinding_moved(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping registry-dependent moved-block test in -short mode")
-	}
-
-	name := testacctest.RandomWithPrefix("tf-acc-rb")
-
-	tfresource.ParallelTest(t, tfresource.TestCase{
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_8_0),
-		},
-		Steps: []tfresource.TestStep{
-			// Step 1: provision kubernetes_role_binding (deprecated) with the
-			// last SDKv2 release. Writes state at schema version 0.
-			{
-				ExternalProviders: map[string]tfresource.ExternalProvider{
-					"kubernetes": {
-						Source:            "hashicorp/kubernetes",
-						VersionConstraint: "3.2.1",
-					},
-				},
-				Config: testAccRoleBindingConfig_deprecated(name),
-			},
-			// Step 2: add a moved block and switch to the Framework provider.
-			// MoveState translates kubernetes_role_binding → kubernetes_role_binding_v1.
-			// Plan must be empty — no destroy, no create.
-			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccRoleBindingV1Config_movedFrom(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
-		},
-	})
 }

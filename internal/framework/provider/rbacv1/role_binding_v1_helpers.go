@@ -4,10 +4,7 @@
 package rbacv1
 
 import (
-	"strconv"
-
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	rbacv1api "k8s.io/api/rbac/v1"
 )
 
@@ -129,48 +126,26 @@ func applySubjectComputedFields(plan *[]SubjectModel, apiSubjects []rbacv1api.Su
 	}
 }
 
-// ── Subject patch helper ──────────────────────────────────────────────────────
+// ── Subject change helper ─────────────────────────────────────────────────────
 
-// patchSubjects generates the minimal JSON Patch operations to reconcile the
-// subject list from old → new. Uses index-based Replace/Add/Remove operations
-// to match the SDKv2 patchRbacSubject behaviour exactly.
-func patchSubjects(old, new []SubjectModel) kubernetes.PatchOperations {
-	oldExpanded := expandSubjects(old)
-	newExpanded := expandSubjects(new)
-
-	ops := make(kubernetes.PatchOperations, 0, len(newExpanded)+len(oldExpanded))
-
-	commonLen := len(newExpanded)
-	if commonLen > len(oldExpanded) {
-		commonLen = len(oldExpanded)
+// subjectsUnchanged reports whether the planned subjects match state, mirroring SDKv2
+// !d.HasChange("subject"). An unknown planned value comes from an unconfigured computed
+// field and keeps the state value, so it does not count as a change.
+func subjectsUnchanged(state, plan []SubjectModel) bool {
+	if len(state) != len(plan) {
+		return false
 	}
-
-	// Remove trailing old entries first (reverse order to keep indices stable)
-	if len(oldExpanded) > len(newExpanded) {
-		for i := len(newExpanded); i < len(oldExpanded); i++ {
-			ops = append(ops, &kubernetes.RemoveOperation{
-				Path: "/subjects/" + strconv.Itoa(len(oldExpanded)-i),
-			})
+	for i := range plan {
+		if !subjectFieldUnchanged(state[i].APIGroup, plan[i].APIGroup) ||
+			!subjectFieldUnchanged(state[i].Kind, plan[i].Kind) ||
+			!subjectFieldUnchanged(state[i].Name, plan[i].Name) ||
+			!subjectFieldUnchanged(state[i].Namespace, plan[i].Namespace) {
+			return false
 		}
 	}
+	return true
+}
 
-	// Replace entries that exist in both old and new
-	for i, v := range newExpanded[:commonLen] {
-		ops = append(ops, &kubernetes.ReplaceOperation{
-			Path:  "/subjects/" + strconv.Itoa(i),
-			Value: v,
-		})
-	}
-
-	// Add new entries beyond the old length
-	if len(newExpanded) > len(oldExpanded) {
-		for i, v := range newExpanded[commonLen:] {
-			ops = append(ops, &kubernetes.AddOperation{
-				Path:  "/subjects/" + strconv.Itoa(commonLen+i),
-				Value: v,
-			})
-		}
-	}
-
-	return ops
+func subjectFieldUnchanged(state, plan types.String) bool {
+	return plan.IsUnknown() || plan.Equal(state)
 }

@@ -9,16 +9,16 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource"
+	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-	tfresource "github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 
 	rbacv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
-// compile-time check: RoleBindingV1 satisfies resource.Resource.
-var _ resource.Resource = (*rbacv1.RoleBindingV1)(nil)
+// compile-time check: RoleBindingV1 satisfies frameworkresource.Resource.
+var _ frameworkresource.Resource = (*rbacv1.RoleBindingV1)(nil)
 
 // TestAccRoleBinding_basic creates a RoleBinding with a single User subject,
 // verifies all computed fields are populated, and confirms import round-trips
@@ -27,22 +27,22 @@ func TestAccRoleBinding_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.namespace", "default"),
-					tfresource.TestCheckResourceAttr(resourceName, "role_ref.0.api_group", "rbac.authorization.k8s.io"),
-					tfresource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
-					tfresource.TestCheckResourceAttr(resourceName, "role_ref.0.name", "admin"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.name", "notauser"),
-					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
-					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.namespace", "default"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.name", "admin"),
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.name", "notauser"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 				),
 			},
 			// Import by "namespace/name" — verify no drift after import.
@@ -66,14 +66,14 @@ func TestAccRoleBinding_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			// Step 1: create with single subject.
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
 				),
 			},
 			{
@@ -88,15 +88,15 @@ func TestAccRoleBinding_update(t *testing.T) {
 			// Step 2: add two more subjects and metadata — must be in-place update.
 			{
 				Config: testAccRoleBindingV1Config_updated(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
 					},
 				},
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "subject.#", "3"),
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.labels.managed-by", "terraform"),
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.example.com/note", "updated"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.managed-by", "terraform"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.example.com/note", "updated"),
 				),
 			},
 			{
@@ -111,9 +111,9 @@ func TestAccRoleBinding_update(t *testing.T) {
 			// Step 3: revert to basic — verify subjects removed cleanly.
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
-					tfresource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.managed-by"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.managed-by"),
 				),
 			},
 			{
@@ -135,16 +135,16 @@ func TestAccRoleBinding_update(t *testing.T) {
 func TestAccRoleBinding_generateName(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			// Step 1: create with generate_name
 			{
 				Config: testAccRoleBindingV1Config_generateName("tf-acc-rb-"),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
-					tfresource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
+					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 				),
 			},
 			{
@@ -159,14 +159,14 @@ func TestAccRoleBinding_generateName(t *testing.T) {
 			// Step 2: update secondary field (labels) — must update in-place without replacement
 			{
 				Config: testAccRoleBindingV1Config_generateName_updated("tf-acc-rb-"),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
 					},
 				},
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
-					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "sec"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "sec"),
 				),
 			},
 			{
@@ -188,16 +188,16 @@ func TestAccRoleBinding_saSubject(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_saSubject(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.kind", "ServiceAccount"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.name", "default"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "ServiceAccount"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.name", "default"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
 				),
 			},
 			{
@@ -218,16 +218,16 @@ func TestAccRoleBinding_groupSubject(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_groupSubject(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.kind", "Group"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.name", "dev-team"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "Group"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.name", "dev-team"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
 				),
 			},
 			{
@@ -250,23 +250,23 @@ func TestAccRoleBinding_emptySubjectNamespace(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_emptySubjectNamespace(name),
-				Check: tfresource.ComposeAggregateTestCheckFunc(
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
-					tfresource.TestCheckResourceAttr(resourceName, "subject.0.namespace", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.namespace", ""),
 				),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
 			{
 				Config: testAccRoleBindingV1Config_emptySubjectNamespace(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
@@ -289,19 +289,19 @@ func TestAccRoleBinding_emptySubjectNamespace(t *testing.T) {
 func TestAccRoleBinding_emptyUserAPIGroup(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_emptyUserAPIGroup(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
 			{
 				Config: testAccRoleBindingV1Config_emptyUserAPIGroup(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
@@ -315,12 +315,12 @@ func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
-				Check:  tfresource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+				Check:  resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
 			},
 			{
 				ResourceName:      resourceName,
@@ -334,12 +334,12 @@ func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 			// Changing role_ref.kind must trigger destroy + create, not in-place update.
 			{
 				Config: testAccRoleBindingV1Config_clusterRoleRef(name),
-				ConfigPlanChecks: tfresource.ConfigPlanChecks{
+				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
 					},
 				},
-				Check: tfresource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "ClusterRole"),
+				Check: resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "ClusterRole"),
 			},
 			{
 				ResourceName:      resourceName,
@@ -361,13 +361,13 @@ func TestAccRoleBinding_disappears(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			// Step 1: create the resource.
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
-				Check:  tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+				Check:  resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 			},
 			// Step 2: delete out-of-band, then refresh state.
 			// RefreshState: true triggers a Read without applying config.
@@ -394,9 +394,9 @@ func TestAccRoleBinding_disappears(t *testing.T) {
 func TestAccRoleBinding_validation_invalidAnnotationKey(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				// common.AnnotationsValidator uses validatordiag.InvalidAttributeValueDiagnostic:
 				// summary "Invalid Attribute Value", detail "Attribute ... annotations[...] key ..., got: ..."
@@ -412,9 +412,9 @@ func TestAccRoleBinding_validation_invalidAnnotationKey(t *testing.T) {
 func TestAccRoleBinding_validation_invalidLabelKey(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				// common.LabelsValidator uses validatordiag.InvalidAttributeValueDiagnostic:
 				// summary "Invalid Attribute Value", detail "Attribute ... labels[...] key ..., got: ..."
@@ -430,9 +430,9 @@ func TestAccRoleBinding_validation_invalidLabelKey(t *testing.T) {
 func TestAccRoleBinding_validation_invalidLabelValue(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				// common.LabelsValidator uses validatordiag.InvalidAttributeValueDiagnostic:
 				// summary "Invalid Attribute Value", detail "Attribute ... labels[...] value ..., got: ..."
@@ -446,9 +446,9 @@ func TestAccRoleBinding_validation_invalidLabelValue(t *testing.T) {
 // TestAccRoleBinding_validation_invalidName verifies that an invalid
 // name (not a valid path segment) is rejected at plan time.
 func TestAccRoleBinding_validation_invalidName(t *testing.T) {
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				// common.RBACNameValidator uses validatordiag.InvalidAttributeValueDiagnostic:
 				// summary "Invalid Attribute Value", detail "Attribute metadata[0].name ..., got: ..."
@@ -462,9 +462,9 @@ func TestAccRoleBinding_validation_invalidName(t *testing.T) {
 // TestAccRoleBinding_validation_missingMetadata verifies that omitting the
 // metadata block is rejected at plan time.
 func TestAccRoleBinding_validation_missingMetadata(t *testing.T) {
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config:      testAccRoleBindingV1Config_missingMetadata(),
 				ExpectError: regexp.MustCompile(`(?s)Block metadata must have a configuration value.*as required`),
@@ -478,9 +478,9 @@ func TestAccRoleBinding_validation_missingMetadata(t *testing.T) {
 func TestAccRoleBinding_validation_missingRoleRef(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config:      testAccRoleBindingV1Config_missingRoleRef(name),
 				ExpectError: regexp.MustCompile(`(?s)Block role_ref must have a configuration value.*as required`),
@@ -494,9 +494,9 @@ func TestAccRoleBinding_validation_missingRoleRef(t *testing.T) {
 func TestAccRoleBinding_validation_missingSubject(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
-	tfresource.ParallelTest(t, tfresource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []tfresource.TestStep{
+		Steps: []resource.TestStep{
 			{
 				Config:      testAccRoleBindingV1Config_missingSubject(name),
 				ExpectError: regexp.MustCompile(`(?s)Block subject must have a configuration value.*as required`),
@@ -727,61 +727,6 @@ resource "kubernetes_role_binding_v1" "test" {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
     name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
-}
-
-// testAccRoleBindingConfig_deprecated uses the old resource type name —
-// the one still registered in the SDKv2 provider for backwards compatibility.
-func testAccRoleBindingConfig_deprecated(name string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding" "test" {
-  metadata {
-    name      = %[1]q
-    namespace = "default"
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "Role"
-    name      = "admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
-}
-
-// testAccRoleBindingV1Config_movedFrom contains the moved block that migrates
-// kubernetes_role_binding.test → kubernetes_role_binding_v1.test.
-func testAccRoleBindingV1Config_movedFrom(name string) string {
-	return fmt.Sprintf(`
-moved {
-  from = kubernetes_role_binding.test
-  to   = kubernetes_role_binding_v1.test
-}
-
-resource "kubernetes_role_binding_v1" "test" {
-  metadata {
-    name      = %[1]q
-    namespace = "default"
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "Role"
-    name      = "admin"
   }
 
   subject {

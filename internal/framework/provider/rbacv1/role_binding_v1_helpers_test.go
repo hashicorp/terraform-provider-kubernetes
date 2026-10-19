@@ -327,3 +327,39 @@ func TestFlattenSubjectsWithPrior_emptyAPIGroupPreserved(t *testing.T) {
 		}
 	}
 }
+
+// ── subjectsUnchanged ─────────────────────────────────────────────────────────
+
+func TestSubjectsUnchanged(t *testing.T) {
+	t.Parallel()
+
+	sa := func(name string, apiGroup types.String) SubjectModel {
+		return SubjectModel{
+			APIGroup:  apiGroup,
+			Kind:      types.StringValue("ServiceAccount"),
+			Name:      types.StringValue(name),
+			Namespace: types.StringValue("default"),
+		}
+	}
+	state := []SubjectModel{sa("a", types.StringValue("")), sa("b", types.StringValue(""))}
+
+	for _, tc := range []struct {
+		name string
+		plan []SubjectModel
+		want bool
+	}{
+		{"identical", []SubjectModel{sa("a", types.StringValue("")), sa("b", types.StringValue(""))}, true},
+		{"unknown computed api_group", []SubjectModel{sa("a", types.StringUnknown()), sa("b", types.StringUnknown())}, true},
+		{"name changed", []SubjectModel{sa("a", types.StringValue("")), sa("c", types.StringValue(""))}, false},
+		{"api_group changed", []SubjectModel{sa("a", types.StringValue("x")), sa("b", types.StringValue(""))}, false},
+		{"subject removed", []SubjectModel{sa("a", types.StringValue(""))}, false},
+		{"subject added", []SubjectModel{sa("a", types.StringValue("")), sa("b", types.StringValue("")), sa("c", types.StringValue(""))}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := subjectsUnchanged(state, tc.plan); got != tc.want {
+				t.Fatalf("subjectsUnchanged = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}

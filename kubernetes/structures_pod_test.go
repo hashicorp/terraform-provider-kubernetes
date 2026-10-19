@@ -739,3 +739,95 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenImageVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          *corev1.ImageVolumeSource
+		ExpectedOutput []interface{}
+	}{
+		{
+			&corev1.ImageVolumeSource{
+				Reference:  "nginx:latest",
+				PullPolicy: corev1.PullAlways,
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"reference":   "nginx:latest",
+					"pull_policy": "Always",
+				},
+			},
+		},
+		{
+			&corev1.ImageVolumeSource{
+				Reference: "myregistry.io/my-image:v1.0",
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"reference": "myregistry.io/my-image:v1.0",
+				},
+			},
+		},
+		{
+			&corev1.ImageVolumeSource{},
+			[]interface{}{
+				map[string]interface{}{},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		output := flattenImageVolumeSource(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}
+
+func TestExpandImageVolumeSource(t *testing.T) {
+	cases := []struct {
+		Input          []interface{}
+		ExpectedOutput *corev1.ImageVolumeSource
+	}{
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"reference":   "nginx:latest",
+					"pull_policy": "Always",
+				},
+			},
+			&corev1.ImageVolumeSource{
+				Reference:  "nginx:latest",
+				PullPolicy: corev1.PullAlways,
+			},
+		},
+		{
+			[]interface{}{
+				map[string]interface{}{
+					"reference": "myregistry.io/my-image:v1.0",
+				},
+			},
+			&corev1.ImageVolumeSource{
+				Reference: "myregistry.io/my-image:v1.0",
+			},
+		},
+		{
+			[]interface{}{
+				map[string]interface{}{},
+			},
+			&corev1.ImageVolumeSource{},
+		},
+		{
+			[]interface{}{},
+			&corev1.ImageVolumeSource{},
+		},
+	}
+
+	for _, tc := range cases {
+		output := expandImageVolumeSource(tc.Input)
+		if !reflect.DeepEqual(output, tc.ExpectedOutput) {
+			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
+				tc.ExpectedOutput, output)
+		}
+	}
+}

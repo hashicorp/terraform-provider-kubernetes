@@ -591,6 +591,27 @@ func commonVolumeSources() map[string]*schema.Schema {
 				},
 			},
 		},
+		"image": {
+			Type:        schema.TypeList,
+			Description: "Represents an OCI image/artifact volume source that is mounted as a volume on the host and then exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#image",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"reference": {
+						Type:        schema.TypeString,
+						Description: "The image/artifact reference to mount as a volume. Behaves in the same way as pod.spec.containers[*].image.",
+						Optional:    true,
+					},
+					"pull_policy": {
+						Type:         schema.TypeString,
+						Description:  "Policy for pulling OCI objects. Possible values: Always, Never, IfNotPresent.",
+						Optional:     true,
+						ValidateFunc: validation.StringInSlice([]string{"Always", "Never", "IfNotPresent"}, false),
+					},
+				},
+			},
+		},
 	}
 }
 

@@ -1,0 +1,32 @@
+---
+subcategory: ""
+page_title: "env_from_map function"
+description: |-
+  Convert a map of strings into a list of name/value objects
+---
+
+{{/* This template serves as a starting point for documentation generation, and can be customized with hardcoded values and/or doc gen templates.
+
+For example, the {{ .FunctionArgumentsMarkdown }} template can be used to replace manual argument documentation if descriptions of function arguments are added in the provider source code. */ -}}
+
+# function: env_from_map
+
+Given a map of strings, returns a list of objects with `name` and `value` attributes, sorted by key. This is useful for populating the `env` field of a container in a `kubernetes_manifest` resource without repeating the `name`/`value` boilerplate for every variable.
+
+## Example Usage
+
+{{tffile "examples/functions/env_from_map/example_1.tf"}}
+
+## Signature
+
+```text
+env_from_map(env map of string) list of object
+```
+
+## Arguments
+
+1. `env` (Map of String) A map of environment variable names to values
+
+## Return Type
+
+The `list of object` returned from `env_from_map` contains one object per map entry, each with a `name` and `value` attribute, ordered by `name`.

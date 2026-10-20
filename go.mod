@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/getkin/kin-openapi v0.111.0
+	github.com/getkin/kin-openapi v0.144.0
 	github.com/google/go-cmp v0.7.0
 	github.com/hashicorp/go-cty v1.5.0
 	github.com/hashicorp/go-hclog v1.6.3
@@ -55,17 +55,19 @@ require (
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-openapi/swag/jsonname v0.25.5 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/huandu/xstrings v1.3.3 // indirect
-	github.com/invopop/yaml v0.2.0 // indirect
 	github.com/mitchellh/cli v1.1.5 // indirect
-	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
+	github.com/oasdiff/yaml v0.1.1 // indirect
+	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
@@ -88,7 +90,7 @@ require (
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/go-openapi/jsonpointer v0.21.0 // indirect
+	github.com/go-openapi/jsonpointer v0.22.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

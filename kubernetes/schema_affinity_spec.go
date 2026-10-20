@@ -186,6 +186,20 @@ func podAffinityTermFields() map[string]*schema.Schema {
 			Description: "empty topology key is interpreted by the scheduler as 'all topologies'",
 			Required:    true,
 		},
+		"match_label_keys": {
+			Type:        schema.TypeSet,
+			Description: "A set of pod label keys to select which pods will be taken into consideration. The keys are used to lookup values from the incoming pod labels, those key-value labels are merged with `labelSelector` as `key in (value)` to select the group of existing pods which pods will be taken into consideration for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming pod labels will be ignored.",
+			Optional:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Set:         schema.HashString,
+		},
+		"mismatch_label_keys": {
+			Type:        schema.TypeSet,
+			Description: "A set of pod label keys to select which pods will be taken into consideration. The keys are used to lookup values from the incoming pod labels, those key-value labels are merged with `labelSelector` as `key notin (value)` to select the group of existing pods which pods will be taken into consideration for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming pod labels will be ignored.",
+			Optional:    true,
+			Elem:        &schema.Schema{Type: schema.TypeString},
+			Set:         schema.HashString,
+		},
 	}
 }
 

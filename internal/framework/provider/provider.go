@@ -221,6 +221,7 @@ func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Fu
 		pfunctions.NewManifestDecodeFunction,
 		pfunctions.NewManifestDecodeMultiFunction,
 		pfunctions.NewManifestEncodeFunction,
+		pfunctions.NewKyamlEncodeFunction,
 	}
 }
 

@@ -27,7 +27,14 @@ func ToTFValue(in interface{}, st tftypes.Type, th map[string]string, at *tftype
 		return tftypes.Value{}, at.NewErrorf("[%s] type cannot be nil", at.String())
 	}
 	if in == nil {
-		return tftypes.NewValue(st, nil), nil
+		switch st.(type) {
+		case tftypes.List:
+			return tftypes.NewValue(st, []tftypes.Value{}), nil
+		case tftypes.Set:
+			return tftypes.NewValue(st, []tftypes.Value{}), nil
+		default:
+			return tftypes.NewValue(st, nil), nil
+		}
 	}
 	switch t := in.(type) {
 	case string:

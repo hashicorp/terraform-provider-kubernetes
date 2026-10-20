@@ -287,9 +287,7 @@ func flattenNFSVolumeSource(in *v1.NFSVolumeSource) []interface{} {
 	att := make(map[string]interface{})
 	att["server"] = in.Server
 	att["path"] = in.Path
-	if in.ReadOnly {
-		att["read_only"] = in.ReadOnly
-	}
+	att["read_only"] = in.ReadOnly
 	return []interface{}{att}
 }
 

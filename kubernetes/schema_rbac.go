@@ -44,11 +44,10 @@ func validateRBACNameFunc(value interface{}, key string) (ws []string, es []erro
 func rbacRoleRefSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"api_group": {
-			Type:         schema.TypeString,
-			Description:  "The API group of the user. The only value possible at the moment is `rbac.authorization.k8s.io`.",
-			Required:     true,
-			ForceNew:     true,
-			ValidateFunc: validation.StringInSlice([]string{"rbac.authorization.k8s.io"}, false),
+			Type:        schema.TypeString,
+			Description: "The API group of the user. The only value possible at the moment is `rbac.authorization.k8s.io`.",
+			Required:    true,
+			ForceNew:    true,
 		},
 		"kind": {
 			Type:         schema.TypeString,

@@ -1,0 +1,3 @@
+```release-note:bug
+resources: Fix a provider crash when `image_pull_secrets` is set with `name = null`
+```

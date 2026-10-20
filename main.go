@@ -83,7 +83,7 @@ func printReattachConfig(config *plugin.ReattachConfig) {
 	fmt.Printf("# Provider server started\nexport TF_REATTACH_PROVIDERS='%s'\n", string(reattachStr))
 }
 
-// waitForReattachConfig blocks until a ReattachConfig is recieved on the
+// waitForReattachConfig blocks until a ReattachConfig is received on the
 // supplied channel or times out after 2 seconds.
 func waitForReattachConfig(ch chan *plugin.ReattachConfig) (*plugin.ReattachConfig, error) {
 	select {

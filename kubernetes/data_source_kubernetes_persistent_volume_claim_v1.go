@@ -87,6 +87,37 @@ func dataSourceKubernetesPersistentVolumeClaimV1(deprecationMessage string) *sch
 					},
 				},
 			},
+			"status": {
+				Type:        schema.TypeList,
+				Description: "Status represents the current information/status of a persistent volume claim.",
+				Computed:    true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"phase": {
+							Type:        schema.TypeString,
+							Description: "Phase represents the current phase of PersistentVolumeClaim.",
+							Computed:    true,
+						},
+						"access_modes": {
+							Type:        schema.TypeSet,
+							Description: "A set of the actual access modes the volume backing the PVC has.",
+							Computed:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+							Set: schema.HashString,
+						},
+						"capacity": {
+							Type:        schema.TypeMap,
+							Description: "A map of actual resources of the underlying volume, e.g. { storage = \"50Gi\" }.",
+							Computed:    true,
+							Elem: &schema.Schema{
+								Type: schema.TypeString,
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -122,6 +153,11 @@ func dataSourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *sch
 	}
 
 	err = d.Set("spec", flattenPersistentVolumeClaimSpec(claim.Spec))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	err = d.Set("status", flattenPersistentVolumeClaimStatus(claim.Status))
 	if err != nil {
 		return diag.FromErr(err)
 	}

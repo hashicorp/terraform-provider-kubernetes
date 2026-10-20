@@ -1858,10 +1858,24 @@ Required:
 
 Optional:
 
+- `data_source` (Block List, Max: 1) Specifies the data source for the volume. This can be used to create a pre-populated volume from an existing volume snapshot, PVC, or other source. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--data_source))
 - `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--selector))
 - `storage_class_name` (String) Name of the storage class requested by the claim
 - `volume_mode` (String) Defines what type of volume is required by the claim.
 - `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
+
+<a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--data_source"></a>
+### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.spec.data_source`
+
+Required:
+
+- `kind` (String) The type of resource being referenced. Valid values are 'PersistentVolumeClaim' or 'VolumeSnapshot'.
+- `name` (String) The name of the resource being referenced.
+
+Optional:
+
+- `api_group` (String) The group for the resource being referenced. If not specified, the specified Kind must be in the core API group. For any other third-party types, the API group is required.
+
 
 <a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--resources"></a>
 ### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.spec.resources`
@@ -2314,10 +2328,24 @@ Required:
 
 Optional:
 
+- `data_source` (Block List, Max: 1) Specifies the data source for the volume. This can be used to create a pre-populated volume from an existing volume snapshot, PVC, or other source. (see [below for nested schema](#nestedblock--spec--volume_claim_template--spec--data_source))
 - `selector` (Block List, Max: 1) A label query over volumes to consider for binding. (see [below for nested schema](#nestedblock--spec--volume_claim_template--spec--selector))
 - `storage_class_name` (String) Name of the storage class requested by the claim
 - `volume_mode` (String) Defines what type of volume is required by the claim.
 - `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
+
+<a id="nestedblock--spec--volume_claim_template--spec--data_source"></a>
+### Nested Schema for `spec.volume_claim_template.spec.data_source`
+
+Required:
+
+- `kind` (String) The type of resource being referenced. Valid values are 'PersistentVolumeClaim' or 'VolumeSnapshot'.
+- `name` (String) The name of the resource being referenced.
+
+Optional:
+
+- `api_group` (String) The group for the resource being referenced. If not specified, the specified Kind must be in the core API group. For any other third-party types, the API group is required.
+
 
 <a id="nestedblock--spec--volume_claim_template--spec--resources"></a>
 ### Nested Schema for `spec.volume_claim_template.spec.resources`

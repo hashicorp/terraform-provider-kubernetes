@@ -65,6 +65,17 @@ func resourceKubernetesCSIDriverV1(deprecationMessage string) *schema.Resource {
 								}, false),
 							},
 						},
+						"fs_group_policy": {
+							Type:        schema.TypeString,
+							Description: "Defines if the underlying volume supports changing ownership and permission of the volume before being mounted. Defaults to `ReadWriteOnceWithFSType`. Valid options are `File`, `None`, and `ReadWriteOnceWithFSType`.",
+							Optional:    true,
+							Default:     "ReadWriteOnceWithFSType",
+							ValidateFunc: validation.StringInSlice([]string{
+								string(storage.ReadWriteOnceWithFSTypeFSGroupPolicy),
+								string(storage.NoneFSGroupPolicy),
+								string(storage.FileFSGroupPolicy),
+							}, false),
+						},
 					},
 				},
 			},

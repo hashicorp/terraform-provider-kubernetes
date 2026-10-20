@@ -303,13 +303,27 @@ func TestDeepUnknown(t *testing.T) {
 		// Karpenter 1.15's EC2NodeClass declares spec.kubelet as an open map
 		// (tftypes.Map{ElementType: tftypes.DynamicPseudoType}), whose
 		// sub-keys (systemReserved, evictionHard, ...) legitimately have
-		// different shapes. DeepUnknown used to pass the differently-shaped
-		// elements straight through to tftypes.NewValue(Map{...}, ...),
-		// which panics because a Map requires a single element type.
+		// different shapes. Since config values for such open attributes
+		// come back from morph.ValueToType as a tftypes.Object (a Map can't
+		// hold differently-shaped elements), DeepUnknown receives an
+		// Object-typed value together with the Map-typed schema type. It
+		// used to pass the differently-shaped elements straight through to
+		// tftypes.NewValue(Map{...}, ...), which panics because a Map
+		// requires a single element type.
 		"map(dynamic)-heterogeneous-nested-objects": {
 			In: deepUnknownTestSampleInput{
 				T: tftypes.Map{ElementType: tftypes.DynamicPseudoType},
-				V: tftypes.NewValue(tftypes.Map{ElementType: tftypes.DynamicPseudoType}, map[string]tftypes.Value{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"systemReserved": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"cpu":               tftypes.String,
+						"memory":            tftypes.String,
+						"ephemeral-storage": tftypes.String,
+					}},
+					"evictionHard": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"memory.available": tftypes.String,
+						"nodefs.available": tftypes.String,
+					}},
+				}}, map[string]tftypes.Value{
 					"systemReserved": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
 						"cpu":               tftypes.String,
 						"memory":            tftypes.String,

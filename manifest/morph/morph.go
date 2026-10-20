@@ -505,7 +505,8 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 // spec.kubelet), which tftypes.Map cannot represent, so the result falls
 // back to an Object in that case. Any other declared element type is
 // expected to produce homogeneous elements; a mismatch there is left as a
-// Map so the usual type-mismatch diagnostic is reported.
+// Map of the declared element type, so the usual type-mismatch diagnostic is
+// reported deterministically instead of depending on map iteration order.
 func mapOrObjectType(elements map[string]tftypes.Value, elementType tftypes.Type) tftypes.Type {
 	var oType tftypes.Type
 	homogeneous := true
@@ -517,15 +518,18 @@ func mapOrObjectType(elements map[string]tftypes.Value, elementType tftypes.Type
 			break
 		}
 	}
+	if !homogeneous {
+		if elementType.Is(tftypes.DynamicPseudoType) {
+			otypes := make(map[string]tftypes.Type, len(elements))
+			for k, ev := range elements {
+				otypes[k] = ev.Type()
+			}
+			return tftypes.Object{AttributeTypes: otypes}
+		}
+		return tftypes.Map{ElementType: elementType}
+	}
 	if oType == tftypes.Type(nil) {
 		oType = elementType
-	}
-	if !homogeneous && elementType.Is(tftypes.DynamicPseudoType) {
-		otypes := make(map[string]tftypes.Type, len(elements))
-		for k, ev := range elements {
-			otypes[k] = ev.Type()
-		}
-		return tftypes.Object{AttributeTypes: otypes}
 	}
 	return tftypes.Map{ElementType: oType}
 }

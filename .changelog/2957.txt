@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_manifest`: fix `ReadResource` diagnostic constructing an unbounded (~100KB for large CRD schemas) formatted dump of the resource's type on every failed GET, via a helper meant only for lazy hclog logging; this could produce an unreadable diagnostic and, in some cases, empty diagnostics
+```

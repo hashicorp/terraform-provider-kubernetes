@@ -5,9 +5,12 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	corev1 "k8s.io/api/core/v1"
@@ -20,9 +23,18 @@ func dataSourceKubernetesServiceV1(deprecationMessage string) *schema.Resource {
 		Description:        "A Service is an abstraction which defines a logical set of pods and a policy by which to access them - sometimes called a micro-service. This data source allows you to pull data about such service.",
 		ReadContext:        dataSourceKubernetesServiceV1Read,
 		DeprecationMessage: deprecationMessage,
+		Timeouts: &schema.ResourceTimeout{
+			Read: schema.DefaultTimeout(5 * time.Minute),
+		},
 
 		Schema: map[string]*schema.Schema{
 			"metadata": namespacedMetadataSchema("service", false),
+			"wait_for_load_balancer": {
+				Type:        schema.TypeBool,
+				Description: "Terraform will wait for the load balancer to become ready.",
+				Optional:    true,
+				Default:     false,
+			},
 			"spec": {
 				Type:        schema.TypeList,
 				Description: "Spec defines the behavior of a service. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
@@ -272,6 +284,27 @@ func dataSourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Received service: %#v", svc)
+
+	if svc.Spec.Type == corev1.ServiceTypeLoadBalancer && d.Get("wait_for_load_balancer").(bool) {
+		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
+		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutRead), func() *retry.RetryError {
+			svc, err = conn.CoreV1().Services(svc.Namespace).Get(ctx, svc.Name, metav1.GetOptions{})
+			if err != nil {
+				log.Printf("[DEBUG] Received error: %#v", err)
+				return retry.NonRetryableError(err)
+			}
+			lbIngress := svc.Status.LoadBalancer.Ingress
+			log.Printf("[INFO] Received service status: %#v", svc.Status)
+			if len(lbIngress) > 0 {
+				return nil
+			}
+			return retry.RetryableError(fmt.Errorf(
+				"Waiting for service %q to assign IP/hostname for a load balancer", d.Id()))
+		})
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	err = d.Set("metadata", flattenMetadataFields(svc.ObjectMeta))
 	if err != nil {

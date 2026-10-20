@@ -739,3 +739,65 @@ func TestFlattenCSIVolumeSource(t *testing.T) {
 		}
 	}
 }
+
+func TestFlattenExpandPodSpecHostUsers(t *testing.T) {
+	cases := []struct {
+		name              string
+		input             corev1.PodSpec
+		expectedFlattened *bool
+		expectedExpanded  *bool
+	}{
+		{
+			name:              "true",
+			input:             corev1.PodSpec{HostUsers: ptr.To(true)},
+			expectedFlattened: ptr.To(true),
+			expectedExpanded:  ptr.To(true),
+		},
+		{
+			name:              "false",
+			input:             corev1.PodSpec{HostUsers: ptr.To(false)},
+			expectedFlattened: ptr.To(false),
+			expectedExpanded:  ptr.To(false),
+		},
+		{
+			name:              "unset",
+			input:             corev1.PodSpec{},
+			expectedFlattened: nil,
+			expectedExpanded:  nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			flattened, err := flattenPodSpec(tc.input, false)
+			if err != nil {
+				t.Fatalf("unexpected error flattening pod spec: %v", err)
+			}
+
+			flattenedSpec := flattened[0].(map[string]interface{})
+			flattenedHostUsers, present := flattenedSpec["host_users"]
+
+			if tc.expectedFlattened == nil {
+				if present {
+					t.Fatalf("expected host_users to be omitted from flattened pod spec, got %v", flattenedHostUsers)
+				}
+			} else {
+				if !present {
+					t.Fatalf("expected host_users to be present in flattened pod spec")
+				}
+				if diff := cmp.Diff(*tc.expectedFlattened, flattenedHostUsers); diff != "" {
+					t.Fatalf("unexpected flattened host_users (-want +got):\n%s", diff)
+				}
+			}
+
+			expanded, err := expandPodSpec(flattened)
+			if err != nil {
+				t.Fatalf("unexpected error expanding pod spec: %v", err)
+			}
+
+			if diff := cmp.Diff(tc.expectedExpanded, expanded.HostUsers); diff != "" {
+				t.Fatalf("unexpected expanded HostUsers (-want +got):\n%s", diff)
+			}
+		})
+	}
+}

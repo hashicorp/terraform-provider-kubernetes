@@ -256,7 +256,7 @@ func flattenPodFailurePolicyRules(in []batchv1.PodFailurePolicyRule) []interface
 
 func flattenPodFailurePolicyOnExitCodes(in *batchv1.PodFailurePolicyOnExitCodesRequirement) []interface{} {
 	att := make(map[string]interface{})
-	if *in.ContainerName != "" {
+	if in.ContainerName != nil && *in.ContainerName != "" {
 		att["container_name"] = *in.ContainerName
 	}
 	att["operator"] = in.Operator

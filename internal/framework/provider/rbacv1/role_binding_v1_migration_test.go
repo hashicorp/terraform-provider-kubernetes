@@ -29,12 +29,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 // migratedRoleBindingProviderVersion is the last released version that ships
 // the SDKv2 implementation of kubernetes_role_binding_v1. Used as the
 // "from" provider in every migration test.
 const migratedRoleBindingProviderVersion = "3.2.1"
+
+// preIdentityRoleBindingProviderVersion predates resource identity, which
+// shipped in 2.38.0; its state has no stored identity.
+const preIdentityRoleBindingProviderVersion = "2.37.1"
 
 // releasedRoleBindingProvider returns the external-provider map pointing at
 // the last SDKv2-based release, used for step 1 of every migration test.
@@ -134,6 +139,29 @@ func TestAccMigrateRoleBinding_basic(t *testing.T) {
 				},
 			},
 		},
+	})
+}
+
+// TestAccMigrateRoleBinding_preIdentity verifies that state written before
+// resource identity existed (no stored identity) upgrades in place with no
+// diff and Read populates the identity.
+func TestAccMigrateRoleBinding_preIdentity(t *testing.T) {
+	name := "tf-acc-migrate-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	resourceName := "kubernetes_role_binding_v1.test"
+	steps := roleBindingMigrationSteps(testAccRoleBindingV1Config_basic(name))
+	steps[0].ExternalProviders = map[string]resource.ExternalProvider{
+		"kubernetes": {
+			VersionConstraint: preIdentityRoleBindingProviderVersion,
+			Source:            "hashicorp/kubernetes",
+		},
+	}
+	steps[1].ConfigStateChecks = []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)}
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: steps,
 	})
 }
 

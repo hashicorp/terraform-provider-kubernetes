@@ -5,13 +5,20 @@ package rbacv1_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -21,12 +28,117 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	client "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	rbacv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
 // compile-time check: RoleBindingV1 satisfies frameworkresource.Resource.
 var _ frameworkresource.Resource = (*rbacv1.RoleBindingV1)(nil)
+
+// roleBindingTestClientsets points Read at a fake API server; the ignore lists
+// are empty.
+type roleBindingTestClientsets struct {
+	kubernetes.KubeClientsets
+	client *client.Clientset
+}
+
+func (c roleBindingTestClientsets) MainClientset() (*client.Clientset, error) {
+	return c.client, nil
+}
+
+func (roleBindingTestClientsets) GetIgnoreAnnotations() []string { return nil }
+
+func (roleBindingTestClientsets) GetIgnoreLabels() []string { return nil }
+
+// TestRoleBindingReadMissingAndErrors covers Read paths CI acceptance tests do
+// not reach: Terraform before 1.12 sends no identity, so removing a missing
+// RoleBinding must set identity first; other API errors must keep state and
+// identity unchanged.
+func TestRoleBindingReadMissingAndErrors(t *testing.T) {
+	ctx := context.Background()
+	for _, status := range []int{http.StatusNotFound, http.StatusForbidden, http.StatusInternalServerError} {
+		for _, storedIdentity := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%d/identity=%t", status, storedIdentity), func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					if req.Method != http.MethodGet || req.URL.Path != "/apis/rbac.authorization.k8s.io/v1/namespaces/team/rolebindings/reader" {
+						t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(status)
+					if err := json.NewEncoder(w).Encode(metav1.Status{
+						TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"},
+						Status:   "Failure", Code: int32(status), Message: http.StatusText(status),
+					}); err != nil {
+						t.Error(err)
+					}
+				}))
+				defer server.Close()
+				conn, err := client.NewForConfig(&rest.Config{Host: server.URL})
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := &rbacv1.RoleBindingV1{SDKv2Meta: func() any { return roleBindingTestClientsets{client: conn} }}
+				var schema frameworkresource.SchemaResponse
+				r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
+				raw := tfprotov6.RawState{JSON: []byte(`{
+					"id":"team/reader",
+					"metadata":[{"name":"reader","namespace":"team","uid":"uid-1","resource_version":"10",
+					"generation":1,"labels":null,"annotations":null,"generate_name":null}],
+					"role_ref":[{"api_group":"rbac.authorization.k8s.io","kind":"Role","name":"reader"}],
+					"subject":[{"api_group":"rbac.authorization.k8s.io","kind":"User","name":"alice","namespace":""}]
+				}`)}
+				value, err := raw.Unmarshal(schema.Schema.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				state := tfsdk.State{Schema: schema.Schema, Raw: value}
+				identitySchema := common.NamespacedIdentitySchema()
+				identity := tfsdk.ResourceIdentity{
+					Schema: identitySchema, Raw: tftypes.NewValue(identitySchema.Type().TerraformType(ctx), nil),
+				}
+				wantIdentity := common.NamespacedResourceIdentity{
+					ResourceIdentity: common.ResourceIdentity{
+						Name: types.StringValue("reader"), Kind: types.StringValue("RoleBinding"),
+						APIVersion: types.StringValue("rbac.authorization.k8s.io/v1"),
+					},
+					Namespace: types.StringValue("team"),
+				}
+				if storedIdentity {
+					if status == http.StatusNotFound {
+						// A distinct value proves an existing identity is not rebuilt.
+						wantIdentity.Name = types.StringValue("existing-reader")
+					}
+					if diags := identity.Set(ctx, wantIdentity); diags.HasError() {
+						t.Fatal(diags)
+					}
+				}
+				responseIdentity := identity
+				response := frameworkresource.ReadResponse{State: state, Identity: &responseIdentity}
+				r.Read(ctx, frameworkresource.ReadRequest{State: state, Identity: &identity}, &response)
+				if status == http.StatusNotFound {
+					if response.Diagnostics.HasError() || !response.State.Raw.IsNull() {
+						t.Fatalf("missing RoleBinding must be removed: %v", response.Diagnostics)
+					}
+					var got common.NamespacedResourceIdentity
+					if diags := response.Identity.Get(ctx, &got); diags.HasError() {
+						t.Fatal(diags)
+					}
+					if got != wantIdentity {
+						t.Fatalf("identity = %#v, want %#v", got, wantIdentity)
+					}
+					return
+				}
+				if !response.Diagnostics.HasError() || !response.State.Raw.Equal(state.Raw) || !response.Identity.Raw.Equal(identity.Raw) {
+					t.Fatalf("API failure must preserve state and identity: %v", response.Diagnostics)
+				}
+			})
+		}
+	}
+}
 
 // TestAccRoleBinding_basic creates a RoleBinding with a single User subject,
 // verifies all computed fields are populated, and confirms import round-trips
@@ -613,6 +725,34 @@ func TestAccRoleBinding_importInvalidIdentity(t *testing.T) {
 	}
 }
 
+// TestAccRoleBinding_importInvalidID verifies that import IDs must be
+// "namespace/name" with both parts non-empty.
+func TestAccRoleBinding_importInvalidID(t *testing.T) {
+	for _, tc := range []struct{ name, id string }{
+		{"missingSlash", "reader"},
+		{"extraSlash", "team/reader/extra"},
+		{"emptyNamespace", "/reader"},
+		{"emptyName", "team/"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := acctest.RandomWithPrefix("tf-acc-rb")
+			resource.ParallelTest(t, resource.TestCase{
+				CheckDestroy:             testAccRoleBindingCheckDestroy,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{Config: testAccRoleBindingV1Config_basic(name)},
+					{
+						ResourceName:  "kubernetes_role_binding_v1.test",
+						ImportState:   true,
+						ImportStateId: tc.id,
+						ExpectError:   regexp.MustCompile("invalid resource ID"),
+					},
+				},
+			})
+		})
+	}
+}
+
 // ── Validation Acceptance Tests (Plan-time checks) ────────────────────────────
 
 // TestAccRoleBinding_validation_invalidAnnotationKey verifies that an invalid
@@ -726,6 +866,43 @@ func TestAccRoleBinding_validation_missingSubject(t *testing.T) {
 			{
 				Config:      testAccRoleBindingV1Config_missingSubject(name),
 				ExpectError: regexp.MustCompile(`(?s)Block subject must have a configuration value.*as required`),
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_validation_nameAndGenerateName verifies that setting both
+// metadata.name and metadata.generate_name is rejected, including an empty
+// generate_name. The Kubernetes API ignores generate_name whenever name is set.
+func TestAccRoleBinding_validation_nameAndGenerateName(t *testing.T) {
+	for _, tc := range []struct{ name, generateName string }{
+		{"empty", ""},
+		{"prefix", "tf-acc-rb-"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resource.ParallelTest(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config:      testAccRoleBindingV1Config_nameAndGenerateName(acctest.RandomWithPrefix("tf-acc-rb"), tc.generateName),
+						ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination`),
+					},
+				},
+			})
+		})
+	}
+}
+
+// TestAccRoleBinding_validation_nullMetadata verifies that a null label or
+// annotation value is rejected at plan time. SDKv2 accepted it and silently
+// dropped the key.
+func TestAccRoleBinding_validation_nullMetadata(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccRoleBindingV1Config_nullMetadata(acctest.RandomWithPrefix("tf-acc-rb")),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Value.*value must be a string`),
 			},
 		},
 	})
@@ -1263,6 +1440,55 @@ resource "kubernetes_role_binding_v1" "test" {
     api_group = "rbac.authorization.k8s.io"
     kind      = "Role"
     name      = "admin"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_nameAndGenerateName(name, generateName string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name          = %[1]q
+    generate_name = %[2]q
+    namespace     = "default"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name, generateName)
+}
+
+func testAccRoleBindingV1Config_nullMetadata(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name        = %[1]q
+    namespace   = "default"
+    labels      = { keep = "retained", optional = null }
+    annotations = { keep = "retained", optional = null }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
   }
 }
 `, name)

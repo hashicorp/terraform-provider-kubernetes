@@ -347,6 +347,49 @@ func TestAccMoveRoleBinding_identity(t *testing.T) {
 	})
 }
 
+// TestAccMoveRoleBinding_preIdentity verifies a moved block from a
+// kubernetes_role_binding written before resource identity existed: the source
+// has no identity, the move plans no diff, and the target gets a complete
+// identity.
+func TestAccMoveRoleBinding_preIdentity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {
+						Source:            "hashicorp/kubernetes",
+						VersionConstraint: preIdentityRoleBindingProviderVersion,
+					},
+				},
+				Config: testAccKubernetesRoleBindingConfig_deprecatedType(name),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccKubernetesRoleBindingConfig_movedToV1(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					testAccRoleBindingExpectIdentity("kubernetes_role_binding_v1.test", name),
+				},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccKubernetesRoleBindingConfig_movedToV1(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 // ── Config helpers ────────────────────────────────────────────────────────────
 
 // testAccKubernetesRoleBindingConfig_deprecatedType returns HCL that creates a

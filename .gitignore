@@ -36,3 +36,4 @@ website/vendor
 # output binary
 terraform-provider-kubernetes
 __debug_bin
+

@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/schedulingv1"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
@@ -199,6 +200,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
 		corev1.NewNamespaceV1,
 		rbacv1.NewRoleV1,
+		schedulingv1.NewPriorityClassV1,
 	}
 }
 

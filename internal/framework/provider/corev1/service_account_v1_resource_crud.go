@@ -11,6 +11,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -42,7 +43,7 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	conn, _, diags := serviceAccountClient(callback)
+	conn, filters, diags := serviceAccountClient(callback)
 	resp.Diagnostics.Append(diags...)
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
@@ -95,7 +96,7 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 			resp.Diagnostics.AddError("Error reading default service account before adoption", err.Error())
 			return
 		}
-		ops, d := serviceAccountAdoptionPatch(ctx, plan, out)
+		ops, d := serviceAccountAdoptionPatch(ctx, plan, out, filters)
 		resp.Diagnostics.Append(d...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -277,7 +278,7 @@ func serviceAccountDelete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 }
 
-func serviceAccountAdoptionPatch(ctx context.Context, plan ServiceAccountV1Model, current *corev1.ServiceAccount) (kubernetes.PatchOperations, diag.Diagnostics) {
+func serviceAccountAdoptionPatch(ctx context.Context, plan ServiceAccountV1Model, current *corev1.ServiceAccount, filters kubernetes.MetadataFilters) (kubernetes.PatchOperations, diag.Diagnostics) {
 	// Adoption has no managed prior references. Using the API object as the
 	// baseline would interpret omitted blocks as instructions to delete them.
 	empty := ServiceAccountV1Model{
@@ -286,7 +287,41 @@ func serviceAccountAdoptionPatch(ctx context.Context, plan ServiceAccountV1Model
 		ImagePullSecret:              types.SetNull(serviceAccountReferenceType),
 		AutomountServiceAccountToken: types.BoolNull(),
 	}
+	if len(plan.Metadata) == 1 {
+		var ignoreAnnotations, ignoreLabels []string
+		if filters != nil {
+			ignoreAnnotations, ignoreLabels = filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels()
+		}
+		empty.Metadata[0].Annotations = serviceAccountAdoptionBaseline(plan.Metadata[0].Annotations, current.Annotations, ignoreAnnotations)
+		empty.Metadata[0].Labels = serviceAccountAdoptionBaseline(plan.Metadata[0].Labels, current.Labels, ignoreLabels)
+	}
 	return serviceAccountPatch(ctx, empty, plan, current)
+}
+
+// serviceAccountAdoptionBaseline treats the keys Read would store in state as
+// previously managed, so adopting with a configured map removes unmanaged keys
+// and converges in one apply. SDKv2 replaced the whole map in that case; ignored
+// and Kubernetes-internal keys are kept here, as in Update. An omitted or empty
+// map leaves the live map untouched, matching SDKv2.
+func serviceAccountAdoptionBaseline(desired types.Map, live map[string]string, ignore []string) types.Map {
+	if desired.IsNull() || desired.IsUnknown() || len(desired.Elements()) == 0 {
+		return types.MapNull(types.StringType)
+	}
+	declared := make(map[string]interface{}, len(desired.Elements()))
+	for key := range desired.Elements() {
+		declared[key] = nil
+	}
+	owned := maps.Clone(live)
+	if owned == nil {
+		owned = map[string]string{}
+	}
+	kubernetes.RemoveInternalKeys(owned, declared)
+	kubernetes.RemoveKeys(owned, declared, ignore)
+	elements := make(map[string]attr.Value, len(owned))
+	for key, value := range owned {
+		elements[key] = types.StringValue(value)
+	}
+	return types.MapValueMust(types.StringType, elements)
 }
 
 func serviceAccountPatch(ctx context.Context, state, plan ServiceAccountV1Model, current *corev1.ServiceAccount) (kubernetes.PatchOperations, diag.Diagnostics) {

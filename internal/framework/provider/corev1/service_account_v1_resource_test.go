@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	framework "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
@@ -905,6 +906,78 @@ func TestAccKubernetesServiceAccountV1_generateName_disappears(t *testing.T) {
 	})
 }
 
+// Adopting a default ServiceAccount that already carries metadata must converge
+// in one apply: unmanaged keys are removed, as SDKv2 did, while keys hidden by
+// ignore_labels survive.
+func TestAccKubernetesDefaultServiceAccountV1_adoptExistingMetadata(t *testing.T) {
+	namespace := "tf-acc-sa-adopt-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	address := "kubernetes_default_service_account_v1.test"
+	provider := "provider \"kubernetes\" {\n  ignore_labels = [\"^owner$\"]\n}\n"
+	fixture := provider + fmt.Sprintf(`
+resource "kubernetes_namespace" "test" {
+  metadata {
+    name = %q
+  }
+  wait_for_default_service_account = true
+}
+`, namespace)
+	adopted := fixture + `
+resource "kubernetes_default_service_account_v1" "test" {
+  metadata {
+    namespace   = kubernetes_namespace.test.metadata[0].name
+    labels      = { managed = "tf" }
+    annotations = { "example.com/tf" = "1" }
+  }
+}
+`
+	var uid k8stypes.UID
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t) }, ProtoV6ProviderFactories: serviceAccountMuxFactories,
+		CheckDestroy: serviceAccountLiveDestroy,
+		Steps: []resource.TestStep{
+			{Config: fixture},
+			{
+				PreConfig: func() {
+					client, err := mainClientset()
+					if err != nil {
+						t.Fatal(err)
+					}
+					patch, _ := json.Marshal(map[string]any{"metadata": map[string]any{
+						"labels":      map[string]string{"preexisting": "yes", "owner": "controller"},
+						"annotations": map[string]string{"example.com/pre": "yes"},
+					}})
+					object, err := client.CoreV1().ServiceAccounts(namespace).Patch(context.Background(), "default",
+						k8stypes.MergePatchType, patch, metav1.PatchOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					uid = object.UID
+				},
+				Config: adopted,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionCreate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: func(*terraform.State) error {
+					object, err := serviceAccountLiveGet(namespace, "default")
+					if err != nil {
+						return err
+					}
+					if object.UID != uid {
+						return fmt.Errorf("default ServiceAccount was replaced: UID %s -> %s", uid, object.UID)
+					}
+					wantLabels := map[string]string{"managed": "tf", "owner": "controller"}
+					wantAnnotations := map[string]string{"example.com/tf": "1"}
+					if !reflect.DeepEqual(object.Labels, wantLabels) || !reflect.DeepEqual(object.Annotations, wantAnnotations) {
+						return fmt.Errorf("labels %v annotations %v, want %v and %v", object.Labels, object.Annotations, wantLabels, wantAnnotations)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
 func serviceAccountLiveGet(namespace, name string) (*coreapi.ServiceAccount, error) {
 	client, err := mainClientset()
 	if err != nil {
@@ -923,11 +996,9 @@ func serviceAccountLiveMigrationEnvironment(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("cannot locate repository-local test workspace")
-	}
-	t.Setenv("TMPDIR", filepath.Clean(filepath.Join(filepath.Dir(file), "../../../..")))
+	// Keep provider reattachment sockets below macOS's 104-byte path limit,
+	// including when this repository is checked out in a deeply nested worktree.
+	t.Setenv("TMPDIR", "/tmp")
 	dir := t.TempDir()
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
@@ -1088,7 +1159,7 @@ func TestAccKubernetesServiceAccountV1_migration(t *testing.T) {
 	}
 	// Serial execution is required by the per-case CLI configuration environment.
 	for _, kind := range serviceAccountTypes {
-		for _, version := range []string{"3.2.1", "2.37.1"} {
+		for _, version := range []string{"3.4.0", "3.3.0", "3.2.1", "2.37.1"} {
 			for _, move := range []string{"same-type", "alias-move", "address-move"} {
 				t.Run(kind.name+"/"+version+"/"+move, func(t *testing.T) {
 					testAccPreCheck(t)
@@ -1188,6 +1259,79 @@ func TestAccKubernetesServiceAccountV1_migration(t *testing.T) {
 				})
 			}
 		}
+	}
+}
+
+// SDKv2 stores `labels = {}` and `annotations = {}` as null until a later refresh
+// persists {}. The Framework keeps the distinction, so upgrading fresh SDKv2
+// state plans one in-place update. It must write nothing to the API and settle.
+// The namespace equivalent is testAccNamespaceMigrationExpectingUpdate.
+func TestAccKubernetesServiceAccountV1_migrationExplicitEmpty(t *testing.T) {
+	if os.Getenv("TF_ACC") == "" {
+		t.Skip("live exact-release migrations require TF_ACC")
+	}
+	const version = "3.4.0"
+	scenario := serviceAccountScenarios()[2]
+	if scenario.name != "explicit-empty" {
+		t.Fatalf("scenario = %q, want explicit-empty", scenario.name)
+	}
+	for _, kind := range serviceAccountTypes {
+		t.Run(kind.name, func(t *testing.T) {
+			testAccPreCheck(t)
+			dir := serviceAccountLiveMigrationEnvironment(t)
+			namespace := "tf-acc-sa-empty-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+			name := "account"
+			if kind.adopt {
+				name = "default"
+			}
+			address := kind.name + ".test"
+			config := serviceAccountLiveFixture(namespace) +
+				serviceAccountConfig(kind.name, "test", "kubernetes_namespace.test.metadata[0].name", name, scenario, true)
+			var before *coreapi.ServiceAccount
+			capture := func(*terraform.State) error {
+				object, err := serviceAccountLiveGet(namespace, name)
+				before = object
+				return err
+			}
+			unchanged := func(*terraform.State) error {
+				object, err := serviceAccountLiveGet(namespace, name)
+				if err != nil {
+					return err
+				}
+				if before == nil || object.UID != before.UID || object.ResourceVersion != before.ResourceVersion {
+					return fmt.Errorf("upgrade wrote or replaced the ServiceAccount")
+				}
+				return nil
+			}
+			emptyMap := func(field string) statecheck.StateCheck {
+				return statecheck.ExpectKnownValue(address, tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field),
+					knownvalue.MapExact(map[string]knownvalue.Check{}))
+			}
+			resource.Test(t, resource.TestCase{
+				PreCheck:               func() { testAccPreCheck(t) },
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+				CheckDestroy:           serviceAccountLiveDestroy,
+				Steps: []resource.TestStep{
+					{
+						ExternalProviders: map[string]resource.ExternalProvider{"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: "= " + version}},
+						Config:            config,
+						Check:             resource.ComposeAggregateTestCheckFunc(serviceAccountReleasedVersion(dir, version), capture),
+					},
+					{
+						ProtoV6ProviderFactories: serviceAccountMuxFactories, Config: config, Check: unchanged,
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						ConfigStateChecks: []statecheck.StateCheck{emptyMap("labels"), emptyMap("annotations")},
+					},
+					{
+						ProtoV6ProviderFactories: serviceAccountMuxFactories, Config: config, Check: unchanged,
+						ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+					},
+				},
+			})
+		})
 	}
 }
 
@@ -1700,7 +1844,7 @@ func TestServiceAccountCLIMigration(t *testing.T) {
 		t.Skip("set TF_KUBERNETES_SERVICE_ACCOUNT_CLI_TESTS=1 for loopback Terraform migrations")
 	}
 	for _, kind := range serviceAccountTypes {
-		for _, version := range []string{"3.2.1", "2.37.1"} {
+		for _, version := range []string{"3.4.0", "3.3.0", "3.2.1", "2.37.1"} {
 			for _, scenario := range serviceAccountScenarios() {
 				for _, migration := range []string{"same-type", "alias-move", "address-move"} {
 					t.Run(kind.name+"/"+version+"/"+scenario.name+"/"+migration, func(t *testing.T) {
@@ -2033,7 +2177,7 @@ func TestServiceAccountCLIDefaultAdoptionReferences(t *testing.T) {
 	if os.Getenv("TF_KUBERNETES_SERVICE_ACCOUNT_CLI_TESTS") != "1" {
 		t.Skip("set TF_KUBERNETES_SERVICE_ACCOUNT_CLI_TESTS=1 for loopback adoption probes")
 	}
-	for _, version := range []string{"3.2.1", "2.37.1", "local"} {
+	for _, version := range []string{"3.4.0", "3.3.0", "3.2.1", "2.37.1", "local"} {
 		t.Run(version, func(t *testing.T) {
 			dir := serviceAccountCLIEnvironment(t)
 			api := newServiceAccountAPI(t, true)

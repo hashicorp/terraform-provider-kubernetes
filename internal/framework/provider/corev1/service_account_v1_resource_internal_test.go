@@ -92,7 +92,7 @@ func TestServiceAccountInternalDefaultAdoptionPreservesReferences(t *testing.T) 
 				plan.Secret = types.SetValueMust(serviceAccountReferenceType, []attr.Value{})
 				plan.ImagePullSecret = types.SetValueMust(serviceAccountReferenceType, []attr.Value{})
 			}
-			ops, diags := serviceAccountAdoptionPatch(ctx, plan, current)
+			ops, diags := serviceAccountAdoptionPatch(ctx, plan, current, serviceAccountTestFilters{})
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
@@ -187,6 +187,99 @@ type serviceAccountTestFilters struct{}
 
 func (serviceAccountTestFilters) GetIgnoreAnnotations() []string { return nil }
 func (serviceAccountTestFilters) GetIgnoreLabels() []string      { return nil }
+
+type serviceAccountIgnoreFilters struct{ annotations, labels []string }
+
+func (f serviceAccountIgnoreFilters) GetIgnoreAnnotations() []string { return f.annotations }
+func (f serviceAccountIgnoreFilters) GetIgnoreLabels() []string      { return f.labels }
+
+// Adopting with a configured map must leave exactly what Read stores plus the
+// ignored and Kubernetes-internal keys, so the first apply converges.
+func TestServiceAccountInternalDefaultAdoptionMetadata(t *testing.T) {
+	ctx := context.Background()
+	live := func() *corev1.ServiceAccount {
+		return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+			Name: "default", Namespace: "ns", ResourceVersion: "7",
+			Labels:      map[string]string{"preexisting": "yes", "owner": "controller", "managed": "old"},
+			Annotations: map[string]string{"example.com/pre": "yes", "kubernetes.io/internal": "keep"},
+		}}
+	}
+	desired := func(values map[string]string) types.Map {
+		if values == nil {
+			return types.MapNull(types.StringType)
+		}
+		elements := map[string]attr.Value{}
+		for key, value := range values {
+			elements[key] = types.StringValue(value)
+		}
+		return types.MapValueMust(types.StringType, elements)
+	}
+	filters := serviceAccountIgnoreFilters{labels: []string{"^owner$"}}
+	for _, tc := range []struct {
+		name                  string
+		labels, annotations   map[string]string
+		wantLabels, wantAnnot map[string]string
+	}{{
+		name:        "configured maps drop unmanaged keys",
+		labels:      map[string]string{"managed": "tf"},
+		annotations: map[string]string{"example.com/tf": "1"},
+		wantLabels:  map[string]string{"managed": "tf", "owner": "controller"},
+		wantAnnot:   map[string]string{"example.com/tf": "1", "kubernetes.io/internal": "keep"},
+	}, {
+		name:       "omitted maps are untouched",
+		wantLabels: map[string]string{"preexisting": "yes", "owner": "controller", "managed": "old"},
+		wantAnnot:  map[string]string{"example.com/pre": "yes", "kubernetes.io/internal": "keep"},
+	}, {
+		name:        "empty maps are untouched",
+		labels:      map[string]string{},
+		annotations: map[string]string{},
+		wantLabels:  map[string]string{"preexisting": "yes", "owner": "controller", "managed": "old"},
+		wantAnnot:   map[string]string{"example.com/pre": "yes", "kubernetes.io/internal": "keep"},
+	}} {
+		t.Run(tc.name, func(t *testing.T) {
+			current := live()
+			before := current.DeepCopy()
+			metadata := common.NamespacedMetadataModel{}
+			metadata.Labels, metadata.Annotations = desired(tc.labels), desired(tc.annotations)
+			plan := ServiceAccountV1Model{
+				Metadata:                     []common.NamespacedMetadataModel{metadata},
+				Secret:                       types.SetNull(serviceAccountReferenceType),
+				ImagePullSecret:              types.SetNull(serviceAccountReferenceType),
+				AutomountServiceAccountToken: types.BoolValue(true),
+			}
+			ops, diags := serviceAccountAdoptionPatch(ctx, plan, current, filters)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !reflect.DeepEqual(current, before) {
+				t.Fatalf("adoption mutated the live object: %#v", current)
+			}
+			payload, err := ops.MarshalJSON()
+			if err != nil {
+				t.Fatal(err)
+			}
+			patch, err := jsonpatch.DecodePatch(payload)
+			if err != nil {
+				t.Fatal(err)
+			}
+			document, err := json.Marshal(current)
+			if err != nil {
+				t.Fatal(err)
+			}
+			patched, err := patch.Apply(document)
+			if err != nil {
+				t.Fatalf("patch %s does not apply: %v", payload, err)
+			}
+			var got corev1.ServiceAccount
+			if err := json.Unmarshal(patched, &got); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got.Labels, tc.wantLabels) || !reflect.DeepEqual(got.Annotations, tc.wantAnnot) {
+				t.Fatalf("labels %v annotations %v, want %v and %v (patch %s)", got.Labels, got.Annotations, tc.wantLabels, tc.wantAnnot, payload)
+			}
+		})
+	}
+}
 
 func TestServiceAccountInternalFlattenNilAutomount(t *testing.T) {
 	model := ServiceAccountV1Model{

@@ -9,7 +9,9 @@ import (
 	"math"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
@@ -92,18 +94,20 @@ func (v *userDefinedValueValidator) MarkdownDescription(_ context.Context) strin
 }
 
 func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config PriorityClassModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	// Retrieve the value attribute directly so int32 bounds are checked even if
+	// the metadata block or collection is unknown (e.g. from dynamic blocks).
+	var value types.Int64
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("value"), &value)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Cannot validate if value is unknown (e.g. computed from another resource).
-	if config.Value.IsUnknown() || config.Value.IsNull() {
+	// Cannot validate if value is unknown or null.
+	if value.IsUnknown() || value.IsNull() {
 		return
 	}
 
-	val := config.Value.ValueInt64()
+	val := value.ValueInt64()
 
 	// Bounds check: value must fit in an int32 because the Kubernetes API field is int32.
 	if val < math.MinInt32 {
@@ -125,15 +129,34 @@ func (v *userDefinedValueValidator) ValidateResource(ctx context.Context, req re
 	// System classes (system-cluster-critical, system-node-critical) exceed this cap
 	// and must remain valid/importable.
 	if val > 1_000_000_000 {
-		// Determine the effective name: use name if set, fall back to generate_name prefix.
-		name := ""
-		if len(config.Metadata) > 0 {
-			if !config.Metadata[0].Name.IsNull() && !config.Metadata[0].Name.IsUnknown() {
-				name = config.Metadata[0].Name.ValueString()
-			} else if !config.Metadata[0].GenerateName.IsNull() && !config.Metadata[0].GenerateName.IsUnknown() {
-				name = config.Metadata[0].GenerateName.ValueString()
-			}
+		var metadataList types.List
+		diags := req.Config.GetAttribute(ctx, path.Root("metadata"), &metadataList)
+		if diags.HasError() || metadataList.IsUnknown() || metadataList.IsNull() {
+			// Defer name-dependent check if the metadata collection is unknown or null.
+			return
 		}
+
+		var metadata []common.MetadataModel
+		diags = req.Config.GetAttribute(ctx, path.Root("metadata"), &metadata)
+		if diags.HasError() || len(metadata) == 0 {
+			// Defer if metadata elements cannot be decoded or are empty.
+			return
+		}
+
+		m := metadata[0]
+		// If either name or generate_name is unknown, defer validation because
+		// it could resolve to a "system-" prefix at apply time.
+		if m.Name.IsUnknown() || m.GenerateName.IsUnknown() {
+			return
+		}
+
+		name := ""
+		if !m.Name.IsNull() {
+			name = m.Name.ValueString()
+		} else if !m.GenerateName.IsNull() {
+			name = m.GenerateName.ValueString()
+		}
+
 		if !strings.HasPrefix(name, "system-") {
 			resp.Diagnostics.AddError(
 				"Invalid Priority Class Value",

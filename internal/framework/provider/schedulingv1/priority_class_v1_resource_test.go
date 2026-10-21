@@ -4,8 +4,8 @@
 package schedulingv1_test
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"testing"
 
@@ -16,8 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	schedulingv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/schedulingv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
 // compile-time check: PriorityClassV1 satisfies resource.Resource.
@@ -297,10 +299,14 @@ func TestAccPriorityClassV1_disappears(t *testing.T) {
 				RefreshState:       true,
 				ExpectNonEmptyPlan: true,
 				PreConfig: func() {
-					// Delete the PriorityClass outside Terraform to simulate an
-					// out-of-band deletion. Errors are intentionally ignored —
-					// the object may already be gone.
-					_ = exec.Command("kubectl", "delete", "priorityclass", name, "--ignore-not-found").Run()
+					conn, err := sdkv2providerMeta()().(kubernetes.KubeClientsets).MainClientset()
+					if err != nil {
+						t.Fatalf("failed to create kubernetes client: %s", err)
+					}
+					err = conn.SchedulingV1().PriorityClasses().Delete(context.Background(), name, metav1.DeleteOptions{})
+					if err != nil {
+						t.Fatalf("failed to delete PriorityClass %q: %s", name, err)
+					}
 				},
 			},
 		},
@@ -408,6 +414,45 @@ func TestAccPriorityClassV1_invalidMetadataName(t *testing.T) {
 			{
 				Config:      testAccPriorityClassV1Config_basic("INVALID_NAME_UPPERCASE"),
 				ExpectError: regexp.MustCompile(`(?s)(Invalid Attribute Value Match|DNS-1123|subdomain)`),
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_unknownNameWithValidSystemValue verifies that when metadata.name
+// is unknown at plan time, values above 1,000,000,000 (valid for system classes)
+// are not prematurely rejected at plan time.
+func TestAccPriorityClassV1_unknownNameWithValidSystemValue(t *testing.T) {
+	name := acctest.RandomWithPrefix("system-acc-pc")
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config:             testAccPriorityClassV1Config_computedName(name, 2_000_000_000),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
+// TestAccPriorityClassV1_unknownMetadataCollection verifies that when the entire metadata
+// collection is unknown at plan time (e.g. via dynamic blocks), req.Config.Get does not
+// fail with a Value Conversion Error.
+func TestAccPriorityClassV1_unknownMetadataCollection(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-pc")
+	resourceName := "kubernetes_priority_class_v1.test"
+
+	tfresource.ParallelTest(t, tfresource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []tfresource.TestStep{
+			{
+				Config: testAccPriorityClassV1Config_dynamicMetadata(name),
+				Check: tfresource.ComposeAggregateTestCheckFunc(
+					tfresource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					tfresource.TestCheckResourceAttr(resourceName, "value", "100"),
+				),
 			},
 		},
 	})
@@ -528,6 +573,43 @@ resource "kubernetes_priority_class_v1" "test" {
   metadata {
     name = %[1]q
   }
+}
+`, name)
+}
+
+func testAccPriorityClassV1Config_computedName(name string, value int) string {
+	return fmt.Sprintf(`
+resource "terraform_data" "name" {
+  input = %[1]q
+}
+
+resource "kubernetes_priority_class_v1" "test" {
+  metadata {
+    name = terraform_data.name.output
+  }
+
+  value = %[2]d
+}
+`, name, value)
+}
+
+func testAccPriorityClassV1Config_dynamicMetadata(name string) string {
+	return fmt.Sprintf(`
+resource "terraform_data" "meta" {
+  input = {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_priority_class_v1" "test" {
+  dynamic "metadata" {
+    for_each = terraform_data.meta.output != null ? [terraform_data.meta.output] : []
+    content {
+      name = metadata.value.name
+    }
+  }
+
+  value = 100
 }
 `, name)
 }

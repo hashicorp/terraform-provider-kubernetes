@@ -70,7 +70,7 @@ func resourceKubernetesConfigMapV1Data() *schema.Resource {
 
 func resourceKubernetesConfigMapV1DataCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]interface{}))
-	d.SetId(buildId(metadata))
+	d.SetId(BuildId(metadata))
 	diag := resourceKubernetesConfigMapV1DataUpdate(ctx, d, m)
 	if diag.HasError() {
 		d.SetId("")
@@ -84,7 +84,7 @@ func resourceKubernetesConfigMapV1DataRead(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_stateful_set_v1`: Fix `Missing Resource Identity After Update` error when `wait_for_rollout` is `true` and the StatefulSet is updated in place
+```

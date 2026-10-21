@@ -16,7 +16,9 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/admissionregistrationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/authenticationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
@@ -195,11 +197,16 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
+		corev1.NewNamespaceV1,
+		rbacv1.NewRoleV1,
 	}
 }
 
 func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		corev1.NewAllNamespacesDataSource,
+		corev1.NewNamespaceV1DataSource,
+	}
 }
 
 func (p *KubernetesProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {

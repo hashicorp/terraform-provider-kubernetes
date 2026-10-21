@@ -413,7 +413,7 @@ func testAccCheckKubernetesNetworkPolicyV1Destroy(s *terraform.State) error {
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -442,7 +442,7 @@ func testAccCheckKubernetesNetworkPolicyV1Exists(n string, obj *networkingv1.Net
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

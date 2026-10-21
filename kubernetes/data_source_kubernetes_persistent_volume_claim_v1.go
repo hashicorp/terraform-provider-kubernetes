@@ -103,7 +103,7 @@ func dataSourceKubernetesPersistentVolumeClaimV1Read(ctx context.Context, d *sch
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading persistent volume claim %s", metadata.Name)
 	claim, err := conn.CoreV1().PersistentVolumeClaims(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

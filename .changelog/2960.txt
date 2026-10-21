@@ -1,0 +1,7 @@
+```release-note:note
+`data-source/kubernetes_namespace_v1`: Migrated from SDKv2 to the Plugin Framework.
+```
+
+```release-note:bug
+`data-source/kubernetes_namespace_v1`: Report a missing `metadata.name` during validation instead of failing during the namespace lookup.
+```

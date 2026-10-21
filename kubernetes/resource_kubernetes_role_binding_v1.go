@@ -70,7 +70,7 @@ func resourceKubernetesRoleBindingV1Create(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new RoleBinding: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesRoleBindingV1Read(ctx, d, meta)
 }
@@ -89,7 +89,7 @@ func resourceKubernetesRoleBindingV1Read(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -133,7 +133,7 @@ func resourceKubernetesRoleBindingV1Update(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -153,7 +153,7 @@ func resourceKubernetesRoleBindingV1Update(ctx context.Context, d *schema.Resour
 		return diag.Errorf("Failed to update RoleBinding: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated RoleBinding: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesRoleBindingV1Read(ctx, d, meta)
 }
@@ -164,7 +164,7 @@ func resourceKubernetesRoleBindingV1Delete(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -188,7 +188,7 @@ func resourceKubernetesRoleBindingV1Exists(ctx context.Context, d *schema.Resour
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

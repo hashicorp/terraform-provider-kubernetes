@@ -565,7 +565,7 @@ func testAccCheckKubernetesPersistentVolumeClaimV1Destroy(s *terraform.State) er
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -603,7 +603,7 @@ func testAccCheckKubernetesPersistentVolumeClaimV1Exists(n string, obj *corev1.P
 			return err
 		}
 		ctx := context.TODO()
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

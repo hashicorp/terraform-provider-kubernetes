@@ -1,3 +1,44 @@
+## 3.4.0 (Oct 16, 2026)
+
+BREAKING CHANGES:
+
+* `resource/kubernetes_role_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected during plan, including `generate_name = ""`. Earlier versions allowed it, but the Kubernetes API ignores `generate_name` whenever `name` is set. To keep the existing Role, remove `generate_name` if it is empty (`""`); otherwise remove `name` and keep `generate_name`. Making the other change replaces the Role. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+* `resource/kubernetes_role_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+
+BUG FIXES:
+
+* provider: Bump `google.golang.org/grpc` to v1.83.2 and `github.com/moby/spdystream` to v0.5.1 to resolve GO-2026-6348, GO-2026-6443, and CVE-2026-35469. [[GH-2986](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2986)]
+
+NOTES:
+
+* `resource/kubernetes_role_v1`: Import IDs require a non-empty namespace and name. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+* `resource/kubernetes_role_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and resource identity, including upgrades from versions before identity support. `moved` blocks from the deprecated `kubernetes_role` resource are supported with Terraform 1.8 or later. Explicit empty metadata maps may require a one-time in-place update. Roles imported with an earlier provider version may show a one-time in-place update setting empty `labels` and `annotations` to null, and a `terraform plan -refresh=false` immediately after upgrading may show a one-time in-place update adding `resource_names = []`; neither replaces the Role. Identity imports default an omitted namespace to `default`. See the Plugin Framework upgrade guide for details. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+
+## 3.3.0 (Oct 1,2026)
+
+BREAKING CHANGES:
+
+* `resource/kubernetes_namespace_v1`: Validate that `metadata.labels` and `metadata.annotations` entries contain non-null strings. Previously accepted null entries are now rejected during planning; omit those entries or provide string values. Entire maps may still be omitted or set to `null`. [[GH-2979](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2979)]
+
+BUG FIXES:
+
+* `data-source/kubernetes_namespace_v1`: Report a missing `metadata.name` during validation instead of failing during the namespace lookup. [[GH-2960](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2960)]
+* `resource/kubernetes_stateful_set_v1`: Fix `Missing Resource Identity After Update` error when `wait_for_rollout` is `true` and the StatefulSet is updated in place [[GH-2967](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2967)]
+* provider: Bump `google.golang.org/grpc` to v1.82.1 and `golang.org/x/crypto` to v0.52.0 to resolve upstream security advisories. [[GH-2959](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2959)]
+
+NOTES:
+
+* `data-source/kubernetes_all_namespaces`: Migrated from SDKv2 to the Plugin Framework. [[GH-2962](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2962)]
+* `data-source/kubernetes_namespace_v1`: Migrated from SDKv2 to the Plugin Framework. [[GH-2960](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2960)]
+* `resource/kubernetes_namespace_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax. `moved` blocks from the deprecated `kubernetes_namespace` resource are supported. Explicitly empty metadata maps may produce a one-time in-place update after upgrading. [[GH-2979](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2979)]
+
+## 3.2.1 (Jun 30, 2026)
+
+BUG FIXES:
+
+* `resource/*`: Fix `Unexpected Identity Change` error after apply when a resource takes a long time to become ready; bump `terraform-plugin-sdk` to v2.38.2 [[GH-2859](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2859)]
+* `resource/kubernetes_secret_v1`: Fix `Missing Resource Identity After Create` error when using `data_wo` or `binary_data_wo` write-only attributes [[GH-2859](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2859)]
+
 ## 3.2.0 (Jun 4, 2026)
 
 ENHANCEMENTS:

@@ -96,13 +96,13 @@ func resourceKubernetesJobV1Create(ctx context.Context, d *schema.ResourceData, 
 	}
 	log.Printf("[INFO] Submitted new job: %#v", out)
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 	err = setResourceIdentityNamespaced(d, "batch/v1", "Job", out.GetNamespace(), out.GetName())
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -132,7 +132,7 @@ func resourceKubernetesJobV1Read(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -179,7 +179,7 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -204,7 +204,7 @@ func resourceKubernetesJobV1Update(ctx context.Context, d *schema.ResourceData, 
 	}
 	log.Printf("[INFO] Submitted updated job: %#v", out)
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	if d.Get("wait_for_completion").(bool) {
 		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
@@ -222,7 +222,7 @@ func resourceKubernetesJobV1Delete(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -264,7 +264,7 @@ func resourceKubernetesJobV1Exists(ctx context.Context, d *schema.ResourceData, 
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

@@ -297,7 +297,7 @@ func testAccCheckKubernetesConfigMapV1Destroy(s *terraform.State) error {
 		if rs.Type != "kubernetes_config_map" {
 			continue
 		}
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -325,7 +325,7 @@ func testAccCheckKubernetesConfigMapV1Exists(n string, obj *corev1.ConfigMap) re
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

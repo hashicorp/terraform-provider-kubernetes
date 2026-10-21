@@ -73,7 +73,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 	sa, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			d.SetId(buildId(sa.ObjectMeta))
+			d.SetId(BuildId(sa.ObjectMeta))
 			return nil
 		}
 		return diag.Errorf(`Unable to fetch service account "%s/%s" from Kubernetes: %s`, metadata.Namespace, metadata.Name, err)
@@ -86,7 +86,7 @@ func dataSourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Res
 		return diag.Errorf("Unable to set default_secret_name: %s", err)
 	}
 
-	d.SetId(buildId(sa.ObjectMeta))
+	d.SetId(BuildId(sa.ObjectMeta))
 
 	log.Printf("[INFO] Reading service account %s", metadata.Name)
 	svcAcc, err := conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

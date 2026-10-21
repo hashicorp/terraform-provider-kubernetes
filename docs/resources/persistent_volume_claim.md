@@ -134,7 +134,7 @@ resource "kubernetes_persistent_volume" "example" {
 }
 ```
 
-##Import
+## Import
 
 Persistent Volume Claim can be imported using its namespace and name, e.g.
 

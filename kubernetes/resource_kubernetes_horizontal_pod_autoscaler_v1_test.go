@@ -142,7 +142,7 @@ func testAccCheckKubernetesHorizontalPodAutoscalerV1Destroy(s *terraform.State) 
 			continue
 		}
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -171,7 +171,7 @@ func testAccCheckKubernetesHorizontalPodAutoscalerV1Exists(n string, obj *api.Ho
 		}
 		ctx := context.TODO()
 
-		namespace, name, err := idParts(rs.Primary.ID)
+		namespace, name, err := IdParts(rs.Primary.ID)
 		if err != nil {
 			return err
 		}

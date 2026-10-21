@@ -107,7 +107,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1Create(ctx context.Context, d *s
 	}
 
 	log.Printf("[INFO] Submitted new horizontal pod autoscaler: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesHorizontalPodAutoscalerV1Read(ctx, d, meta)
 }
@@ -127,7 +127,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1Read(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -160,7 +160,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1Update(ctx context.Context, d *s
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -180,7 +180,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1Update(ctx context.Context, d *s
 		return diag.Errorf("Failed to update horizontal pod autoscaler: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated horizontal pod autoscaler: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesHorizontalPodAutoscalerV1Read(ctx, d, meta)
 }
@@ -191,7 +191,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1Delete(ctx context.Context, d *s
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -216,7 +216,7 @@ func resourceKubernetesHorizontalPodAutoscalerV1Exists(ctx context.Context, d *s
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

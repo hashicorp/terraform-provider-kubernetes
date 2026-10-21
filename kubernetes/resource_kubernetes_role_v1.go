@@ -91,7 +91,7 @@ func resourceKubernetesRoleV1Create(ctx context.Context, d *schema.ResourceData,
 	}
 
 	log.Printf("[INFO] Submitted new role: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesRoleV1Read(ctx, d, meta)
 }
@@ -110,7 +110,7 @@ func resourceKubernetesRoleV1Read(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -145,7 +145,7 @@ func resourceKubernetesRoleV1Update(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -170,7 +170,7 @@ func resourceKubernetesRoleV1Update(ctx context.Context, d *schema.ResourceData,
 		return diag.Errorf("Failed to update role: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated role: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesRoleV1Read(ctx, d, meta)
 }
@@ -181,7 +181,7 @@ func resourceKubernetesRoleV1Delete(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -206,7 +206,7 @@ func resourceKubernetesRoleV1Exists(ctx context.Context, d *schema.ResourceData,
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

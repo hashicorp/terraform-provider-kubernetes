@@ -103,7 +103,7 @@ func resourceKubernetesPodV1Create(ctx context.Context, d *schema.ResourceData, 
 	}
 	log.Printf("[INFO] Submitted new pod: %#v", out)
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	stateConf := &retry.StateChangeConf{
 		Target:  expandPodTargetState(d.Get("target_state").([]interface{})),
@@ -140,7 +140,7 @@ func resourceKubernetesPodV1Update(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -166,7 +166,7 @@ func resourceKubernetesPodV1Update(ctx context.Context, d *schema.ResourceData, 
 	}
 	log.Printf("[INFO] Submitted updated pod: %#v", out)
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 	return resourceKubernetesPodV1Read(ctx, d, meta)
 }
 
@@ -184,7 +184,7 @@ func resourceKubernetesPodV1Read(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -225,7 +225,7 @@ func resourceKubernetesPodV1Delete(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -268,7 +268,7 @@ func resourceKubernetesPodV1Exists(ctx context.Context, d *schema.ResourceData, 
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

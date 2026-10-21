@@ -109,7 +109,7 @@ func resourceKubernetesIngressClassV1Create(ctx context.Context, d *schema.Resou
 	log.Printf("[INFO] Creating new Ingress Class: %#v", ing)
 	out, err := conn.NetworkingV1().IngressClasses().Create(ctx, ing, metav1.CreateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to create Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
+		return diag.Errorf("Failed to create Ingress Class '%s' because: %s", BuildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted new IngressClass: %#v", out)
 	d.SetId(out.ObjectMeta.GetName())
@@ -142,7 +142,7 @@ func resourceKubernetesIngressClassV1Read(ctx context.Context, d *schema.Resourc
 	ing, err := conn.NetworkingV1().IngressClasses().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return diag.Errorf("Failed to read Ingress Class '%s' because: %s", buildId(ing.ObjectMeta), err)
+		return diag.Errorf("Failed to read Ingress Class '%s' because: %s", BuildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Received Ingress Class: %#v", ing)
 	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d, meta))
@@ -185,7 +185,7 @@ func resourceKubernetesIngressClassV1Update(ctx context.Context, d *schema.Resou
 
 	out, err := conn.NetworkingV1().IngressClasses().Update(ctx, ingressClass, metav1.UpdateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to update Ingress Class %s because: %s", buildId(ingressClass.ObjectMeta), err)
+		return diag.Errorf("Failed to update Ingress Class %s because: %s", BuildId(ingressClass.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted updated Ingress Class: %#v", out)
 

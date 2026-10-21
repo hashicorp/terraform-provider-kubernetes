@@ -72,7 +72,7 @@ func resourceKubernetesTokenRequestV1Create(ctx context.Context, d *schema.Resou
 	d.Set("spec", s)
 
 	log.Printf("[INFO] Submitted new TokenRequest: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesTokenRequestV1Read(ctx, d, meta)
 }

@@ -190,10 +190,10 @@ func resourceKubernetesIngressV1Create(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[INFO] Creating new ingress: %#v", ing)
 	out, err := conn.NetworkingV1().Ingresses(metadata.Namespace).Create(ctx, ing, metav1.CreateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to create Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
+		return diag.Errorf("Failed to create Ingress '%s' because: %s", BuildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted new ingress: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	if !d.Get("wait_for_load_balancer").(bool) {
 		return resourceKubernetesIngressV1Read(ctx, d, meta)
@@ -243,7 +243,7 @@ func resourceKubernetesIngressV1Read(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -252,7 +252,7 @@ func resourceKubernetesIngressV1Read(ctx context.Context, d *schema.ResourceData
 	ing, err := conn.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		log.Printf("[DEBUG] Received error: %#v", err)
-		return diag.Errorf("Failed to read Ingress '%s' because: %s", buildId(ing.ObjectMeta), err)
+		return diag.Errorf("Failed to read Ingress '%s' because: %s", BuildId(ing.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Received ingress: %#v", ing)
 	err = d.Set("metadata", flattenMetadata(ing.ObjectMeta, d, meta))
@@ -289,7 +289,7 @@ func resourceKubernetesIngressV1Update(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	namespace, _, err := idParts(d.Id())
+	namespace, _, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -308,7 +308,7 @@ func resourceKubernetesIngressV1Update(ctx context.Context, d *schema.ResourceDa
 
 	out, err := conn.NetworkingV1().Ingresses(namespace).Update(ctx, ingress, metav1.UpdateOptions{})
 	if err != nil {
-		return diag.Errorf("Failed to update Ingress %s because: %s", buildId(ingress.ObjectMeta), err)
+		return diag.Errorf("Failed to update Ingress %s because: %s", BuildId(ingress.ObjectMeta), err)
 	}
 	log.Printf("[INFO] Submitted updated ingress: %#v", out)
 
@@ -321,7 +321,7 @@ func resourceKubernetesIngressV1Delete(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -360,7 +360,7 @@ func resourceKubernetesIngressV1Exists(ctx context.Context, d *schema.ResourceDa
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

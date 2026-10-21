@@ -136,7 +136,7 @@ func resourceKubernetesReplicationControllerV1Create(ctx context.Context, d *sch
 		return diag.Errorf("Failed to create replication controller: %s", err)
 	}
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	log.Printf("[DEBUG] Waiting for replication controller %s to schedule %d replicas",
 		d.Id(), *out.Spec.Replicas)
@@ -169,7 +169,7 @@ func resourceKubernetesReplicationControllerV1Read(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -206,7 +206,7 @@ func resourceKubernetesReplicationControllerV1Update(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -250,7 +250,7 @@ func resourceKubernetesReplicationControllerV1Delete(ctx context.Context, d *sch
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -315,7 +315,7 @@ func resourceKubernetesReplicationControllerV1Exists(ctx context.Context, d *sch
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

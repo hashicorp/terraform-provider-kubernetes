@@ -101,7 +101,7 @@ func resourceKubernetesServiceAccountV1Create(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new service account: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	secret, err := getServiceAccountDefaultSecretV1(ctx, out.Name, svcAcc, d.Timeout(schema.TimeoutCreate), conn)
 	if err != nil {
@@ -134,7 +134,7 @@ func getServiceAccountDefaultSecretV1(ctx context.Context, name string, config c
 
 		if len(resp.Secrets) == len(config.Secrets) {
 			log.Printf("[DEBUG] Configuration contains %d secrets, saw %d, expected %d", len(config.Secrets), len(resp.Secrets), len(config.Secrets)+1)
-			return retry.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", buildId(resp.ObjectMeta)))
+			return retry.RetryableError(fmt.Errorf("Waiting for default secret of %q to appear", BuildId(resp.ObjectMeta)))
 		}
 
 		diff := diffObjectReferences(config.Secrets, resp.Secrets)
@@ -265,7 +265,7 @@ func resourceKubernetesServiceAccountV1Read(ctx context.Context, d *schema.Resou
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -321,7 +321,7 @@ func resourceKubernetesServiceAccountV1Update(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -360,7 +360,7 @@ func resourceKubernetesServiceAccountV1Update(ctx context.Context, d *schema.Res
 		return diag.Errorf("Failed to update service account: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated service account: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesServiceAccountV1Read(ctx, d, meta)
 }
@@ -371,7 +371,7 @@ func resourceKubernetesServiceAccountV1Delete(ctx context.Context, d *schema.Res
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -397,7 +397,7 @@ func resourceKubernetesServiceAccountV1Exists(ctx context.Context, d *schema.Res
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}
@@ -421,7 +421,7 @@ func resourceKubernetesServiceAccountV1ImportState(ctx context.Context, d *schem
 
 	var namespace, name string
 	if d.Id() != "" {
-		namespace, name, err = idParts(d.Id())
+		namespace, name, err = IdParts(d.Id())
 		if err != nil {
 			return nil, fmt.Errorf("Unable to parse identifier %s: %s", d.Id(), err)
 		}
@@ -457,7 +457,7 @@ func resourceKubernetesServiceAccountV1ImportState(ctx context.Context, d *schem
 		return nil, fmt.Errorf("Unable to set default_secret_name: %s", err)
 	}
 
-	d.SetId(buildId(sa.ObjectMeta))
+	d.SetId(BuildId(sa.ObjectMeta))
 
 	return []*schema.ResourceData{d}, nil
 }

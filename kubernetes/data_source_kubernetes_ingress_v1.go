@@ -159,7 +159,7 @@ func dataSourceKubernetesIngressV1Read(ctx context.Context, d *schema.ResourceDa
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading ingress %s", metadata.Name)
 	ing, err := conn.NetworkingV1().Ingresses(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

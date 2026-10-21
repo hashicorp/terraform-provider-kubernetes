@@ -59,7 +59,7 @@ func dataSourceKubernetesSecretV1Read(ctx context.Context, d *schema.ResourceDat
 		Namespace: metadata.Namespace,
 		Name:      metadata.Name,
 	}
-	d.SetId(buildId(om))
+	d.SetId(BuildId(om))
 
 	log.Printf("[INFO] Reading secret %s", metadata.Name)
 	secret, err := conn.CoreV1().Secrets(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})

@@ -354,7 +354,7 @@ func resourceKubernetesServiceV1Create(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 	log.Printf("[INFO] Submitted new service: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	if out.Spec.Type == corev1.ServiceTypeLoadBalancer && d.Get("wait_for_load_balancer").(bool) {
 		log.Printf("[DEBUG] Waiting for load balancer to assign IP/hostname")
@@ -402,7 +402,7 @@ func resourceKubernetesServiceV1Read(ctx context.Context, d *schema.ResourceData
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -448,7 +448,7 @@ func resourceKubernetesServiceV1Update(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -472,7 +472,7 @@ func resourceKubernetesServiceV1Update(ctx context.Context, d *schema.ResourceDa
 		return diag.Errorf("Failed to update service: %s", err)
 	}
 	log.Printf("[INFO] Submitted updated service: %#v", out)
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	return resourceKubernetesServiceV1Read(ctx, d, meta)
 }
@@ -483,7 +483,7 @@ func resourceKubernetesServiceV1Delete(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -525,7 +525,7 @@ func resourceKubernetesServiceV1Exists(ctx context.Context, d *schema.ResourceDa
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

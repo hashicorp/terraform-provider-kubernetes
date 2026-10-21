@@ -75,7 +75,7 @@ func resourceKubernetesSecretV1Data() *schema.Resource {
 func resourceKubernetesSecretV1DataCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	metadata := expandMetadata(d.Get("metadata").([]any))
 	// Sets the resource id based on the metadata
-	d.SetId(buildId(metadata))
+	d.SetId(BuildId(metadata))
 
 	//Calling the update function ensuring resource config is correct
 	diag := resourceKubernetesSecretV1DataUpdate(ctx, d, m)
@@ -92,7 +92,7 @@ func resourceKubernetesSecretV1DataRead(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}

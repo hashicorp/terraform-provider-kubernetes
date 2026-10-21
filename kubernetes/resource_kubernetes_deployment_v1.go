@@ -253,7 +253,7 @@ func resourceKubernetesDeploymentV1Create(ctx context.Context, d *schema.Resourc
 		return diag.Errorf("Failed to create deployment: %s", err)
 	}
 
-	d.SetId(buildId(out.ObjectMeta))
+	d.SetId(BuildId(out.ObjectMeta))
 
 	log.Printf("[DEBUG] Waiting for deployment %s to schedule %d replicas", d.Id(), *out.Spec.Replicas)
 
@@ -277,7 +277,7 @@ func resourceKubernetesDeploymentV1Update(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -343,7 +343,7 @@ func resourceKubernetesDeploymentV1Read(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -385,7 +385,7 @@ func resourceKubernetesDeploymentV1Delete(ctx context.Context, d *schema.Resourc
 		return diag.FromErr(err)
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -428,7 +428,7 @@ func resourceKubernetesDeploymentV1Exists(ctx context.Context, d *schema.Resourc
 		return false, err
 	}
 
-	namespace, name, err := idParts(d.Id())
+	namespace, name, err := IdParts(d.Id())
 	if err != nil {
 		return false, err
 	}

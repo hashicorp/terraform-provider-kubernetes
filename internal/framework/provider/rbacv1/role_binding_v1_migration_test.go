@@ -22,8 +22,6 @@ package rbacv1_test
 // ---------------------------------------------------------------------------
 
 import (
-	"context"
-	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -31,10 +29,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // migratedRoleBindingProviderVersion is the last released version that ships
@@ -64,7 +58,7 @@ func roleBindingMigrationTestCase(t *testing.T, config string, extraChecks ...re
 
 	steps := roleBindingMigrationSteps(config)
 	steps[0].Check = resource.ComposeAggregateTestCheckFunc(extraChecks...)
-	resource.ParallelTest(t, resource.TestCase{Steps: steps})
+	resource.ParallelTest(t, resource.TestCase{CheckDestroy: testAccRoleBindingCheckDestroy, Steps: steps})
 }
 
 // frameworkChecks run after both Framework steps, independently of SDKv2 checks.
@@ -105,6 +99,7 @@ func TestAccMigrateRoleBinding_basic(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: releasedRoleBindingProvider(),
@@ -173,30 +168,8 @@ func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
 	}
 	steps[2].ConfigPlanChecks.PreApply = []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}
 	resource.ParallelTest(t, resource.TestCase{
-		Steps: steps,
-		CheckDestroy: func(_ *terraform.State) error {
-			metaFunc, err := sdkv2providerMeta()
-			if err != nil {
-				return err
-			}
-			meta := metaFunc()
-			clients, ok := meta.(kubernetes.KubeClientsets)
-			if !ok {
-				return fmt.Errorf("expected kubernetes.KubeClientsets, got %T", meta)
-			}
-			client, err := clients.MainClientset()
-			if err != nil {
-				return err
-			}
-			_, err = client.RbacV1().RoleBindings("default").Get(context.Background(), name, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-			return fmt.Errorf("RoleBinding default/%s still exists after destroy", name)
-		},
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		Steps:        steps,
 	})
 }
 

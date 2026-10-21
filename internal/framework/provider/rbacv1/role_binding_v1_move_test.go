@@ -6,72 +6,51 @@ package rbacv1_test
 // ---------------------------------------------------------------------------
 // MoveState tests for kubernetes_role_binding_v1.
 //
-// This file is the single home for all MoveState coverage — the mechanism that
-// lets practitioners migrate from the deprecated kubernetes_role_binding
-// (SDKv2) resource to kubernetes_role_binding_v1 (Framework) using a
-// moved { } block:
+// Cover migrating from the deprecated kubernetes_role_binding (SDKv2) resource
+// to kubernetes_role_binding_v1 (Framework) with a moved block:
 //
 //	moved {
 //	  from = kubernetes_role_binding.example
 //	  to   = kubernetes_role_binding_v1.example
 //	}
 //
-// It contains two families of tests that describe the same state shapes and so
-// cannot drift apart:
-//
-//   - Acceptance tests (TestAccMoveRoleBinding_*) drive real Terraform: they
-//     create state with the released SDKv2 provider, add a moved block, switch
-//     to the local Framework provider, and assert an empty post-move plan.
-//   - Unit tests (TestMigration_MoveState_*) call the MoveState handler
-//     directly with raw SDKv2 JSON and assert the translated model field by
-//     field. These were relocated here from role_binding_v1_migration_test.go
-//     so that every MoveState test lives together.
-//
-// Correspondence between the two families (see requirement: every migration
-// scenario has a matching MoveState test):
-//
-//	Acceptance test                        Unit test
-//	──────────────────────────────────────────────────────────────────────────
-//	TestAccMoveRoleBinding_basic           TestMigration_MoveState_basic
-//	                                        TestMigration_MoveState_emptyGenerateName
-//	                                        TestMigration_MoveState_emptyMapsAreNil
-//	TestAccMoveRoleBinding_generateName    TestMigration_MoveState_nonEmptyGenerateName
-//	TestAccMoveRoleBinding_multipleSubjects TestMigration_MoveState_multipleSubjects
-//	TestAccMoveRoleBinding_clusterRoleRef  TestMigration_MoveState_clusterRoleRef
-//
-// The remaining unit tests are guard cases (handler wiring and early-return
-// safety) with no state shape to reproduce at the acceptance level:
-// TestMigration_MoveState_handlersRegistered,
-// TestMigration_MoveState_wrongSourceTypeIsIgnored,
-// TestMigration_MoveState_wrongProviderAddressIsIgnored,
-// TestMigration_MoveState_wrongSchemaVersionIsIgnored,
-// TestMigration_MoveState_nilRawStateIsIgnored.
+// Acceptance tests (TestAccMoveRoleBinding_*) create state with the released
+// SDKv2 provider, add a moved block, switch to the local Framework provider,
+// and assert an empty post-move plan. TestRoleBindingMoveState calls the
+// handler directly for paths Terraform cannot reach, following
+// TestRoleMoveState and TestNamespaceMoveState.
 // ---------------------------------------------------------------------------
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	rbacv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
 // TestAccMoveRoleBinding_basic verifies that a binding created as
 // kubernetes_role_binding can be moved to kubernetes_role_binding_v1 via a
-// moved block with no diff. Corresponds to TestMigration_MoveState_basic.
+// moved block with no diff.
 func TestAccMoveRoleBinding_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
@@ -140,11 +119,12 @@ func TestAccMoveRoleBinding_basic(t *testing.T) {
 
 // TestAccMoveRoleBinding_generateName verifies that a binding created with
 // metadata.generate_name can be moved to kubernetes_role_binding_v1 via a
-// moved block with no diff. Corresponds to TestMigration_MoveState_nonEmptyGenerateName.
+// moved block with no diff.
 func TestAccMoveRoleBinding_generateName(t *testing.T) {
 	prefix := "tf-acc-rb-"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
@@ -202,11 +182,12 @@ func TestAccMoveRoleBinding_generateName(t *testing.T) {
 
 // TestAccMoveRoleBinding_multipleSubjects verifies that a binding with all
 // three subject types (User, ServiceAccount, Group) can be moved via a moved
-// block with no diff. Corresponds to TestMigration_MoveState_multipleSubjects.
+// block with no diff.
 func TestAccMoveRoleBinding_multipleSubjects(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
@@ -268,11 +249,11 @@ func TestAccMoveRoleBinding_multipleSubjects(t *testing.T) {
 
 // TestAccMoveRoleBinding_clusterRoleRef verifies that a RoleBinding referencing
 // a ClusterRole can be moved via a moved block with no diff.
-// Corresponds to TestMigration_MoveState_clusterRoleRef.
 func TestAccMoveRoleBinding_clusterRoleRef(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_8_0),
 		},
@@ -322,6 +303,44 @@ func TestAccMoveRoleBinding_clusterRoleRef(t *testing.T) {
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
+				},
+			},
+		},
+	})
+}
+
+// TestAccMoveRoleBinding_identity verifies that after a moved block the
+// Framework resource has a complete identity and no plan diff. Terraform
+// refreshes during apply and Read also sets identity, so this checks the
+// end result rather than MoveState's TargetIdentity in isolation. Kept separate
+// because identity requires Terraform 1.12, while the other move tests run
+// from 1.8.
+func TestAccMoveRoleBinding_identity(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"kubernetes": {
+						Source:            "hashicorp/kubernetes",
+						VersionConstraint: "3.2.1",
+					},
+				},
+				Config: testAccKubernetesRoleBindingConfig_deprecatedType(name),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccKubernetesRoleBindingConfig_movedToV1(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					testAccRoleBindingExpectIdentity("kubernetes_role_binding_v1.test", name),
 				},
 			},
 		},
@@ -577,458 +596,143 @@ resource "kubernetes_role_binding_v1" "test" {
 `, name)
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-// sdkv2RawJSON produces raw JSON bytes that mirror what the SDKv2 provider
-// writes into terraform.tfstate for kubernetes_role_binding.
-func sdkv2RawJSON(
-	id, name, generateName, namespace string,
-	annotations, labels map[string]string,
-	resourceVersion, uid string,
-	generation int,
-	roleRefAPIGroup, roleRefKind, roleRefName string,
-	subjects []map[string]string,
-) []byte {
-	meta := map[string]interface{}{
-		"name":             name,
-		"generate_name":    generateName,
-		"namespace":        namespace,
-		"resource_version": resourceVersion,
-		"uid":              uid,
-		"generation":       generation,
-		"annotations":      annotations,
-		"labels":           labels,
+// TestRoleBindingMoveState covers MoveState paths acceptance tests cannot
+// reach: early returns for other sources, malformed source state, null versus
+// empty maps, and the target identity.
+func TestRoleBindingMoveState(t *testing.T) {
+	ctx := context.Background()
+	r := &rbacv1.RoleBindingV1{}
+	var schema frameworkresource.SchemaResponse
+	r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
+	identitySchema := common.NamespacedIdentitySchema()
+	movers := r.MoveState(ctx)
+	if len(movers) != 1 {
+		t.Fatalf("expected 1 state mover, got %d", len(movers))
 	}
+	valid := `{"id":"team/reader","metadata":[{"name":"reader","namespace":"team","uid":"retained","resource_version":"42","generation":3,"labels":{},"annotations":null,"generate_name":""}],` +
+		`"role_ref":[{"api_group":"rbac.authorization.k8s.io","kind":"Role","name":"reader"}],` +
+		`"subject":[{"api_group":"rbac.authorization.k8s.io","kind":"User","name":"alice","namespace":""},` +
+		`{"api_group":"","kind":"ServiceAccount","name":"builder","namespace":"kube-system"},` +
+		`{"api_group":"rbac.authorization.k8s.io","kind":"Group","name":"devs","namespace":""}]}`
+	for _, tc := range []struct {
+		name, sourceType, provider, raw string
+		version                         int64
+		wantError, wantSkip, noIdentity bool
+		wantDetail                      string
+		nullLabels, emptyAnnotations    bool
+		wantGenerateName                string
+		wantRoleRefKind                 string
+	}{
+		{name: "valid", raw: valid},
+		{name: "bothNullMaps", raw: strings.Replace(valid, `"labels":{}`, `"labels":null`, 1), nullLabels: true},
+		{name: "bothEmptyMaps", raw: strings.Replace(valid, `"annotations":null`, `"annotations":{}`, 1), emptyAnnotations: true},
+		{name: "omittedMaps", raw: strings.ReplaceAll(strings.ReplaceAll(valid, `"labels":{},`, ""), `"annotations":null,`, ""), nullLabels: true},
+		{name: "generatedName", raw: strings.Replace(valid, `"generate_name":""`, `"generate_name":"reader-"`, 1), wantGenerateName: "reader-"},
+		{name: "clusterRoleRef", raw: strings.Replace(valid, `"kind":"Role","name":"reader"`, `"kind":"ClusterRole","name":"reader"`, 1), wantRoleRefKind: "ClusterRole"},
+		{name: "withoutTargetIdentity", raw: valid, noIdentity: true},
+		{name: "privateRegistry", provider: "registry.example.com/hashicorp/kubernetes", raw: valid},
+		{name: "wrongType", sourceType: "kubernetes_cluster_role_binding", raw: valid, wantSkip: true},
+		{name: "wrongProvider", provider: "registry.terraform.io/example/kubernetes", raw: valid, wantSkip: true},
+		{name: "lookalikeProvider", provider: "registry.example.com/nothashicorp/kubernetes", raw: valid, wantSkip: true},
+		{name: "wrongVersion", version: 1, raw: valid, wantSkip: true},
+		{name: "missingJSON", wantSkip: true},
+		{name: "malformedJSON", raw: "{", wantError: true},
+		{name: "missingMetadata", raw: `{"id":"team/reader","role_ref":[{}]}`, wantError: true, wantDetail: "expected exactly 1 metadata element in source state, got 0"},
+		{name: "multipleMetadata", raw: `{"id":"team/reader","metadata":[{},{}],"role_ref":[{}]}`, wantError: true, wantDetail: "expected exactly 1 metadata element in source state, got 2"},
+		{name: "missingRoleRef", raw: `{"id":"team/reader","metadata":[{}]}`, wantError: true, wantDetail: "expected exactly 1 role_ref element in source state, got 0"},
+		{name: "emptyID", raw: `{"metadata":[{}],"role_ref":[{}]}`, wantError: true, wantDetail: "empty 'id' in source state"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := frameworkresource.MoveStateRequest{
+				SourceTypeName: "kubernetes_role_binding", SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
+				SourceSchemaVersion: tc.version,
+			}
+			if tc.sourceType != "" {
+				req.SourceTypeName = tc.sourceType
+			}
+			if tc.provider != "" {
+				req.SourceProviderAddress = tc.provider
+			}
+			if tc.raw != "" {
+				req.SourceRawState = &tfprotov6.RawState{JSON: []byte(tc.raw)}
+			}
+			resp := frameworkresource.MoveStateResponse{
+				TargetState: tfsdk.State{Schema: schema.Schema, Raw: tftypes.NewValue(schema.Schema.Type().TerraformType(ctx), nil)},
+			}
+			if !tc.noIdentity {
+				resp.TargetIdentity = &tfsdk.ResourceIdentity{Schema: identitySchema, Raw: tftypes.NewValue(identitySchema.Type().TerraformType(ctx), nil)}
+			}
+			movers[0].StateMover(ctx, req, &resp)
+			if resp.Diagnostics.HasError() != tc.wantError {
+				t.Fatalf("diagnostics: %v", resp.Diagnostics)
+			}
+			if tc.wantDetail != "" && (len(resp.Diagnostics) != 1 || resp.Diagnostics[0].Detail() != tc.wantDetail) {
+				t.Fatalf("expected diagnostic detail %q, got %v", tc.wantDetail, resp.Diagnostics)
+			}
+			if tc.wantError || tc.wantSkip {
+				if !resp.TargetState.Raw.IsNull() {
+					t.Fatal("unexpected target state")
+				}
+				if resp.TargetIdentity != nil && !resp.TargetIdentity.Raw.IsNull() {
+					t.Fatal("unexpected target identity")
+				}
+				return
+			}
 
-	roleRef := []interface{}{
-		map[string]interface{}{
-			"api_group": roleRefAPIGroup,
-			"kind":      roleRefKind,
-			"name":      roleRefName,
-		},
-	}
+			var state rbacv1.RoleBindingModel
+			if diags := resp.TargetState.Get(ctx, &state); diags.HasError() {
+				t.Fatal(diags)
+			}
+			meta := state.Metadata[0]
+			if state.ID.ValueString() != "team/reader" || meta.Name.ValueString() != "reader" || meta.Namespace.ValueString() != "team" ||
+				meta.UID.ValueString() != "retained" || meta.ResourceVersion.ValueString() != "42" || meta.Generation.ValueInt64() != 3 ||
+				meta.Annotations.IsNull() == tc.emptyAnnotations || meta.Labels.IsNull() != tc.nullLabels {
+				t.Fatalf("incorrect metadata: %#v", state)
+			}
+			if tc.wantGenerateName != "" {
+				if meta.GenerateName.ValueString() != tc.wantGenerateName {
+					t.Fatalf("generate_name = %v, want %q", meta.GenerateName, tc.wantGenerateName)
+				}
+			} else if !meta.GenerateName.IsNull() {
+				t.Fatal("unset generate_name must normalize to null")
+			}
+			wantRoleRefKind := "Role"
+			if tc.wantRoleRefKind != "" {
+				wantRoleRefKind = tc.wantRoleRefKind
+			}
+			if len(state.RoleRef) != 1 || state.RoleRef[0].Kind.ValueString() != wantRoleRefKind ||
+				state.RoleRef[0].Name.ValueString() != "reader" || state.RoleRef[0].APIGroup.ValueString() != "rbac.authorization.k8s.io" {
+				t.Fatalf("incorrect role_ref: %#v", state.RoleRef)
+			}
+			wantSubjects := []rbacv1.SubjectModel{
+				{APIGroup: types.StringValue("rbac.authorization.k8s.io"), Kind: types.StringValue("User"), Name: types.StringValue("alice"), Namespace: types.StringValue("")},
+				{APIGroup: types.StringValue(""), Kind: types.StringValue("ServiceAccount"), Name: types.StringValue("builder"), Namespace: types.StringValue("kube-system")},
+				{APIGroup: types.StringValue("rbac.authorization.k8s.io"), Kind: types.StringValue("Group"), Name: types.StringValue("devs"), Namespace: types.StringValue("")},
+			}
+			if len(state.Subject) != len(wantSubjects) {
+				t.Fatalf("subject count = %d, want %d", len(state.Subject), len(wantSubjects))
+			}
+			for i, want := range wantSubjects {
+				if state.Subject[i] != want {
+					t.Fatalf("subject[%d] = %#v, want %#v", i, state.Subject[i], want)
+				}
+			}
 
-	subjectList := make([]interface{}, 0, len(subjects))
-	for _, s := range subjects {
-		subjectList = append(subjectList, map[string]interface{}{
-			"api_group": s["api_group"],
-			"kind":      s["kind"],
-			"name":      s["name"],
-			"namespace": s["namespace"],
+			if tc.noIdentity {
+				return
+			}
+			var identity common.NamespacedResourceIdentity
+			if diags := resp.TargetIdentity.Get(ctx, &identity); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if identity.Kind.ValueString() != "RoleBinding" || identity.APIVersion.ValueString() != "rbac.authorization.k8s.io/v1" ||
+				identity.Name.ValueString() != "reader" || identity.Namespace.ValueString() != "team" {
+				t.Fatalf("identity: %#v", identity)
+			}
 		})
 	}
-
-	state := map[string]interface{}{
-		"id":       id,
-		"metadata": []interface{}{meta},
-		"role_ref": roleRef,
-		"subject":  subjectList,
-	}
-	raw, _ := json.Marshal(state)
-	return raw
-}
-
-// runMoveStateWithReq calls the MoveState handler with a full MoveStateRequest.
-func runMoveStateWithReq(t *testing.T, req frameworkresource.MoveStateRequest) *frameworkresource.MoveStateResponse {
-	t.Helper()
-	r := rbacv1.NewRoleBindingV1()
-	movers := r.(interface {
-		MoveState(context.Context) []frameworkresource.StateMover
-	}).MoveState(context.Background())
-
-	if len(movers) == 0 {
-		t.Fatal("expected at least 1 StateMover")
-	}
-
-	resp := &frameworkresource.MoveStateResponse{
-		TargetState: tfsdk.State{Schema: rbacv1.RoleBindingV1Schema()},
-	}
-	movers[0].StateMover(context.Background(), req, resp)
-	return resp
-}
-
-// runMoveState calls the MoveState handler with the given source type and raw JSON,
-// using default provider address ("hashicorp/kubernetes") and schema version (0).
-func runMoveState(t *testing.T, sourceTypeName string, rawJSON []byte) *frameworkresource.MoveStateResponse {
-	t.Helper()
-	var rawState *tfprotov6.RawState
-	if rawJSON != nil {
-		rawState = &tfprotov6.RawState{JSON: rawJSON}
-	}
-	req := frameworkresource.MoveStateRequest{
-		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
-		SourceTypeName:        sourceTypeName,
-		SourceSchemaVersion:   0,
-		SourceRawState:        rawState,
-	}
-	return runMoveStateWithReq(t, req)
-}
-
-// readMovedModel reads the moved RoleBindingModel out of resp.TargetState.
-func readMovedModel(t *testing.T, resp *frameworkresource.MoveStateResponse) rbacv1.RoleBindingModel {
-	t.Helper()
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("move state produced errors: %s", resp.Diagnostics)
-	}
-	var m rbacv1.RoleBindingModel
-	resp.Diagnostics.Append(resp.TargetState.Get(context.Background(), &m)...)
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("reading moved state: %s", resp.Diagnostics)
-	}
-	return m
-}
-
-// ── MoveState tests ───────────────────────────────────────────────────────────
-
-// TestMigration_MoveState_handlersRegistered verifies the StateMover is wired
-// up — a compile-time regression guard.
-func TestMigration_MoveState_handlersRegistered(t *testing.T) {
-	t.Parallel()
-	r := rbacv1.NewRoleBindingV1()
-	movers := r.(interface {
-		MoveState(context.Context) []frameworkresource.StateMover
-	}).MoveState(context.Background())
-
-	if len(movers) == 0 {
-		t.Error("expected at least 1 StateMover registered")
-	}
-}
-
-// TestMigration_MoveState_basic verifies the core translation from
-// kubernetes_role_binding raw JSON state to RoleBindingModel.
-func TestMigration_MoveState_basic(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/my-binding",
-		"my-binding", "", "default",
-		map[string]string{"example.com/note": "test"},
-		map[string]string{"managed-by": "terraform"},
-		"567273", "a6da86ec-b80d-44c0-9007-aafa4d982d4a", 1,
-		"rbac.authorization.k8s.io", "Role", "pod-reader",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
-		},
-	)
-
-	resp := runMoveState(t, "kubernetes_role_binding", raw)
-	got := readMovedModel(t, resp)
-
-	if got.ID.ValueString() != "default/my-binding" {
-		t.Errorf("id: got %q, want default/my-binding", got.ID.ValueString())
-	}
-	if len(got.Metadata) != 1 {
-		t.Fatalf("metadata: got %d elements, want 1", len(got.Metadata))
-	}
-	if got.Metadata[0].Name.ValueString() != "my-binding" {
-		t.Errorf("name: got %q, want my-binding", got.Metadata[0].Name.ValueString())
-	}
-	if got.Metadata[0].Namespace.ValueString() != "default" {
-		t.Errorf("namespace: got %q, want default", got.Metadata[0].Namespace.ValueString())
-	}
-	if len(got.RoleRef) != 1 {
-		t.Fatalf("role_ref: got %d elements, want 1", len(got.RoleRef))
-	}
-	if got.RoleRef[0].Kind.ValueString() != "Role" {
-		t.Errorf("role_ref.kind: got %q, want Role", got.RoleRef[0].Kind.ValueString())
-	}
-	if got.RoleRef[0].Name.ValueString() != "pod-reader" {
-		t.Errorf("role_ref.name: got %q, want pod-reader", got.RoleRef[0].Name.ValueString())
-	}
-	if len(got.Subject) != 1 {
-		t.Fatalf("subject: got %d elements, want 1", len(got.Subject))
-	}
-	if got.Subject[0].Name.ValueString() != "alice" {
-		t.Errorf("subject[0].name: got %q, want alice", got.Subject[0].Name.ValueString())
-	}
-	// Annotations and Labels are now types.Map; extract elements to check values.
-	annotationElems := got.Metadata[0].Annotations.Elements()
-	if v, ok := annotationElems["example.com/note"]; !ok {
-		t.Error("annotation 'example.com/note' missing")
-	} else if s, ok := v.(interface{ ValueString() string }); !ok || s.ValueString() != "test" {
-		t.Errorf("annotation: got %v, want test", v)
-	}
-	labelElems := got.Metadata[0].Labels.Elements()
-	if v, ok := labelElems["managed-by"]; !ok {
-		t.Error("label 'managed-by' missing")
-	} else if s, ok := v.(interface{ ValueString() string }); !ok || s.ValueString() != "terraform" {
-		t.Errorf("label: got %v, want terraform", v)
-	}
-}
-
-// TestMigration_MoveState_emptyGenerateName verifies that an empty string
-// generate_name from SDKv2 is normalised to null to prevent plan drift.
-func TestMigration_MoveState_emptyGenerateName(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/my-binding", "my-binding", "" /* empty generate_name */, "default",
-		nil, nil, "1", "uid-1", 0,
-		"rbac.authorization.k8s.io", "Role", "admin",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "bob", "namespace": "default"},
-		},
-	)
-
-	resp := runMoveState(t, "kubernetes_role_binding", raw)
-	got := readMovedModel(t, resp)
-
-	if !got.Metadata[0].GenerateName.IsNull() {
-		t.Errorf("generate_name: expected null for empty string, got %q",
-			got.Metadata[0].GenerateName.ValueString())
-	}
-}
-
-// TestMigration_MoveState_nonEmptyGenerateName verifies that a set
-// generate_name is preserved after the move.
-func TestMigration_MoveState_nonEmptyGenerateName(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/rb-gen-xk9p2", "rb-gen-xk9p2", "rb-gen-", "default",
-		nil, nil, "2", "uid-2", 0,
-		"rbac.authorization.k8s.io", "Role", "admin",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "carol", "namespace": "default"},
-		},
-	)
-
-	resp := runMoveState(t, "kubernetes_role_binding", raw)
-	got := readMovedModel(t, resp)
-
-	if got.Metadata[0].GenerateName.IsNull() {
-		t.Error("generate_name: expected non-null for 'rb-gen-', got null")
-	}
-	if got.Metadata[0].GenerateName.ValueString() != "rb-gen-" {
-		t.Errorf("generate_name: got %q, want rb-gen-",
-			got.Metadata[0].GenerateName.ValueString())
-	}
-}
-
-// TestMigration_MoveState_emptyMapsAreEmpty verifies that SDKv2 JSON `{}` maps for
-// annotations and labels are preserved as empty (zero-element, known) types.Map values,
-// not as null. SDKv2 stores `{}` when the user explicitly set annotations = {} or
-// labels = {}; the null/empty distinction must be preserved across the state move
-// so the Framework schema can produce an in-place update (not a perpetual diff).
-func TestMigration_MoveState_emptyMapsAreEmpty(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/my-binding", "my-binding", "", "default",
-		map[string]string{}, map[string]string{}, // SDKv2 stored {} (not null)
-		"1", "uid-3", 0,
-		"rbac.authorization.k8s.io", "Role", "admin",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "dave", "namespace": "default"},
-		},
-	)
-
-	resp := runMoveState(t, "kubernetes_role_binding", raw)
-	got := readMovedModel(t, resp)
-
-	// {} from SDKv2 → empty known types.Map (not null): the plan for a config that
-	// omits annotations/labels will show an in-place update, not a replacement.
-	if got.Metadata[0].Annotations.IsNull() {
-		t.Error("annotations: expected empty known map for SDKv2 {}, got null")
-	}
-	if got.Metadata[0].Annotations.IsUnknown() {
-		t.Error("annotations: expected empty known map for SDKv2 {}, got unknown")
-	}
-	if len(got.Metadata[0].Annotations.Elements()) != 0 {
-		t.Errorf("annotations: expected 0 elements for SDKv2 {}, got %d", len(got.Metadata[0].Annotations.Elements()))
-	}
-	if got.Metadata[0].Labels.IsNull() {
-		t.Error("labels: expected empty known map for SDKv2 {}, got null")
-	}
-	if got.Metadata[0].Labels.IsUnknown() {
-		t.Error("labels: expected empty known map for SDKv2 {}, got unknown")
-	}
-	if len(got.Metadata[0].Labels.Elements()) != 0 {
-		t.Errorf("labels: expected 0 elements for SDKv2 {}, got %d", len(got.Metadata[0].Labels.Elements()))
-	}
-}
-
-// TestMigration_MoveState_multipleSubjects verifies that all three subject
-// types (User, ServiceAccount, Group) are preserved correctly after the move.
-func TestMigration_MoveState_multipleSubjects(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/my-binding", "my-binding", "", "default",
-		nil, nil, "1", "uid-4", 0,
-		"rbac.authorization.k8s.io", "Role", "pod-reader",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
-			{"api_group": "", "kind": "ServiceAccount", "name": "default", "namespace": "kube-system"},
-			{"api_group": "rbac.authorization.k8s.io", "kind": "Group", "name": "dev-team", "namespace": "default"},
-		},
-	)
-
-	resp := runMoveState(t, "kubernetes_role_binding", raw)
-	got := readMovedModel(t, resp)
-
-	if len(got.Subject) != 3 {
-		t.Fatalf("subject: got %d elements, want 3", len(got.Subject))
-	}
-	if got.Subject[0].Kind.ValueString() != "User" {
-		t.Errorf("subject[0].kind: got %q, want User", got.Subject[0].Kind.ValueString())
-	}
-	if got.Subject[1].Kind.ValueString() != "ServiceAccount" {
-		t.Errorf("subject[1].kind: got %q, want ServiceAccount", got.Subject[1].Kind.ValueString())
-	}
-	if got.Subject[1].Namespace.ValueString() != "kube-system" {
-		t.Errorf("subject[1].namespace: got %q, want kube-system", got.Subject[1].Namespace.ValueString())
-	}
-	if got.Subject[2].Kind.ValueString() != "Group" {
-		t.Errorf("subject[2].kind: got %q, want Group", got.Subject[2].Kind.ValueString())
-	}
-}
-
-// TestMigration_MoveState_clusterRoleRef verifies that a ClusterRole reference
-// in role_ref is preserved correctly.
-func TestMigration_MoveState_clusterRoleRef(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/my-binding", "my-binding", "", "default",
-		nil, nil, "1", "uid-5", 0,
-		"rbac.authorization.k8s.io", "ClusterRole", "cluster-admin",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
-		},
-	)
-
-	resp := runMoveState(t, "kubernetes_role_binding", raw)
-	got := readMovedModel(t, resp)
-
-	if got.RoleRef[0].Kind.ValueString() != "ClusterRole" {
-		t.Errorf("role_ref.kind: got %q, want ClusterRole", got.RoleRef[0].Kind.ValueString())
-	}
-	if got.RoleRef[0].Name.ValueString() != "cluster-admin" {
-		t.Errorf("role_ref.name: got %q, want cluster-admin", got.RoleRef[0].Name.ValueString())
-	}
-}
-
-// TestMigration_MoveState_wrongSourceTypeIsIgnored verifies that the handler
-// returns early without error or writing any state when SourceTypeName does
-// not match "kubernetes_role_binding". This ensures the handler is safe to
-// call for any moved block in the configuration.
-func TestMigration_MoveState_wrongSourceTypeIsIgnored(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/some-other", "some-other", "", "default",
-		nil, nil, "1", "uid-6", 0,
-		"rbac.authorization.k8s.io", "Role", "admin",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
-		},
-	)
-
-	resp := runMoveState(t, "kubernetes_some_other_resource", raw)
-
-	// No errors expected — handler must silently return
-	if resp.Diagnostics.HasError() {
-		t.Errorf("expected no errors for unrecognised source type, got: %s",
-			resp.Diagnostics)
-	}
-
-	// TargetState must be empty — handler must not have written anything
-	var m rbacv1.RoleBindingModel
-	diags := resp.TargetState.Get(context.Background(), &m)
-	if !diags.HasError() && m.ID.ValueString() != "" {
-		t.Errorf("expected empty target state for unrecognised source type, got id=%q",
-			m.ID.ValueString())
-	}
-}
-
-// TestMigration_MoveState_wrongProviderAddressIsIgnored verifies that the handler
-// returns early without error or writing state when SourceProviderAddress does
-// not end with "hashicorp/kubernetes".
-func TestMigration_MoveState_wrongProviderAddressIsIgnored(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/my-binding", "my-binding", "", "default",
-		nil, nil, "1", "uid-7", 0,
-		"rbac.authorization.k8s.io", "Role", "admin",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
-		},
-	)
-
-	req := frameworkresource.MoveStateRequest{
-		SourceProviderAddress: "registry.terraform.io/other-org/other-provider",
-		SourceTypeName:        "kubernetes_role_binding",
-		SourceSchemaVersion:   0,
-		SourceRawState:        &tfprotov6.RawState{JSON: raw},
-	}
-	resp := runMoveStateWithReq(t, req)
-
-	if resp.Diagnostics.HasError() {
-		t.Errorf("expected no errors for wrong provider address, got: %s", resp.Diagnostics)
-	}
-
-	var m rbacv1.RoleBindingModel
-	diags := resp.TargetState.Get(context.Background(), &m)
-	if !diags.HasError() && m.ID.ValueString() != "" {
-		t.Errorf("expected empty target state for wrong provider address, got id=%q", m.ID.ValueString())
-	}
-}
-
-// TestMigration_MoveState_wrongSchemaVersionIsIgnored verifies that the handler
-// returns early without error or writing state when SourceSchemaVersion != 0.
-func TestMigration_MoveState_wrongSchemaVersionIsIgnored(t *testing.T) {
-	t.Parallel()
-
-	raw := sdkv2RawJSON(
-		"default/my-binding", "my-binding", "", "default",
-		nil, nil, "1", "uid-8", 0,
-		"rbac.authorization.k8s.io", "Role", "admin",
-		[]map[string]string{
-			{"api_group": "rbac.authorization.k8s.io", "kind": "User", "name": "alice", "namespace": "default"},
-		},
-	)
-
-	req := frameworkresource.MoveStateRequest{
-		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
-		SourceTypeName:        "kubernetes_role_binding",
-		SourceSchemaVersion:   1, // not 0
-		SourceRawState:        &tfprotov6.RawState{JSON: raw},
-	}
-	resp := runMoveStateWithReq(t, req)
-
-	if resp.Diagnostics.HasError() {
-		t.Errorf("expected no errors for wrong schema version, got: %s", resp.Diagnostics)
-	}
-
-	var m rbacv1.RoleBindingModel
-	diags := resp.TargetState.Get(context.Background(), &m)
-	if !diags.HasError() && m.ID.ValueString() != "" {
-		t.Errorf("expected empty target state for wrong schema version, got id=%q", m.ID.ValueString())
-	}
-}
-
-// TestMigration_MoveState_nilRawStateIsIgnored verifies that the handler
-// returns early without error or panic when SourceRawState is nil.
-func TestMigration_MoveState_nilRawStateIsIgnored(t *testing.T) {
-	t.Parallel()
-
-	req := frameworkresource.MoveStateRequest{
-		SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
-		SourceTypeName:        "kubernetes_role_binding",
-		SourceSchemaVersion:   0,
-		SourceRawState:        nil,
-	}
-	resp := runMoveStateWithReq(t, req)
-
-	if resp.Diagnostics.HasError() {
-		t.Errorf("expected no errors for nil raw state, got: %s", resp.Diagnostics)
-	}
-
-	var m rbacv1.RoleBindingModel
-	diags := resp.TargetState.Get(context.Background(), &m)
-	if !diags.HasError() && m.ID.ValueString() != "" {
-		t.Errorf("expected empty target state for nil raw state, got id=%q", m.ID.ValueString())
+	// Ensure the fixture itself is JSON, rather than testing a decode failure accidentally.
+	if !json.Valid([]byte(valid)) {
+		t.Fatal("invalid fixture")
 	}
 }

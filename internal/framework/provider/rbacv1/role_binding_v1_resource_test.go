@@ -4,15 +4,23 @@
 package rbacv1_test
 
 import (
+	"context"
 	"fmt"
-	"os/exec"
 	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	rbacv1 "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
@@ -28,6 +36,7 @@ func TestAccRoleBinding_basic(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -53,7 +62,6 @@ func TestAccRoleBinding_basic(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -67,6 +75,7 @@ func TestAccRoleBinding_update(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Step 1: create with single subject.
@@ -82,7 +91,6 @@ func TestAccRoleBinding_update(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 			// Step 2: add two more subjects and metadata — must be in-place update.
@@ -105,12 +113,16 @@ func TestAccRoleBinding_update(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
-			// Step 3: revert to basic — verify subjects removed cleanly.
+			// Step 3: revert to basic — subjects removed in-place, not replaced.
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
 					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.managed-by"),
@@ -122,7 +134,6 @@ func TestAccRoleBinding_update(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -136,6 +147,7 @@ func TestAccRoleBinding_generateName(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Step 1: create with generate_name
@@ -153,7 +165,6 @@ func TestAccRoleBinding_generateName(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 			// Step 2: update secondary field (labels) — must update in-place without replacement
@@ -175,7 +186,6 @@ func TestAccRoleBinding_generateName(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -189,6 +199,7 @@ func TestAccRoleBinding_saSubject(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -206,7 +217,6 @@ func TestAccRoleBinding_saSubject(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -219,6 +229,7 @@ func TestAccRoleBinding_groupSubject(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -236,7 +247,6 @@ func TestAccRoleBinding_groupSubject(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -251,6 +261,7 @@ func TestAccRoleBinding_emptySubjectNamespace(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -276,7 +287,6 @@ func TestAccRoleBinding_emptySubjectNamespace(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -290,6 +300,7 @@ func TestAccRoleBinding_emptyUserAPIGroup(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -316,6 +327,7 @@ func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -328,7 +340,6 @@ func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 			// Changing role_ref.kind must trigger destroy + create, not in-place update.
@@ -347,7 +358,6 @@ func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"metadata.0.resource_version",
-					"metadata.0.generation",
 				},
 			},
 		},
@@ -355,36 +365,252 @@ func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 }
 
 // TestAccRoleBinding_disappears verifies that if the RoleBinding is deleted
-// outside Terraform (e.g. kubectl delete), the next plan detects it is gone
-// and proposes to recreate it.
+// outside Terraform, the next refresh removes it from state (Read 404 →
+// RemoveResource), the plan proposes to recreate it, and re-applying converges.
 func TestAccRoleBinding_disappears(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1: create the resource.
+			// Create, then delete out-of-band; the post-apply refresh must
+			// remove the binding from state and plan a create.
+			{
+				Config: testAccRoleBindingV1Config_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
+					testAccRoleBindingDeleteOutOfBand(name),
+				),
+				ExpectNonEmptyPlan: true,
+			},
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
 				Check:  resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
 			},
-			// Step 2: delete out-of-band, then refresh state.
-			// RefreshState: true triggers a Read without applying config.
-			// Read returns 404 → provider calls RemoveResource → state cleared.
-			// The subsequent plan (ExpectNonEmptyPlan) then shows a create.
 			{
-				RefreshState:       true,
-				ExpectNonEmptyPlan: true,
-				PreConfig: func() {
-					_ = exec.Command(
-						"kubectl", "delete", "rolebinding", name,
-						"-n", "default", "--ignore-not-found",
-					).Run()
+				Config: testAccRoleBindingV1Config_basic(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
 		},
 	})
+}
+
+// TestAccRoleBinding_subjectReorder replays the SDKv2 _Bug sequence on the
+// Framework resource: removing subjects from the front and middle and
+// inserting at the front must update in place and converge with no drift.
+func TestAccRoleBinding_subjectReorder(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+
+	step := func(users ...string) resource.TestStep {
+		checks := []resource.TestCheckFunc{
+			resource.TestCheckResourceAttr(resourceName, "subject.#", strconv.Itoa(len(users))),
+		}
+		for i, user := range users {
+			checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("subject.%d.name", i), user))
+		}
+		return resource.TestStep{
+			Config: testAccRoleBindingV1Config_users(name, users...),
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+				PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+			},
+			Check: resource.ComposeAggregateTestCheckFunc(checks...),
+		}
+	}
+	create := step("notauser1", "notauser2", "notauser3")
+	create.ConfigPlanChecks.PreApply = nil
+
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			create,
+			step("notauser2", "notauser4"),
+			step("notauser0", "notauser1", "notauser2", "notauser3"),
+		},
+	})
+}
+
+// TestAccRoleBinding_computedAPIGroup verifies the Optional+Computed
+// subject.api_group path: subjects that omit api_group resolve it from the API
+// on create and on update, and a label-only update leaves subjects unchanged.
+func TestAccRoleBinding_computedAPIGroup(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+	inPlaceUpdate := resource.ConfigPlanChecks{
+		PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+		PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRoleBindingV1Config_serviceAccounts(name, "", "sa-a"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+			},
+			{
+				Config:           testAccRoleBindingV1Config_serviceAccounts(name, "", "sa-a", "sa-b"),
+				ConfigPlanChecks: inPlaceUpdate,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "subject.1.api_group", ""),
+				),
+			},
+			{
+				Config:           testAccRoleBindingV1Config_serviceAccounts(name, "team", "sa-a", "sa-b"),
+				ConfigPlanChecks: inPlaceUpdate,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "team"),
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+					resource.TestCheckResourceAttr(resourceName, "subject.1.api_group", ""),
+				),
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_noRefreshLabelUpdate reproduces the review scenario for
+// skipping unchanged subjects: a subject is removed outside Terraform, then a
+// label-only change is applied with -refresh=false. Update must patch only
+// metadata, as SDKv2 did when !d.HasChange("subject"), so the apply succeeds
+// and the out-of-band subject removal is left untouched.
+func TestAccRoleBinding_noRefreshLabelUpdate(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+	config := testAccRoleBindingV1Config_users(name, "notauser1", "notauser2")
+	labeled := strings.Replace(config, `namespace = "default"`, "namespace = \"default\"\n    labels = {\n      team = \"x\"\n    }", 1)
+
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		AdditionalCLIOptions: &resource.AdditionalCLIOptions{
+			Plan: resource.PlanOptions{NoRefresh: true},
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "2"),
+					testAccRoleBindingKeepOnlyFirstSubject(name),
+				),
+			},
+			{
+				Config: labeled,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "x"),
+					testAccRoleBindingCheckLive(name, "x", "notauser1"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_identity verifies identity after create and an import
+// block keyed by resource identity.
+func TestAccRoleBinding_identity(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:            testAccRoleBindingV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+			{
+				// Import blocks already assert a no-op plan and unchanged identity;
+				// plugin-testing only supports ImportStateVerify for CLI imports.
+				ResourceName:    resourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_identityImportDefaultNamespace verifies that an identity
+// import without namespace targets the default namespace.
+func TestAccRoleBinding_identityImportDefaultNamespace(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{Config: testAccRoleBindingV1Config_basic(name)},
+			// Use exact configuration so the harness cannot reuse the stored namespace.
+			{
+				ResourceName:           resourceName,
+				ImportState:            true,
+				ImportStateKind:        resource.ImportBlockWithResourceIdentity,
+				ImportStateConfigExact: true,
+				Config:                 testAccRoleBindingV1Config_identityImport(name, "RoleBinding", "rbac.authorization.k8s.io/v1"),
+			},
+			{
+				Config: testAccRoleBindingV1Config_basic(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_importInvalidIdentity verifies that an identity import
+// with the wrong kind or api_version is rejected.
+func TestAccRoleBinding_importInvalidIdentity(t *testing.T) {
+	for _, tc := range []struct{ name, kind, apiVersion string }{
+		{"wrongKind", "ClusterRoleBinding", "rbac.authorization.k8s.io/v1"},
+		{"wrongAPIVersion", "RoleBinding", "rbac.authorization.k8s.io/v1beta1"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := acctest.RandomWithPrefix("tf-acc-rb")
+			resource.ParallelTest(t, resource.TestCase{
+				CheckDestroy:             testAccRoleBindingCheckDestroy,
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_12_0),
+				},
+				Steps: []resource.TestStep{
+					{Config: testAccRoleBindingV1Config_basic(name)},
+					{
+						ResourceName:           "kubernetes_role_binding_v1.test",
+						ImportState:            true,
+						ImportStateKind:        resource.ImportBlockWithResourceIdentity,
+						ImportStateConfigExact: true,
+						Config:                 testAccRoleBindingV1Config_identityImport(name, tc.kind, tc.apiVersion),
+						ExpectError:            regexp.MustCompile("invalid identity import"),
+					},
+				},
+			})
+		})
+	}
 }
 
 // ── Validation Acceptance Tests (Plan-time checks) ────────────────────────────
@@ -505,7 +731,181 @@ func TestAccRoleBinding_validation_missingSubject(t *testing.T) {
 	})
 }
 
+// ── Check helpers ─────────────────────────────────────────────────────────────
+
+// testAccRoleBindingCheckDestroy verifies that every RoleBinding in state was
+// deleted from the cluster.
+func testAccRoleBindingCheckDestroy(state *terraform.State) error {
+	conn, err := testAccRoleClient()
+	if err != nil {
+		return err
+	}
+	for _, module := range state.Modules {
+		for _, rs := range module.Resources {
+			if rs.Type != "kubernetes_role_binding_v1" && rs.Type != "kubernetes_role_binding" {
+				continue
+			}
+			namespace, name, ok := strings.Cut(rs.Primary.ID, "/")
+			if !ok {
+				return fmt.Errorf("invalid RoleBinding ID %q", rs.Primary.ID)
+			}
+			_, err := conn.RbacV1().RoleBindings(namespace).Get(context.Background(), name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			if err != nil {
+				return fmt.Errorf("checking destruction of RoleBinding %q: %w", rs.Primary.ID, err)
+			}
+			return fmt.Errorf("RoleBinding %q still exists", rs.Primary.ID)
+		}
+	}
+	return nil
+}
+
+// testAccRoleBindingDeleteOutOfBand deletes the RoleBinding through the API,
+// simulating a deletion made outside Terraform.
+func testAccRoleBindingDeleteOutOfBand(name string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		conn, err := testAccRoleClient()
+		if err != nil {
+			return err
+		}
+		return conn.RbacV1().RoleBindings("default").Delete(context.Background(), name, metav1.DeleteOptions{})
+	}
+}
+
+// testAccRoleBindingKeepOnlyFirstSubject removes all but the first subject
+// through the API, simulating a change made outside Terraform.
+func testAccRoleBindingKeepOnlyFirstSubject(name string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		conn, err := testAccRoleClient()
+		if err != nil {
+			return err
+		}
+		rb, err := conn.RbacV1().RoleBindings("default").Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		rb.Subjects = rb.Subjects[:1]
+		_, err = conn.RbacV1().RoleBindings("default").Update(context.Background(), rb, metav1.UpdateOptions{})
+		return err
+	}
+}
+
+// testAccRoleBindingCheckLive verifies the live RoleBinding's team label and
+// subject names, independent of Terraform state.
+func testAccRoleBindingCheckLive(name, team string, subjects ...string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		conn, err := testAccRoleClient()
+		if err != nil {
+			return err
+		}
+		rb, err := conn.RbacV1().RoleBindings("default").Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if rb.Labels["team"] != team {
+			return fmt.Errorf("live label team = %q, want %q", rb.Labels["team"], team)
+		}
+		got := make([]string, 0, len(rb.Subjects))
+		for _, s := range rb.Subjects {
+			got = append(got, s.Name)
+		}
+		if strings.Join(got, ",") != strings.Join(subjects, ",") {
+			return fmt.Errorf("live subjects = %v, want %v", got, subjects)
+		}
+		return nil
+	}
+}
+
+func testAccRoleBindingExpectIdentity(resourceName, name string) statecheck.StateCheck {
+	return statecheck.ExpectIdentity(resourceName, map[string]knownvalue.Check{
+		"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
+		"kind":        knownvalue.StringExact("RoleBinding"),
+		"name":        knownvalue.StringExact(name),
+		"namespace":   knownvalue.StringExact("default"),
+	})
+}
+
 // ── HCL config helpers ────────────────────────────────────────────────────────
+
+// testAccRoleBindingV1Config_users binds the admin Role to one User subject
+// per name, in the given order.
+func testAccRoleBindingV1Config_users(name string, users ...string) string {
+	var subjects strings.Builder
+	for _, user := range users {
+		fmt.Fprintf(&subjects, `
+  subject {
+    kind      = "User"
+    name      = %q
+    api_group = "rbac.authorization.k8s.io"
+  }
+`, user)
+	}
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = "default"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+%s}
+`, name, subjects.String())
+}
+
+// testAccRoleBindingV1Config_serviceAccounts uses ServiceAccount subjects that
+// omit api_group, so the computed value comes from the API. A non-empty team
+// adds a "team" label.
+func testAccRoleBindingV1Config_serviceAccounts(name, team string, serviceAccounts ...string) string {
+	labels := ""
+	if team != "" {
+		labels = fmt.Sprintf("\n    labels = {\n      team = %q\n    }", team)
+	}
+	var subjects strings.Builder
+	for _, sa := range serviceAccounts {
+		fmt.Fprintf(&subjects, `
+  subject {
+    kind      = "ServiceAccount"
+    name      = %q
+    namespace = "default"
+  }
+`, sa)
+	}
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = "default"%s
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+%s}
+`, name, labels, subjects.String())
+}
+
+// testAccRoleBindingV1Config_identityImport adds an identity import block
+// without namespace, so ImportState must default it.
+func testAccRoleBindingV1Config_identityImport(name, kind, apiVersion string) string {
+	return testAccRoleBindingV1Config_basic(name) + fmt.Sprintf(`
+import {
+  to = kubernetes_role_binding_v1.test
+  identity = {
+    name        = %q
+    kind        = %q
+    api_version = %q
+  }
+}
+`, name, kind, apiVersion)
+}
 
 func testAccRoleBindingV1Config_basic(name string) string {
 	return fmt.Sprintf(`

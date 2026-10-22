@@ -1,3 +1,6 @@
+// Copyright IBM Corp. 2017, 2026
+// SPDX-License-Identifier: MPL-2.0
+
 package rbacv1
 
 import "github.com/hashicorp/terraform-plugin-framework/types"

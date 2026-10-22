@@ -61,7 +61,7 @@ func TestAccMoveClusterRoleBinding_basic(t *testing.T) {
 				// Step 2 — switch to the local Framework provider with a
 				// moved block renaming the resource type. The plan must be
 				// empty: MoveState copies state in place with no changes.
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -86,7 +86,7 @@ func TestAccMoveClusterRoleBinding_basic(t *testing.T) {
 			{
 				// Step 3 — idempotency after the move: plan must still be
 				// empty on the Framework provider.
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -121,7 +121,7 @@ func TestAccMoveClusterRoleBinding_complete_name(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -148,7 +148,7 @@ func TestAccMoveClusterRoleBinding_complete_name(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1MultiSubject(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -191,7 +191,7 @@ func TestAccMoveClusterRoleBinding_complete_generateName(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1GenerateName(prefix),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -214,7 +214,7 @@ func TestAccMoveClusterRoleBinding_complete_generateName(t *testing.T) {
 				),
 			},
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingConfig_movedToV1GenerateName(prefix),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{

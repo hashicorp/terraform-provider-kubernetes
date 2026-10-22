@@ -78,3 +78,28 @@ func flattenSubjects(in []api.Subject) []SubjectModel {
 	}
 	return subjects
 }
+
+// flattenSubjectsWithPrior is flattenSubjects for Read. It keeps a prior-state
+// api_group of "" when the API returns the canonical rbac.authorization.k8s.io for a
+// User or Group subject: the API server defaults an empty api_group for those kinds,
+// so the two values are equivalent and rewriting the configured "" would cause a
+// perpetual diff. SDKv2 avoided the diff the same way.
+func flattenSubjectsWithPrior(in []api.Subject, prior []SubjectModel) []SubjectModel {
+	result := flattenSubjects(in)
+	for i := range result {
+		if i >= len(prior) {
+			break
+		}
+		p := prior[i]
+		if p.APIGroup.IsNull() || p.APIGroup.IsUnknown() || p.APIGroup.ValueString() != "" {
+			continue
+		}
+		if p.Kind.ValueString() != in[i].Kind || p.Name.ValueString() != in[i].Name {
+			continue
+		}
+		if (in[i].Kind == api.UserKind || in[i].Kind == api.GroupKind) && in[i].APIGroup == api.GroupName {
+			result[i].APIGroup = types.StringValue("")
+		}
+	}
+	return result
+}

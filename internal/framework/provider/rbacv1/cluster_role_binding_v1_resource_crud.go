@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -48,9 +49,9 @@ func (r *ClusterRoleBinding) identity(name string) common.ResourceIdentity {
 	}
 }
 
-// applyState fully rebuilds a model from a fetched ClusterRoleBinding object,
+// applyState rebuilds a model from a fetched ClusterRoleBinding object for Read,
 // filtering internal and provider-ignored metadata keys that are not already
-// tracked in state. It is used by Read and ImportState.
+// tracked in state.
 func applyState(
 	ctx context.Context,
 	state *ClusterRoleBindingModel,
@@ -67,7 +68,7 @@ func applyState(
 
 	state.Metadata = metadata
 	state.RoleRef = flattenRoleRef(out.RoleRef)
-	state.Subject = flattenSubjects(out.Subjects)
+	state.Subject = flattenSubjectsWithPrior(out.Subjects, state.Subject)
 
 	return diags
 }
@@ -82,7 +83,12 @@ func applyPlanResult(
 	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
 	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	// Terraform requires the applied block count to match the plan, so extra API
+	// subjects are ignored here and surface as drift on the next Read.
 	for i := range plan.Subject {
+		if i >= len(out.Subjects) {
+			break
+		}
 		if plan.Subject[i].APIGroup.IsUnknown() {
 			plan.Subject[i].APIGroup = types.StringValue(out.Subjects[i].APIGroup)
 		}
@@ -154,6 +160,14 @@ func (r *ClusterRoleBinding) Read(ctx context.Context, req resource.ReadRequest,
 	name := state.ID.ValueString()
 	out, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
+		// Terraform before 1.12 does not send identity on refresh, but the
+		// framework still requires it when Read removes a missing resource.
+		if resp.Identity.Raw.IsNull() {
+			resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(name))...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -298,48 +312,26 @@ func (r *ClusterRoleBinding) Delete(ctx context.Context, req resource.DeleteRequ
 }
 
 func (r *ClusterRoleBinding) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	var name string
-	if req.ID != "" {
-		name = req.ID
-	} else {
+	name := req.ID
+	if name == "" {
 		var identityData common.ResourceIdentity
 		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
+		if identityData.Kind.ValueString() != clusterRoleBindingKind || identityData.APIVersion.ValueString() != clusterRoleBindingAPIVersion {
+			resp.Diagnostics.AddError("invalid identity import",
+				fmt.Sprintf("Expected kind %q and api_version %q, got kind %q and api_version %q.",
+					clusterRoleBindingKind, clusterRoleBindingAPIVersion, identityData.Kind.ValueString(), identityData.APIVersion.ValueString()))
+			return
+		}
 		name = identityData.Name.ValueString()
+		if name == "" {
+			resp.Diagnostics.AddError("invalid identity import", "Identity attribute \"name\" must not be empty.")
+			return
+		}
 	}
 
-	clientset, err := r.conn()
-	if err != nil {
-		resp.Diagnostics.AddError("kubernetes client error", err.Error())
-		return
-	}
-	conn, err := clientset.MainClientset()
-	if err != nil {
-		resp.Diagnostics.AddError("kubernetes client error", err.Error())
-		return
-	}
-
-	out, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"error importing ClusterRoleBinding",
-			fmt.Sprintf("Failed to import ClusterRoleBinding %q: %s", name, err.Error()),
-		)
-		return
-	}
-
-	var state ClusterRoleBindingModel
-	filters, ok := r.SDKv2Meta().(kubernetes.MetadataFilters)
-	if !ok {
-		resp.Diagnostics.AddError("Unexpected provider metadata", "Provider metadata does not implement kubernetes.MetadataFilters.")
-		return
-	}
-	resp.Diagnostics.Append(applyState(ctx, &state, out, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
+	// Read fetches the object and populates state and identity.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), name)...)
 }

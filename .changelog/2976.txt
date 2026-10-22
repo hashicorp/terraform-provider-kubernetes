@@ -1,3 +1,7 @@
 ```release-note:note
 `resource/kubernetes_cluster_role_binding_v1`: Updated the Plugin Framework resource to require the appropriate role binding blocks.
 ```
+
+```release-note:note
+`resource/kubernetes_cluster_role_binding_v1`: A `User` or `Group` subject configured with `api_group = ""` produces a one-time in-place update when upgrading SDKv2 state, because SDKv2 stored the API server's defaulted `rbac.authorization.k8s.io`. The binding is not replaced and no further diff occurs.
+```

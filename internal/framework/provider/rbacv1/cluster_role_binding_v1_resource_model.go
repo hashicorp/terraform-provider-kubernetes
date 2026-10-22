@@ -20,16 +20,3 @@ type ClusterRoleBindingModel struct {
 	RoleRef  []RoleRefModel         `tfsdk:"role_ref"`
 	Subject  []SubjectModel         `tfsdk:"subject"`
 }
-
-type RoleRefModel struct {
-	APIGroup types.String `tfsdk:"api_group"`
-	Kind     types.String `tfsdk:"kind"`
-	Name     types.String `tfsdk:"name"`
-}
-
-type SubjectModel struct {
-	APIGroup  types.String `tfsdk:"api_group"`
-	Kind      types.String `tfsdk:"kind"`
-	Name      types.String `tfsdk:"name"`
-	Namespace types.String `tfsdk:"namespace"`
-}

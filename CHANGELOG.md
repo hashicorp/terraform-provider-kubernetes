@@ -1,3 +1,19 @@
+## 3.4.0 (Oct 16, 2026)
+
+BREAKING CHANGES:
+
+* `resource/kubernetes_role_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected during plan, including `generate_name = ""`. Earlier versions allowed it, but the Kubernetes API ignores `generate_name` whenever `name` is set. To keep the existing Role, remove `generate_name` if it is empty (`""`); otherwise remove `name` and keep `generate_name`. Making the other change replaces the Role. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+* `resource/kubernetes_role_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+
+BUG FIXES:
+
+* provider: Bump `google.golang.org/grpc` to v1.83.2 and `github.com/moby/spdystream` to v0.5.1 to resolve GO-2026-6348, GO-2026-6443, and CVE-2026-35469. [[GH-2986](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2986)]
+
+NOTES:
+
+* `resource/kubernetes_role_v1`: Import IDs require a non-empty namespace and name. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+* `resource/kubernetes_role_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and resource identity, including upgrades from versions before identity support. `moved` blocks from the deprecated `kubernetes_role` resource are supported with Terraform 1.8 or later. Explicit empty metadata maps may require a one-time in-place update. Roles imported with an earlier provider version may show a one-time in-place update setting empty `labels` and `annotations` to null, and a `terraform plan -refresh=false` immediately after upgrading may show a one-time in-place update adding `resource_names = []`; neither replaces the Role. Identity imports default an omitted namespace to `default`. See the Plugin Framework upgrade guide for details. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+
 ## 3.3.0 (Oct 1,2026)
 
 BREAKING CHANGES:

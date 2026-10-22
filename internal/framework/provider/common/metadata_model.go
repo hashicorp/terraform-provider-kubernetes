@@ -41,3 +41,14 @@ type NamespacedMetadataBase struct {
 	MetadataBase
 	Namespace types.String `tfsdk:"namespace"`
 }
+
+type SDKv2NamespacedMetadataV0 struct {
+	Annotations     map[string]string `json:"annotations"`
+	GenerateName    string            `json:"generate_name"`
+	Generation      int64             `json:"generation"`
+	Labels          map[string]string `json:"labels"`
+	Name            string            `json:"name"`
+	Namespace       string            `json:"namespace"`
+	ResourceVersion string            `json:"resource_version"`
+	UID             string            `json:"uid"`
+}

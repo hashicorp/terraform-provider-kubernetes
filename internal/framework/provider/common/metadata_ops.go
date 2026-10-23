@@ -158,19 +158,23 @@ func filterMetadataMap(ctx context.Context, fromAPI map[string]string, prior typ
 	return types.MapValueFrom(ctx, types.StringType, filtered)
 }
 
-// PopulateMetadataFromResponse resolves server-assigned fields without
+// PopulateNamespacedMetadataFromResponse resolves server-assigned fields without
 // replacing planned labels, annotations, or generate_name with API-normalized values.
-func PopulateMetadataFromResponse(metadata *MetadataModel, out metav1.ObjectMeta) {
+func PopulateNamespacedMetadataFromResponse(metadata *NamespacedMetadataModel, out metav1.ObjectMeta) {
 	metadata.Name = types.StringValue(out.Name)
+	metadata.Namespace = types.StringValue(out.Namespace)
 	metadata.UID = types.StringValue(string(out.UID))
 	metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
 	metadata.Generation = types.Int64Value(out.Generation)
 }
 
-// PopulateNamespacedMetadataFromResponse adds namespace to PopulateMetadataFromResponse.
-func PopulateNamespacedMetadataFromResponse(metadata *NamespacedMetadataModel, out metav1.ObjectMeta) {
-	PopulateMetadataFromResponse(&metadata.MetadataModel, out)
-	metadata.Namespace = types.StringValue(out.Namespace)
+// PopulateMetadataFromResponse is PopulateNamespacedMetadataFromResponse for
+// non-namespaced resources.
+func PopulateMetadataFromResponse(metadata *MetadataModel, out metav1.ObjectMeta) {
+	metadata.Name = types.StringValue(out.Name)
+	metadata.UID = types.StringValue(string(out.UID))
+	metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
+	metadata.Generation = types.Int64Value(out.Generation)
 }
 
 // ExpandNamespacedMetadata adds namespace to ExpandMetadata's result.

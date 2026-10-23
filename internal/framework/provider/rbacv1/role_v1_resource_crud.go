@@ -21,9 +21,10 @@ import (
 )
 
 const (
-	rbacAPIVersion = "rbac.authorization.k8s.io/v1"
-	roleKind       = "Role"
+	roleKind = "Role"
 )
+
+var rbacAPIVersion = rbacv1api.SchemeGroupVersion.String()
 
 func (r *RoleV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan RoleModel

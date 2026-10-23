@@ -15,6 +15,31 @@ description: |-
 
 {{tffile "examples/resources/cluster_role_binding_v1/example_1.tf"}}
 
+## Metadata and upgrades
+
+Exactly one `metadata` block is required. RBAC names may contain colons, such as
+`system:example`; they are not restricted to DNS names. Set either `name` or
+`generate_name`, not both. Label and annotation values must be non-null strings;
+omit an entry to remove it.
+
+Upgrading SDKv2 state preserves the binding and its name-only ID. If configuration
+explicitly sets `labels = {}` or `annotations = {}`, the first plan may show a
+one-time in-place update because SDKv2 stored empty maps as null. The binding is
+not replaced.
+
+With Terraform 1.8 or later, migrate the deprecated resource name without
+recreating the binding:
+
+```terraform
+moved {
+  from = kubernetes_cluster_role_binding.example
+  to   = kubernetes_cluster_role_binding_v1.example
+}
+```
+
+Change the corresponding resource declaration to `kubernetes_cluster_role_binding_v1`
+and retain its configuration.
+
 ## Import
 
 ClusterRoleBinding can be imported using the name, e.g.

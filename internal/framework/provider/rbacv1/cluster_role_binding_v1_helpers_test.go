@@ -126,7 +126,7 @@ func TestFlattenSubjects_namespacePreserved(t *testing.T) {
 		},
 	}
 
-	got := flattenSubjects(input)
+	got := flattenSubjects(input, nil)
 
 	if len(got) != 3 {
 		t.Fatalf("flattenSubjects returned %d subjects, want 3", len(got))
@@ -143,10 +143,10 @@ func TestFlattenSubjects_namespacePreserved(t *testing.T) {
 	}
 }
 
-// TestFlattenSubjectsWithPrior verifies that Read keeps a configured empty
+// TestFlattenSubjects_prior verifies that Read keeps a configured empty
 // api_group for User and Group subjects, which the API server defaults to
 // rbac.authorization.k8s.io, and otherwise reports the API value.
-func TestFlattenSubjectsWithPrior(t *testing.T) {
+func TestFlattenSubjects_prior(t *testing.T) {
 	t.Parallel()
 
 	sv := types.StringValue
@@ -173,7 +173,7 @@ func TestFlattenSubjectsWithPrior(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := flattenSubjectsWithPrior([]api.Subject{tc.in}, tc.prior)
+			got := flattenSubjects([]api.Subject{tc.in}, tc.prior)
 			if len(got) != 1 || got[0].APIGroup.ValueString() != tc.want {
 				t.Fatalf("api_group = %v, want %q", got, tc.want)
 			}

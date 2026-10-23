@@ -6,184 +6,148 @@ package rbacv1_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
 // TestClusterRoleBindingMoveState exercises the ClusterRoleBinding StateMover
-// without a running Kubernetes cluster.
+// with SDKv2-shaped raw JSON, without a running cluster. It mirrors
+// TestRoleMoveState: matching sources are moved field by field, other sources
+// are skipped, and absent or malformed source state returns an error with no
+// target state or identity (never a panic).
 func TestClusterRoleBindingMoveState(t *testing.T) {
 	ctx := context.Background()
+	r := &rbacv1.ClusterRoleBinding{}
+	var schema frameworkresource.SchemaResponse
+	r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
+	identitySchema := common.IdentitySchema()
 
-	crb := &rbacv1.ClusterRoleBinding{}
-
-	var schemaResp frameworkresource.SchemaResponse
-	crb.Schema(ctx, frameworkresource.SchemaRequest{}, &schemaResp)
-	if schemaResp.Diagnostics.HasError() {
-		t.Fatal(schemaResp.Diagnostics)
-	}
-
-	var identitySchemaResp frameworkresource.IdentitySchemaResponse
-	crb.IdentitySchema(ctx, frameworkresource.IdentitySchemaRequest{}, &identitySchemaResp)
-	if identitySchemaResp.Diagnostics.HasError() {
-		t.Fatal(identitySchemaResp.Diagnostics)
-	}
-
-	mover := crb.MoveState(ctx)[0].StateMover
-
-	// validSourceJSON returns a minimal but structurally valid JSON payload
-	// that matches the SDKv2 kubernetes_cluster_role_binding schema layout.
-	// ClusterRoleBinding is cluster-scoped so metadata has no namespace field.
-	validSourceJSON := func() []byte {
-		src := map[string]any{
-			"id": "my-binding",
-			"metadata": []map[string]any{{
-				"name":             "my-binding",
-				"generate_name":    "",
-				"annotations":      nil,
-				"labels":           nil,
-				"generation":       0,
-				"resource_version": "",
-				"uid":              "",
-			}},
-			"role_ref": []map[string]any{{
-				"api_group": "rbac.authorization.k8s.io",
-				"kind":      "ClusterRole",
-				"name":      "cluster-admin",
-			}},
-			"subject": []map[string]any{{
-				"api_group": "rbac.authorization.k8s.io",
-				"kind":      "User",
-				"name":      "notauser",
-				"namespace": "",
-			}},
-		}
-		b, err := json.Marshal(src)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return b
-	}
-
-	// buildSourceState constructs a *tfsdk.State pre-populated with validSourceJSON
-	// using the same RawState → tftypes.Value unmarshal path the framework itself uses.
-	buildSourceState := func() *tfsdk.State {
-		raw := &tfprotov6.RawState{JSON: validSourceJSON()}
-		val, err := raw.Unmarshal(schemaResp.Schema.Type().TerraformType(ctx))
-		if err != nil {
-			t.Fatalf("could not unmarshal source state: %v", err)
-		}
-		s := tfsdk.State{Schema: schemaResp.Schema, Raw: val}
-		return &s
-	}
-
-	// ---- valid cases: mover must populate TargetState and TargetIdentity ----
+	// SDKv2 state as written by kubernetes_cluster_role_binding at schema version 0.
+	valid := `{"id":"my-binding","metadata":[{"name":"my-binding","uid":"retained","resource_version":"7","generation":0,"labels":{},"annotations":null,"generate_name":""}],` +
+		`"role_ref":[{"api_group":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"cluster-admin"}],` +
+		`"subject":[{"api_group":"rbac.authorization.k8s.io","kind":"User","name":"notauser","namespace":"default"},` +
+		`{"api_group":"","kind":"ServiceAccount","name":"default","namespace":"kube-system"}]}`
 	for _, tc := range []struct {
-		name            string
-		providerAddress string
+		name, sourceType, provider, raw string
+		version                         int64
+		wantError, wantSkip, noIdentity bool
+		wantDetail                      string
+		nullLabels, emptyAnnotations    bool
 	}{
-		{name: "canonical provider address", providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
-		{name: "mirror provider address", providerAddress: "mirror.example.com/hashicorp/kubernetes"},
+		{name: "valid", raw: valid},
+		{name: "bothNullMaps", raw: strings.Replace(valid, `"labels":{}`, `"labels":null`, 1), nullLabels: true},
+		{name: "bothEmptyMaps", raw: strings.Replace(valid, `"annotations":null`, `"annotations":{}`, 1), emptyAnnotations: true},
+		{name: "omittedMaps", raw: strings.Replace(strings.Replace(valid, `"labels":{},`, "", 1), `"annotations":null,`, "", 1), nullLabels: true},
+		{name: "generatedName", raw: strings.Replace(valid, `"generate_name":""`, `"generate_name":"my-"`, 1)},
+		{name: "withoutTargetIdentity", raw: valid, noIdentity: true},
+		{name: "privateRegistry", provider: "registry.example.com/hashicorp/kubernetes", raw: valid},
+		{name: "wrongType", sourceType: "kubernetes_role_binding", raw: valid, wantSkip: true},
+		{name: "v1Type", sourceType: "kubernetes_cluster_role_binding_v1", raw: valid, wantSkip: true},
+		{name: "prefixedType", sourceType: "other_kubernetes_cluster_role_binding", raw: valid, wantSkip: true},
+		{name: "wrongProvider", provider: "registry.terraform.io/example/kubernetes", raw: valid, wantSkip: true},
+		{name: "lookalikeProvider", provider: "registry.example.com/nothashicorp/kubernetes", raw: valid, wantSkip: true},
+		{name: "emptyProvider", provider: "-", raw: valid, wantSkip: true},
+		{name: "wrongVersion", version: 1, raw: valid, wantSkip: true},
+		{name: "missingJSON", wantError: true, wantDetail: "The source state has no JSON data. Flatmap state is not supported."},
+		{name: "malformedJSON", raw: "{", wantError: true},
+		{name: "emptyID", raw: `{"metadata":[{}],"role_ref":[{}]}`, wantError: true, wantDetail: "The source state must have a non-empty id."},
+		{name: "missingMetadata", raw: `{"id":"my-binding","role_ref":[{}]}`, wantError: true, wantDetail: "Expected exactly 1 metadata element in the source state, got 0."},
+		{name: "multipleMetadata", raw: `{"id":"my-binding","metadata":[{},{}],"role_ref":[{}]}`, wantError: true, wantDetail: "Expected exactly 1 metadata element in the source state, got 2."},
+		{name: "missingRoleRef", raw: `{"id":"my-binding","metadata":[{}]}`, wantError: true, wantDetail: "Expected exactly 1 role_ref element in the source state, got 0."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			resp := frameworkresource.MoveStateResponse{
-				TargetState:    tfsdk.State{Schema: schemaResp.Schema},
-				TargetIdentity: &tfsdk.ResourceIdentity{Schema: identitySchemaResp.IdentitySchema},
-			}
-			mover(ctx, frameworkresource.MoveStateRequest{
+			req := frameworkresource.MoveStateRequest{
 				SourceTypeName:        "kubernetes_cluster_role_binding",
-				SourceSchemaVersion:   0,
-				SourceProviderAddress: tc.providerAddress,
-				SourceState:           buildSourceState(),
-			}, &resp)
-			if resp.Diagnostics.HasError() {
-				t.Fatalf("unexpected diagnostics: %v", resp.Diagnostics)
+				SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
+				SourceSchemaVersion:   tc.version,
 			}
-			if resp.TargetState.Raw.IsNull() {
-				t.Fatal("expected TargetState to be populated, got null")
+			if tc.sourceType != "" {
+				req.SourceTypeName = tc.sourceType
 			}
-			var identity common.ResourceIdentity
-			if diags := resp.TargetIdentity.Get(ctx, &identity); diags.HasError() {
+			if tc.provider == "-" {
+				req.SourceProviderAddress = ""
+			} else if tc.provider != "" {
+				req.SourceProviderAddress = tc.provider
+			}
+			if tc.raw != "" {
+				req.SourceRawState = &tfprotov6.RawState{JSON: []byte(tc.raw)}
+			}
+			resp := frameworkresource.MoveStateResponse{
+				TargetState: tfsdk.State{Schema: schema.Schema, Raw: tftypes.NewValue(schema.Schema.Type().TerraformType(ctx), nil)},
+			}
+			if !tc.noIdentity {
+				resp.TargetIdentity = &tfsdk.ResourceIdentity{Schema: identitySchema, Raw: tftypes.NewValue(identitySchema.Type().TerraformType(ctx), nil)}
+			}
+
+			r.MoveState(ctx)[0].StateMover(ctx, req, &resp)
+
+			if resp.Diagnostics.HasError() != tc.wantError {
+				t.Fatalf("diagnostics: %v", resp.Diagnostics)
+			}
+			if tc.wantDetail != "" && (len(resp.Diagnostics) != 1 || resp.Diagnostics[0].Detail() != tc.wantDetail) {
+				t.Fatalf("expected diagnostic detail %q, got %v", tc.wantDetail, resp.Diagnostics)
+			}
+			if tc.wantError || tc.wantSkip {
+				if !resp.TargetState.Raw.IsNull() {
+					t.Fatal("unexpected target state")
+				}
+				if resp.TargetIdentity != nil && !resp.TargetIdentity.Raw.IsNull() {
+					t.Fatal("unexpected target identity")
+				}
+				return
+			}
+
+			var state rbacv1.ClusterRoleBindingModel
+			if diags := resp.TargetState.Get(ctx, &state); diags.HasError() {
 				t.Fatal(diags)
 			}
-			if identity.Name.ValueString() != "my-binding" {
-				t.Errorf("unexpected identity name %q", identity.Name.ValueString())
+			m := state.Metadata[0]
+			if state.ID.ValueString() != "my-binding" || m.Name.ValueString() != "my-binding" ||
+				m.UID.ValueString() != "retained" || m.ResourceVersion.ValueString() != "7" ||
+				m.Annotations.IsNull() == tc.emptyAnnotations || m.Labels.IsNull() != tc.nullLabels {
+				t.Fatalf("incorrect metadata: %#v", state)
+			}
+			if len(state.RoleRef) != 1 || state.RoleRef[0].APIGroup.ValueString() != "rbac.authorization.k8s.io" ||
+				state.RoleRef[0].Kind.ValueString() != "ClusterRole" || state.RoleRef[0].Name.ValueString() != "cluster-admin" {
+				t.Fatalf("incorrect role_ref: %#v", state.RoleRef)
+			}
+			if len(state.Subject) != 2 ||
+				state.Subject[0].Kind.ValueString() != "User" || state.Subject[0].APIGroup.ValueString() != "rbac.authorization.k8s.io" ||
+				state.Subject[0].Namespace.ValueString() != "default" ||
+				state.Subject[1].Kind.ValueString() != "ServiceAccount" || state.Subject[1].APIGroup.IsNull() ||
+				state.Subject[1].APIGroup.ValueString() != "" || state.Subject[1].Namespace.ValueString() != "kube-system" {
+				t.Fatalf("incorrect subjects: %#v", state.Subject)
+			}
+			if tc.name == "generatedName" {
+				if m.GenerateName.ValueString() != "my-" {
+					t.Fatal("lost generate_name")
+				}
+			} else if !m.GenerateName.IsNull() {
+				t.Fatal("unset generate_name must normalize to null")
+			}
+
+			if resp.TargetIdentity != nil {
+				var identity common.ResourceIdentity
+				if diags := resp.TargetIdentity.Get(ctx, &identity); diags.HasError() {
+					t.Fatal(diags)
+				}
+				if identity.Kind.ValueString() != "ClusterRoleBinding" || identity.APIVersion.ValueString() != "rbac.authorization.k8s.io/v1" ||
+					identity.Name.ValueString() != "my-binding" {
+					t.Fatalf("identity: %#v", identity)
+				}
 			}
 		})
 	}
-
-	// ---- guard cases: unrecognised source must produce no state/identity ----
-	for _, tc := range []struct {
-		name            string
-		sourceType      string
-		sourceVersion   int64
-		providerAddress string
-	}{
-		{name: "wrong resource type", sourceType: "kubernetes_role_binding", sourceVersion: 0, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
-		{name: "unexpected resource type prefix", sourceType: "other_kubernetes_cluster_role_binding", sourceVersion: 0, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
-		{name: "v1 suffix skipped", sourceType: "kubernetes_cluster_role_binding_v1", sourceVersion: 0, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
-		{name: "wrong schema version", sourceType: "kubernetes_cluster_role_binding", sourceVersion: 1, providerAddress: "registry.terraform.io/hashicorp/kubernetes"},
-		{name: "wrong provider address", sourceType: "kubernetes_cluster_role_binding", sourceVersion: 0, providerAddress: "registry.terraform.io/other/kubernetes"},
-		{name: "forked provider namespace", sourceType: "kubernetes_cluster_role_binding", sourceVersion: 0, providerAddress: "registry.terraform.io/nothashicorp/kubernetes"},
-		{name: "empty provider address", sourceType: "kubernetes_cluster_role_binding", sourceVersion: 0, providerAddress: ""},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			resp := frameworkresource.MoveStateResponse{
-				TargetState:    tfsdk.State{Schema: schemaResp.Schema},
-				TargetIdentity: &tfsdk.ResourceIdentity{Schema: identitySchemaResp.IdentitySchema},
-			}
-			mover(ctx, frameworkresource.MoveStateRequest{
-				SourceTypeName:        tc.sourceType,
-				SourceSchemaVersion:   tc.sourceVersion,
-				SourceProviderAddress: tc.providerAddress,
-			}, &resp)
-			if resp.Diagnostics.HasError() {
-				t.Errorf("unexpected diagnostics: %v", resp.Diagnostics)
-			}
-			if !resp.TargetState.Raw.IsNull() || !resp.TargetIdentity.Raw.IsNull() {
-				t.Fatal("unrecognised source must not produce state or identity")
-			}
-		})
-	}
-
-	// ---- error cases: matched source but absent or undecodable SourceState ----
-	//
-	// The framework leaves SourceState nil when it cannot decode the source
-	// state. A non-nil state with a null Raw value cannot be decoded into the
-	// model, so SourceState.Get() itself fails.
-	for _, tc := range []struct {
-		name        string
-		sourceState *tfsdk.State
-	}{
-		{name: "nil SourceState", sourceState: nil},
-		{name: "undecodable SourceState", sourceState: &tfsdk.State{Schema: schemaResp.Schema}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			resp := frameworkresource.MoveStateResponse{
-				TargetState:    tfsdk.State{Schema: schemaResp.Schema},
-				TargetIdentity: &tfsdk.ResourceIdentity{Schema: identitySchemaResp.IdentitySchema},
-			}
-			mover(ctx, frameworkresource.MoveStateRequest{
-				SourceTypeName:        "kubernetes_cluster_role_binding",
-				SourceSchemaVersion:   0,
-				SourceProviderAddress: "registry.terraform.io/hashicorp/kubernetes",
-				SourceState:           tc.sourceState,
-			}, &resp)
-			if !resp.Diagnostics.HasError() {
-				t.Error("expected an error diagnostic, got none")
-			}
-			if !resp.TargetState.Raw.IsNull() {
-				t.Error("TargetState must remain null when source is absent or undecodable")
-			}
-			if !resp.TargetIdentity.Raw.IsNull() {
-				t.Error("TargetIdentity must remain null when source is absent or undecodable")
-			}
-		})
+	// Ensure the fixture itself is JSON, rather than testing a decode failure accidentally.
+	if !json.Valid([]byte(valid)) {
+		t.Fatal("invalid fixture")
 	}
 }

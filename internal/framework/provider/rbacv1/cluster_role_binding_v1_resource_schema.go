@@ -97,3 +97,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 		},
 	}
 }
+
+func (r *ClusterRoleBinding) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = common.IdentitySchema()
+}

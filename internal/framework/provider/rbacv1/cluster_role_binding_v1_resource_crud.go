@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -49,40 +49,13 @@ func (r *ClusterRoleBinding) identity(name string) common.ResourceIdentity {
 	}
 }
 
-// applyState rebuilds a model from a fetched ClusterRoleBinding object for Read,
-// filtering internal and provider-ignored metadata keys that are not already
-// tracked in state.
-func applyState(
-	ctx context.Context,
-	state *ClusterRoleBindingModel,
-	out *api.ClusterRoleBinding,
-	ignoreAnnotations []string,
-	ignoreLabels []string,
-) diag.Diagnostics {
-	state.ID = types.StringValue(out.Name)
-
-	metadata, diags := common.FlattenMetadata(ctx, out.ObjectMeta, state.Metadata, ignoreAnnotations, ignoreLabels)
-	if diags.HasError() {
-		return diags
-	}
-
-	state.Metadata = metadata
-	state.RoleRef = flattenRoleRef(out.RoleRef)
-	state.Subject = flattenSubjectsWithPrior(out.Subjects, state.Subject)
-
-	return diags
-}
-
 // applyPlanResult preserves configured values and resolves server-computed fields.
 func applyPlanResult(
 	plan *ClusterRoleBindingModel,
 	out *api.ClusterRoleBinding,
 ) {
 	plan.ID = types.StringValue(out.Name)
-	plan.Metadata[0].Name = types.StringValue(out.Name)
-	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
-	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
-	plan.Metadata[0].UID = types.StringValue(string(out.UID))
+	common.PopulateMetadataFromResponse(&plan.Metadata[0], out.ObjectMeta)
 	// Terraform requires the applied block count to match the plan, so extra API
 	// subjects are ignored here and surface as drift on the next Read.
 	for i := range plan.Subject {
@@ -125,6 +98,7 @@ func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequ
 		Subjects:   expandSubjects(plan.Subject),
 	}
 
+	tflog.Info(ctx, "Creating new ClusterRoleBinding", map[string]any{"cluster_role_binding": fmt.Sprintf("%#v", binding)})
 	out, err := conn.RbacV1().ClusterRoleBindings().Create(ctx, binding, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -133,6 +107,7 @@ func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequ
 		)
 		return
 	}
+	tflog.Info(ctx, "Submitted new ClusterRoleBinding", map[string]any{"cluster_role_binding": fmt.Sprintf("%#v", out)})
 
 	applyPlanResult(&plan, out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -158,6 +133,7 @@ func (r *ClusterRoleBinding) Read(ctx context.Context, req resource.ReadRequest,
 	}
 
 	name := state.ID.ValueString()
+	tflog.Info(ctx, "Reading ClusterRoleBinding", map[string]any{"name": name})
 	out, err := conn.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		// Terraform before 1.12 does not send identity on refresh, but the
@@ -172,22 +148,31 @@ func (r *ClusterRoleBinding) Read(ctx context.Context, req resource.ReadRequest,
 		return
 	}
 	if err != nil {
+		tflog.Debug(ctx, "Received error", map[string]any{"error": fmt.Sprintf("%#v", err)})
 		resp.Diagnostics.AddError(
 			"error reading ClusterRoleBinding",
 			fmt.Sprintf("Failed to read ClusterRoleBinding %q: %s", name, err.Error()),
 		)
 		return
 	}
+	tflog.Info(ctx, "Received ClusterRoleBinding", map[string]any{"cluster_role_binding": fmt.Sprintf("%#v", out)})
 
 	filters, ok := r.SDKv2Meta().(kubernetes.MetadataFilters)
 	if !ok {
 		resp.Diagnostics.AddError("Unexpected provider metadata", "Provider metadata does not implement kubernetes.MetadataFilters.")
 		return
 	}
-	resp.Diagnostics.Append(applyState(ctx, &state, out, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())...)
+	metadata, diags := common.FlattenMetadata(ctx, out.ObjectMeta, state.Metadata, filters.GetIgnoreAnnotations(), filters.GetIgnoreLabels())
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	state.ID = types.StringValue(out.Name)
+	state.Metadata = metadata
+	state.RoleRef = flattenRoleRef(out.RoleRef)
+	tflog.Debug(ctx, "Flattened ClusterRoleBinding roleRef", map[string]any{"role_ref": fmt.Sprintf("%#v", state.RoleRef)})
+	state.Subject = flattenSubjects(out.Subjects, state.Subject)
+	tflog.Debug(ctx, "Flattened ClusterRoleBinding subjects", map[string]any{"subjects": fmt.Sprintf("%#v", state.Subject)})
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
@@ -229,9 +214,10 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 	// Read) and therefore never appear in the diff.
 	ops := common.MetadataPatchOps("/metadata/", stateMetadata, planMetadata)
 
-	// role_ref is immutable (RequiresReplace) — only subjects can change here.
-	// Replace /subjects atomically with one operation to avoid per-index
-	// ordering and stale-entry bugs.
+	// role_ref is immutable (RequiresReplace), so only subjects can change here.
+	// SDKv2's patchRbacSubject patches index by index (remove, replace, add) and
+	// also ends with the planned list. Replacing /subjects in one operation is a
+	// simplification that produces the same result.
 	if !subjectsEqual(state.Subject, plan.Subject) {
 		ops = append(ops, &kubernetes.ReplaceOperation{
 			Path:  "/subjects",
@@ -261,6 +247,7 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 		resp.Diagnostics.AddError("failed to marshal patch", err.Error())
 		return
 	}
+	tflog.Info(ctx, "Updating ClusterRoleBinding", map[string]any{"name": name, "patch": string(patchBytes)})
 
 	out, err := conn.RbacV1().ClusterRoleBindings().Patch(
 		ctx,
@@ -276,6 +263,7 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 		)
 		return
 	}
+	tflog.Info(ctx, "Submitted updated ClusterRoleBinding", map[string]any{"cluster_role_binding": fmt.Sprintf("%#v", out)})
 
 	applyPlanResult(&plan, out)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -301,6 +289,7 @@ func (r *ClusterRoleBinding) Delete(ctx context.Context, req resource.DeleteRequ
 	}
 
 	name := state.ID.ValueString()
+	tflog.Info(ctx, "Deleting ClusterRoleBinding", map[string]any{"name": name})
 	err = conn.RbacV1().ClusterRoleBindings().Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		resp.Diagnostics.AddError(
@@ -309,6 +298,7 @@ func (r *ClusterRoleBinding) Delete(ctx context.Context, req resource.DeleteRequ
 		)
 		return
 	}
+	tflog.Info(ctx, "ClusterRoleBinding deleted", map[string]any{"name": name})
 }
 
 func (r *ClusterRoleBinding) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

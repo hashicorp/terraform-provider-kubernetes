@@ -33,3 +33,35 @@ type SubjectModel struct {
 	Name      types.String `tfsdk:"name"`
 	Namespace types.String `tfsdk:"namespace"`
 }
+
+// These raw shapes describe the frozen SDKv2 schema-version-0 state.
+type sdkv2RBMetadataElement struct {
+	Name            string            `json:"name"`
+	GenerateName    string            `json:"generate_name"`
+	Namespace       string            `json:"namespace"`
+	Annotations     map[string]string `json:"annotations"`
+	Labels          map[string]string `json:"labels"`
+	ResourceVersion string            `json:"resource_version"`
+	UID             string            `json:"uid"`
+	Generation      int64             `json:"generation"`
+}
+
+type sdkv2RBRoleRefElement struct {
+	APIGroup string `json:"api_group"`
+	Kind     string `json:"kind"`
+	Name     string `json:"name"`
+}
+
+type sdkv2RBSubjectElement struct {
+	APIGroup  string `json:"api_group"`
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+type sdkv2RoleBindingStateV0 struct {
+	ID       string                   `json:"id"`
+	Metadata []sdkv2RBMetadataElement `json:"metadata"`
+	RoleRef  []sdkv2RBRoleRefElement  `json:"role_ref"`
+	Subjects []sdkv2RBSubjectElement  `json:"subject"`
+}

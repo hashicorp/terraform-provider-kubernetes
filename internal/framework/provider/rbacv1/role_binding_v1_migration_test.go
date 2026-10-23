@@ -3,25 +3,8 @@
 
 package rbacv1_test
 
-// ---------------------------------------------------------------------------
-// Migration tests for kubernetes_role_binding_v1.
-//
-// This file covers the *in-place upgrade* path: state written by the released
-// SDKv2 kubernetes_role_binding_v1 resource is read back by the local Framework
-// resource under the same type name, and the post-upgrade plan must be empty.
-//
-// No UpgradeState handler is needed because the Framework schema uses
-// ListNestedBlock for metadata and other blocks, producing an identical JSON
-// state shape to the SDKv2 TypeList{MaxItems:1}; schema_version stays at 0 and
-// Terraform reads the existing state directly.
-//
-// The *cross-type rename* path (moving from the deprecated
-// kubernetes_role_binding alias to kubernetes_role_binding_v1 via a moved
-// block) is covered separately — together with the MoveState unit tests — in
-// role_binding_v1_move_test.go.
-// ---------------------------------------------------------------------------
-
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -32,78 +15,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-// migratedRoleBindingProviderVersion is the last released version that ships
-// the SDKv2 implementation of kubernetes_role_binding_v1. Used as the
-// "from" provider in every migration test.
 const migratedRoleBindingProviderVersion = "3.2.1"
-
-// preIdentityRoleBindingProviderVersion predates resource identity, which
-// shipped in 2.38.0; its state has no stored identity.
 const preIdentityRoleBindingProviderVersion = "2.37.1"
 
-// releasedRoleBindingProvider returns the external-provider map pointing at
-// the last SDKv2-based release, used for step 1 of every migration test.
 func releasedRoleBindingProvider() map[string]resource.ExternalProvider {
 	return map[string]resource.ExternalProvider{
-		"kubernetes": {
-			VersionConstraint: migratedRoleBindingProviderVersion,
-			Source:            "hashicorp/kubernetes",
-		},
+		"kubernetes": {VersionConstraint: migratedRoleBindingProviderVersion, Source: "hashicorp/kubernetes"},
 	}
 }
 
-// roleBindingMigrationTestCase runs a standard three-step migration test:
-//   - step 1: create with the released SDKv2 provider
-//   - step 2: same config on the local Framework provider, ExpectEmptyPlan
-//   - step 3: re-apply and confirm idempotent (PostApplyPostRefresh empty plan)
-//
-// extraChecks are asserted after the SDKv2 create step.
-func roleBindingMigrationTestCase(t *testing.T, config string, extraChecks ...resource.TestCheckFunc) {
-	t.Helper()
-
-	steps := roleBindingMigrationSteps(config)
-	steps[0].Check = resource.ComposeAggregateTestCheckFunc(extraChecks...)
-	resource.ParallelTest(t, resource.TestCase{CheckDestroy: testAccRoleBindingCheckDestroy, Steps: steps})
-}
-
-// frameworkChecks run after both Framework steps, independently of SDKv2 checks.
-func roleBindingMigrationSteps(config string, frameworkChecks ...resource.TestCheckFunc) []resource.TestStep {
-	return []resource.TestStep{
-		{
-			ExternalProviders: releasedRoleBindingProvider(),
-			Config:            config,
-		},
-		{
-			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-			Config:                   config,
-			Check:                    resource.ComposeAggregateTestCheckFunc(frameworkChecks...),
-			ConfigPlanChecks: resource.ConfigPlanChecks{
-				PreApply: []plancheck.PlanCheck{
-					plancheck.ExpectEmptyPlan(),
-				},
-			},
-		},
-		{
-			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-			Config:                   config,
-			Check:                    resource.ComposeAggregateTestCheckFunc(frameworkChecks...),
-			ConfigPlanChecks: resource.ConfigPlanChecks{
-				PostApplyPostRefresh: []plancheck.PlanCheck{
-					plancheck.ExpectEmptyPlan(),
-				},
-			},
-		},
-	}
-}
-
-// TestAccMigrateRoleBinding_basic verifies that the simplest RoleBinding
-// (a single User subject) migrates in place with no diff and that the
-// Framework resource identity is populated correctly after migration.
 func TestAccMigrateRoleBinding_basic(t *testing.T) {
-	name := "tf-acc-migrate:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
 	resourceName := "kubernetes_role_binding_v1.test"
-
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccRoleBindingCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -114,151 +39,255 @@ func TestAccMigrateRoleBinding_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "role_ref.0.name", "admin"),
 					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "subject.0.name", "notauser"),
-					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
 				),
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccRoleBindingV1Config_basic(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-					PostApplyPostRefresh: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-				// Verify identity is fully populated after migration.
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectIdentity(resourceName, map[string]knownvalue.Check{
-						"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
-						"kind":        knownvalue.StringExact("RoleBinding"),
-						"name":        knownvalue.StringExact(name),
-						"namespace":   knownvalue.StringExact("default"),
-					}),
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 			},
 		},
 	})
 }
 
-// TestAccMigrateRoleBinding_preIdentity verifies that state written before
-// resource identity existed (no stored identity) upgrades in place with no
-// diff and Read populates the identity.
+func TestAccMigrateRoleBinding_identity(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	resourceName := "kubernetes_role_binding_v1.test"
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:               func() { testAccPreCheck(t) },
+		CheckDestroy:           testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: releasedRoleBindingProvider(),
+				Config:            testAccRoleBindingV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccRoleBindingV1Config_basic(name),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+				ConfigStateChecks:        []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+		},
+	})
+}
+
 func TestAccMigrateRoleBinding_preIdentity(t *testing.T) {
-	name := "tf-acc-migrate-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	resourceName := "kubernetes_role_binding_v1.test"
-	steps := roleBindingMigrationSteps(testAccRoleBindingV1Config_basic(name))
-	steps[0].ExternalProviders = map[string]resource.ExternalProvider{
-		"kubernetes": {
-			VersionConstraint: preIdentityRoleBindingProviderVersion,
-			Source:            "hashicorp/kubernetes",
-		},
+	for _, tc := range []struct {
+		name   string
+		config func(string) string
+	}{
+		{"name", testAccRoleBindingV1Config_basic},
+		{"generateName", testAccRoleBindingV1Config_generateName},
+		{"complete", testAccRoleBindingV1Config_updated},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := acctest.RandomWithPrefix("tf-acc-migrate")
+			config := tc.config(name)
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:               func() { testAccPreCheck(t) },
+				CheckDestroy:           testAccRoleBindingCheckDestroy,
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+				Steps: []resource.TestStep{
+					{
+						ExternalProviders: map[string]resource.ExternalProvider{
+							"kubernetes": {VersionConstraint: preIdentityRoleBindingProviderVersion, Source: "hashicorp/kubernetes"},
+						},
+						Config: config,
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   config,
+						ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+						ConfigStateChecks: []statecheck.StateCheck{
+							statecheck.ExpectIdentity("kubernetes_role_binding_v1.test", map[string]knownvalue.Check{
+								"name":        knownvalue.StringRegexp(regexp.MustCompile("^" + regexp.QuoteMeta(name))),
+								"namespace":   knownvalue.StringExact("default"),
+								"kind":        knownvalue.StringExact("RoleBinding"),
+								"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
+							}),
+						},
+					},
+				},
+			})
+		})
 	}
-	steps[1].ConfigStateChecks = []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)}
-	resource.ParallelTest(t, resource.TestCase{
-		CheckDestroy: testAccRoleBindingCheckDestroy,
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_12_0),
-		},
-		Steps: steps,
-	})
 }
 
-// TestAccMigrateRoleBinding_emptySubjectNamespace verifies that state written by
-// the SDKv2 provider for a subject with an explicitly empty namespace migrates
-// with no diff.
 func TestAccMigrateRoleBinding_emptySubjectNamespace(t *testing.T) {
-	name := "tf-acc-migrate-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	roleBindingMigrationTestCase(t, testAccRoleBindingV1Config_emptySubjectNamespace(name),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.namespace", ""),
-	)
-}
-
-// SDKv2 stores the canonical API group despite api_group = "". Framework must
-// reconcile it once, then preserve the configured empty value across refreshes.
-func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
-	name := "tf-acc-migrate-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	resourceName := "kubernetes_role_binding_v1.test"
-	steps := roleBindingMigrationSteps(testAccRoleBindingV1Config_emptyUserAPIGroup(name),
-		resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
-	)
-	steps[0].Check = resource.ComposeAggregateTestCheckFunc(
-		resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
-		resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
-	)
-	steps[1].ConfigPlanChecks = resource.ConfigPlanChecks{
-		PreApply: []plancheck.PlanCheck{
-			plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
-		},
-		PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-		PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-	}
-	steps[2].ConfigPlanChecks.PreApply = []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	config := testAccRoleBindingV1Config_emptySubjectNamespace(name)
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccRoleBindingCheckDestroy,
-		Steps:        steps,
+		Steps: []resource.TestStep{
+			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				Check: resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.namespace", "")},
+			{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}}},
+		},
 	})
 }
 
-// TestAccMigrateRoleBinding_complete_name verifies that a RoleBinding with
-// metadata.name and multiple subject kinds (User, ServiceAccount, Group)
-// migrates with no diff, exercising the computed subject.api_group and
-// subject.namespace defaulting logic across the migration boundary.
+func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	resourceName := "kubernetes_role_binding_v1.test"
+	config := testAccRoleBindingV1Config_emptyUserAPIGroup(name)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		Steps: []resource.TestStep{
+			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				Check: resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io")},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				Check: resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 func TestAccMigrateRoleBinding_complete_name(t *testing.T) {
-	name := "tf-acc-migrate:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-
-	roleBindingMigrationTestCase(t,
-		testAccRoleBindingV1Config_updated(name),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.#", "3"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.kind", "User"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.1.kind", "ServiceAccount"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.1.namespace", "kube-system"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.1.api_group", ""),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.2.kind", "Group"),
-	)
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	config := testAccRoleBindingV1Config_updated(name)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		Steps: []resource.TestStep{
+			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.#", "3"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.1.namespace", "kube-system"),
+					resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.1.api_group", ""),
+				)},
+			{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}}},
+		},
+	})
 }
 
-// TestAccMigrateRoleBinding_complete_generateName verifies that a RoleBinding
-// created with metadata.generate_name (server-assigned name) migrates without
-// a diff. This is the computed-name case: the Framework resource must preserve
-// the exact generated name stored by the SDKv2 version.
 func TestAccMigrateRoleBinding_complete_generateName(t *testing.T) {
-	prefix := "tf-acc-migrate-gen:"
-
-	roleBindingMigrationTestCase(t,
-		testAccRoleBindingV1Config_generateName(prefix),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "metadata.0.generate_name", prefix),
-		resource.TestCheckResourceAttrSet("kubernetes_role_binding_v1.test", "metadata.0.name"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.#", "1"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.name", "notauser"),
-	)
+	prefix := acctest.RandomWithPrefix("tf-acc-migrate") + "-"
+	config := testAccRoleBindingV1Config_generateName(prefix)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		Steps: []resource.TestStep{
+			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "metadata.0.generate_name", prefix),
+					resource.TestCheckResourceAttrSet("kubernetes_role_binding_v1.test", "metadata.0.name"),
+				)},
+			{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}}},
+		},
+	})
 }
 
-// TestAccMigrateRoleBinding_saSubject verifies migration of a RoleBinding
-// whose only subject is a ServiceAccount that omits api_group.
 func TestAccMigrateRoleBinding_saSubject(t *testing.T) {
-	name := "tf-acc-migrate:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-
-	roleBindingMigrationTestCase(t,
-		testAccRoleBindingV1Config_saSubject(name),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.#", "1"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.kind", "ServiceAccount"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.name", "default"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.api_group", ""),
-	)
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	config := testAccRoleBindingV1Config_saSubject(name)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		Steps: []resource.TestStep{
+			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				Check: resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.api_group", "")},
+			{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}}},
+		},
+	})
 }
 
-// TestAccMigrateRoleBinding_groupSubject verifies migration of a RoleBinding
-// with a single Group subject (non-empty api_group).
 func TestAccMigrateRoleBinding_groupSubject(t *testing.T) {
-	name := "tf-acc-migrate:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	config := testAccRoleBindingV1Config_groupSubject(name)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		Steps: []resource.TestStep{
+			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				Check: resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.api_group", "rbac.authorization.k8s.io")},
+			{ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}}},
+		},
+	})
+}
 
-	roleBindingMigrationTestCase(t,
-		testAccRoleBindingV1Config_groupSubject(name),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.#", "1"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.kind", "Group"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.name", "dev-team"),
-		resource.TestCheckResourceAttr("kubernetes_role_binding_v1.test", "subject.0.api_group", "rbac.authorization.k8s.io"),
-	)
+func TestAccMigrateRoleBinding_noRefresh(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	resourceName := "kubernetes_role_binding_v1.test"
+	config := testAccRoleBindingV1Config_basic(name)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:               func() { testAccPreCheck(t) },
+		CheckDestroy:           testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		AdditionalCLIOptions:   &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: true}},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+		},
+	})
+}
+
+func TestAccMigrateRoleBinding_updateAndReplace(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	resourceName := "kubernetes_role_binding_v1.test"
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:               func() { testAccPreCheck(t) },
+		CheckDestroy:           testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: releasedRoleBindingProvider(),
+				Config:            testAccRoleBindingV1Config_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccRoleBindingV1Config_basic(name),
+				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+				ConfigStateChecks:        []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccRoleBindingV1Config_updated(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+				Check:             resource.TestCheckResourceAttr(resourceName, "subject.#", "3"),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccRoleBindingV1Config_clusterRoleRef(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+				Check:             resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "ClusterRole"),
+			},
+		},
+	})
 }

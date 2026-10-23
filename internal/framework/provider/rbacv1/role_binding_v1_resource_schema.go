@@ -10,21 +10,21 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
 func (r *RoleBindingV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = RoleBindingV1Schema()
+	resp.Schema = roleBindingV1Schema()
 }
 
-// RoleBindingV1Schema returns the Plugin Framework schema for RoleBindingV1.
-// Exported so that unit tests can construct tfsdk.State values for the state mover.
-func RoleBindingV1Schema() schema.Schema {
+func roleBindingV1Schema() schema.Schema {
 	return schema.Schema{
 		MarkdownDescription: "A RoleBinding may be used to grant permissions defined in a Role to a set of subjects within a namespace.",
 		Attributes: map[string]schema.Attribute{
@@ -41,10 +41,11 @@ func RoleBindingV1Schema() schema.Schema {
 			// It uses the RBAC path-segment name validator rather than DNS-subdomain, so names like
 			// "system:controller:foo" are accepted. generatableName=true, namespaced=true.
 			"metadata": common.MetadataSchemaRBAC("role binding", true, true),
-			// role_ref is ForceNew in SDKv2 — modelled here with RequiresReplace on
-			// all three fields because the Kubernetes API forbids patching roleRef.
 			"role_ref": schema.ListNestedBlock{
 				MarkdownDescription: "RoleRef references the Role or ClusterRole granting the permissions defined in this binding.",
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.RequiresReplace(),
+				},
 				Validators: []validator.List{
 					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
@@ -57,9 +58,6 @@ func RoleBindingV1Schema() schema.Schema {
 							Validators: []validator.String{
 								stringvalidator.OneOf("rbac.authorization.k8s.io"),
 							},
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
 						},
 						"kind": schema.StringAttribute{
 							MarkdownDescription: "The kind of the referenced role. Must be `Role` or `ClusterRole`.",
@@ -67,16 +65,10 @@ func RoleBindingV1Schema() schema.Schema {
 							Validators: []validator.String{
 								stringvalidator.OneOf("Role", "ClusterRole"),
 							},
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
 						},
 						"name": schema.StringAttribute{
 							MarkdownDescription: "The name of the Role or ClusterRole to bind to.",
 							Required:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
 						},
 					},
 				},
@@ -94,6 +86,9 @@ func RoleBindingV1Schema() schema.Schema {
 							MarkdownDescription: "The API group of the subject. For User and Group subjects use `rbac.authorization.k8s.io`. For ServiceAccount subjects use `\"\"`.",
 							Optional:            true,
 							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								subjectAPIGroupUseState{},
+							},
 						},
 						"kind": schema.StringAttribute{
 							MarkdownDescription: "The kind of the subject. One of `User`, `ServiceAccount`, or `Group`.",
@@ -117,4 +112,45 @@ func RoleBindingV1Schema() schema.Schema {
 			},
 		},
 	}
+}
+
+func (r *RoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+	resp.IdentitySchema = common.NamespacedIdentitySchema()
+}
+
+func (r *RoleBindingV1) UpgradeIdentity(_ context.Context) map[int64]resource.IdentityUpgrader {
+	return common.UpgradeNamespacedIdentity(roleBindingKind, rbacAPIVersion)
+}
+
+type subjectAPIGroupUseState struct{}
+
+func (subjectAPIGroupUseState) Description(context.Context) string {
+	return "Retains an omitted API group when the subject at the same list index is unchanged."
+}
+
+func (m subjectAPIGroupUseState) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (subjectAPIGroupUseState) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if !req.ConfigValue.IsNull() || !req.PlanValue.IsUnknown() ||
+		req.StateValue.IsNull() || req.StateValue.IsUnknown() ||
+		req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	// Lists are positional: a different subject must not inherit this one's API group.
+	for _, field := range []string{"kind", "name"} {
+		var prior, planned types.String
+		fieldPath := req.Path.ParentPath().AtName(field)
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, fieldPath, &prior)...)
+		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, fieldPath, &planned)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if prior.IsNull() || prior.IsUnknown() || planned.IsNull() || planned.IsUnknown() || !prior.Equal(planned) {
+			return
+		}
+	}
+	resp.PlanValue = req.StateValue
 }

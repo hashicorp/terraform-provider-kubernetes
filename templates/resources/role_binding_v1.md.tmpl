@@ -9,6 +9,10 @@ description: |-
 
 {{ .Description }}
 
+Exactly one `metadata` block, exactly one `role_ref` block, and at least one `subject` block are required. Changing `role_ref` replaces the RoleBinding.
+
+For existing SDKv2-managed bindings, see the [Plugin Framework upgrade guide](../guides/plugin-framework-upgrade-guide.md#resource-kubernetes_role_binding_v1) before upgrading.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage
@@ -17,8 +21,12 @@ description: |-
 
 ## Import
 
-RoleBinding can be imported using the name, e.g.
+RoleBinding can be imported using a non-empty namespace and name in the form `namespace/name`, for example:
 
 ```
 $ terraform import kubernetes_role_binding_v1.example default/terraform-name
 ```
+
+Identity import requires Terraform 1.12 or later. Use `api_version = "rbac.authorization.k8s.io/v1"`, `kind = "RoleBinding"`, and the binding's `name`; an omitted `namespace` defaults to `default`.
+
+For a binding created with `generate_name`, configure the original prefix and omit `name` after import to avoid replacement.

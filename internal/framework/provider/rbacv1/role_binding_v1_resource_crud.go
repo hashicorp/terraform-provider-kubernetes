@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -22,8 +23,7 @@ import (
 )
 
 const (
-	roleBindingAPIVersion = "rbac.authorization.k8s.io/v1"
-	roleBindingKind       = "RoleBinding"
+	roleBindingKind = "RoleBinding"
 )
 
 // ── Create ────────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
-	clients, _, metaDiags := r.sdkv2Meta()
+	clients, _, metaDiags := common.ResolveSDKv2Meta(r.SDKv2Meta)
 	resp.Diagnostics.Append(metaDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -58,6 +58,7 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 		Subjects:   expandSubjects(plan.Subject),
 	}
 
+	tflog.Debug(ctx, "Creating RoleBinding", map[string]any{"namespace": objMeta.Namespace, "name": objMeta.Name})
 	out, err := conn.RbacV1().RoleBindings(objMeta.Namespace).Create(ctx, obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -70,25 +71,14 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 	// Echo the plan, overwriting only server-assigned fields.
 	// Filtering server-added metadata keys is Read's job, not Create's.
 	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
-	plan.Metadata[0].Name = types.StringValue(out.Name)
-	plan.Metadata[0].Namespace = types.StringValue(out.Namespace)
-	plan.Metadata[0].UID = types.StringValue(string(out.UID))
-	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
-	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
+	common.PopulateNamespacedMetadataFromResponse(&plan.Metadata[0], out.ObjectMeta)
 
 	// Preserve configured subject values; resolve only unknown computed fields
 	// (e.g. api_group omitted by the caller) from the Kubernetes response.
 	applySubjectComputedFields(&plan.Subject, out.Subjects)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(roleBindingAPIVersion),
-			Kind:       types.StringValue(roleBindingKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(out.Namespace, out.Name))...)
 }
 
 // ── Read ──────────────────────────────────────────────────────────────────────
@@ -108,7 +98,7 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	clients, filters, metaDiags := r.sdkv2Meta()
+	clients, filters, metaDiags := common.ResolveSDKv2Meta(r.SDKv2Meta)
 	resp.Diagnostics.Append(metaDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -119,19 +109,13 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
+	tflog.Debug(ctx, "Reading RoleBinding", map[string]any{"namespace": namespace, "name": name})
 	out, err := conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		// Terraform before 1.12 does not send identity on refresh, but the
 		// framework still requires it when Read removes a missing resource.
 		if resp.Identity.Raw.IsNull() {
-			resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-				ResourceIdentity: common.ResourceIdentity{
-					APIVersion: types.StringValue(roleBindingAPIVersion),
-					Kind:       types.StringValue(roleBindingKind),
-					Name:       types.StringValue(name),
-				},
-				Namespace: types.StringValue(namespace),
-			})...)
+			resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(namespace, name))...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
@@ -160,14 +144,7 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 	state.Subject = flattenSubjectsWithPrior(out.Subjects, state.Subject)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(roleBindingAPIVersion),
-			Kind:       types.StringValue(roleBindingKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(out.Namespace, out.Name))...)
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -192,7 +169,7 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	clients, _, metaDiags := r.sdkv2Meta()
+	clients, _, metaDiags := common.ResolveSDKv2Meta(r.SDKv2Meta)
 	resp.Diagnostics.Append(metaDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -206,13 +183,23 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	stateMeta := state.Metadata[0]
 	planMeta := plan.Metadata[0]
 
-	// Build metadata patch ops via common helper — mirrors SDKv2 patchMetadata.
-	ops := common.MetadataPatchOps("/metadata/", stateMeta.MetadataModel, planMeta.MetadataModel)
+	var current metav1.ObjectMeta
+	if (len(stateMeta.Annotations.Elements()) == 0 && len(planMeta.Annotations.Elements()) > 0) ||
+		(len(stateMeta.Labels.Elements()) == 0 && len(planMeta.Labels.Elements()) > 0) {
+		out, err := conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			resp.Diagnostics.AddError("error reading RoleBinding",
+				fmt.Sprintf("Failed to read RoleBinding %q/%q before updating metadata: %s", namespace, name, err))
+			return
+		}
+		current = out.ObjectMeta
+	}
+	ops := roleBindingMetadataPatchOps(stateMeta.MetadataModel, planMeta.MetadataModel, current)
 	// Patch subjects only when they changed, mirroring SDKv2 d.HasChange("subject").
 	// One replace of the whole list is simpler than index-based operations and yields
 	// the same final list.
-	subjectsChanged := !subjectsUnchanged(state.Subject, plan.Subject)
-	if subjectsChanged {
+	changedSubjects := subjectsChanged(state.Subject, plan.Subject)
+	if changedSubjects {
 		ops = append(ops, &kubernetes.ReplaceOperation{
 			Path:  "/subjects",
 			Value: expandSubjects(plan.Subject),
@@ -229,6 +216,7 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
+	tflog.Debug(ctx, "Updating RoleBinding", map[string]any{"namespace": namespace, "name": name})
 	out, err := conn.RbacV1().RoleBindings(namespace).Patch(
 		ctx,
 		name,
@@ -247,27 +235,16 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	// Echo the plan, overwriting only server-assigned fields.
 	// Filtering server-added metadata keys is Read's job, not Update's.
 	plan.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
-	plan.Metadata[0].Name = types.StringValue(out.Name)
-	plan.Metadata[0].Namespace = types.StringValue(out.Namespace)
-	plan.Metadata[0].UID = types.StringValue(string(out.UID))
-	plan.Metadata[0].ResourceVersion = types.StringValue(out.ResourceVersion)
-	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
+	common.PopulateNamespacedMetadataFromResponse(&plan.Metadata[0], out.ObjectMeta)
 
 	// Preserve configured subject values; resolve only unknown computed fields
 	// (e.g. api_group omitted by the caller) from the Kubernetes response.
-	if subjectsChanged {
+	if changedSubjects {
 		applySubjectComputedFields(&plan.Subject, out.Subjects)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(roleBindingAPIVersion),
-			Kind:       types.StringValue(roleBindingKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(out.Namespace, out.Name))...)
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -285,7 +262,7 @@ func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	clients, _, metaDiags := r.sdkv2Meta()
+	clients, _, metaDiags := common.ResolveSDKv2Meta(r.SDKv2Meta)
 	resp.Diagnostics.Append(metaDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -296,6 +273,7 @@ func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
+	tflog.Debug(ctx, "Deleting RoleBinding", map[string]any{"namespace": namespace, "name": name})
 	err = conn.RbacV1().RoleBindings(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		resp.Diagnostics.AddError(
@@ -315,10 +293,10 @@ func (r *RoleBindingV1) ImportState(ctx context.Context, req resource.ImportStat
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		if identityData.Kind.ValueString() != roleBindingKind || identityData.APIVersion.ValueString() != roleBindingAPIVersion {
+		if identityData.Kind.ValueString() != roleBindingKind || identityData.APIVersion.ValueString() != rbacAPIVersion {
 			resp.Diagnostics.AddError("invalid identity import",
 				fmt.Sprintf("Expected kind %q and api_version %q, got kind %q and api_version %q.",
-					roleBindingKind, roleBindingAPIVersion, identityData.Kind.ValueString(), identityData.APIVersion.ValueString()))
+					roleBindingKind, rbacAPIVersion, identityData.Kind.ValueString(), identityData.APIVersion.ValueString()))
 			return
 		}
 		namespace := identityData.Namespace.ValueString()

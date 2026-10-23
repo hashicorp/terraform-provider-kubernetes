@@ -1,11 +1,11 @@
-```release-note:feature
-`kubernetes_role_binding_v1`: Migrate resource from SDKv2 to the Terraform Plugin Framework. Existing state is automatically compatible; no state migration or configuration rewrite is required for users whose configuration does not hit the breaking changes below. Users of the deprecated `kubernetes_role_binding` resource type may migrate to `kubernetes_role_binding_v1` using a `moved` block.
+```release-note:note
+`resource/kubernetes_role_binding_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and supporting existing state without re-import. Explicit empty User/Group subject API groups and empty metadata maps may require a one-time in-place update. Immediately after upgrading, `terraform plan -refresh=false` may show a one-time in-place update normalizing an omitted `generate_name` from `""` to null. These changes do not replace the RoleBinding. Moving from the deprecated `kubernetes_role_binding` type is supported with Terraform 1.8 or later. See the Plugin Framework upgrade guide for details.
 ```
 
 ```release-note:breaking-change
-`kubernetes_role_binding_v1`: Annotation and label map values must now be strings. A `null` value (e.g. `annotations = { key = null }`) previously silently dropped the key; it now produces a plan-time error. Replace `null` values with an empty string `""` or remove the key entirely.
+`resource/kubernetes_role_binding_v1`: Annotation and label map values must now be non-null strings. A `null` value (e.g. `annotations = { key = null }`) previously silently dropped the key; it now produces a plan-time error. Provide a string value or remove the key entirely. Omitting the whole map or setting it to null remains supported.
 ```
 
 ```release-note:breaking-change
-`kubernetes_role_binding_v1`: Setting both `metadata.name` and `metadata.generate_name` in the same block is now rejected at plan time. Previously the Kubernetes API silently ignored `generate_name` when `name` was set. Remove one of the two fields.
+`resource/kubernetes_role_binding_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected at plan time, including `generate_name = ""`. Previously the Kubernetes API silently ignored `generate_name` when `name` was set. To keep the existing RoleBinding, remove `generate_name` if it is empty; otherwise remove `name` and retain the original `generate_name`. Removing or changing a stored non-empty prefix replaces the RoleBinding.
 ```

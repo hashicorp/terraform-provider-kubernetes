@@ -5,13 +5,14 @@ package rbacv1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
-	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 )
 
 // Compile-time interface assertions — ensure RoleBindingV1 implements all
@@ -49,61 +50,98 @@ func (r *RoleBindingV1) Configure(_ context.Context, req resource.ConfigureReque
 	if req.ProviderData == nil {
 		return
 	}
-	r.SDKv2Meta = req.ProviderData.(func() any)
-}
-
-// sdkv2Meta resolves the SDKv2 provider metadata into the two interfaces this resource
-// needs. The call is deferred until the request rather than made in Configure, because the
-// mux server configures the SDKv2 provider independently and its meta is not populated
-// until that happens.
-func (r *RoleBindingV1) sdkv2Meta() (kubernetes.KubeClientsets, kubernetes.MetadataFilters, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if r.SDKv2Meta == nil {
-		diags.AddError("Provider not configured",
-			"The SDKv2 provider metadata is unavailable. This is a bug in the provider.")
-		return nil, nil, diags
-	}
-
-	meta := r.SDKv2Meta()
-	clients, ok := meta.(kubernetes.KubeClientsets)
+	sdkv2Meta, ok := req.ProviderData.(func() any)
 	if !ok {
-		diags.AddError("Unexpected provider data",
-			fmt.Sprintf("Expected kubernetes.KubeClientsets, got %T. This is a bug in the provider.", meta))
-		return nil, nil, diags
+		resp.Diagnostics.AddError("Unexpected provider data",
+			fmt.Sprintf("Expected func() any, got %T. This is a bug in the provider.", req.ProviderData))
+		return
 	}
-
-	filters, ok := meta.(kubernetes.MetadataFilters)
-	if !ok {
-		diags.AddError("Unexpected provider data",
-			fmt.Sprintf("Expected kubernetes.MetadataFilters, got %T. This is a bug in the provider.", meta))
-		return nil, nil, diags
-	}
-
-	return clients, filters, diags
-}
-
-// IdentitySchema defines the identity schema for kubernetes_role_binding_v1.
-// RoleBindings are namespaced; delegates to common.NamespacedIdentitySchema which mirrors
-// the SDKv2 resourceIdentitySchemaNamespaced contract (Version: 1, namespace OptionalForImport,
-// others RequiredForImport).
-func (r *RoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
-	resp.IdentitySchema = common.NamespacedIdentitySchema()
-}
-
-// UpgradeIdentity implements [resource.ResourceWithUpgradeIdentity].
-//
-// Without this, any object created by provider 2.37.x or older fails its first plan with
-// "Unable to Upgrade Resource Identity": identity shipped in 2.38.0, so older state carries
-// identity_schema_version 0 and no identity, and Terraform asks for an upgrade whenever the
-// stored version differs from the declared one. SDKv2 answers that generically in its gRPC
-// server; the framework requires each resource to supply it.
-func (r *RoleBindingV1) UpgradeIdentity(ctx context.Context) map[int64]resource.IdentityUpgrader {
-	return common.UpgradeNamespacedIdentity(roleBindingKind, roleBindingAPIVersion)
+	r.SDKv2Meta = sdkv2Meta
 }
 
 // MoveState returns the StateMover handlers that enable `moved {}` block support
 // for migrating from the deprecated kubernetes_role_binding (SDKv2) resource.
 func (r *RoleBindingV1) MoveState(_ context.Context) []resource.StateMover {
-	return moveStateHandlers()
+	return []resource.StateMover{{StateMover: moveStateFromKubernetesRoleBindingHandler}}
+}
+
+func moveStateFromKubernetesRoleBindingHandler(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+	if !strings.HasSuffix(req.SourceProviderAddress, providerAddressSuffix) ||
+		req.SourceTypeName != "kubernetes_role_binding" || req.SourceSchemaVersion != 0 {
+		tflog.Debug(ctx, "MoveState: not a kubernetes_role_binding v0 source, skipping", map[string]any{
+			"source_type_name":        req.SourceTypeName,
+			"source_schema_version":   req.SourceSchemaVersion,
+			"source_provider_address": req.SourceProviderAddress,
+		})
+		return
+	}
+	if req.SourceRawState == nil || len(req.SourceRawState.JSON) == 0 {
+		resp.Diagnostics.AddError("state move failed", "The source state has no JSON data. Flatmap state is not supported.")
+		return
+	}
+	var raw sdkv2RoleBindingStateV0
+	if err := json.Unmarshal(req.SourceRawState.JSON, &raw); err != nil {
+		resp.Diagnostics.AddError("state move failed", fmt.Sprintf("failed to unmarshal kubernetes_role_binding state: %s", err))
+		return
+	}
+	if len(raw.Metadata) != 1 {
+		resp.Diagnostics.AddError("state move failed", fmt.Sprintf("expected exactly 1 metadata element in source state, got %d", len(raw.Metadata)))
+		return
+	}
+	if len(raw.RoleRef) != 1 {
+		resp.Diagnostics.AddError("state move failed", fmt.Sprintf("expected exactly 1 role_ref element in source state, got %d", len(raw.RoleRef)))
+		return
+	}
+	if raw.ID == "" {
+		resp.Diagnostics.AddError("state move failed", "empty 'id' in source state")
+		return
+	}
+
+	m := raw.Metadata[0]
+	annotations, annotationDiags := common.SDKv2MapToFramework(ctx, m.Annotations)
+	resp.Diagnostics.Append(annotationDiags...)
+	labels, labelDiags := common.SDKv2MapToFramework(ctx, m.Labels)
+	resp.Diagnostics.Append(labelDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	meta := common.NamespacedMetadataModel{
+		MetadataModel: common.MetadataModel{
+			MetadataBase: common.MetadataBase{
+				Name:            types.StringValue(m.Name),
+				Generation:      types.Int64Value(m.Generation),
+				ResourceVersion: types.StringValue(m.ResourceVersion),
+				UID:             types.StringValue(m.UID),
+				Annotations:     annotations,
+				Labels:          labels,
+			},
+			GenerateName: types.StringNull(),
+		},
+		Namespace: types.StringValue(m.Namespace),
+	}
+	// Normalize SDKv2's unset prefix even when the first plan skips refresh.
+	if m.GenerateName != "" {
+		meta.GenerateName = types.StringValue(m.GenerateName)
+	}
+	subjects := make([]SubjectModel, 0, len(raw.Subjects))
+	for _, s := range raw.Subjects {
+		subjects = append(subjects, SubjectModel{
+			APIGroup: types.StringValue(s.APIGroup), Kind: types.StringValue(s.Kind),
+			Name: types.StringValue(s.Name), Namespace: types.StringValue(s.Namespace),
+		})
+	}
+	rr := raw.RoleRef[0]
+	moved := RoleBindingModel{
+		ID:       types.StringValue(raw.ID),
+		Metadata: []common.NamespacedMetadataModel{meta},
+		RoleRef: []RoleRefModel{{
+			APIGroup: types.StringValue(rr.APIGroup), Kind: types.StringValue(rr.Kind), Name: types.StringValue(rr.Name),
+		}},
+		Subject: subjects,
+	}
+	resp.Diagnostics.Append(resp.TargetState.Set(ctx, &moved)...)
+	if resp.Diagnostics.HasError() || resp.TargetIdentity == nil {
+		return
+	}
+	resp.Diagnostics.Append(resp.TargetIdentity.Set(ctx, roleBindingIdentity(m.Namespace, m.Name))...)
 }

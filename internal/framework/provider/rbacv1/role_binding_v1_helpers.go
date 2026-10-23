@@ -5,7 +5,10 @@ package rbacv1
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	rbacv1api "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ── RoleRef helpers ───────────────────────────────────────────────────────────
@@ -45,32 +48,17 @@ func expandSubjects(in []SubjectModel) []rbacv1api.Subject {
 	return subjects
 }
 
-// flattenSubjects converts Kubernetes Subject API objects to a slice of SubjectModel.
-//
-// Namespace is written exactly as the API returns it. The schema default ("default")
-// is applied by Terraform at plan time when namespace is omitted, so the API then
-// stores and returns "default". An empty namespace coming back from the API therefore
-// means the user explicitly configured "" (or the object was created outside Terraform);
-// rewriting it to "default" would make the next plan differ from state. This matches the
-// SDKv2 flatten, which kept an empty namespace empty.
-func flattenSubjects(in []rbacv1api.Subject) []SubjectModel {
-	result := make([]SubjectModel, 0, len(in))
-	for _, s := range in {
-		result = append(result, flattenSubject(s))
-	}
-	return result
-}
-
-// flattenSubjectsWithPrior is flattenSubjects for Read. It keeps a prior-state
+// flattenSubjectsWithPrior keeps a prior-state
 // api_group of "" when the API returns the canonical rbac.authorization.k8s.io for a
 // User or Group subject: the API server defaults an empty api_group for those kinds,
 // so the two values are equivalent and rewriting the configured "" would cause a
 // perpetual diff.
 func flattenSubjectsWithPrior(in []rbacv1api.Subject, prior []SubjectModel) []SubjectModel {
-	result := flattenSubjects(in)
-	for i := range result {
+	result := make([]SubjectModel, len(in))
+	for i, s := range in {
+		result[i] = flattenSubject(s)
 		if i >= len(prior) {
-			break
+			continue
 		}
 		p := prior[i]
 		if p.APIGroup.IsNull() || p.APIGroup.IsUnknown() || p.APIGroup.ValueString() != "" {
@@ -119,31 +107,67 @@ func applySubjectComputedFields(plan *[]SubjectModel, apiSubjects []rbacv1api.Su
 		if s.APIGroup.IsUnknown() {
 			s.APIGroup = types.StringValue(api.APIGroup)
 		}
-		// Resolve namespace only when the plan left it unknown; keep the API value as-is.
-		if s.Namespace.IsUnknown() {
-			s.Namespace = types.StringValue(api.Namespace)
-		}
 	}
 }
 
 // ── Subject change helper ─────────────────────────────────────────────────────
 
-// subjectsUnchanged reports whether the planned subjects match state, mirroring SDKv2
-// !d.HasChange("subject"). An unknown planned value comes from an unconfigured computed
+// subjectsChanged mirrors SDKv2 d.HasChange("subject"). An unknown planned value comes from an unconfigured computed
 // field and keeps the state value, so it does not count as a change.
-func subjectsUnchanged(state, plan []SubjectModel) bool {
+func subjectsChanged(state, plan []SubjectModel) bool {
 	if len(state) != len(plan) {
-		return false
+		return true
 	}
 	for i := range plan {
 		if !subjectFieldUnchanged(state[i].APIGroup, plan[i].APIGroup) ||
 			!subjectFieldUnchanged(state[i].Kind, plan[i].Kind) ||
 			!subjectFieldUnchanged(state[i].Name, plan[i].Name) ||
 			!subjectFieldUnchanged(state[i].Namespace, plan[i].Namespace) {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+func roleBindingIdentity(namespace, name string) common.NamespacedResourceIdentity {
+	return common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(rbacAPIVersion),
+			Kind:       types.StringValue(roleBindingKind),
+			Name:       types.StringValue(name),
+		},
+		Namespace: types.StringValue(namespace),
+	}
+}
+
+// Seed only empty managed maps from the API, so adding the first managed key
+// does not replace a map containing keys owned by another controller.
+func roleBindingMetadataPatchOps(state, plan common.MetadataModel, current metav1.ObjectMeta) kubernetes.PatchOperations {
+	ops := make(kubernetes.PatchOperations, 0)
+	for _, field := range []struct {
+		name        string
+		state, plan types.Map
+		current     map[string]string
+	}{
+		{"annotations", state.Annotations, plan.Annotations, current.Annotations},
+		{"labels", state.Labels, plan.Labels, current.Labels},
+	} {
+		oldValues := common.ExpandMapForPatch(field.state)
+		newValues := common.ExpandMapForPatch(field.plan)
+		if len(oldValues) == 0 && len(newValues) == 0 {
+			continue
+		}
+		if len(oldValues) == 0 {
+			for key, value := range field.current {
+				oldValues[key] = value
+				if _, configured := newValues[key]; !configured {
+					newValues[key] = value
+				}
+			}
+		}
+		ops = append(ops, kubernetes.DiffStringMap("/metadata/"+field.name, oldValues, newValues)...)
+	}
+	return ops
 }
 
 func subjectFieldUnchanged(state, plan types.String) bool {

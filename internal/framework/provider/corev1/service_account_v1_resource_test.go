@@ -2070,6 +2070,80 @@ func TestServiceAccountNameAndGenerateNameProtocol(t *testing.T) {
 	t.Fatalf("missing ignored generate_name warning: %#v", response.Diagnostics)
 }
 
+// SDKv2 imported a default ServiceAccount under any name. Such state must still
+// refresh and destroy as before, while new imports reject the wrong name.
+func TestServiceAccountDefaultLegacyNameProtocol(t *testing.T) {
+	ctx := context.Background()
+	const typeName = "kubernetes_default_service_account_v1"
+	path := "/api/v1/namespaces/" + serviceAccountCLINamespace + "/serviceaccounts/legacy"
+	var mu sync.Mutex
+	calls := map[string]int{}
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		calls[r.Method+" "+r.URL.Path]++
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == path:
+			serviceAccountHTTPJSON(w, http.StatusOK, &coreapi.ServiceAccount{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "ServiceAccount"},
+				ObjectMeta: metav1.ObjectMeta{Name: "legacy", Namespace: serviceAccountCLINamespace, UID: "legacy-uid", ResourceVersion: "7"},
+			})
+		case r.Method == http.MethodDelete && r.URL.Path == path:
+			serviceAccountHTTPJSON(w, http.StatusOK, &metav1.Status{TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"}, Status: metav1.StatusSuccess})
+		default:
+			t.Errorf("unexpected API call: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	}))
+	defer api.Close()
+	server, schemas := serviceAccountServer(t)
+	config := serviceAccountDynamic(t, serviceAccountValue(schemas.Provider.ValueType(), map[string]tftypes.Value{
+		"host": tftypes.NewValue(tftypes.String, api.URL),
+	}))
+	configured, err := server.ConfigureProvider(ctx, &tfprotov6.ConfigureProviderRequest{Config: config})
+	if err != nil || serviceAccountDiagnosticError(configured.Diagnostics) {
+		t.Fatalf("configure: %v, %#v", err, configured)
+	}
+	typ := schemas.ResourceSchemas[typeName].ValueType()
+	prior := serviceAccountLegacyState(t, typ, "legacy", false)
+
+	read, err := server.ReadResource(ctx, &tfprotov6.ReadResourceRequest{TypeName: typeName, CurrentState: serviceAccountDynamic(t, prior)})
+	if err != nil || serviceAccountDiagnosticError(read.Diagnostics) || read.NewState == nil {
+		t.Fatalf("legacy default ServiceAccount state must refresh: %v, %#v", err, read)
+	}
+	refreshed, err := read.NewState.Unmarshal(typ)
+	if err != nil || refreshed.IsNull() {
+		t.Fatalf("legacy state removed on refresh: %v, %s", err, refreshed)
+	}
+	var attributes map[string]tftypes.Value
+	var id string
+	if err := refreshed.As(&attributes); err != nil {
+		t.Fatal(err)
+	}
+	if err := attributes["id"].As(&id); err != nil || id != serviceAccountCLINamespace+"/legacy" {
+		t.Fatalf("refreshed id = %q, %v", id, err)
+	}
+
+	null := serviceAccountDynamic(t, tftypes.NewValue(typ, nil))
+	deleted, err := server.ApplyResourceChange(ctx, &tfprotov6.ApplyResourceChangeRequest{
+		TypeName: typeName, PriorState: serviceAccountDynamic(t, prior), PlannedState: null, Config: null,
+	})
+	if err != nil || serviceAccountDiagnosticError(deleted.Diagnostics) {
+		t.Fatalf("legacy default ServiceAccount state must destroy: %v, %#v", err, deleted)
+	}
+
+	imported, err := server.ImportResourceState(ctx, &tfprotov6.ImportResourceStateRequest{TypeName: typeName, ID: serviceAccountCLINamespace + "/legacy"})
+	if err != nil || !serviceAccountDiagnosticError(imported.Diagnostics) {
+		t.Fatalf("importing a non-default name must fail: %v, %#v", err, imported)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if calls["GET "+path] != 1 || calls["DELETE "+path] != 1 || len(calls) != 2 {
+		t.Fatalf("expected one GET for refresh and one DELETE, and no API call for the rejected import: %v", calls)
+	}
+}
+
 // Skip ReadResource deliberately: a refresh can normalize a legacy value before
 // the plan modifiers see it and conceal unintended replacement on upgrade.
 func TestServiceAccountLegacyPlanWithoutRefresh(t *testing.T) {

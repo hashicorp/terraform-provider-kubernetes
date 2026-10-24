@@ -700,3 +700,19 @@ func TestServiceAccountInternalPatchRejectsConcurrentChanges(t *testing.T) {
 		t.Fatalf("patch overwrote concurrent metadata/reference edits: %s", payload)
 	}
 }
+
+func TestServiceAccountInternalAPIErrorNamesObject(t *testing.T) {
+	for _, tc := range []struct {
+		meta metav1.ObjectMeta
+		want string
+	}{
+		{metav1.ObjectMeta{Namespace: "ns", Name: "account"}, `Failed to create ServiceAccount "ns/account": dial tcp: connection refused`},
+		{metav1.ObjectMeta{Namespace: "ns", GenerateName: "prefix-"}, `Failed to create ServiceAccount "ns/prefix-<generated>": dial tcp: connection refused`},
+	} {
+		var diags diag.Diagnostics
+		serviceAccountAPIError(&diags, "Error creating service account", "create", serviceAccountRef(tc.meta), fmt.Errorf("dial tcp: connection refused"))
+		if len(diags) != 1 || diags[0].Summary() != "Error creating service account" || diags[0].Detail() != tc.want {
+			t.Fatalf("diagnostic = %#v, want detail %q", diags, tc.want)
+		}
+	}
+}

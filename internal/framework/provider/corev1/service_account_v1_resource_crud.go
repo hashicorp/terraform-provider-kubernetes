@@ -41,8 +41,8 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// As in SDKv2, the timeout bounds each wait separately rather than the whole
+	// Create, so adoption can wait for the account and then for its token.
 	conn, filters, diags := serviceAccountClient(callback)
 	resp.Diagnostics.Append(diags...)
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
@@ -78,14 +78,14 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 			return nil
 		})
 		if err != nil {
-			resp.Diagnostics.AddError("Error waiting for default service account", err.Error())
+			serviceAccountAPIError(&resp.Diagnostics, "Error waiting for default service account", "wait for", serviceAccountRef(metadata), err)
 			return
 		}
 		// SDKv2 looks for the controller token relative to an empty secrets list
 		// during adoption, not relative to the user's desired list.
 		secret, err := serviceAccountWaitForDefaultSecret(ctx, conn, metadata.Name, corev1.ServiceAccount{ObjectMeta: metadata}, timeout)
 		if err != nil {
-			resp.Diagnostics.AddError("Error discovering default service account token", err.Error())
+			serviceAccountAPIError(&resp.Diagnostics, "Error discovering default service account token", "discover the default token of", serviceAccountRef(metadata), err)
 			return
 		}
 		plan.DefaultSecretName = types.StringValue(secret)
@@ -93,7 +93,7 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 		// version before constructing the guarded adoption patch.
 		out, err = conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 		if err != nil {
-			resp.Diagnostics.AddError("Error reading default service account before adoption", err.Error())
+			serviceAccountAPIError(&resp.Diagnostics, "Error reading default service account before adoption", "read", serviceAccountRef(metadata), err)
 			return
 		}
 		ops, d := serviceAccountAdoptionPatch(ctx, plan, out, filters)
@@ -108,13 +108,13 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 		}
 		out, err = conn.CoreV1().ServiceAccounts(metadata.Namespace).Patch(ctx, metadata.Name, k8stypes.JSONPatchType, payload, metav1.PatchOptions{})
 		if err != nil {
-			resp.Diagnostics.AddError("Error adopting default service account", err.Error())
+			serviceAccountAPIError(&resp.Diagnostics, "Error adopting default service account", "adopt", serviceAccountRef(metadata), err)
 			return
 		}
 	} else {
 		out, err = conn.CoreV1().ServiceAccounts(metadata.Namespace).Create(ctx, &config, metav1.CreateOptions{})
 		if err != nil {
-			resp.Diagnostics.AddError("Error creating service account", err.Error())
+			serviceAccountAPIError(&resp.Diagnostics, "Error creating service account", "create", serviceAccountRef(metadata), err)
 			return
 		}
 		// A failed discovery remains distinguishable from a successful >=1.24
@@ -144,7 +144,7 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 	// Token generation may have changed resource_version after the POST.
 	out, err = conn.CoreV1().ServiceAccounts(out.Namespace).Get(ctx, out.Name, metav1.GetOptions{})
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading service account after creation", err.Error())
+		serviceAccountAPIError(&resp.Diagnostics, "Error reading service account after creation", "read", serviceAccountRef(out.ObjectMeta), err)
 		return
 	}
 	serviceAccountSetComputed(&plan, out)
@@ -157,7 +157,7 @@ func serviceAccountRead(ctx context.Context, req resource.ReadRequest, resp *res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	namespace, name, err := serviceAccountIDParts(state.ID.ValueString(), defaultAccount)
+	namespace, name, err := serviceAccountIDParts(state.ID.ValueString(), false)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid service account identifier", err.Error())
 		return
@@ -181,7 +181,7 @@ func serviceAccountRead(ctx context.Context, req resource.ReadRequest, resp *res
 		return
 	}
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading service account", err.Error())
+		serviceAccountAPIError(&resp.Diagnostics, "Error reading service account", "read", namespace+"/"+name, err)
 		return
 	}
 	// A recorded legacy token remains the excluded/default reference even after
@@ -216,7 +216,7 @@ func serviceAccountUpdate(ctx context.Context, req resource.UpdateRequest, resp 
 		resp.Diagnostics.AddError("Invalid service account metadata", "Exactly one metadata block is required in plan and state.")
 		return
 	}
-	namespace, name, err := serviceAccountIDParts(state.ID.ValueString(), defaultAccount)
+	namespace, name, err := serviceAccountIDParts(state.ID.ValueString(), false)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid service account identifier", err.Error())
 		return
@@ -228,7 +228,7 @@ func serviceAccountUpdate(ctx context.Context, req resource.UpdateRequest, resp 
 	}
 	out, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading service account during update", err.Error())
+		serviceAccountAPIError(&resp.Diagnostics, "Error reading service account during update", "read", namespace+"/"+name, err)
 		return
 	}
 	plan.DefaultSecretName = state.DefaultSecretName
@@ -245,7 +245,7 @@ func serviceAccountUpdate(ctx context.Context, req resource.UpdateRequest, resp 
 		}
 		out, err = conn.CoreV1().ServiceAccounts(namespace).Patch(ctx, name, k8stypes.JSONPatchType, payload, metav1.PatchOptions{})
 		if err != nil {
-			resp.Diagnostics.AddError("Error updating service account", err.Error())
+			serviceAccountAPIError(&resp.Diagnostics, "Error updating service account", "update", namespace+"/"+name, err)
 			return
 		}
 	}
@@ -262,7 +262,7 @@ func serviceAccountDelete(ctx context.Context, req resource.DeleteRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	namespace, name, err := serviceAccountIDParts(state.ID.ValueString(), defaultAccount)
+	namespace, name, err := serviceAccountIDParts(state.ID.ValueString(), false)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid service account identifier", err.Error())
 		return
@@ -274,8 +274,23 @@ func serviceAccountDelete(ctx context.Context, req resource.DeleteRequest, resp 
 	}
 	err = conn.CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
-		resp.Diagnostics.AddError("Error deleting service account", err.Error())
+		serviceAccountAPIError(&resp.Diagnostics, "Error deleting service account", "delete", namespace+"/"+name, err)
 	}
+}
+
+// serviceAccountAPIError names the object because transport errors, unlike most
+// Kubernetes API errors, do not.
+func serviceAccountAPIError(diags *diag.Diagnostics, summary, verb, ref string, err error) {
+	diags.AddError(summary, fmt.Sprintf("Failed to %s ServiceAccount %q: %s", verb, ref, err.Error()))
+}
+
+// serviceAccountRef returns namespace/name. Before creation, a generated name is
+// known only by its prefix.
+func serviceAccountRef(meta metav1.ObjectMeta) string {
+	if meta.Name == "" && meta.GenerateName != "" {
+		return meta.Namespace + "/" + meta.GenerateName + "<generated>"
+	}
+	return meta.Namespace + "/" + meta.Name
 }
 
 func serviceAccountAdoptionPatch(ctx context.Context, plan ServiceAccountV1Model, current *corev1.ServiceAccount, filters kubernetes.MetadataFilters) (kubernetes.PatchOperations, diag.Diagnostics) {

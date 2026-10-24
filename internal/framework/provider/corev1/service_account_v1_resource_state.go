@@ -53,7 +53,7 @@ func serviceAccountImport(ctx context.Context, req resource.ImportStateRequest, 
 	}
 	account, err := conn.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		resp.Diagnostics.AddError("Error importing service account", err.Error())
+		serviceAccountAPIError(&resp.Diagnostics, "Error importing service account", "import", namespace+"/"+name, err)
 		return
 	}
 	secret, diags := serviceAccountDiscoverDefaultSecret(ctx, conn, account)

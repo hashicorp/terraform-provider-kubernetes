@@ -89,7 +89,9 @@ func serviceAccountWriteModel(ctx context.Context, target serviceAccountModelWri
 	return target.Set(ctx, &other)
 }
 
-func serviceAccountIDParts(id string, defaultAccount bool) (string, string, error) {
+// requireDefaultName is set only by import and MoveState. SDKv2 import accepted any
+// name, so Read, Update and Delete must still accept such state, as SDKv2 did.
+func serviceAccountIDParts(id string, requireDefaultName bool) (string, string, error) {
 	namespace, name, err := kubernetes.IdParts(id)
 	if err != nil {
 		return "", "", err
@@ -97,7 +99,7 @@ func serviceAccountIDParts(id string, defaultAccount bool) (string, string, erro
 	if namespace == "" || name == "" {
 		return "", "", fmt.Errorf("expected a non-empty namespace/name identifier, got %q", id)
 	}
-	if defaultAccount && name != "default" {
+	if requireDefaultName && name != "default" {
 		return "", "", fmt.Errorf("the default service account must be named \"default\", got %q", name)
 	}
 	return namespace, name, nil

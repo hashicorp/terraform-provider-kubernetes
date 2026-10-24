@@ -1,0 +1,31 @@
+ ```release-note:enhancement
+`resource/kubernetes_service_account_v1`: Support `moved` blocks from the deprecated `kubernetes_service_account` resource without recreating the ServiceAccount. Cross-type moves require Terraform 1.8 or later.
+```
+
+```release-note:enhancement
+`resource/kubernetes_default_service_account_v1`: Support `moved` blocks from the deprecated `kubernetes_default_service_account` resource without recreating or re-adopting the default ServiceAccount. Cross-type moves require Terraform 1.8 or later.
+```
+
+```release-note:note
+`resource/kubernetes_service_account_v1`, `resource/kubernetes_default_service_account_v1`: Migrate to Plugin Framework. Existing versioned resources upgrade at the same address without a `moved` block or re-import. Explicitly empty metadata maps may produce a one-time in-place update after upgrading.
+```
+
+```release-note:note
+`resource/kubernetes_default_service_account_v1`: Import and `moved` blocks now reject identifiers that do not name the `default` ServiceAccount, instead of importing another account that the next plan would replace. Existing state that refers to another account still refreshes and plans as before.
+```
+
+```release-note:note
+`resource/kubernetes_service_account_v1`: Setting both `metadata.name` and `metadata.generate_name` now produces a warning, because Kubernetes ignores `generate_name` when `name` is set. The configuration is still accepted.
+```
+
+```release-note:note
+`resource/kubernetes_service_account_v1`, `resource/kubernetes_default_service_account_v1`: Importing by resource identity without a `namespace` now uses the `default` namespace. Previously such an import failed.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_service_account_v1`, `resource/kubernetes_default_service_account_v1`: Validate that `metadata.labels` and `metadata.annotations` entries contain non-null strings. Previously accepted null entries are now rejected during planning; omit those entries or provide string values. Entire maps may still be omitted or set to `null`.
+```
+
+```release-note:bug
+`resource/kubernetes_service_account_v1`, `resource/kubernetes_default_service_account_v1`: Adding the first managed label or annotation no longer removes keys excluded by `ignore_labels` or `ignore_annotations`. Adopting the default ServiceAccount with configured metadata also keeps those keys.
+```

@@ -37,6 +37,8 @@ The version below is the first release containing each migration.
 | --- | --- | --- | --- |
 | Resource | `kubernetes_namespace_v1` | v3.3.0 | [Namespace resource](#resource-kubernetes_namespace_v1) |
 | Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
+| Resource | `kubernetes_service_account_v1` | v3.5.0 | [ServiceAccount resources](#resource-kubernetes_service_account_v1-and-kubernetes_default_service_account_v1) |
+| Resource | `kubernetes_default_service_account_v1` | v3.5.0 | [ServiceAccount resources](#resource-kubernetes_service_account_v1-and-kubernetes_default_service_account_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -100,6 +102,22 @@ moved {
 ```
 
 Resolve the configuration changes above and verify that the plan does not replace the Role. See the [Role resource reference](../resources/role_v1.md#migrating-from-kubernetes_role) for further migration details.
+
+## Resource: kubernetes_service_account_v1 and kubernetes_default_service_account_v1
+
+Both resources retain block syntax and existing resource addresses. No `moved` block or re-import is needed for the same address.
+
+- **Empty metadata maps:** SDKv2 could store explicitly configured `annotations = {}` or `labels = {}` as `null` until a later refresh. Upgrading such state can produce a one-time in-place update to `{}`. The update does not modify the ServiceAccount and settles after applying.
+- **Computed metadata:** During updates, `metadata[0].generation` and `metadata[0].resource_version` can be `(known after apply)` until read from the API. This does not itself indicate replacement; review downstream changes that depend on these values.
+- **Null map entries:** Annotation and label values must be non-null strings. Previously accepted entries such as `annotations = { owner = null }` are now rejected during validation. Remove these entries or provide string values before planning, applying, or destroying. Omitting the whole map or setting it to `null` remains supported.
+- **Ignored metadata:** Adding the first managed label or annotation no longer removes keys excluded by the provider's `ignore_labels` or `ignore_annotations`. SDKv2 replaced the whole map.
+- **Default ServiceAccount adoption:** When `kubernetes_default_service_account_v1` adopts the existing account with `labels` or `annotations` configured, keys in that map that are not configured are still removed, except keys excluded by `ignore_labels` or `ignore_annotations` and Kubernetes-reserved `*.kubernetes.io` keys other than `app.kubernetes.io`. Omitted or empty maps leave existing keys unchanged, as before.
+- **Default ServiceAccount import:** Importing `kubernetes_default_service_account_v1`, or moving `kubernetes_default_service_account` to it, now fails unless the identifier names the `default` account, for example `my-namespace/default`. Previously, importing another account succeeded and the next plan replaced that account. Existing state that refers to another account still refreshes and plans as before.
+- **Name and generate_name:** Setting both `metadata.name` and `metadata.generate_name` on `kubernetes_service_account_v1` now produces a warning, because Kubernetes ignores `generate_name` when `name` is set. The configuration is still accepted, as before.
+- **Identity import without namespace:** Importing either resource by resource identity without `namespace` now uses the `default` namespace. Previously such an import failed.
+- **Legacy token Secrets:** Import does not require access to legacy token Secrets. If a referenced Secret cannot be read, import succeeds with a warning and an empty `default_secret_name`. Accounts without token Secrets import without a token-discovery warning.
+
+To move from the deprecated `kubernetes_service_account` or `kubernetes_default_service_account` resource types, follow the [ServiceAccount](../resources/service_account_v1.md) and [default ServiceAccount](../resources/default_service_account_v1.md) migration notes. Cross-type moves require Terraform 1.8 or later.
 
 ## Data source: kubernetes_namespace_v1
 

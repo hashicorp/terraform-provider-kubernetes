@@ -36,6 +36,7 @@ The version below is the first release containing each migration.
 | Kind | Terraform type | Migrated in | Behavior notes |
 | --- | --- | --- | --- |
 | Resource | `kubernetes_namespace_v1` | v3.3.0 | [Namespace resource](#resource-kubernetes_namespace_v1) |
+| Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -68,6 +69,37 @@ resource "kubernetes_namespace_v1" "example" {
 Update references to the new address, for example, `kubernetes_namespace.example.metadata[0].name` to `kubernetes_namespace_v1.example.metadata[0].name`.
 
 Run `terraform plan` to verify the move and review any in-place changes described above. Investigate any proposed replacement before applying. After applying, run `terraform plan` again and confirm it is empty. No state removal or re-import is needed.
+
+## Resource: kubernetes_role_v1
+
+- **Empty metadata maps:** Explicit `labels = {}` or `annotations = {}` can require a one-time in-place update from SDKv2's `null`. Conversely, an earlier import may have stored empty maps that now change to `null` when omitted from configuration. These normalization changes do not themselves replace the Role or change its Kubernetes metadata.
+- **Computed metadata:** During updates, `metadata[0].generation` and `metadata[0].resource_version` can be `(known after apply)` until read from the API. This does not itself indicate replacement.
+- **Plans without refresh:** Immediately after upgrading, `terraform plan -refresh=false` may show an in-place update adding `resource_names = []` when the argument is omitted. Review a normal, refresh-enabled plan before applying; refresh records the empty set from Kubernetes. This normalization does not itself replace the Role.
+- **Null map entries:** `metadata.labels` and `metadata.annotations` entries must contain non-null strings. Remove entries such as `owner = null` or provide string values. Omitting the whole map or setting it to `null` remains supported.
+- **Unset generated-name prefix:** Omitted `metadata.generate_name` changes from SDKv2's `""` to `null`. This state-only change needs no Role update or replacement, even with `-refresh=false`. Leave it omitted.
+- **Import:** String import IDs must contain a non-empty namespace and name (`namespace/name`). Identity imports require Terraform 1.12 or later and use `default` when namespace is omitted. For a Role created with `generateName`, configure `generate_name` with the original prefix and omit `name` to avoid a replacement plan after import.
+
+### Configurations with both name and generate_name
+
+Setting both `metadata.name` and `metadata.generate_name` is now rejected during planning, including `generate_name = ""`. For an existing Role previously managed with both arguments:
+
+- If `generate_name = ""`, remove `generate_name` and keep `name`.
+- If `generate_name` is non-empty, remove `name` and keep the original `generate_name`. The current Role keeps its name; a future replacement can receive a new name generated from that prefix.
+
+Removing or changing a stored non-empty `generate_name` replaces the Role. Review the plan before applying either correction.
+
+### Moving from kubernetes_role
+
+Terraform 1.8 or later supports moving from the deprecated `kubernetes_role` resource to `kubernetes_role_v1`. Change the resource type, update references, and add a `moved` block:
+
+```terraform
+moved {
+  from = kubernetes_role.example
+  to   = kubernetes_role_v1.example
+}
+```
+
+Resolve the configuration changes above and verify that the plan does not replace the Role. See the [Role resource reference](../resources/role_v1.md#migrating-from-kubernetes_role) for further migration details.
 
 ## Data source: kubernetes_namespace_v1
 

@@ -15,6 +15,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestKubernetesHorizontalPodAutoscalerV2Beta2_deprecation(t *testing.T) {
+	r, ok := Provider().ResourcesMap["kubernetes_horizontal_pod_autoscaler_v2beta2"]
+	if !ok {
+		t.Fatal("deprecated resource must remain registered until version 4.0")
+	}
+
+	want := "Deprecated: this resource will be removed in version 4.0 of the provider. Use kubernetes_horizontal_pod_autoscaler_v2 instead."
+	if r.DeprecationMessage != want {
+		t.Fatalf("unexpected deprecation message: got %q, want %q", r.DeprecationMessage, want)
+	}
+}
+
 func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_minimal(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
 	resourceName := "kubernetes_horizontal_pod_autoscaler_v2beta2.test"

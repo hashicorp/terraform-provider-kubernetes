@@ -299,6 +299,32 @@ func TestDeepUnknown(t *testing.T) {
 				},
 			),
 		},
+		"map(dynamic) known and unknown strings": {
+			In: deepUnknownTestSampleInput{
+				T: tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+				V: tftypes.NewValue(tftypes.Map{ElementType: tftypes.DynamicPseudoType}, map[string]tftypes.Value{
+					"known":   tftypes.NewValue(tftypes.String, "already"),
+					"pending": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+				}),
+			},
+			Out: tftypes.NewValue(tftypes.Map{ElementType: tftypes.DynamicPseudoType}, map[string]tftypes.Value{
+				"known":   tftypes.NewValue(tftypes.String, "already"),
+				"pending": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+			}),
+		},
+		"list(dynamic) known and unknown strings": {
+			In: deepUnknownTestSampleInput{
+				T: tftypes.List{ElementType: tftypes.DynamicPseudoType},
+				V: tftypes.NewValue(tftypes.List{ElementType: tftypes.DynamicPseudoType}, []tftypes.Value{
+					tftypes.NewValue(tftypes.String, "already"),
+					tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+				}),
+			},
+			Out: tftypes.NewValue(tftypes.List{ElementType: tftypes.DynamicPseudoType}, []tftypes.Value{
+				tftypes.NewValue(tftypes.String, "already"),
+				tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+			}),
+		},
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {
@@ -315,5 +341,38 @@ func TestDeepUnknown(t *testing.T) {
 				t.Fail()
 			}
 		})
+	}
+}
+
+// PlanResourceChange morphs the manifest, then fills unknown schema fields.
+// A free-form map with both known and unknown strings has to survive both.
+func TestDeepUnknownAfterValueToType(t *testing.T) {
+	in := tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+		"known":   tftypes.String,
+		"pending": tftypes.String,
+	}}, map[string]tftypes.Value{
+		"known":   tftypes.NewValue(tftypes.String, "already"),
+		"pending": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+	})
+	dest := tftypes.Map{ElementType: tftypes.DynamicPseudoType}
+	morphed, diags := ValueToType(in, dest, tftypes.NewAttributePath())
+	if len(diags) > 0 {
+		t.Fatalf("ValueToType: %+v", diags)
+	}
+	filled, err := DeepUnknown(dest, morphed, tftypes.NewAttributePath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := tftypes.NewValue(dest, map[string]tftypes.Value{
+		"known":   tftypes.NewValue(tftypes.String, "already"),
+		"pending": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+	})
+	if !cmp.Equal(filled, want, cmp.Exporter(func(reflect.Type) bool { return true })) {
+		t.Fatalf("DeepUnknown:\n got: %#v\nwant: %#v", filled, want)
+	}
+	// Dry-run replaces unknowns with null before the API sees the manifest.
+	nulled := UnknownToNull(filled)
+	if !nulled.IsFullyKnown() {
+		t.Fatalf("UnknownToNull left an unknown value: %s", nulled)
 	}
 }

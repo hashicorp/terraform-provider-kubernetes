@@ -190,22 +190,22 @@ func TestLimitRangeMoveState(t *testing.T) {
 			labels:       map[string]string{"app": "demo"},
 			spec: []map[string]any{{
 				"limit": []map[string]any{{
-					"type":            "Container",
-					"default":         map[string]string{"cpu": "200m", "memory": "512M"},
-					"default_request": map[string]string{"cpu": "100m", "memory": "256M"},
-					"max":             map[string]string(nil),
+					"type":                    "Container",
+					"default":                 map[string]string{"cpu": "200m", "memory": "512M"},
+					"default_request":         map[string]string{"cpu": "100m", "memory": "256M"},
+					"max":                     map[string]string(nil),
 					"max_limit_request_ratio": map[string]string(nil),
-					"min":             map[string]string(nil),
+					"min":                     map[string]string(nil),
 				}},
 			}},
 			wantSpec: []map[string]any{{
 				"limit": []map[string]any{{
-					"type":            "Container",
-					"default":         map[string]string{"cpu": "200m", "memory": "512M"},
-					"default_request": map[string]string{"cpu": "100m", "memory": "256M"},
-					"max":             map[string]string(nil),
+					"type":                    "Container",
+					"default":                 map[string]string{"cpu": "200m", "memory": "512M"},
+					"default_request":         map[string]string{"cpu": "100m", "memory": "256M"},
+					"max":                     map[string]string(nil),
 					"max_limit_request_ratio": map[string]string(nil),
-					"min":             map[string]string(nil),
+					"min":                     map[string]string(nil),
 				}},
 			}},
 		},
@@ -227,14 +227,14 @@ func TestLimitRangeMoveState(t *testing.T) {
 			spec: []map[string]any{{
 				"limit": []map[string]any{
 					{
-						"type": "Pod",
-						"max":  map[string]string{"cpu": "200m", "memory": "1024M"},
+						"type":    "Pod",
+						"max":     map[string]string{"cpu": "200m", "memory": "1024M"},
 						"default": map[string]string(nil), "default_request": map[string]string(nil),
 						"max_limit_request_ratio": map[string]string(nil), "min": map[string]string(nil),
 					},
 					{
-						"type": "PersistentVolumeClaim",
-						"min":  map[string]string{"storage": "24M"},
+						"type":    "PersistentVolumeClaim",
+						"min":     map[string]string{"storage": "24M"},
 						"default": map[string]string(nil), "default_request": map[string]string(nil),
 						"max": map[string]string(nil), "max_limit_request_ratio": map[string]string(nil),
 					},
@@ -337,28 +337,28 @@ func TestLimitRangeMoveState(t *testing.T) {
 		wantError     bool
 	}{
 		{
-			name: "wrong resource type — no state, no error",
+			name:       "wrong resource type — no state, no error",
 			sourceType: "kubernetes_pod", providerAddr: "registry.terraform.io/hashicorp/kubernetes",
 		},
 		{
-			name: "wrong schema version — no state, no error",
+			name:       "wrong schema version — no state, no error",
 			sourceType: "kubernetes_limit_range", sourceVersion: 1,
 			providerAddr: "registry.terraform.io/hashicorp/kubernetes",
 		},
 		{
-			name: "wrong provider — no state, no error",
+			name:       "wrong provider — no state, no error",
 			sourceType: "kubernetes_limit_range", providerAddr: "registry.terraform.io/other/kubernetes",
 		},
 		{
-			name:        "nil raw state — error",
-			sourceType:  "kubernetes_limit_range", providerAddr: "registry.terraform.io/hashicorp/kubernetes",
-			wantError:   true,
+			name:       "nil raw state — error",
+			sourceType: "kubernetes_limit_range", providerAddr: "registry.terraform.io/hashicorp/kubernetes",
+			wantError: true,
 		},
 		{
-			name:        "malformed JSON — error",
-			sourceType:  "kubernetes_limit_range", providerAddr: "registry.terraform.io/hashicorp/kubernetes",
-			rawState:    &tfprotov6.RawState{JSON: []byte(`{`)},
-			wantError:   true,
+			name:       "malformed JSON — error",
+			sourceType: "kubernetes_limit_range", providerAddr: "registry.terraform.io/hashicorp/kubernetes",
+			rawState:  &tfprotov6.RawState{JSON: []byte(`{`)},
+			wantError: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -297,7 +297,9 @@ func TestAccLimitRange_UpgradeFromSDKV2_ignoredMetadataSurvivesUpdate(t *testing
 					},
 					{
 						// Another controller writes to the unmanaged map while SDKv2 still owns it.
-						PreConfig:                func() { testAccInjectIgnoredLimitRangeMetadata(t, name, name, tc.ignored, ignoredLimitRangeMetadataKey) },
+						PreConfig: func() {
+							testAccInjectIgnoredLimitRangeMetadata(t, name, name, tc.ignored, ignoredLimitRangeMetadataKey)
+						},
 						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 						Config:                   testAccKubernetesLimitRangeV1MigrationConfig_managedMetadata(name, tc.managed, "before"),
 						ConfigPlanChecks: resource.ConfigPlanChecks{

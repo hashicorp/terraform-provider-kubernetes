@@ -1,0 +1,3 @@
+```release-note:note
+`resource/kubernetes_limit_range_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax. `moved` blocks from the deprecated `kubernetes_limit_range` resource are supported. Explicitly empty metadata maps may produce a one-time in-place update after upgrading.
+```

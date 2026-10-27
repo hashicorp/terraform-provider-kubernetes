@@ -99,9 +99,9 @@ func (r *LimitRangeV1) ImportState(ctx context.Context, req resource.ImportState
 // sdkv2LimitRangeStateV0 is the frozen shape of kubernetes_limit_range (the deprecated
 // alias) state as SDKv2 writes it at schema version 0. Used only by MoveState.
 type sdkv2LimitRangeStateV0 struct {
-	ID       string                         `json:"id"`
-	Metadata []sdkv2LimitRangeMetadataV0    `json:"metadata"`
-	Spec     []sdkv2LimitRangeSpecV0        `json:"spec"`
+	ID       string                      `json:"id"`
+	Metadata []sdkv2LimitRangeMetadataV0 `json:"metadata"`
+	Spec     []sdkv2LimitRangeSpecV0     `json:"spec"`
 }
 
 type sdkv2LimitRangeMetadataV0 struct {

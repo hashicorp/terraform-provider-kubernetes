@@ -10,9 +10,9 @@ import (
 
 // LimitRangeV1Model is the top-level Terraform state model for kubernetes_limit_range_v1.
 type LimitRangeV1Model struct {
-	ID       types.String                   `tfsdk:"id"`
+	ID       types.String                     `tfsdk:"id"`
 	Metadata []common.NamespacedMetadataModel `tfsdk:"metadata"`
-	Spec     []LimitRangeSpecModel           `tfsdk:"spec"`
+	Spec     []LimitRangeSpecModel            `tfsdk:"spec"`
 }
 
 // LimitRangeSpecModel matches the single-element list block for spec.

@@ -1,0 +1,11 @@
+```release-note:breaking-change
+`resource/kubernetes_horizontal_pod_autoscaler_v2beta2`: Removed. Kubernetes removed the `autoscaling/v2beta2` API client types in `k8s.io/api` v0.36, and the provider now builds against `k8s.io/api` v0.37. Use `kubernetes_horizontal_pod_autoscaler_v2`, which accepts the same configuration, and migrate any existing state before upgrading.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_horizontal_pod_autoscaler`: Removed. The resource selected `autoscaling/v2beta2` when `metric` or `behavior` was set, which is no longer available. Use `kubernetes_horizontal_pod_autoscaler_v2` for configurations that set `metric` or `behavior`, or `kubernetes_horizontal_pod_autoscaler_v1` for `target_cpu_utilization_percentage`, and migrate any existing state before upgrading.
+```
+
+```release-note:note
+provider: Upgraded Kubernetes client libraries to v0.37.2 (`k8s.io/kubernetes` v1.37.2).
+```

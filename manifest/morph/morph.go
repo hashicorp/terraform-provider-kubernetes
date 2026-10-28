@@ -68,7 +68,8 @@ func ValueToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tft
 
 func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
 	var diags []*tfprotov5.Diagnostic
-	if t.Is(tftypes.Bool) {
+	// Dynamic keeps the original value. Its type is known even when the value is not.
+	if t.Is(tftypes.Bool) || t.Is(tftypes.DynamicPseudoType) {
 		return v, diags
 	}
 	var bnat bool
@@ -85,8 +86,6 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 	switch {
 	case t.Is(tftypes.String):
 		return newValue(t, strconv.FormatBool(bnat), p)
-	case t.Is(tftypes.DynamicPseudoType):
-		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -99,7 +98,8 @@ func morphBoolToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) 
 
 func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
 	var diags []*tfprotov5.Diagnostic
-	if t.Is(tftypes.Number) {
+	// Dynamic keeps the original value. Its type is known even when the value is not.
+	if t.Is(tftypes.Number) || t.Is(tftypes.DynamicPseudoType) {
 		return v, diags
 	}
 	var vnat big.Float
@@ -116,8 +116,6 @@ func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	switch {
 	case t.Is(tftypes.String):
 		return newValue(t, vnat.String(), p)
-	case t.Is(tftypes.DynamicPseudoType):
-		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,
@@ -130,7 +128,8 @@ func morphNumberToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 
 func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
 	var diags []*tfprotov5.Diagnostic
-	if t.Is(tftypes.String) {
+	// Dynamic keeps the original value. Its type is known even when the value is not.
+	if t.Is(tftypes.String) || t.Is(tftypes.DynamicPseudoType) {
 		return v, diags
 	}
 	var vnat string
@@ -170,8 +169,6 @@ func morphStringToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			return tftypes.Value{}, diags
 		}
 		return newValue(t, bv, p)
-	case t.Is(tftypes.DynamicPseudoType):
-		return v, diags
 	}
 	diags = append(diags, &tfprotov5.Diagnostic{
 		Attribute: p,

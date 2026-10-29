@@ -30,8 +30,9 @@ func resourceKubernetesStorageClassV1(deprecationMessage string) *schema.Resourc
 		UpdateContext: resourceKubernetesStorageClassV1Update,
 		DeleteContext: resourceKubernetesStorageClassV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNonNamespaced,
 		},
+		Identity: resourceIdentitySchemaNonNamespaced(),
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("storage class", true),
@@ -196,6 +197,12 @@ func resourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.Resourc
 			diags = append(diags, diag.FromErr(err)[0])
 		}
 	}
+
+	err = setResourceIdentityNonNamespaced(d, "storage.k8s.io/v1", "StorageClass", name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diags
 }
 

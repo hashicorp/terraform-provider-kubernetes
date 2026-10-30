@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -92,8 +94,31 @@ func (r *LimitRangeV1) meta() (kubernetes.KubeClientsets, kubernetes.MetadataFil
 // ImportState implements [resource.ResourceWithImportState].
 //
 // The import ID is "namespace/name", matching SDKv2's ImportStatePassthroughContext.
+// An import block with `identity = {...}` supplies no ID, so it is built from the
+// identity instead.
 func (r *LimitRangeV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	id := req.ID
+	if id == "" {
+		var identityData common.NamespacedResourceIdentity
+		resp.Diagnostics.Append(req.Identity.Get(ctx, &identityData)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if identityData.Kind.ValueString() != limitRangeKind || identityData.APIVersion.ValueString() != limitRangeAPIVersion {
+			resp.Diagnostics.AddError("invalid identity import",
+				fmt.Sprintf("Expected kind %q and api_version %q, got kind %q and api_version %q.",
+					limitRangeKind, limitRangeAPIVersion, identityData.Kind.ValueString(), identityData.APIVersion.ValueString()))
+			return
+		}
+		namespace := identityData.Namespace.ValueString()
+		if namespace == "" {
+			namespace = metav1.NamespaceDefault
+		}
+		id = kubernetes.BuildId(metav1.ObjectMeta{Namespace: namespace, Name: identityData.Name.ValueString()})
+	}
+
+	// Read validates the namespaced ID and populates state and identity.
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
 }
 
 // sdkv2LimitRangeStateV0 is the frozen shape of kubernetes_limit_range (the deprecated

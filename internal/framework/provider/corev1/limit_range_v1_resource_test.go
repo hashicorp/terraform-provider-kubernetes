@@ -11,8 +11,11 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	corev1api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -224,6 +227,49 @@ func TestAccKubernetesLimitRangeV1_multipleLimits(t *testing.T) {
 					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.2.default.memory", "24M"),
 					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.2.type", "Container"),
 				),
+			},
+		},
+	})
+}
+
+// Identity import: an `import { identity = {...} }` block carries no ID string, so
+// ImportState must build the ID from the identity.
+func TestAccKubernetesLimitRangeV1_identityImport(t *testing.T) {
+	var conf corev1api.LimitRange
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesLimitRangeV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesLimitRangeV1Config_basic(name),
+				Check:  testAccCheckKubernetesLimitRangeV1Exists(limitRangeResourceName, &conf),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectIdentity(limitRangeResourceName, map[string]knownvalue.Check{
+						"namespace":   knownvalue.StringExact(name),
+						"name":        knownvalue.StringExact(name),
+						"api_version": knownvalue.StringExact("v1"),
+						"kind":        knownvalue.StringExact("LimitRange"),
+					}),
+				},
+			},
+			{
+				// Import blocks already assert a no-op plan and unchanged identity;
+				// plugin-testing only supports ImportStateVerify for CLI imports.
+				ResourceName:    limitRangeResourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+			{
+				Config: testAccKubernetesLimitRangeV1Config_basic(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
 			},
 		},
 	})

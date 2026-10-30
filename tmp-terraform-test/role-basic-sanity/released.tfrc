@@ -1,0 +1,6 @@
+provider_installation {
+  dev_overrides {
+    "hashicorp/kubernetes" = "/tmp/k8-sanity"
+  }
+  direct {}
+}

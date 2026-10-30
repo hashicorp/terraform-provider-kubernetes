@@ -1,0 +1,4 @@
+# Registry-only CLI config for creating the SDKv2 baseline. Never add dev_overrides here.
+provider_installation {
+  direct {}
+}

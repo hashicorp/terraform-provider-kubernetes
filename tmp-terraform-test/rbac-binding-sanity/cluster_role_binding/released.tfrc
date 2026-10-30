@@ -1,0 +1,7 @@
+# Points hashicorp/kubernetes at the locally built provider (build steps in ../README.md).
+provider_installation {
+  dev_overrides {
+    "hashicorp/kubernetes" = "/tmp/k8s-sanity/cluster_role_binding"
+  }
+  direct {}
+}

@@ -1,0 +1,3 @@
+```release-note:bug
+`resource/kubernetes_role_binding_v1`, `resource/kubernetes_cluster_role_binding_v1`: Allow `role_ref.api_group` values other than `rbac.authorization.k8s.io`, such as OpenShift role API groups
+```

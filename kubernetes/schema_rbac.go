@@ -45,10 +45,10 @@ func rbacRoleRefSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"api_group": {
 			Type:         schema.TypeString,
-			Description:  "The API group of the user. The only value possible at the moment is `rbac.authorization.k8s.io`.",
+			Description:  "The API group of the referenced role. Usually `rbac.authorization.k8s.io`, but some distributions, such as OpenShift, define their own role API groups.",
 			Required:     true,
 			ForceNew:     true,
-			ValidateFunc: validation.StringInSlice([]string{"rbac.authorization.k8s.io"}, false),
+			ValidateFunc: validation.StringIsNotEmpty,
 		},
 		"kind": {
 			Type:         schema.TypeString,

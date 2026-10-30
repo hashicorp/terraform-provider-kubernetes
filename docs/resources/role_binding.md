@@ -43,7 +43,7 @@ Read-Only:
 
 Required:
 
-- `api_group` (String) The API group of the user. The only value possible at the moment is `rbac.authorization.k8s.io`.
+- `api_group` (String) The API group of the referenced role. Usually `rbac.authorization.k8s.io`, but some distributions, such as OpenShift, define their own role API groups.
 - `kind` (String) The kind of resource.
 - `name` (String) The name of the User to bind to.
 

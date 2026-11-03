@@ -11,7 +11,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/helpers/validatordiag"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
+	"k8s.io/apimachinery/pkg/api/resource"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
 	pathValidation "k8s.io/apimachinery/pkg/api/validation/path"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
@@ -29,6 +31,7 @@ var (
 	_ validator.String = dnsLabelPrefixValidator{}
 	_ validator.Map    = annotationsValidator{}
 	_ validator.Map    = labelsValidator{}
+	_ validator.Map    = quantityMapValidator{}
 )
 
 // DNSSubdomainNameValidator returns a validator that checks a string is a valid DNS
@@ -225,5 +228,52 @@ func (v rbacNameValidator) ValidateString(_ context.Context, req validator.Strin
 	for _, msg := range pathValidation.IsValidPathSegmentName(req.ConfigValue.ValueString()) {
 		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 			req.Path, msg, req.ConfigValue.ValueString()))
+	}
+}
+
+// QuantityMapValidator ports validateResourceList from kubernetes/validators.go: every
+// element of the map must parse as a Kubernetes resource quantity. Unknown elements are
+// deferred to apply. A null element is rejected, like the metadata map validators do, because
+// it has no quantity to send and Create would otherwise fail with a conversion error.
+func QuantityMapValidator() validator.Map {
+	return quantityMapValidator{}
+}
+
+type quantityMapValidator struct{}
+
+func (v quantityMapValidator) Description(ctx context.Context) string {
+	return v.MarkdownDescription(ctx)
+}
+
+func (v quantityMapValidator) MarkdownDescription(_ context.Context) string {
+	return "every value must be a valid Kubernetes resource quantity"
+}
+
+func (v quantityMapValidator) ValidateMap(_ context.Context, req validator.MapRequest, resp *validator.MapResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	for k, raw := range req.ConfigValue.Elements() {
+		if raw.IsUnknown() {
+			continue
+		}
+		if raw.IsNull() {
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				req.Path.AtMapKey(k), "value must be a quantity string", raw.String()))
+			continue
+		}
+		s, ok := raw.(basetypes.StringValuable)
+		if !ok {
+			continue // unreachable: the schema declares a string-based element type
+		}
+		sv, diags := s.ToStringValue(context.Background())
+		if diags.HasError() {
+			resp.Diagnostics.Append(diags...)
+			continue
+		}
+		if _, err := resource.ParseQuantity(sv.ValueString()); err != nil {
+			resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
+				req.Path.AtMapKey(k), err.Error(), fmt.Sprintf("%q", sv.ValueString())))
+		}
 	}
 }

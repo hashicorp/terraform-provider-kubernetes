@@ -278,8 +278,8 @@ func Provider() *schema.Provider {
 			"kubernetes_persistent_volume_claim_v1": resourceKubernetesPersistentVolumeClaimV1(""),
 			"kubernetes_replication_controller":     resourceKubernetesReplicationControllerV1("Deprecated; use kubernetes_replication_controller_v1."),
 			"kubernetes_replication_controller_v1":  resourceKubernetesReplicationControllerV1(""),
-			"kubernetes_resource_quota":             resourceKubernetesResourceQuotaV1("Deprecated; use kubernetes_resource_quota_v1."),
-			"kubernetes_resource_quota_v1":          resourceKubernetesResourceQuotaV1(""),
+			// kubernetes_resource_quota_v1 has migrated to the Plugin Framework provider (internal/framework/provider/corev1).
+			"kubernetes_resource_quota": resourceKubernetesResourceQuotaV1("Deprecated; use kubernetes_resource_quota_v1."),
 
 			// api registration
 			"kubernetes_api_service":    resourceKubernetesAPIServiceV1("Deprecated; use kubernetes_api_service_v1."),

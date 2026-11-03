@@ -45,6 +45,22 @@ func expandStorageClassAllowedTopologies(l []interface{}) []v1.TopologySelectorT
 	return topologies
 }
 
+// patchStorageClassAllowedTopologies returns the JSON patch operations that move
+// allowedTopologies from oldVal to newVal. The field is mutable in the API, and
+// "add" both creates and replaces it. Clearing also uses "add" with an empty list
+// rather than "remove", because the field may already be absent on the server
+// (e.g. removed out of band), and removing a nonexistent key fails the patch.
+func patchStorageClassAllowedTopologies(oldVal, newVal []interface{}) PatchOperations {
+	topologies := expandStorageClassAllowedTopologies(newVal)
+	if len(topologies) == 0 && len(expandStorageClassAllowedTopologies(oldVal)) == 0 {
+		return nil
+	}
+	return PatchOperations{&AddOperation{
+		Path:  "/allowedTopologies",
+		Value: topologies,
+	}}
+}
+
 func expandStorageClassMatchLabelExpressions(l []interface{}) []v1.TopologySelectorLabelRequirement {
 	if len(l) == 0 || l[0] == nil {
 		return []v1.TopologySelectorLabelRequirement{}

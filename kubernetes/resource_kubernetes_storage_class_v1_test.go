@@ -8,13 +8,16 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func TestAccKubernetesStorageClass_minikube(t *testing.T) {
@@ -244,6 +247,96 @@ func TestAccKubernetesStorageClass_allowedTopologies_minikube(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesStorageClass_allowedTopologiesUpdate(t *testing.T) {
+	var conf api.StorageClass
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_storage_class.test"
+	// StorageClass objects are not reconciled by a provisioner, so a static
+	// provisioner keeps this test independent of the cluster flavour.
+	provisioner := "kubernetes.io/no-provisioner"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesStorageClassV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologies(name, provisioner),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.#", "2"),
+					testAccCheckStorageClassV1AllowedTopologyValues(&conf, []string{"us-west1-a", "us-west1-b"}),
+				),
+			},
+			{
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologiesModified(name, provisioner),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.*", "us-west1-c"),
+					testAccCheckStorageClassV1AllowedTopologyValues(&conf, []string{"us-west1-a", "us-west1-b", "us-west1-c"}),
+				),
+			},
+			{
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologiesRemoved(name, provisioner),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "0"),
+					testAccCheckStorageClassV1AllowedTopologyValues(&conf, nil),
+				),
+			},
+			{
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologies(name, provisioner),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
+					testAccCheckStorageClassV1AllowedTopologyValues(&conf, []string{"us-west1-a", "us-west1-b"}),
+				),
+			},
+			{
+				// allowedTopologies is removed outside of Terraform before the
+				// block is removed from the configuration. Clearing the field
+				// must succeed even though it is already absent on the server.
+				PreConfig: func() {
+					testAccRemoveStorageClassV1AllowedTopologies(t, name)
+				},
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologiesRemoved(name, provisioner),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "0"),
+					testAccCheckStorageClassV1AllowedTopologyValues(&conf, nil),
+				),
+			},
+		},
+	})
+}
+
+func testAccRemoveStorageClassV1AllowedTopologies(t *testing.T, name string) {
+	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch := []byte(`[{"op":"remove","path":"/allowedTopologies"}]`)
+	_, err = conn.StorageV1().StorageClasses().Patch(context.TODO(), name, types.JSONPatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		t.Fatalf("failed to remove allowedTopologies from storage class %q: %s", name, err)
+	}
+}
+
 func TestAccKubernetesStorageClass_generatedName(t *testing.T) {
 	var conf api.StorageClass
 	prefix := "tf-acc-test-gen-"
@@ -276,6 +369,26 @@ func TestAccKubernetesStorageClass_generatedName(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccCheckStorageClassV1AllowedTopologyValues(m *api.StorageClass, expected []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		var given []string
+		for _, term := range m.AllowedTopologies {
+			for _, req := range term.MatchLabelExpressions {
+				given = append(given, req.Values...)
+			}
+		}
+		sort.Strings(given)
+		if len(expected) == 0 && len(given) == 0 {
+			return nil
+		}
+		if !reflect.DeepEqual(given, expected) {
+			return fmt.Errorf("%s allowed topology values don't match.\nExpected: %q\nGiven: %q",
+				m.Name, expected, given)
+		}
+		return nil
+	}
 }
 
 func testAccCheckStorageClassV1Parameters(m *api.StorageClass, expected map[string]string) resource.TestCheckFunc {
@@ -464,6 +577,38 @@ func testAccKubernetesStorageClassV1Config_allowedTopologies(name, provisioner s
       ]
     }
   }
+}
+`, name, provisioner)
+}
+
+func testAccKubernetesStorageClassV1Config_allowedTopologiesModified(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner = "%s"
+  allowed_topologies {
+    match_label_expressions {
+      key = "topology.kubernetes.io/zone"
+      values = [
+        "us-west1-a",
+        "us-west1-b",
+        "us-west1-c"
+      ]
+    }
+  }
+}
+`, name, provisioner)
+}
+
+func testAccKubernetesStorageClassV1Config_allowedTopologiesRemoved(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner = "%s"
 }
 `, name, provisioner)
 }

@@ -5,9 +5,11 @@ package storagev1
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -53,6 +55,26 @@ func expandAllowedTopologies(ctx context.Context, topologies []AllowedTopologyMo
 		terms = append(terms, term)
 	}
 	return terms
+}
+
+// patchAllowedTopologies returns the JSON patch operations that move
+// allowedTopologies from the state value to the planned value. "add" both
+// creates and replaces the field. Clearing also uses "add" with an empty list
+// rather than "remove", because the field may already be absent on the server
+// (e.g. removed out of band), and removing a nonexistent key fails the patch.
+func patchAllowedTopologies(ctx context.Context, state, plan []AllowedTopologyModel) kubernetes.PatchOperations {
+	oldVal := expandAllowedTopologies(ctx, state)
+	newVal := expandAllowedTopologies(ctx, plan)
+	if reflect.DeepEqual(oldVal, newVal) {
+		return nil
+	}
+	if newVal == nil {
+		newVal = []corev1.TopologySelectorTerm{}
+	}
+	return kubernetes.PatchOperations{&kubernetes.AddOperation{
+		Path:  "/allowedTopologies",
+		Value: newVal,
+	}}
 }
 
 // expandMatchLabelExpressions converts []MatchLabelExpressionModel →

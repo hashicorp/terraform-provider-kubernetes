@@ -178,13 +178,14 @@ func (r *StorageClassV1) Update(ctx context.Context, req resource.UpdateRequest,
 
 	name := state.ID.ValueString()
 
-	// Build JSON Patch: metadata (annotations + labels) and allow_volume_expansion.
-	// Only these two items are mutable; everything else is ForceNew.
+	// Build JSON Patch: metadata (annotations + labels), allow_volume_expansion
+	// and allowed_topologies. Only these items are mutable; everything else is ForceNew.
 	ops := common.MetadataPatchOps("/metadata/", state.Metadata[0], plan.Metadata[0])
 	ops = append(ops, &kubernetes.ReplaceOperation{
 		Path:  "/allowVolumeExpansion",
 		Value: plan.AllowVolumeExpansion.ValueBool(),
 	})
+	ops = append(ops, patchAllowedTopologies(ctx, state.AllowedTopologies, plan.AllowedTopologies)...)
 
 	patchBytes, err := json.Marshal(ops)
 	if err != nil {

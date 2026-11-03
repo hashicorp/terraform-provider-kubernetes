@@ -117,9 +117,8 @@ func StorageClassV1Schema() schema.Schema {
 
 			// allowed_topologies is MaxItems:1 in SDKv2. Modelled as a
 			// ListNestedBlock with SizeBetween(0,1) to allow the block to be
-			// omitted entirely. RequiresReplaceIfConfigured is applied at the
-			// nested block attribute level so that any configured topology
-			// change causes a replace, matching SDKv2 ForceNew behaviour.
+			// omitted entirely. The field is mutable in the API, so changes
+			// are patched in place by Update.
 			"allowed_topologies": schema.ListNestedBlock{
 				MarkdownDescription: "Restrict the node topologies where volumes can be dynamically provisioned.",
 				Validators: []validator.List{
@@ -134,17 +133,11 @@ func StorageClassV1Schema() schema.Schema {
 									"key": schema.StringAttribute{
 										MarkdownDescription: "The label key that the selector applies to.",
 										Optional:            true,
-										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.RequiresReplaceIfConfigured(),
-										},
 									},
 									"values": schema.SetAttribute{
 										MarkdownDescription: "An array of string values. One value must match the label to be selected.",
 										ElementType:         types.StringType,
 										Optional:            true,
-										PlanModifiers: []planmodifier.Set{
-											setplanmodifier.RequiresReplaceIfConfigured(),
-										},
 									},
 								},
 							},

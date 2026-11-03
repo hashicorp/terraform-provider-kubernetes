@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
-type ConfigMapV1Model struct {
+type ConfigMapV1DataSourceModel struct {
 	ID         types.String                    `tfsdk:"id"`
 	Metadata   []common.NamespacedMetadataBase `tfsdk:"metadata"`
 	Data       types.Map                       `tfsdk:"data"`

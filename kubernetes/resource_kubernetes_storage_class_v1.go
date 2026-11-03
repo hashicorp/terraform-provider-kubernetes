@@ -30,8 +30,9 @@ func resourceKubernetesStorageClassV1(deprecationMessage string) *schema.Resourc
 		UpdateContext: resourceKubernetesStorageClassV1Update,
 		DeleteContext: resourceKubernetesStorageClassV1Delete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceIdentityImportNonNamespaced,
 		},
+		Identity: resourceIdentitySchemaNonNamespaced(),
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("storage class", true),
@@ -87,7 +88,6 @@ func resourceKubernetesStorageClassV1(deprecationMessage string) *schema.Resourc
 				Type:        schema.TypeList,
 				Description: "Restrict the node topologies where volumes can be dynamically provisioned.",
 				Optional:    true,
-				ForceNew:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -196,6 +196,12 @@ func resourceKubernetesStorageClassV1Read(ctx context.Context, d *schema.Resourc
 			diags = append(diags, diag.FromErr(err)[0])
 		}
 	}
+
+	err = setResourceIdentityNonNamespaced(d, "storage.k8s.io/v1", "StorageClass", name)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	return diags
 }
 
@@ -214,6 +220,10 @@ func resourceKubernetesStorageClassV1Update(ctx context.Context, d *schema.Resou
 			Path:  "/allowVolumeExpansion",
 			Value: newVal,
 		})
+	}
+	if d.HasChange("allowed_topologies") {
+		oldVal, newVal := d.GetChange("allowed_topologies")
+		ops = append(ops, patchStorageClassAllowedTopologies(oldVal.([]interface{}), newVal.([]interface{}))...)
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {

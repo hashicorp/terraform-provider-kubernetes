@@ -37,7 +37,7 @@ Optional:
 
 - `annotations` (Map of String) An unstructured key value map stored with the config_map that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 - `labels` (Map of String) Map of string keys and values that can be used to organize and categorize (scope and select) the config_map. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-- `namespace` (String) Namespace defines the space within which name of the config_map must be unique.
+- `namespace` (String) Namespace defines the space within which name of the config_map must be unique. Defaults to "default" when not set.
 
 Read-Only:
 
@@ -62,7 +62,7 @@ data "kubernetes_config_map_v1" "example" {
 
 ## Migration to Plugin Framework
 
-`kubernetes_config_map_v1` is implemented using the Terraform Plugin Framework. Existing state written by the SDKv2 implementation is supported without re-importing or manually editing state, and references such as `data.kubernetes_config_map_v1.example.metadata[0].data` remain valid.
+`kubernetes_config_map_v1` is implemented using the Terraform Plugin Framework. Existing state written by the SDKv2 implementation is supported without re-importing or manually editing state, and references such as `data.kubernetes_config_map_v1.example.data` remain valid.
 
 This data source has one behavior change, described below. Run `terraform plan` with your current provider version before upgrading.
 

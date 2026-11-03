@@ -16,13 +16,9 @@ import (
 )
 
 func (d *ConfigMapV1DataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var model ConfigMapV1Model
+	var model ConfigMapV1DataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &model)...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if len(model.Metadata) == 0 {
 		return
 	}
 

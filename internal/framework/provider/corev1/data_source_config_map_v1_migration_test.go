@@ -107,12 +107,12 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFound(t *testing
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: sdkv2ExternalProvider(),
-				Config:            testAccConfigMapDataSourceNotFoundConfig(name),
+				Config:            testAccConfigMapDataSourceAnchoredConfig(name),
 				ConfigStateChecks: checks,
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccConfigMapDataSourceNotFoundConfig(name),
+				Config:                   testAccConfigMapDataSourceAnchoredConfig(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -124,9 +124,10 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFound(t *testing
 	})
 }
 
-// TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFoundWithAnnotations — missing
-// ConfigMap whose config sets annotations/labels; asserts they survive 404.
-func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFoundWithAnnotations(t *testing.T) {
+// TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFoundWithInputs — missing
+// ConfigMap whose config sets annotations/labels, one label null; asserts the configured
+// values survive a 404 and the null label is dropped, as SDKv2 dropped it.
+func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFoundWithInputs(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-cm-absent-in-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
 
 	meta := func(field string) tfjsonpath.Path {
@@ -144,12 +145,12 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFoundWithAnnotat
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: sdkv2ExternalProvider(),
-				Config:            testAccConfigMapDataSourceNotFoundWithAnnotationsConfig(name),
+				Config:            testAccConfigMapDataSourceAnchoredWithInputsConfig(name),
 				ConfigStateChecks: checks,
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-				Config:                   testAccConfigMapDataSourceNotFoundWithAnnotationsConfig(name),
+				Config:                   testAccConfigMapDataSourceAnchoredWithInputsConfig(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -196,64 +197,6 @@ data "kubernetes_config_map_v1" "test" {
     name        = %q
     annotations = { "anno-key" = "anno-value" }
     labels      = { "label-key" = "label-value", "null-key" = null }
-  }
-}
-
-resource "terraform_data" "anchor" {
-  input = {
-    id               = jsonencode(data.kubernetes_config_map_v1.test.id)
-    name             = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].name)
-    namespace        = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].namespace)
-    uid              = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].uid)
-    resource_version = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].resource_version)
-    generation       = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].generation)
-    annotations      = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].annotations)
-    labels           = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].labels)
-    data             = jsonencode(data.kubernetes_config_map_v1.test.data)
-    binary_data      = jsonencode(data.kubernetes_config_map_v1.test.binary_data)
-    immutable        = jsonencode(data.kubernetes_config_map_v1.test.immutable)
-  }
-}
-`, name)
-}
-
-func testAccConfigMapDataSourceNotFoundConfig(name string) string {
-	return fmt.Sprintf(`
-data "kubernetes_config_map_v1" "test" {
-  metadata {
-    name = %q
-  }
-}
-
-resource "terraform_data" "anchor" {
-  input = {
-    id               = jsonencode(data.kubernetes_config_map_v1.test.id)
-    name             = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].name)
-    namespace        = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].namespace)
-    uid              = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].uid)
-    resource_version = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].resource_version)
-    generation       = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].generation)
-    annotations      = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].annotations)
-    labels           = jsonencode(data.kubernetes_config_map_v1.test.metadata[0].labels)
-    data             = jsonencode(data.kubernetes_config_map_v1.test.data)
-    binary_data      = jsonencode(data.kubernetes_config_map_v1.test.binary_data)
-    immutable        = jsonencode(data.kubernetes_config_map_v1.test.immutable)
-  }
-}
-`, name)
-}
-
-func testAccConfigMapDataSourceNotFoundWithAnnotationsConfig(name string) string {
-	return fmt.Sprintf(`
-data "kubernetes_config_map_v1" "test" {
-  metadata {
-    name = %q
-    annotations = {
-      anno-key = "anno-value"
-    }
-    labels = {
-      label-key = "label-value"
-    }
   }
 }
 

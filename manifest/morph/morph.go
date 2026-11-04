@@ -497,6 +497,49 @@ func morphSetToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 	return tftypes.Value{}, diags
 }
 
+// mapOrObjectType determines the type to use for a Map-typed value built
+// from the given elements. If the elements all share the same type, the Map
+// is kept as-is. A declared element type carrying no structural information
+// (tftypes.DynamicPseudoType) can legitimately be populated with
+// differently-shaped values per key (e.g. Karpenter's EC2NodeClass
+// spec.kubelet), which tftypes.Map cannot represent, so the result falls
+// back to an Object in that case. Any other declared element type is
+// expected to produce homogeneous elements; a mismatch there is left as a
+// Map of the declared element type, so the usual type-mismatch diagnostic is
+// reported deterministically instead of depending on map iteration order.
+func mapOrObjectType(elements map[string]tftypes.Value, elementType tftypes.Type) tftypes.Type {
+	var oType tftypes.Type
+	homogeneous := true
+	for _, ev := range elements {
+		if oType == tftypes.Type(nil) {
+			oType = ev.Type()
+		} else if !oType.Equal(ev.Type()) {
+			homogeneous = false
+			break
+		}
+	}
+	if !homogeneous {
+		if elementType.Is(tftypes.DynamicPseudoType) {
+			otypes := make(map[string]tftypes.Type, len(elements))
+			for k, ev := range elements {
+				otypes[k] = ev.Type()
+			}
+			return tftypes.Object{AttributeTypes: otypes}
+		}
+		return tftypes.Map{ElementType: elementType}
+	}
+	if oType == tftypes.Type(nil) {
+		oType = elementType
+	}
+	return tftypes.Map{ElementType: oType}
+}
+
+// mapOrObjectValue builds a tftypes.Value using the type determined by
+// mapOrObjectType (see its documentation for the Map vs Object decision).
+func mapOrObjectValue(elements map[string]tftypes.Value, elementType tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
+	return newValue(mapOrObjectType(elements, elementType), elements, p)
+}
+
 func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (tftypes.Value, []*tfprotov5.Diagnostic) {
 	var diags []*tfprotov5.Diagnostic
 	var mvals map[string]tftypes.Value
@@ -564,7 +607,7 @@ func morphMapToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath) (
 			}
 			nmvals[k] = nv
 		}
-		return newValue(t, nmvals, p)
+		return mapOrObjectValue(nmvals, t.(tftypes.Map).ElementType, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}
@@ -660,7 +703,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 			}
 			mvals[k] = nv
 		}
-		return newValue(t, mvals, p)
+		return mapOrObjectValue(mvals, t.(tftypes.Map).ElementType, p)
 	case t.Is(tftypes.DynamicPseudoType):
 		return v, diags
 	}

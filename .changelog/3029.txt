@@ -1,0 +1,3 @@
+```release-note:bug
+manifest: Allow open/arbitrary map attributes (declared with no schema, e.g. Karpenter's `EC2NodeClass` `spec.kubelet`) to contain nested objects of different shapes, instead of failing conversion when sub-keys don't share an identical structure.
+```

@@ -20,7 +20,7 @@ This resource allows the user to request for and claim to a persistent volume.
 ### Optional
 
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
-- `wait_until_bound` (Boolean) Whether to wait for the claim to reach `Bound` state (to find volume in which to claim the space)
+- `wait_until_bound` (Boolean) Whether to wait for the claim to reach `Bound` state (to find volume in which to claim the space). The wait is skipped when the claim's storage class has `volume_binding_mode` set to `WaitForFirstConsumer`, since such a claim is only bound once a pod uses it.
 
 ### Read-Only
 

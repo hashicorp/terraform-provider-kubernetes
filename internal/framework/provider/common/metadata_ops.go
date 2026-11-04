@@ -168,6 +168,15 @@ func PopulateNamespacedMetadataFromResponse(metadata *NamespacedMetadataModel, o
 	metadata.Generation = types.Int64Value(out.Generation)
 }
 
+// PopulateMetadataFromResponse is PopulateNamespacedMetadataFromResponse for
+// non-namespaced resources.
+func PopulateMetadataFromResponse(metadata *MetadataModel, out metav1.ObjectMeta) {
+	metadata.Name = types.StringValue(out.Name)
+	metadata.UID = types.StringValue(string(out.UID))
+	metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
+	metadata.Generation = types.Int64Value(out.Generation)
+}
+
 // ExpandNamespacedMetadata adds namespace to ExpandMetadata's result.
 func ExpandNamespacedMetadata(ctx context.Context, in []NamespacedMetadataModel) (metav1.ObjectMeta, diag.Diagnostics) {
 	if len(in) == 0 {

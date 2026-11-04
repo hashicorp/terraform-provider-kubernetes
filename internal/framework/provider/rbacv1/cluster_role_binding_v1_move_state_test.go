@@ -25,7 +25,7 @@ import (
 // target state or identity (never a panic).
 func TestClusterRoleBindingMoveState(t *testing.T) {
 	ctx := context.Background()
-	r := &rbacv1.ClusterRoleBinding{}
+	r := &rbacv1.ClusterRoleBindingV1{}
 	var schema frameworkresource.SchemaResponse
 	r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
 	identitySchema := common.IdentitySchema()

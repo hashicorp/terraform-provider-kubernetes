@@ -135,15 +135,14 @@ func TestAccMigrateClusterRoleBinding_preIdentityAndEmptyMetadata(t *testing.T) 
 		for _, empty := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/empty=%t", version, empty), func(t *testing.T) {
 				name := "tf-acc-test:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-				metadata := ""
+				config := testAccKubernetesClusterRoleBindingV1Config_basic(name)
 				checkPlan := plancheck.ExpectEmptyPlan()
 				var mapValue knownvalue.Check = knownvalue.Null()
 				if empty {
-					metadata = "labels = {}\nannotations = {}"
+					config = testAccKubernetesClusterRoleBindingV1Config_emptyMetadata(name)
 					checkPlan = plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate)
 					mapValue = knownvalue.MapExact(map[string]knownvalue.Check{})
 				}
-				config := testAccKubernetesClusterRoleBindingV1Config_metadata(name, metadata)
 				checkUID := testAccClusterRoleBindingCheckSameUID()
 				resource.Test(t, resource.TestCase{
 					CheckDestroy: testAccKubernetesClusterRoleBindingV1Destroy,
@@ -230,17 +229,21 @@ func TestAccMigrateClusterRoleBinding_groupSubject(t *testing.T) {
 	)
 }
 
-// TestAccMigrateClusterRoleBinding_emptySubjectNamespace verifies migration of
-// a binding whose subject sets namespace = "" explicitly alongside one that
-// relies on the "default" namespace, with no diff afterwards.
-func TestAccMigrateClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+// TestAccMigrateClusterRoleBinding_completeName migrates a binding with every
+// field set: labels and annotations, every subject kind, an explicitly empty
+// subject namespace next to an omitted one, and subjects that leave namespace
+// and api_group to their defaults. The name uses characters only RBAC names
+// allow (uppercase, underscore, colon).
+func TestAccMigrateClusterRoleBinding_completeName(t *testing.T) {
+	name := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	migrationTestCase(t, testAccKubernetesClusterRoleBindingV1Config_completeName(name, "one"))
+}
 
-	migrationTestCase(t,
-		testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name),
-		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.namespace", ""),
-		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.namespace", "default"),
-	)
+// TestAccMigrateClusterRoleBinding_completeGeneratedName is the complete shape
+// named by generate_name rather than name.
+func TestAccMigrateClusterRoleBinding_completeGeneratedName(t *testing.T) {
+	prefix := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum) + "-"
+	migrationTestCase(t, testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName(prefix, "one"))
 }
 
 // TestAccMigrateClusterRoleBinding_emptyUserAPIGroup covers a User subject
@@ -350,17 +353,17 @@ func (e expectNotReplacedCheck) CheckPlan(_ context.Context, req plancheck.Check
 	resp.Error = fmt.Errorf("%s not found in plan", e.address)
 }
 
-// TestAccMigrateClusterRoleBinding_thenUpdate verifies the full lifecycle
-// across the migration boundary: create with the released SDKv2 provider,
-// migrate to the Framework provider with no diff, then apply an actual
-// configuration change (adding subjects) using the Framework provider to prove
-// Update works correctly on state that originated from SDKv2.
+// TestAccMigrateClusterRoleBinding_thenUpdate creates the complete binding with
+// the released SDKv2 provider, then changes its label and annotation values as
+// the first Framework apply. The update must keep the binding, plan the omitted
+// subject api_group values from the SDKv2 state rather than as unknown, and
+// store what an import reads back.
 func TestAccMigrateClusterRoleBinding_thenUpdate(t *testing.T) {
 	testAccMigrateClusterRoleBinding_thenUpdateFrom(t, migratedProviderVersion)
 }
 
 func testAccMigrateClusterRoleBinding_thenUpdateFrom(t *testing.T, version string) {
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	name := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	checkUID := testAccClusterRoleBindingCheckSameUID()
 
 	resource.Test(t, resource.TestCase{
@@ -368,38 +371,27 @@ func testAccMigrateClusterRoleBinding_thenUpdateFrom(t *testing.T, version strin
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: releasedKubernetesProviderAt(version),
-				Config:            testAccKubernetesClusterRoleBindingV1Config_basic(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "1"),
-					checkUID,
-				),
+				Config:            testAccKubernetesClusterRoleBindingV1Config_completeName(name, "one"),
+				Check:             checkUID,
 			},
 			{
 				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
-				Config:                   testAccKubernetesClusterRoleBindingV1Config_basic(name),
+				Config:                   testAccKubernetesClusterRoleBindingV1Config_completeName(name, "two"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-				Check: checkUID,
-			},
-			{
-				// Adding subjects must be an in-place update, not a replacement,
-				// and the plan must be empty again once it is applied.
-				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
-				Config:                   testAccKubernetesClusterRoleBindingV1Config_modified(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
+					PreApply: append([]plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate),
-					},
-					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					}, testAccClusterRoleBindingExpectOmittedAPIGroupsKnown()...),
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "3"),
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.name", "system:masters"),
+					testAccCheckClusterRoleBindingV1Complete("two"),
 					checkUID,
 				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				ResourceName:             clusterRoleBindingResourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
 			},
 		},
 	})
@@ -451,12 +443,13 @@ func testAccMigrateClusterRoleBinding_thenForceReplaceFrom(t *testing.T, version
 }
 
 // TestAccMigrateClusterRoleBinding_externalMetadataSurvivesSubjectUpdate
-// verifies that an annotation written by another controller survives the
-// upgrade from SDKv2 and the first subject update after it, following
+// verifies that an annotation and a label written by another controller survive
+// the upgrade from SDKv2 and the first subject update after it, following
 // TestAccNamespace_UpgradeFromSDKV2_ignoredMetadataSurvivesUpdate.
 //
-// The annotation key matches the provider-level ignore_annotations pattern, so
-// Read keeps it out of state and the subject-only patch never touches it. The
+// The keys match the provider-level ignore_annotations and ignore_labels
+// patterns, so Read keeps them out of state and the subject-only patch never
+// touches them. The
 // same scenario without the SDKv2 step is
 // TestAccClusterRoleBinding_externalMetadataSurvivesSubjectUpdate.
 func TestAccMigrateClusterRoleBinding_externalMetadataSurvivesSubjectUpdate(t *testing.T) {
@@ -476,10 +469,10 @@ func testAccMigrateClusterRoleBinding_externalMetadataSurvivesSubjectUpdateFrom(
 				Check:             checkUID,
 			},
 			{
-				// Another controller adds an annotation while SDKv2 still owns
+				// Another controller adds an annotation and a label while SDKv2 still owns
 				// the binding; the upgrade must plan nothing.
 				PreConfig: func() {
-					testAccClusterRoleBindingInjectAnnotation(t, name, externalAnnotationKey, externalAnnotationValue)
+					testAccClusterRoleBindingInjectExternalMetadata(t, name)
 				},
 				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIO(name),
@@ -487,13 +480,13 @@ func testAccMigrateClusterRoleBinding_externalMetadataSurvivesSubjectUpdateFrom(
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckClusterRoleBindingAnnotation(name, externalAnnotationKey, externalAnnotationValue),
+					testAccCheckClusterRoleBindingExternalMetadata(name),
 					checkUID,
 				),
 			},
 			{
 				// The first update after the upgrade patches subjects only and
-				// must leave the external annotation in place.
+				// must leave the external annotation and label in place.
 				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 				Config:                   testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIOModified(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -504,77 +497,12 @@ func testAccMigrateClusterRoleBinding_externalMetadataSurvivesSubjectUpdateFrom(
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "3"),
-					testAccCheckClusterRoleBindingAnnotation(name, externalAnnotationKey, externalAnnotationValue),
+					testAccCheckClusterRoleBindingExternalMetadata(name),
 					checkUID,
 				),
 			},
 		},
 	})
-}
-
-func testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIO(name string) string {
-	return fmt.Sprintf(`
-provider "kubernetes" {
-  ignore_annotations = ["^external\\.io/"]
-}
-
-resource "kubernetes_cluster_role_binding_v1" "test" {
-  metadata {
-    name = %q
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
-}
-
-func testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIOModified(name string) string {
-	return fmt.Sprintf(`
-provider "kubernetes" {
-  ignore_annotations = ["^external\\.io/"]
-}
-
-resource "kubernetes_cluster_role_binding_v1" "test" {
-  metadata {
-    name = %q
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-
-  subject {
-    kind      = "ServiceAccount"
-    name      = "default"
-    api_group = ""
-    namespace = "kube-system"
-  }
-
-  subject {
-    kind      = "Group"
-    name      = "system:masters"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`, name)
 }
 
 // The pre-identity tests below run every migration test above from the last
@@ -646,14 +574,16 @@ func TestAccMigrateClusterRoleBinding_preIdentity_groupSubject(t *testing.T) {
 	)
 }
 
-func TestAccMigrateClusterRoleBinding_preIdentity_emptySubjectNamespace(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-
+func TestAccMigrateClusterRoleBinding_preIdentity_completeName(t *testing.T) {
+	name := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	migrationTestCaseFrom(t, clusterRoleBindingPreIdentityProviderVersion,
-		testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name),
-		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.namespace", ""),
-		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.namespace", "default"),
-	)
+		testAccKubernetesClusterRoleBindingV1Config_completeName(name, "one"))
+}
+
+func TestAccMigrateClusterRoleBinding_preIdentity_completeGeneratedName(t *testing.T) {
+	prefix := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum) + "-"
+	migrationTestCaseFrom(t, clusterRoleBindingPreIdentityProviderVersion,
+		testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName(prefix, "one"))
 }
 
 func TestAccMigrateClusterRoleBinding_preIdentity_emptyUserAPIGroup(t *testing.T) {

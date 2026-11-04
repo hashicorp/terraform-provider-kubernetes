@@ -17,34 +17,34 @@ import (
 )
 
 var (
-	_ resource.Resource                    = (*ClusterRoleBinding)(nil)
-	_ resource.ResourceWithConfigure       = (*ClusterRoleBinding)(nil)
-	_ resource.ResourceWithImportState     = (*ClusterRoleBinding)(nil)
-	_ resource.ResourceWithIdentity        = (*ClusterRoleBinding)(nil)
-	_ resource.ResourceWithMoveState       = (*ClusterRoleBinding)(nil)
-	_ resource.ResourceWithUpgradeIdentity = (*ClusterRoleBinding)(nil)
+	_ resource.Resource                    = (*ClusterRoleBindingV1)(nil)
+	_ resource.ResourceWithConfigure       = (*ClusterRoleBindingV1)(nil)
+	_ resource.ResourceWithImportState     = (*ClusterRoleBindingV1)(nil)
+	_ resource.ResourceWithIdentity        = (*ClusterRoleBindingV1)(nil)
+	_ resource.ResourceWithMoveState       = (*ClusterRoleBindingV1)(nil)
+	_ resource.ResourceWithUpgradeIdentity = (*ClusterRoleBindingV1)(nil)
 )
 
-// ClusterRoleBinding is the Plugin Framework implementation of the
+// ClusterRoleBindingV1 is the Plugin Framework implementation of the
 // kubernetes_cluster_role_binding_v1 resource. It is served alongside the SDKv2
 // provider through the mux server. The schema intentionally uses blocks (rather
 // than nested attributes) so that both the HCL configuration syntax and the
 // persisted state layout remain compatible with the SDKv2 version.
-type ClusterRoleBinding struct {
+type ClusterRoleBindingV1 struct {
 	// SDKv2Meta returns the provider meta struct configured by the SDKv2
 	// provider (shared through the mux server).
 	SDKv2Meta func() any
 }
 
-func NewClusterRoleBinding() resource.Resource {
-	return &ClusterRoleBinding{}
+func NewClusterRoleBindingV1() resource.Resource {
+	return &ClusterRoleBindingV1{}
 }
 
-func (r *ClusterRoleBinding) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *ClusterRoleBindingV1) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_cluster_role_binding_v1"
 }
 
-func (r *ClusterRoleBinding) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *ClusterRoleBindingV1) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -56,7 +56,7 @@ func (r *ClusterRoleBinding) Configure(_ context.Context, req resource.Configure
 	r.SDKv2Meta = meta
 }
 
-func (r *ClusterRoleBinding) UpgradeIdentity(_ context.Context) map[int64]resource.IdentityUpgrader {
+func (r *ClusterRoleBindingV1) UpgradeIdentity(_ context.Context) map[int64]resource.IdentityUpgrader {
 	return common.UpgradeIdentity(clusterRoleBindingKind, clusterRoleBindingAPIVersion)
 }
 
@@ -79,13 +79,13 @@ const (
 // The source is decoded from raw JSON into the frozen sdkv2ClusterRoleBindingStateV0
 // rather than through a SourceSchema, so it does not follow this resource's
 // schema as that changes.
-func (r *ClusterRoleBinding) MoveState(_ context.Context) []resource.StateMover {
+func (r *ClusterRoleBindingV1) MoveState(_ context.Context) []resource.StateMover {
 	return []resource.StateMover{{
 		StateMover: r.moveFromDeprecatedClusterRoleBinding,
 	}}
 }
 
-func (r *ClusterRoleBinding) moveFromDeprecatedClusterRoleBinding(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+func (r *ClusterRoleBindingV1) moveFromDeprecatedClusterRoleBinding(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
 	if req.SourceTypeName != deprecatedClusterRoleBindingTypeName ||
 		req.SourceSchemaVersion != deprecatedClusterRoleBindingSchemaVersion ||
 		!strings.HasSuffix(req.SourceProviderAddress, providerAddressSuffix) {

@@ -14,9 +14,9 @@ A ClusterRoleBinding may be used to grant permission at the cluster level and in
 
 ### Optional
 
-- `metadata` (Block List) Standard clusterRoleBinding's metadata. Exactly one metadata block is required. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
-- `role_ref` (Block List) RoleRef references the Cluster Role for this binding (see [below for nested schema](#nestedblock--role_ref))
-- `subject` (Block List) Subjects defines the entities to bind a ClusterRole to. (see [below for nested schema](#nestedblock--subject))
+- `metadata` (Block List) (Required) Standard clusterRoleBinding's metadata. Exactly one `metadata` block must be present. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
+- `role_ref` (Block List) (Required) RoleRef references the Cluster Role for this binding. Exactly one `role_ref` block must be present. (see [below for nested schema](#nestedblock--role_ref))
+- `subject` (Block List) (Required) Subjects defines the entities to bind a ClusterRole to. At least one `subject` block must be present. (see [below for nested schema](#nestedblock--subject))
 
 ### Read-Only
 
@@ -106,6 +106,12 @@ Upgrading SDKv2 state preserves the binding and its name-only ID. If configurati
 explicitly sets `labels = {}` or `annotations = {}`, the first plan may show a
 one-time in-place update because SDKv2 stored empty maps as null. The binding is
 not replaced.
+
+A `User` or `Group` subject with `api_group = ""` also shows a one-time in-place
+update, displayed as `- api_group = "rbac.authorization.k8s.io" -> null`. SDKv2
+stored the API server's default instead of the configured `""`. Only Terraform
+state changes; the binding is not modified or replaced. To avoid the update, omit
+`api_group` or set it to `rbac.authorization.k8s.io`.
 
 With Terraform 1.8 or later, migrate the deprecated resource name without
 recreating the binding:

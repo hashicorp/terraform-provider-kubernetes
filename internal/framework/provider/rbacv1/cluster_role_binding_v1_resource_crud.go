@@ -26,7 +26,7 @@ const (
 	clusterRoleBindingKind       = "ClusterRoleBinding"
 )
 
-func (r *ClusterRoleBinding) conn() (kubernetes.KubeClientsets, error) {
+func (r *ClusterRoleBindingV1) conn() (kubernetes.KubeClientsets, error) {
 	if r.SDKv2Meta == nil {
 		return nil, fmt.Errorf("provider meta is not configured")
 	}
@@ -41,7 +41,7 @@ func (r *ClusterRoleBinding) conn() (kubernetes.KubeClientsets, error) {
 	return clientsets, nil
 }
 
-func (r *ClusterRoleBinding) identity(name string) common.ResourceIdentity {
+func (r *ClusterRoleBindingV1) identity(name string) common.ResourceIdentity {
 	return common.ResourceIdentity{
 		APIVersion: types.StringValue(clusterRoleBindingAPIVersion),
 		Kind:       types.StringValue(clusterRoleBindingKind),
@@ -68,7 +68,7 @@ func applyPlanResult(
 	}
 }
 
-func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *ClusterRoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ClusterRoleBindingModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -114,7 +114,7 @@ func (r *ClusterRoleBinding) Create(ctx context.Context, req resource.CreateRequ
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
 
-func (r *ClusterRoleBinding) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *ClusterRoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state ClusterRoleBindingModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -177,7 +177,7 @@ func (r *ClusterRoleBinding) Read(ctx context.Context, req resource.ReadRequest,
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
 
-func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *ClusterRoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan, state ClusterRoleBindingModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -270,7 +270,7 @@ func (r *ClusterRoleBinding) Update(ctx context.Context, req resource.UpdateRequ
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, r.identity(out.Name))...)
 }
 
-func (r *ClusterRoleBinding) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *ClusterRoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state ClusterRoleBindingModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -301,7 +301,7 @@ func (r *ClusterRoleBinding) Delete(ctx context.Context, req resource.DeleteRequ
 	tflog.Info(ctx, "ClusterRoleBinding deleted", map[string]any{"name": name})
 }
 
-func (r *ClusterRoleBinding) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *ClusterRoleBindingV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	name := req.ID
 	if name == "" {
 		var identityData common.ResourceIdentity

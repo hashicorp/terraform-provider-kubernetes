@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -432,60 +433,14 @@ func TestAccClusterRoleBinding_updatePatchOperationsOrderWithRemovals(t *testing
 	})
 }
 
-// TestAccClusterRoleBinding_generatedNameMetadataUpdate verifies that
-// adding a label to a binding created with generate_name updates it in place.
-func TestAccClusterRoleBinding_generatedNameMetadataUpdate(t *testing.T) {
-	prefix := "tf-acc-test:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum) + "-"
-	config := testAccKubernetesClusterRoleBindingV1Config_generateName(prefix)
-	updated := testAccKubernetesClusterRoleBindingV1Config_generateNameWithLabels(prefix)
+// TestAccClusterRoleBinding_completeGeneratedName creates a binding with
+// generate_name and every other field set, then changes the label and
+// annotation values, which must update the binding in place and keep the
+// omitted subject api_group values known in the plan. The prefix uses
+// characters only RBAC names allow (uppercase, underscore, colon).
+func TestAccClusterRoleBinding_completeGeneratedName(t *testing.T) {
+	prefix := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum) + "-"
 	checkUID := testAccClusterRoleBindingCheckSameUID()
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
-		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
-		Steps: []resource.TestStep{
-			{Config: config, Check: checkUID},
-			{
-				Config: updated,
-				Check:  checkUID,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate),
-					},
-				},
-			},
-		},
-	})
-}
-
-// TestAccClusterRoleBinding_metadataUpdate moves one binding through
-// no metadata maps, empty maps, managed labels and annotations, and back to
-// none, checking that every change is applied in place.
-func TestAccClusterRoleBinding_metadataUpdate(t *testing.T) {
-	name := "tf-acc-test:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	checkUID := testAccClusterRoleBindingCheckSameUID()
-	steps := []resource.TestStep{}
-	for _, metadata := range []string{"", "labels = {}\nannotations = {}",
-		`labels = { "app.kubernetes.io/name" = "managed" }
-annotations = { "example.com/owner" = "terraform" }`, ""} {
-		steps = append(steps, resource.TestStep{
-			Config: testAccKubernetesClusterRoleBindingV1Config_metadata(name, metadata),
-			Check:  checkUID,
-		})
-	}
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
-		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
-		Steps:                    steps,
-	})
-}
-
-// TestAccClusterRoleBinding_emptySubjectNamespace verifies that an
-// explicitly empty subject namespace is kept as-is and does not produce a
-// diff, while an omitted namespace still takes the schema default.
-func TestAccClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -493,13 +448,158 @@ func TestAccClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
 		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name),
+				Config: testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName(prefix, "one"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "2"),
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.name", "explicit-empty"),
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.namespace", ""),
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.name", "omitted"),
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.namespace", "default"),
+					resource.TestMatchResourceAttr(clusterRoleBindingResourceName, "metadata.0.name", regexp.MustCompile("^"+regexp.QuoteMeta(prefix))),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.generate_name", prefix),
+					testAccCheckClusterRoleBindingV1Complete("one"),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      clusterRoleBindingResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName(prefix, "two"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: append([]plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate),
+					}, testAccClusterRoleBindingExpectOmittedAPIGroupsKnown()...),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.generate_name", prefix),
+					testAccCheckClusterRoleBindingV1Complete("two"),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      clusterRoleBindingResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccClusterRoleBinding_completeName creates a named binding with every
+// field set, changes the label and annotation values (keeping the omitted
+// subject api_group values known in the plan), removes the metadata
+// maps, declares them empty, then sets every field again. Every change must
+// update the binding in place. The name uses characters only RBAC names allow (uppercase,
+// underscore, colon), which the DNS rule other resources use would reject.
+func TestAccClusterRoleBinding_completeName(t *testing.T) {
+	name := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	checkUID := testAccClusterRoleBindingCheckSameUID()
+	update := resource.ConfigPlanChecks{
+		PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate),
+		},
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleBindingV1Config_completeName(name, "one"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.name", name),
+					testAccCheckClusterRoleBindingV1Complete("one"),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      clusterRoleBindingResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingV1Config_completeName(name, "two"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: append([]plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate),
+					}, testAccClusterRoleBindingExpectOmittedAPIGroupsKnown()...),
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckClusterRoleBindingV1Complete("two"),
+					checkUID,
+				),
+			},
+			{
+				Config:           testAccKubernetesClusterRoleBindingV1Config_basic(name),
+				ConfigPlanChecks: update,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(clusterRoleBindingResourceName, "metadata.0.labels.%"),
+					resource.TestCheckNoResourceAttr(clusterRoleBindingResourceName, "metadata.0.annotations.%"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "1"),
+					checkUID,
+				),
+			},
+			{
+				Config:           testAccKubernetesClusterRoleBindingV1Config_emptyMetadata(name),
+				ConfigPlanChecks: update,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.annotations.%", "0"),
+					checkUID,
+				),
+			},
+			{
+				Config:           testAccKubernetesClusterRoleBindingV1Config_completeName(name, "one"),
+				ConfigPlanChecks: update,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckClusterRoleBindingV1Complete("one"),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      clusterRoleBindingResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccClusterRoleBinding_omittedAPIGroupSubjectSwap swaps a ServiceAccount
+// and a User subject that both omit api_group. Subjects are positional, so
+// neither may keep the api_group stored for the other kind: the API rejects a
+// ServiceAccount with rbac.authorization.k8s.io.
+func TestAccClusterRoleBinding_omittedAPIGroupSubjectSwap(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	checkUID := testAccClusterRoleBindingCheckSameUID()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleBindingV1Config_omittedAPIGroup(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.kind", "ServiceAccount"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.api_group", ""),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.kind", "User"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.api_group", "rbac.authorization.k8s.io"),
+					checkUID,
+				),
+			},
+			{
+				Config: testAccKubernetesClusterRoleBindingV1Config_omittedAPIGroupSwapped(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.kind", "User"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.kind", "ServiceAccount"),
+					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.api_group", ""),
+					checkUID,
 				),
 			},
 			{
@@ -513,7 +613,8 @@ func TestAccClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
 
 // TestAccClusterRoleBinding_emptyUserAPIGroup verifies that
 // api_group = "" on a User subject, which the API server defaults to
-// rbac.authorization.k8s.io, does not drift: apply -> refresh -> empty plan.
+// rbac.authorization.k8s.io, does not drift. The automatic post-apply plans
+// fail the step if it does.
 func TestAccClusterRoleBinding_emptyUserAPIGroup(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -522,30 +623,21 @@ func TestAccClusterRoleBinding_emptyUserAPIGroup(t *testing.T) {
 		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
-			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_emptyUserAPIGroup(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-				Check: resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.api_group", ""),
-			},
-			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_emptyUserAPIGroup(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-			},
+			{Config: testAccKubernetesClusterRoleBindingV1Config_emptyUserAPIGroup(name)},
 		},
 	})
 }
 
-// TestAccClusterRoleBinding_ignoreAnnotations verifies that:
-//   - provider-level ignore_annotations prevents drift from untracked
-//     server-side annotations matching the pattern
-//   - annotations the user has explicitly configured are retained even
-//     when their key matches an ignore pattern
-func TestAccClusterRoleBinding_ignoreAnnotations(t *testing.T) {
+// TestAccClusterRoleBinding_ignoreMetadata verifies the provider-level
+// ignore_annotations and ignore_labels:
+//   - an annotation and a label added outside Terraform, whose keys match the
+//     patterns, do not show as drift; and
+//   - an annotation and a label configured in Terraform stay managed even
+//     though their keys match the same patterns.
+//
+// Without the patterns the injected keys are read into state and step 2 plans
+// to remove them.
+func TestAccClusterRoleBinding_ignoreMetadata(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -553,37 +645,20 @@ func TestAccClusterRoleBinding_ignoreAnnotations(t *testing.T) {
 		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
+			{Config: testAccKubernetesClusterRoleBindingV1Config_ignoreMetadata(name)},
 			{
-				// Step 1 — create a binding with an annotation that is
-				// tracked in config. The provider is configured to ignore
-				// the same pattern so that any server-added keys with that
-				// prefix are transparently dropped.
-				Config: testAccKubernetesClusterRoleBindingV1Config_ignoreAnnotations(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.name", name),
-					// The user-configured annotation must appear in state.
-					resource.TestCheckResourceAttr(
-						clusterRoleBindingResourceName,
-						"metadata.0.annotations.acme.io/managed",
-						"true",
-					),
-				),
-			},
-			{
-				// Step 2 — re-plan; must be empty (no phantom diff from
-				// internal Kubernetes annotations or the ignored pattern).
-				Config:             testAccKubernetesClusterRoleBindingV1Config_ignoreAnnotations(name),
-				PlanOnly:           true,
-				ExpectNonEmptyPlan: false,
+				PreConfig: func() { testAccClusterRoleBindingInjectExternalMetadata(t, name) },
+				Config:    testAccKubernetesClusterRoleBindingV1Config_ignoreMetadata(name),
+				PlanOnly:  true,
 			},
 		},
 	})
 }
 
 // TestAccClusterRoleBinding_externalMetadataSurvivesSubjectUpdate
-// verifies that an annotation added outside Terraform, whose key matches the
-// provider-level ignore_annotations pattern, never shows as drift and is not
-// removed when the binding's subjects are updated.
+// verifies that an annotation and a label added outside Terraform, whose keys
+// match the provider-level ignore_annotations and ignore_labels patterns, are
+// not removed when the binding's subjects are updated.
 func TestAccClusterRoleBinding_externalMetadataSurvivesSubjectUpdate(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	checkUID := testAccClusterRoleBindingCheckSameUID()
@@ -595,29 +670,18 @@ func TestAccClusterRoleBinding_externalMetadataSurvivesSubjectUpdate(t *testing.
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIO(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "1"),
-					checkUID,
-				),
+				Check:  checkUID,
 			},
 			{
-				// The injected key is filtered by ignore_annotations, so the plan stays empty.
-				PreConfig: func() {
-					testAccClusterRoleBindingInjectAnnotation(t, name, externalAnnotationKey, externalAnnotationValue)
-				},
-				Config:   testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIO(name),
-				PlanOnly: true,
-			},
-			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIOModified(name),
+				PreConfig: func() { testAccClusterRoleBindingInjectExternalMetadata(t, name) },
+				Config:    testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIOModified(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionUpdate),
 					},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "3"),
-					testAccCheckClusterRoleBindingAnnotation(name, externalAnnotationKey, externalAnnotationValue),
+					testAccCheckClusterRoleBindingExternalMetadata(name),
 					checkUID,
 				),
 			},
@@ -638,11 +702,8 @@ func TestAccClusterRoleBinding_disappears(t *testing.T) {
 		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_basic(name),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.name", name),
-					testAccKubernetesClusterRoleBindingV1DeleteOutOfBand(name),
-				),
+				Config:             testAccKubernetesClusterRoleBindingV1Config_basic(name),
+				Check:              testAccKubernetesClusterRoleBindingV1DeleteOutOfBand(name),
 				ExpectNonEmptyPlan: true,
 			},
 			{
@@ -652,77 +713,107 @@ func TestAccClusterRoleBinding_disappears(t *testing.T) {
 						plancheck.ExpectResourceAction(clusterRoleBindingResourceName, plancheck.ResourceActionCreate),
 					},
 				},
-				Check: resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.name", name),
-			},
-			{
-				Config: testAccKubernetesClusterRoleBindingV1Config_basic(name),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
 			},
 		},
 	})
 }
 
 // TestAccClusterRoleBinding_importInvalidIdentity verifies that an
-// identity import with the wrong kind or api_version is rejected.
+// identity import with the wrong kind or api_version, or an empty name, is
+// rejected.
 func TestAccClusterRoleBinding_importInvalidIdentity(t *testing.T) {
-	for _, tc := range []struct{ name, kind, apiVersion string }{
-		{"otherResource", "ConfigMap", "v9"},
-		{"wrongKind", "RoleBinding", "rbac.authorization.k8s.io/v1"},
-		{"wrongAPIVersion", "ClusterRoleBinding", "rbac.authorization.k8s.io/v1beta1"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-			resource.ParallelTest(t, resource.TestCase{
-				PreCheck:                 func() { testAccPreCheck(t) },
-				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
-				CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
-				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-					tfversion.SkipBelow(tfversion.Version1_12_0),
-				},
-				Steps: []resource.TestStep{
-					{Config: testAccKubernetesClusterRoleBindingV1Config_basic(name)},
-					{
-						ResourceName:           clusterRoleBindingResourceName,
-						ImportState:            true,
-						ImportStateKind:        resource.ImportBlockWithResourceIdentity,
-						ImportStateConfigExact: true,
-						Config:                 testAccKubernetesClusterRoleBindingV1Config_identityImport(name, tc.kind, tc.apiVersion),
-						ExpectError:            regexp.MustCompile("invalid identity import"),
-					},
-				},
-			})
-		})
-	}
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+		CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_12_0),
+		},
+		Steps: []resource.TestStep{
+			{Config: testAccKubernetesClusterRoleBindingV1Config_basic(name)},
+			{
+				ResourceName:           clusterRoleBindingResourceName,
+				ImportState:            true,
+				ImportStateKind:        resource.ImportBlockWithResourceIdentity,
+				ImportStateConfigExact: true,
+				Config:                 testAccKubernetesClusterRoleBindingV1Config_identityImport(name, name, "RoleBinding", "rbac.authorization.k8s.io/v1"),
+				ExpectError:            regexp.MustCompile(`invalid identity import`),
+			},
+			{
+				ResourceName:           clusterRoleBindingResourceName,
+				ImportState:            true,
+				ImportStateKind:        resource.ImportBlockWithResourceIdentity,
+				ImportStateConfigExact: true,
+				Config:                 testAccKubernetesClusterRoleBindingV1Config_identityImport(name, name, "ClusterRoleBinding", "rbac.authorization.k8s.io/v1beta1"),
+				ExpectError:            regexp.MustCompile(`invalid identity import`),
+			},
+			{
+				ResourceName:           clusterRoleBindingResourceName,
+				ImportState:            true,
+				ImportStateKind:        resource.ImportBlockWithResourceIdentity,
+				ImportStateConfigExact: true,
+				Config:                 testAccKubernetesClusterRoleBindingV1Config_identityImport(name, "", "ClusterRoleBinding", "rbac.authorization.k8s.io/v1"),
+				ExpectError:            regexp.MustCompile(`"name" must not be empty`),
+			},
+		},
+	})
 }
 
-// TestAccClusterRoleBinding_invalidMetadataName verifies that a
-// metadata.name containing a path separator is rejected during Terraform
-// validation, matching the SDKv2 validateRBACNameFunc behavior.
+// TestAccClusterRoleBinding_invalidMetadataName verifies that metadata.name is
+// validated as an RBAC path segment name, as SDKv2's validateRBACNameFunc does:
+// "/" and "%" are rejected anywhere, and "." and ".." as the whole name. The
+// names the DNS rule would reject but RBAC allows are accepted by
+// TestAccClusterRoleBinding_completeName.
 func TestAccClusterRoleBinding_invalidMetadataName(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccKubernetesClusterRoleBindingV1Config_invalidName(),
-				ExpectError: regexp.MustCompile(`may not contain`),
+				Config:      testAccKubernetesClusterRoleBindingV1Config_basic("invalid/name"),
+				ExpectError: regexp.MustCompile(`may not contain '/'`),
+			},
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_basic("invalid%name"),
+				ExpectError: regexp.MustCompile(`may not contain '%'`),
+			},
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_basic("."),
+				ExpectError: regexp.MustCompile(`may not be '\.'`),
+			},
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_basic(".."),
+				ExpectError: regexp.MustCompile(`may not be '\.\.'`),
 			},
 		},
 	})
 }
 
-// TestAccClusterRoleBinding_invalidMetadataGenerateName verifies
-// that an invalid generate_name prefix is also rejected during validation.
+// TestAccClusterRoleBinding_invalidMetadataGenerateName verifies that
+// generate_name gets the same RBAC path segment validation as name, as in
+// SDKv2. The prefixes the DNS rule would reject but RBAC allows are accepted by
+// TestAccClusterRoleBinding_completeGeneratedName.
 func TestAccClusterRoleBinding_invalidMetadataGenerateName(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccKubernetesClusterRoleBindingV1Config_invalidGenerateName(),
-				ExpectError: regexp.MustCompile(`may not contain`),
+				Config:      testAccKubernetesClusterRoleBindingV1Config_generateName("invalid/prefix-"),
+				ExpectError: regexp.MustCompile(`may not contain '/'`),
+			},
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_generateName("invalid%prefix-"),
+				ExpectError: regexp.MustCompile(`may not contain '%'`),
+			},
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_generateName("."),
+				ExpectError: regexp.MustCompile(`may not be '\.'`),
+			},
+			{
+				Config:      testAccKubernetesClusterRoleBindingV1Config_generateName(".."),
+				ExpectError: regexp.MustCompile(`may not be '\.\.'`),
 			},
 		},
 	})
@@ -748,7 +839,7 @@ func TestAccClusterRoleBinding_metadataValidation(t *testing.T) {
 				CheckDestroy:             testAccKubernetesClusterRoleBindingV1Destroy,
 				Steps: []resource.TestStep{
 					{Config: testAccKubernetesClusterRoleBindingV1Config_metadata(name, tc.metadata), ExpectError: regexp.MustCompile(tc.errorPattern)},
-					{Config: testAccKubernetesClusterRoleBindingV1Config_metadata(name, "")},
+					{Config: testAccKubernetesClusterRoleBindingV1Config_basic(name)},
 				},
 			})
 		})
@@ -841,7 +932,7 @@ func TestClusterRoleBindingReadMissingAndErrors(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				r := &rbacv1.ClusterRoleBinding{SDKv2Meta: func() any { return roleUpdateClientsets{client: conn} }}
+				r := &rbacv1.ClusterRoleBindingV1{SDKv2Meta: func() any { return roleUpdateClientsets{client: conn} }}
 				var schema frameworkresource.SchemaResponse
 				r.Schema(ctx, frameworkresource.SchemaRequest{}, &schema)
 				raw := tfprotov6.RawState{JSON: []byte(`{
@@ -967,16 +1058,18 @@ func testAccClusterRoleBindingCheckSameUID() resource.TestCheckFunc {
 	}
 }
 
-// externalAnnotationKey matches the ignore_annotations pattern in
+// externalMetadataKey matches the ignore_annotations and ignore_labels
+// patterns in testAccKubernetesClusterRoleBindingV1Config_ignoreMetadata and
 // testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIO.
 const (
-	externalAnnotationKey   = "external.io/injected"
-	externalAnnotationValue = "true"
+	externalMetadataKey   = "external.io/injected"
+	externalMetadataValue = "true"
 )
 
-// testAccClusterRoleBindingInjectAnnotation adds an annotation to the live
-// object, simulating another controller writing to it.
-func testAccClusterRoleBindingInjectAnnotation(t *testing.T, name, key, value string) {
+// testAccClusterRoleBindingInjectExternalMetadata adds the annotation and the
+// label externalMetadataKey to the live object, simulating another controller
+// writing to it.
+func testAccClusterRoleBindingInjectExternalMetadata(t *testing.T, name string) {
 	t.Helper()
 	meta, err := sdkv2providerMeta()
 	if err != nil {
@@ -994,14 +1087,20 @@ func testAccClusterRoleBindingInjectAnnotation(t *testing.T, name, key, value st
 	if obj.Annotations == nil {
 		obj.Annotations = map[string]string{}
 	}
-	obj.Annotations[key] = value
+	if obj.Labels == nil {
+		obj.Labels = map[string]string{}
+	}
+	obj.Annotations[externalMetadataKey] = externalMetadataValue
+	obj.Labels[externalMetadataKey] = externalMetadataValue
 	if _, err := conn.RbacV1().ClusterRoleBindings().Update(ctx, obj, metav1.UpdateOptions{}); err != nil {
 		t.Fatalf("update ClusterRoleBinding %q: %v", name, err)
 	}
 }
 
-// testAccCheckClusterRoleBindingAnnotation checks the annotation on the live object.
-func testAccCheckClusterRoleBindingAnnotation(name, key, value string) resource.TestCheckFunc {
+// testAccCheckClusterRoleBindingExternalMetadata checks that the annotation and
+// the label added by testAccClusterRoleBindingInjectExternalMetadata are still
+// on the live object.
+func testAccCheckClusterRoleBindingExternalMetadata(name string) resource.TestCheckFunc {
 	return func(_ *terraform.State) error {
 		meta, err := sdkv2providerMeta()
 		if err != nil {
@@ -1015,11 +1114,79 @@ func testAccCheckClusterRoleBindingAnnotation(name, key, value string) resource.
 		if err != nil {
 			return fmt.Errorf("get ClusterRoleBinding %q: %w", name, err)
 		}
-		if got, ok := obj.Annotations[key]; !ok || got != value {
-			return fmt.Errorf("annotation %q = %q (present=%t), want %q", key, got, ok, value)
+		if got, ok := obj.Annotations[externalMetadataKey]; !ok || got != externalMetadataValue {
+			return fmt.Errorf("annotation %q = %q (present=%t), want %q", externalMetadataKey, got, ok, externalMetadataValue)
+		}
+		if got, ok := obj.Labels[externalMetadataKey]; !ok || got != externalMetadataValue {
+			return fmt.Errorf("label %q = %q (present=%t), want %q", externalMetadataKey, got, ok, externalMetadataValue)
 		}
 		return nil
 	}
+}
+
+// testAccClusterRoleBindingExpectOmittedAPIGroupsKnown checks that an update of
+// the complete configuration plans the stored api_group for the last three
+// subjects, which omit it, instead of (known after apply).
+func testAccClusterRoleBindingExpectOmittedAPIGroupsKnown() []plancheck.PlanCheck {
+	apiGroup := func(i int) tfjsonpath.Path {
+		return tfjsonpath.New("subject").AtSliceIndex(i).AtMapKey("api_group")
+	}
+	return []plancheck.PlanCheck{
+		plancheck.ExpectKnownValue(clusterRoleBindingResourceName, apiGroup(4), knownvalue.StringExact("")),
+		plancheck.ExpectKnownValue(clusterRoleBindingResourceName, apiGroup(5), knownvalue.StringExact("rbac.authorization.k8s.io")),
+		plancheck.ExpectKnownValue(clusterRoleBindingResourceName, apiGroup(6), knownvalue.StringExact("rbac.authorization.k8s.io")),
+	}
+}
+
+// testAccCheckClusterRoleBindingV1Complete checks the fields set by
+// testAccKubernetesClusterRoleBindingV1Config_completeName and
+// testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName, whose
+// label and annotation values are all value.
+func testAccCheckClusterRoleBindingV1Complete(value string) resource.TestCheckFunc {
+	return resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttrSet(clusterRoleBindingResourceName, "metadata.0.generation"),
+		resource.TestCheckResourceAttrSet(clusterRoleBindingResourceName, "metadata.0.resource_version"),
+		resource.TestCheckResourceAttrSet(clusterRoleBindingResourceName, "metadata.0.uid"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.labels.%", "2"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.labels.TestLabelOne", value),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.labels.app.kubernetes.io/name", value),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.annotations.%", "2"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.annotations.TestAnnotationOne", value),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "metadata.0.annotations.example.com/owner", value),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "role_ref.#", "1"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "role_ref.0.api_group", "rbac.authorization.k8s.io"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "role_ref.0.kind", "ClusterRole"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "role_ref.0.name", "cluster-admin"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.#", "7"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.kind", "User"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.name", "notauser"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.0.namespace", "default"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.kind", "ServiceAccount"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.name", "default"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.namespace", "kube-system"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.1.api_group", ""),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.kind", "Group"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.name", "system:masters"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.api_group", "rbac.authorization.k8s.io"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.2.namespace", "default"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.3.kind", "User"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.3.name", "empty-namespace"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.3.api_group", "rbac.authorization.k8s.io"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.3.namespace", ""),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.4.kind", "ServiceAccount"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.4.name", "default"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.4.api_group", ""),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.4.namespace", "default"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.5.kind", "User"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.5.name", "notauser"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.5.api_group", "rbac.authorization.k8s.io"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.5.namespace", "default"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.6.kind", "Group"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.6.name", "system:masters"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.6.api_group", "rbac.authorization.k8s.io"),
+		resource.TestCheckResourceAttr(clusterRoleBindingResourceName, "subject.6.namespace", "default"),
+	)
 }
 
 func testAccKubernetesClusterRoleBindingV1Config_basic(name string) string {
@@ -1064,15 +1231,14 @@ func testAccKubernetesClusterRoleBindingV1Config_generateName(namePrefix string)
 `, namePrefix)
 }
 
-// testAccKubernetesClusterRoleBindingV1Config_generateNameWithLabels is the
-// generate_name configuration with a managed label added.
-func testAccKubernetesClusterRoleBindingV1Config_generateNameWithLabels(namePrefix string) string {
+// testAccKubernetesClusterRoleBindingV1Config_emptyMetadata is the basic
+// configuration with labels and annotations declared empty.
+func testAccKubernetesClusterRoleBindingV1Config_emptyMetadata(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
   metadata {
-    generate_name = %q
-    labels = {
-      "managed" = "true"
-    }
+    name        = %q
+    labels      = {}
+    annotations = {}
   }
 
   role_ref {
@@ -1087,7 +1253,202 @@ func testAccKubernetesClusterRoleBindingV1Config_generateNameWithLabels(namePref
     api_group = "rbac.authorization.k8s.io"
   }
 }
-`, namePrefix)
+`, name)
+}
+
+// testAccKubernetesClusterRoleBindingV1Config_completeName sets every field
+// except generate_name, which conflicts with name. The last three subjects
+// omit namespace and api_group, so their values come from the schema default
+// and the API. All label and annotation values are value, so a step can change
+// them without changing the keys.
+func testAccKubernetesClusterRoleBindingV1Config_completeName(name, value string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = %[1]q
+
+    labels = {
+      TestLabelOne             = %[2]q
+      "app.kubernetes.io/name" = %[2]q
+    }
+
+    annotations = {
+      TestAnnotationOne   = %[2]q
+      "example.com/owner" = %[2]q
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = "kube-system"
+    api_group = ""
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "system:masters"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "empty-namespace"
+    namespace = ""
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind = "ServiceAccount"
+    name = "default"
+  }
+
+  subject {
+    kind = "User"
+    name = "notauser"
+  }
+
+  subject {
+    kind = "Group"
+    name = "system:masters"
+  }
+}
+`, name, value)
+}
+
+// testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName is
+// testAccKubernetesClusterRoleBindingV1Config_completeName with generate_name
+// in place of name.
+func testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName(prefix, value string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    generate_name = %[1]q
+
+    labels = {
+      TestLabelOne             = %[2]q
+      "app.kubernetes.io/name" = %[2]q
+    }
+
+    annotations = {
+      TestAnnotationOne   = %[2]q
+      "example.com/owner" = %[2]q
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = "kube-system"
+    api_group = ""
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "system:masters"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "empty-namespace"
+    namespace = ""
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind = "ServiceAccount"
+    name = "default"
+  }
+
+  subject {
+    kind = "User"
+    name = "notauser"
+  }
+
+  subject {
+    kind = "Group"
+    name = "system:masters"
+  }
+}
+`, prefix, value)
+}
+
+// testAccKubernetesClusterRoleBindingV1Config_omittedAPIGroup has a
+// ServiceAccount and a User subject that both omit api_group.
+func testAccKubernetesClusterRoleBindingV1Config_omittedAPIGroup(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind = "ServiceAccount"
+    name = "default"
+  }
+
+  subject {
+    kind = "User"
+    name = "notauser"
+  }
+}
+`, name)
+}
+
+// testAccKubernetesClusterRoleBindingV1Config_omittedAPIGroupSwapped is
+// testAccKubernetesClusterRoleBindingV1Config_omittedAPIGroup with the two
+// subjects in the opposite order.
+func testAccKubernetesClusterRoleBindingV1Config_omittedAPIGroupSwapped(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind = "User"
+    name = "notauser"
+  }
+
+  subject {
+    kind = "ServiceAccount"
+    name = "default"
+  }
+}
+`, name)
 }
 
 // testAccKubernetesClusterRoleBindingV1Config_metadata is the basic configuration
@@ -1224,34 +1585,6 @@ func testAccKubernetesClusterRoleBindingV1Config_groupSubject(name string) strin
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
-  metadata {
-    name = "%s"
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "User"
-    name      = "explicit-empty"
-    namespace = ""
-  }
-
-  subject {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "User"
-    name      = "omitted"
-  }
-}
-`, name)
-}
-
 func testAccKubernetesClusterRoleBindingV1Config_emptyUserAPIGroup(name string) string {
 	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding_v1" "test" {
   metadata {
@@ -1273,17 +1606,24 @@ func testAccKubernetesClusterRoleBindingV1Config_emptyUserAPIGroup(name string) 
 `, name)
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_ignoreAnnotations(name string) string {
+// testAccKubernetesClusterRoleBindingV1Config_ignoreMetadata configures an
+// annotation and a label whose keys match the provider's ignore patterns, which
+// testAccClusterRoleBindingInjectExternalMetadata also matches.
+func testAccKubernetesClusterRoleBindingV1Config_ignoreMetadata(name string) string {
 	return fmt.Sprintf(`
 provider "kubernetes" {
-  ignore_annotations = ["^acme\\.io/"]
+  ignore_annotations = ["^external\\.io/"]
+  ignore_labels      = ["^external\\.io/"]
 }
 
 resource "kubernetes_cluster_role_binding_v1" "test" {
   metadata {
     name = %q
     annotations = {
-      "acme.io/managed" = "true"
+      "external.io/managed" = "true"
+    }
+    labels = {
+      "external.io/managed" = "true"
     }
   }
 
@@ -1296,6 +1636,73 @@ resource "kubernetes_cluster_role_binding_v1" "test" {
   subject {
     kind      = "User"
     name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIO(name string) string {
+	return fmt.Sprintf(`
+provider "kubernetes" {
+  ignore_annotations = ["^external\\.io/"]
+  ignore_labels      = ["^external\\.io/"]
+}
+
+resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleBindingV1Config_ignoreExternalIOModified(name string) string {
+	return fmt.Sprintf(`
+provider "kubernetes" {
+  ignore_annotations = ["^external\\.io/"]
+  ignore_labels      = ["^external\\.io/"]
+}
+
+resource "kubernetes_cluster_role_binding_v1" "test" {
+  metadata {
+    name = %q
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    api_group = ""
+    namespace = "kube-system"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "system:masters"
     api_group = "rbac.authorization.k8s.io"
   }
 }
@@ -1352,51 +1759,9 @@ resource "kubernetes_cluster_role_binding_v1" "test" {
 `
 }
 
-func testAccKubernetesClusterRoleBindingV1Config_invalidName() string {
-	return `
-resource "kubernetes_cluster_role_binding_v1" "test" {
-  metadata {
-    name = "invalid/name"
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`
-}
-
-func testAccKubernetesClusterRoleBindingV1Config_invalidGenerateName() string {
-	return `
-resource "kubernetes_cluster_role_binding_v1" "test" {
-  metadata {
-    generate_name = "invalid/prefix"
-  }
-
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-
-  subject {
-    kind      = "User"
-    name      = "notauser"
-    api_group = "rbac.authorization.k8s.io"
-  }
-}
-`
-}
-
-func testAccKubernetesClusterRoleBindingV1Config_identityImport(name, kind, apiVersion string) string {
+// testAccKubernetesClusterRoleBindingV1Config_identityImport is the basic
+// binding named name, imported by the identity identityName, kind, apiVersion.
+func testAccKubernetesClusterRoleBindingV1Config_identityImport(name, identityName, kind, apiVersion string) string {
 	return testAccKubernetesClusterRoleBindingV1Config_basic(name) + fmt.Sprintf(`
 import {
   to = kubernetes_cluster_role_binding_v1.test
@@ -1406,7 +1771,7 @@ import {
     api_version = %q
   }
 }
-`, name, kind, apiVersion)
+`, identityName, kind, apiVersion)
 }
 
 // testAccKubernetesClusterRoleBindingV1ConfigBug_step_0 is SDKv2's ConfigBug_step_0: notauser1, notauser2, notauser3.

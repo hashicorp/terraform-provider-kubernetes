@@ -4,8 +4,11 @@
 package rbacv1
 
 import (
+	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	rbacv1api "k8s.io/api/rbac/v1"
@@ -188,4 +191,41 @@ func flattenSubjects(in []rbacv1api.Subject, prior []SubjectModel) []SubjectMode
 		}
 	}
 	return result
+}
+
+// subjectAPIGroupUseState keeps an omitted subject api_group known during updates.
+// Plain UseStateForUnknown is not enough: subjects are positional, and the API
+// server defaults api_group from kind, so a subject must not inherit the value
+// stored for a different subject at the same index.
+type subjectAPIGroupUseState struct{}
+
+func (subjectAPIGroupUseState) Description(context.Context) string {
+	return "Retains an omitted API group when the subject at the same list index keeps its kind and name."
+}
+
+func (m subjectAPIGroupUseState) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (subjectAPIGroupUseState) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if !req.ConfigValue.IsNull() || !req.PlanValue.IsUnknown() ||
+		req.StateValue.IsNull() || req.StateValue.IsUnknown() ||
+		req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	// Lists are positional: a different subject must not inherit this one's API group.
+	for _, field := range []string{"kind", "name"} {
+		var prior, planned types.String
+		fieldPath := req.Path.ParentPath().AtName(field)
+		resp.Diagnostics.Append(req.State.GetAttribute(ctx, fieldPath, &prior)...)
+		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, fieldPath, &planned)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if prior.IsNull() || prior.IsUnknown() || planned.IsNull() || planned.IsUnknown() || !prior.Equal(planned) {
+			return
+		}
+	}
+	resp.PlanValue = req.StateValue
 }

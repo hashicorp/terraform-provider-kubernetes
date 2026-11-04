@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
-func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *ClusterRoleBindingV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "A ClusterRoleBinding may be used to grant permission at the cluster level and in all namespaces",
 		Attributes: map[string]schema.Attribute{
@@ -33,7 +33,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 		Blocks: map[string]schema.Block{
 			"metadata": common.MetadataSchemaRBAC("clusterRoleBinding", true, false),
 			"role_ref": schema.ListNestedBlock{
-				Description: "RoleRef references the Cluster Role for this binding",
+				Description: "(Required) RoleRef references the Cluster Role for this binding. Exactly one `role_ref` block must be present.",
 				Validators: []validator.List{
 					listvalidator.IsRequired(),
 					listvalidator.SizeBetween(1, 1),
@@ -65,7 +65,7 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 			},
 			"subject": schema.ListNestedBlock{
-				Description: "Subjects defines the entities to bind a ClusterRole to.",
+				Description: "(Required) Subjects defines the entities to bind a ClusterRole to. At least one `subject` block must be present.",
 				Validators: []validator.List{
 					listvalidator.IsRequired(),
 					listvalidator.SizeAtLeast(1),
@@ -76,6 +76,9 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 							Description: "The API group of the subject resource.",
 							Optional:    true,
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								subjectAPIGroupUseState{},
+							},
 						},
 						"kind": schema.StringAttribute{
 							Description: "The kind of resource.",
@@ -98,6 +101,6 @@ func (r *ClusterRoleBinding) Schema(_ context.Context, _ resource.SchemaRequest,
 	}
 }
 
-func (r *ClusterRoleBinding) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
+func (r *ClusterRoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = common.IdentitySchema()
 }

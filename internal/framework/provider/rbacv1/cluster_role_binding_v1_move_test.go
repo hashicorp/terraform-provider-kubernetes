@@ -104,10 +104,19 @@ func TestAccMoveClusterRoleBinding_multipleSubjects(t *testing.T) {
 	testAccClusterRoleBindingMoveState(t, migratedProviderVersion, testAccKubernetesClusterRoleBindingV1Config_modified(name))
 }
 
-// An explicitly empty subject namespace next to one that takes the "default" default.
-func TestAccMoveClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
-	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	testAccClusterRoleBindingMoveState(t, migratedProviderVersion, testAccKubernetesClusterRoleBindingV1Config_emptySubjectNamespace(name))
+// Every field set: labels and annotations, every subject kind, an explicitly
+// empty subject namespace next to an omitted one, and subjects that leave
+// namespace and api_group to their defaults. The name uses characters only RBAC
+// names allow (uppercase, underscore, colon).
+func TestAccMoveClusterRoleBinding_completeName(t *testing.T) {
+	name := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	testAccClusterRoleBindingMoveState(t, migratedProviderVersion, testAccKubernetesClusterRoleBindingV1Config_completeName(name, "one"))
+}
+
+// The complete shape named by generate_name rather than name.
+func TestAccMoveClusterRoleBinding_completeGeneratedName(t *testing.T) {
+	prefix := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum) + "-"
+	testAccClusterRoleBindingMoveState(t, migratedProviderVersion, testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName(prefix, "one"))
 }
 
 // labels = {} and annotations = {}: SDKv2 stores null for both, so the first plan
@@ -116,7 +125,7 @@ func TestAccMoveClusterRoleBinding_emptySubjectNamespace(t *testing.T) {
 func TestAccMoveClusterRoleBinding_emptyMetadata(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccClusterRoleBindingMoveStateExpectingUpdate(t, migratedProviderVersion,
-		testAccKubernetesClusterRoleBindingV1Config_metadata(name, "labels = {}\nannotations = {}"))
+		testAccKubernetesClusterRoleBindingV1Config_emptyMetadata(name))
 }
 
 // api_group = "" on a User subject: SDKv2 stores the API default
@@ -131,7 +140,7 @@ func TestAccMoveClusterRoleBinding_emptyUserAPIGroup(t *testing.T) {
 // The pre-identity tests below are the only move coverage of state written before
 // resource identity existed (2.38.0). There the identity MoveState writes is built
 // rather than carried across. As in the namespace move tests, a few shapes are
-// enough: name, generate_name, and every subject kind.
+// enough: name, generate_name, every subject kind, and the complete shapes.
 func TestAccMoveClusterRoleBinding_preIdentity_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccClusterRoleBindingMoveState(t, clusterRoleBindingPreIdentityProviderVersion, testAccKubernetesClusterRoleBindingV1Config_basic(name))
@@ -144,4 +153,14 @@ func TestAccMoveClusterRoleBinding_preIdentity_generatedName(t *testing.T) {
 func TestAccMoveClusterRoleBinding_preIdentity_multipleSubjects(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	testAccClusterRoleBindingMoveState(t, clusterRoleBindingPreIdentityProviderVersion, testAccKubernetesClusterRoleBindingV1Config_modified(name))
+}
+
+func TestAccMoveClusterRoleBinding_preIdentity_completeName(t *testing.T) {
+	name := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	testAccClusterRoleBindingMoveState(t, clusterRoleBindingPreIdentityProviderVersion, testAccKubernetesClusterRoleBindingV1Config_completeName(name, "one"))
+}
+
+func TestAccMoveClusterRoleBinding_preIdentity_completeGeneratedName(t *testing.T) {
+	prefix := "TF-Acc-Test_Upper:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum) + "-"
+	testAccClusterRoleBindingMoveState(t, clusterRoleBindingPreIdentityProviderVersion, testAccKubernetesClusterRoleBindingV1Config_completeGeneratedName(prefix, "one"))
 }

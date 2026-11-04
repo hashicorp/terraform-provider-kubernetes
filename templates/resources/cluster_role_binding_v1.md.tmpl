@@ -27,6 +27,12 @@ explicitly sets `labels = {}` or `annotations = {}`, the first plan may show a
 one-time in-place update because SDKv2 stored empty maps as null. The binding is
 not replaced.
 
+A `User` or `Group` subject with `api_group = ""` also shows a one-time in-place
+update, displayed as `- api_group = "rbac.authorization.k8s.io" -> null`. SDKv2
+stored the API server's default instead of the configured `""`. Only Terraform
+state changes; the binding is not modified or replaced. To avoid the update, omit
+`api_group` or set it to `rbac.authorization.k8s.io`.
+
 With Terraform 1.8 or later, migrate the deprecated resource name without
 recreating the binding:
 

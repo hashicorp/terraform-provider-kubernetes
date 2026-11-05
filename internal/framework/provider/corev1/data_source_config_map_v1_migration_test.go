@@ -46,6 +46,45 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2(t *testing.T) {
 	})
 }
 
+// TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_emptyNamespace verifies that
+// explicitly empty namespace metadata retains the SDKv2 not-found state after migration.
+func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_emptyNamespace(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-cm-empty-ns-%s", acctest.RandStringFromCharSet(8, acctest.CharSetAlphaNum))
+	meta := func(field string) tfjsonpath.Path {
+		return tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(field)
+	}
+	config := testAccConfigMapDataSourceAnchoredConfig(name, "")
+	checks := []statecheck.StateCheck{
+		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("id"), knownvalue.StringExact("/"+name)),
+		statecheck.ExpectKnownValue(configMapDataSourceName, meta("name"), knownvalue.StringExact(name)),
+		statecheck.ExpectKnownValue(configMapDataSourceName, meta("namespace"), knownvalue.StringExact("")),
+		statecheck.ExpectKnownValue(configMapDataSourceName, meta("uid"), knownvalue.StringExact("")),
+		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("data"), knownvalue.Null()),
+		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("binary_data"), knownvalue.Null()),
+		statecheck.ExpectKnownValue(configMapDataSourceName, tfjsonpath.New("immutable"), knownvalue.Null()),
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: sdkv2ExternalProvider(),
+				Config:            config,
+				ConfigStateChecks: checks,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				ConfigStateChecks: checks,
+			},
+		},
+	})
+}
+
 // TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_withInputs — an existing ConfigMap
 // with annotations and labels set in configuration, one label null, which SDKv2 accepted.
 // The read reports what the ConfigMap carries, not what was configured.
@@ -162,11 +201,17 @@ func TestAccKubernetesDataSourceConfigMapV1_MigrateFromSDKv2_notFoundWithInputs(
 	})
 }
 
-func testAccConfigMapDataSourceAnchoredConfig(name string) string {
+func testAccConfigMapDataSourceAnchoredConfig(name string, namespace ...string) string {
+	namespaceConfig := ""
+	if len(namespace) > 0 {
+		namespaceConfig = fmt.Sprintf("    namespace = %q\n", namespace[0])
+	}
+
 	return fmt.Sprintf(`
 data "kubernetes_config_map_v1" "test" {
   metadata {
     name = %q
+%s
   }
 }
 
@@ -185,7 +230,7 @@ resource "terraform_data" "anchor" {
     immutable        = jsonencode(data.kubernetes_config_map_v1.test.immutable)
   }
 }
-`, name)
+`, name, namespaceConfig)
 }
 
 // testAccConfigMapDataSourceAnchoredWithInputsConfig is testAccConfigMapDataSourceAnchoredConfig

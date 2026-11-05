@@ -302,7 +302,7 @@ func notFoundStringMap(m types.Map) types.Map {
 // SDKv2's default lands in state, so a configuration that omits namespace records
 // "default"; returning null instead would change state shape.
 func ResolveDataSourceNamespace(in types.String) types.String {
-	if in.IsNull() || in.IsUnknown() || in.ValueString() == "" {
+	if in.IsNull() || in.IsUnknown() {
 		return types.StringValue(corev1.NamespaceDefault)
 	}
 	return in

@@ -38,6 +38,7 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_namespace_v1` | v3.3.0 | [Namespace resource](#resource-kubernetes_namespace_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
+| Data source | `kubernetes_config_map_v1` | v3.5.0 | [Config map data source](#data-source-kubernetes_config_map_v1) |
 
 ## Resource: kubernetes_namespace_v1
 
@@ -76,3 +77,7 @@ Run `terraform plan` to verify the move and review any in-place changes describe
 ## Data source: kubernetes_all_namespaces
 
 Behavior is unchanged; no configuration updates are required.
+
+## Data source: kubernetes_config_map_v1
+
+- **Required name:** Omitting `metadata.name` now fails validation instead of failing during the read.

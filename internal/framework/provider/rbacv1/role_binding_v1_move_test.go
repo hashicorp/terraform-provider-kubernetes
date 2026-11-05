@@ -25,44 +25,86 @@ import (
 )
 
 func TestAccMoveRoleBinding(t *testing.T) {
-	for _, tc := range []struct {
-		name                                 string
-		generated, complete, noRefresh       bool
-		subjectNamespace, apiGroup, roleKind string
-		multiple                             bool
-	}{
-		{name: "basic", subjectNamespace: "default", apiGroup: "rbac.authorization.k8s.io", roleKind: "Role"},
-		{name: "generateName", generated: true, subjectNamespace: "default", apiGroup: "rbac.authorization.k8s.io", roleKind: "Role"},
-		{name: "multipleSubjects", multiple: true, subjectNamespace: "default", apiGroup: "rbac.authorization.k8s.io", roleKind: "Role"},
-		{name: "clusterRoleRef", subjectNamespace: "default", apiGroup: "rbac.authorization.k8s.io", roleKind: "ClusterRole"},
-		{name: "emptySubjectNamespace", subjectNamespace: "", apiGroup: "rbac.authorization.k8s.io", roleKind: "Role"},
-		{name: "emptyUserAPIGroup", subjectNamespace: "default", apiGroup: "", roleKind: "Role"},
-		{name: "metadata", complete: true, subjectNamespace: "default", apiGroup: "rbac.authorization.k8s.io", roleKind: "Role"},
-		{name: "noRefresh", noRefresh: true, subjectNamespace: "default", apiGroup: "rbac.authorization.k8s.io", roleKind: "Role"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			name := acctest.RandomWithPrefix("tf-acc-rb")
-			config := testAccRoleBindingMoveConfig("kubernetes_role_binding", name, tc.generated, tc.complete, tc.multiple, tc.subjectNamespace, tc.apiGroup, tc.roleKind)
-			moved := testAccRoleBindingMoveConfig("kubernetes_role_binding_v1", name, tc.generated, tc.complete, tc.multiple, tc.subjectNamespace, tc.apiGroup, tc.roleKind)
-			check := plancheck.ExpectEmptyPlan()
-			if tc.apiGroup == "" {
-				check = plancheck.ExpectResourceAction("kubernetes_role_binding_v1.test", plancheck.ResourceActionUpdate)
-			}
-			resource.ParallelTest(t, resource.TestCase{
-				PreCheck:               func() { testAccPreCheck(t) },
-				CheckDestroy:           testAccRoleBindingCheckDestroy,
-				AdditionalCLIOptions:   &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: tc.noRefresh}},
-				TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
-				Steps: []resource.TestStep{
-					{ExternalProviders: releasedRoleBindingProvider(), Config: config},
-					{
-						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-						Config:                   moved,
-						ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{check}},
+	for _, version := range []string{migratedRoleBindingProviderVersion, preIdentityRoleBindingProviderVersion} {
+		for _, tc := range []struct {
+			name      string
+			shape     roleBindingMoveShape
+			noRefresh bool
+		}{
+			{name: "basic", shape: roleBindingMoveShape{}},
+			{name: "generateName", shape: roleBindingMoveShape{generated: true}},
+			{name: "multipleSubjects", shape: roleBindingMoveShape{multiple: true}},
+			{name: "clusterRoleRef", shape: roleBindingMoveShape{roleKind: "ClusterRole"}},
+			{name: "emptySubjectNamespace", shape: roleBindingMoveShape{emptySubjectNamespace: true}},
+			{name: "emptyUserAPIGroup", shape: roleBindingMoveShape{emptyAPIGroup: true}},
+			{name: "metadata", shape: roleBindingMoveShape{complete: true}},
+			{name: "emptyMetadataMaps", shape: roleBindingMoveShape{emptyMaps: true}},
+			{name: "noRefresh", shape: roleBindingMoveShape{}, noRefresh: true},
+		} {
+			t.Run(version+"/"+tc.name, func(t *testing.T) {
+				name := acctest.RandomWithPrefix("tf-acc-rb")
+				resourceName := "kubernetes_role_binding_v1.test"
+				checkUID := testAccRoleBindingCheckSameUID()
+				checkUnchanged := testAccRoleBindingCheckUnchanged()
+				updated := tc.shape
+				updated.user = "bob"
+				check := plancheck.ExpectEmptyPlan()
+				var importIgnore []string
+				if tc.shape.emptyAPIGroup || tc.shape.emptyMaps {
+					check = plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)
+				}
+				if tc.shape.emptyAPIGroup {
+					importIgnore = append(importIgnore, "subject.0.api_group")
+				}
+				if tc.shape.emptyMaps {
+					importIgnore = append(importIgnore, "metadata.0.annotations", "metadata.0.labels")
+				}
+				resource.ParallelTest(t, resource.TestCase{
+					PreCheck:               func() { testAccPreCheck(t) },
+					CheckDestroy:           testAccRoleBindingCheckDestroy,
+					AdditionalCLIOptions:   &resource.AdditionalCLIOptions{Plan: resource.PlanOptions{NoRefresh: tc.noRefresh}},
+					TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
+					Steps: []resource.TestStep{
+						{
+							ExternalProviders: map[string]resource.ExternalProvider{
+								"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: version},
+							},
+							Config: testAccRoleBindingMoveConfig("kubernetes_role_binding", name, tc.shape),
+							Check:  resource.ComposeAggregateTestCheckFunc(checkUID, checkUnchanged),
+						},
+						{
+							ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+							Config:                   testAccRoleBindingMoveConfig("kubernetes_role_binding_v1", name, tc.shape),
+							Check:                    checkUnchanged,
+							ConfigPlanChecks: resource.ConfigPlanChecks{
+								PreApply:             []plancheck.PlanCheck{check},
+								PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+								PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+							},
+						},
+						{
+							ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+							Config:                   testAccRoleBindingMoveConfig("kubernetes_role_binding_v1", name, updated),
+							Check: resource.ComposeAggregateTestCheckFunc(
+								resource.TestCheckResourceAttr(resourceName, "subject.0.name", "bob"),
+								checkUID,
+							),
+							ConfigPlanChecks: resource.ConfigPlanChecks{
+								PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+								PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+							},
+						},
+						{
+							ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+							ResourceName:             resourceName,
+							ImportState:              true,
+							ImportStateVerify:        true,
+							ImportStateVerifyIgnore:  importIgnore,
+						},
 					},
-				},
+				})
 			})
-		})
+		}
 	}
 }
 
@@ -72,6 +114,7 @@ func TestAccMoveRoleBinding_identity(t *testing.T) {
 			for _, complete := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/generated=%t/complete=%t", version, generated, complete), func(t *testing.T) {
 					name := acctest.RandomWithPrefix("tf-acc-rb")
+					shape := roleBindingMoveShape{generated: generated, complete: complete}
 					resource.ParallelTest(t, resource.TestCase{
 						PreCheck:               func() { testAccPreCheck(t) },
 						CheckDestroy:           testAccRoleBindingCheckDestroy,
@@ -81,11 +124,11 @@ func TestAccMoveRoleBinding_identity(t *testing.T) {
 								ExternalProviders: map[string]resource.ExternalProvider{
 									"kubernetes": {Source: "hashicorp/kubernetes", VersionConstraint: version},
 								},
-								Config: testAccRoleBindingMoveConfig("kubernetes_role_binding", name, generated, complete, false, "default", "rbac.authorization.k8s.io", "Role"),
+								Config: testAccRoleBindingMoveConfig("kubernetes_role_binding", name, shape),
 							},
 							{
-								ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-								Config:                   testAccRoleBindingMoveConfig("kubernetes_role_binding_v1", name, generated, complete, false, "default", "rbac.authorization.k8s.io", "Role"),
+								ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+								Config:                   testAccRoleBindingMoveConfig("kubernetes_role_binding_v1", name, shape),
 								ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 								ConfigStateChecks: []statecheck.StateCheck{
 									statecheck.ExpectIdentityValueMatchesStateAtPath("kubernetes_role_binding_v1.test", tfjsonpath.New("name"), tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey("name")),
@@ -102,7 +145,30 @@ func TestAccMoveRoleBinding_identity(t *testing.T) {
 	}
 }
 
-func testAccRoleBindingMoveConfig(resourceType, name string, generated, complete, multiple bool, namespace, apiGroup, roleKind string) string {
+// roleBindingMoveShape selects the config variant for the move tests. The zero
+// value is a named binding with one User subject "alice" in namespace "default"
+// and a Role ref.
+type roleBindingMoveShape struct {
+	generated, complete, multiple, emptyMaps bool
+	emptySubjectNamespace, emptyAPIGroup     bool
+	roleKind, user                           string
+}
+
+func testAccRoleBindingMoveConfig(resourceType, name string, shape roleBindingMoveShape) string {
+	roleKind, user, namespace, apiGroup := "Role", "alice", "default", "rbac.authorization.k8s.io"
+	if shape.roleKind != "" {
+		roleKind = shape.roleKind
+	}
+	if shape.user != "" {
+		user = shape.user
+	}
+	if shape.emptySubjectNamespace {
+		namespace = ""
+	}
+	if shape.emptyAPIGroup {
+		apiGroup = ""
+	}
+	generated, complete, multiple := shape.generated, shape.complete, shape.multiple
 	nameAttribute := "name"
 	if generated {
 		nameAttribute = "generate_name"
@@ -111,6 +177,10 @@ func testAccRoleBindingMoveConfig(resourceType, name string, generated, complete
 	if complete {
 		metadata = `labels = { environment = "test" }
     annotations = { "example.com/note" = "preserve" }`
+	}
+	if shape.emptyMaps {
+		metadata = `labels = {}
+    annotations = {}`
 	}
 	extraSubjects := ""
 	if multiple {
@@ -151,13 +221,13 @@ resource %q "test" {
   }
   subject {
     kind = "User"
-    name = "alice"
+    name = %q
     namespace = %q
     api_group = %q
   }
   %s
 }
-`, move, resourceType, nameAttribute, name, metadata, roleKind, namespace, apiGroup, extraSubjects)
+`, move, resourceType, nameAttribute, name, metadata, roleKind, user, namespace, apiGroup, extraSubjects)
 }
 
 func TestRoleBindingMoveState(t *testing.T) {

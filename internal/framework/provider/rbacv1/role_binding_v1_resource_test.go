@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+	rbacv1api "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	client "k8s.io/client-go/kubernetes"
@@ -184,6 +186,7 @@ func TestAccRoleBinding_basic(t *testing.T) {
 func TestAccRoleBinding_update(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleBindingCheckDestroy,
@@ -195,6 +198,7 @@ func TestAccRoleBinding_update(t *testing.T) {
 				Config: testAccRoleBindingV1Config_basic(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.#", "1"),
+					checkUID,
 				),
 			},
 			{
@@ -226,6 +230,7 @@ func TestAccRoleBinding_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subject.2.namespace", "default"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.managed-by", "terraform"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.example.com/note", "updated"),
+					checkUID,
 				),
 			},
 			{
@@ -248,6 +253,7 @@ func TestAccRoleBinding_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subject.0.name", "notauser"),
 					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
 					resource.TestCheckResourceAttr(resourceName, "subject.0.namespace", "default"),
+					checkUID,
 				),
 			},
 			{
@@ -264,6 +270,7 @@ func TestAccRoleBinding_update(t *testing.T) {
 // triggers an in-place update rather than a destroy/re-create (K8S-MIGRATE-025).
 func TestAccRoleBinding_generateName(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleBindingCheckDestroy,
@@ -277,6 +284,7 @@ func TestAccRoleBinding_generateName(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.name"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
+					checkUID,
 				),
 			},
 			{
@@ -295,6 +303,7 @@ func TestAccRoleBinding_generateName(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.generate_name", "tf-acc-rb-"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "sec"),
+					checkUID,
 				),
 			},
 			{
@@ -414,6 +423,21 @@ func TestAccRoleBinding_emptyUserAPIGroup(t *testing.T) {
 func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
+	checkSubjects := resource.ComposeAggregateTestCheckFunc(
+		resource.TestCheckResourceAttr(resourceName, "subject.#", "3"),
+		resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "User"),
+		resource.TestCheckResourceAttr(resourceName, "subject.0.name", "notauser"),
+		resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+		resource.TestCheckResourceAttr(resourceName, "subject.1.kind", "ServiceAccount"),
+		resource.TestCheckResourceAttr(resourceName, "subject.1.name", "default"),
+		resource.TestCheckResourceAttr(resourceName, "subject.1.namespace", "kube-system"),
+		resource.TestCheckResourceAttr(resourceName, "subject.1.api_group", ""),
+		resource.TestCheckResourceAttr(resourceName, "subject.2.kind", "Group"),
+		resource.TestCheckResourceAttr(resourceName, "subject.2.name", "system:masters"),
+		resource.TestCheckResourceAttr(resourceName, "subject.2.api_group", "rbac.authorization.k8s.io"),
+		testAccRoleBindingCheckLive(name, "", "notauser", "default", "system:masters"),
+	)
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleBindingCheckDestroy,
@@ -422,31 +446,54 @@ func TestAccRoleBinding_roleRefRequiresReplace(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_basic(name),
-				Check:  resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+					checkUID,
+				),
 			},
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
-			// Changing role_ref.kind must trigger destroy + create, not in-place update.
 			{
-				Config: testAccRoleBindingV1Config_clusterRoleRef(name),
+				Config: testAccRoleBindingV1Config_updated(name),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
-					},
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
 				},
-				Check: resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "ClusterRole"),
+				Check: resource.ComposeAggregateTestCheckFunc(checkSubjects, checkUID),
 			},
 			{
-				Config: testAccRoleBindingV1Config_basic(name),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				// Changing role_ref.kind must trigger destroy + create, not in-place update.
+				Config: testAccRoleBindingV1Config_updatedRoleRef(name, "ClusterRole", "cluster-admin"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
 					},
 				},
-				Check: resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "ClusterRole"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.name", "cluster-admin"),
+					checkSubjects,
+				),
+			},
+			{
+				Config: testAccRoleBindingV1Config_updated(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "Role"),
+					resource.TestCheckResourceAttr(resourceName, "role_ref.0.name", "admin"),
+					checkSubjects,
+				),
 			},
 			{
 				ResourceName:      resourceName,
@@ -493,6 +540,7 @@ func TestAccRoleBinding_disappears(t *testing.T) {
 func TestAccRoleBinding_subjectReorder(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleBindingCheckDestroy,
@@ -501,17 +549,31 @@ func TestAccRoleBinding_subjectReorder(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_users(name, "notauser1", "notauser2", "notauser3"),
-				Check:  testAccRoleBindingCheckLive(name, "", "notauser1", "notauser2", "notauser3"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckLive(name, "", "notauser1", "notauser2", "notauser3"),
+					checkUID,
+				),
 			},
 			{
 				Config:           testAccRoleBindingV1Config_users(name, "notauser2", "notauser4"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)}},
-				Check:            testAccRoleBindingCheckLive(name, "", "notauser2", "notauser4"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckLive(name, "", "notauser2", "notauser4"),
+					checkUID,
+				),
 			},
 			{
 				Config:           testAccRoleBindingV1Config_users(name, "notauser0", "notauser1", "notauser2", "notauser3"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)}},
-				Check:            testAccRoleBindingCheckLive(name, "", "notauser0", "notauser1", "notauser2", "notauser3"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckLive(name, "", "notauser0", "notauser1", "notauser2", "notauser3"),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
@@ -523,6 +585,7 @@ func TestAccRoleBinding_subjectReorder(t *testing.T) {
 func TestAccRoleBinding_computedAPIGroup(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
 	inPlaceUpdate := resource.ConfigPlanChecks{
 		PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
 	}
@@ -534,7 +597,10 @@ func TestAccRoleBinding_computedAPIGroup(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRoleBindingV1Config_serviceAccounts(name, "", "sa-a"),
-				Check:  resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+					checkUID,
+				),
 			},
 			{
 				Config:           testAccRoleBindingV1Config_serviceAccounts(name, "", "sa-a", "sa-b"),
@@ -542,6 +608,7 @@ func TestAccRoleBinding_computedAPIGroup(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "subject.1.api_group", ""),
+					checkUID,
 				),
 			},
 			{
@@ -558,6 +625,7 @@ func TestAccRoleBinding_computedAPIGroup(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subject.#", "2"),
 					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
 					resource.TestCheckResourceAttr(resourceName, "subject.1.api_group", ""),
+					checkUID,
 				),
 			},
 		},
@@ -574,6 +642,7 @@ func TestAccRoleBinding_noRefreshLabelUpdate(t *testing.T) {
 	resourceName := "kubernetes_role_binding_v1.test"
 	config := testAccRoleBindingV1Config_users(name, "notauser1", "notauser2")
 	labeled := testAccRoleBindingV1Config_labeledUsers(name, "x", "notauser1", "notauser2")
+	checkUID := testAccRoleBindingCheckSameUID()
 
 	resource.ParallelTest(t, resource.TestCase{
 		CheckDestroy:             testAccRoleBindingCheckDestroy,
@@ -588,6 +657,7 @@ func TestAccRoleBinding_noRefreshLabelUpdate(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.#", "2"),
 					testAccRoleBindingKeepOnlyFirstSubject(name),
+					checkUID,
 				),
 			},
 			{
@@ -600,6 +670,7 @@ func TestAccRoleBinding_noRefreshLabelUpdate(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.team", "x"),
 					testAccRoleBindingCheckLive(name, "x", "notauser1"),
+					checkUID,
 				),
 			},
 		},
@@ -609,6 +680,7 @@ func TestAccRoleBinding_noRefreshLabelUpdate(t *testing.T) {
 func TestAccRoleBinding_computedAPIGroupKindAndOrder(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-rb")
 	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleBindingCheckDestroy,
@@ -621,6 +693,7 @@ func TestAccRoleBinding_computedAPIGroupKindAndOrder(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
 					resource.TestCheckResourceAttr(resourceName, "subject.1.api_group", "rbac.authorization.k8s.io"),
+					checkUID,
 				),
 			},
 			{
@@ -637,36 +710,126 @@ func TestAccRoleBinding_computedAPIGroupKindAndOrder(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
 					resource.TestCheckResourceAttr(resourceName, "subject.1.api_group", ""),
+					checkUID,
 				),
 			},
 		},
 	})
 }
 
-func testAccRoleBindingV1Config_subjectKinds(name, first, second string) string {
-	return fmt.Sprintf(`
-resource "kubernetes_role_binding_v1" "test" {
-  metadata {
-    name      = %q
-    namespace = "default"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "Role"
-    name      = "admin"
-  }
-  subject {
-    kind      = %q
-    name      = "same-name"
-    namespace = "default"
-  }
-  subject {
-    kind      = %q
-    name      = "same-name"
-    namespace = "default"
-  }
+// TestAccRoleBinding_unknownSubjectKind changes a subject's kind to a value known
+// only after apply. The API server defaults api_group from kind, so the omitted
+// api_group must be planned unknown, not kept from the User subject.
+func TestAccRoleBinding_unknownSubjectKind(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_4_0)},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRoleBindingV1Config_subjectFields(name, map[string]string{"kind": "User", "name": "alice"}, ""),
+				Check:  checkUID,
+			},
+			{
+				Config: testAccRoleBindingV1Config_subjectFields(name, map[string]string{"kind": "ServiceAccount", "name": "alice"}, "kind"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(resourceName, tfjsonpath.New("subject").AtSliceIndex(0).AtMapKey("api_group")),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
 }
-`, name, first, second)
+
+// TestAccRoleBinding_unknownSubjectName replaces a User subject that set
+// api_group = "" with another User whose name is known only after apply and
+// whose api_group is omitted. The new subject must not inherit the stored "".
+func TestAccRoleBinding_unknownSubjectName(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_4_0)},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRoleBindingV1Config_subjectFields(name, map[string]string{"kind": "User", "name": "alice", "api_group": ""}, ""),
+				Check:  checkUID,
+			},
+			{
+				Config: testAccRoleBindingV1Config_subjectFields(name, map[string]string{"kind": "User", "name": "bob"}, "name"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(resourceName, tfjsonpath.New("subject").AtSliceIndex(0).AtMapKey("api_group")),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_unknownSubjectAPIGroup sets api_group to a value known only
+// after apply. The configured value must be planned unknown, not replaced by the
+// value stored for the omitted api_group.
+func TestAccRoleBinding_unknownSubjectAPIGroup(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_4_0)},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRoleBindingV1Config_subjectFields(name, map[string]string{"kind": "User", "name": "alice"}, ""),
+				Check:  checkUID,
+			},
+			{
+				Config: testAccRoleBindingV1Config_subjectFields(name, map[string]string{"kind": "User", "name": "alice", "api_group": ""}, "api_group"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(resourceName, tfjsonpath.New("subject").AtSliceIndex(0).AtMapKey("api_group")),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+					checkUID,
+				),
+			},
+		},
+	})
 }
 
 // TestAccRoleBinding_identity verifies identity after create and an import
@@ -805,6 +968,121 @@ func TestAccRoleBinding_validation(t *testing.T) {
 
 // ── Check helpers ─────────────────────────────────────────────────────────────
 
+// TestAccRoleBinding_externalMetadataSubjectUpdate adds an ignored annotation and
+// label outside Terraform, then updates only the subjects. With no managed
+// metadata, the patch must leave both maps alone (the namespace K8S-CRUD-006
+// regression). Step 3 also adds unignored keys: they are removed, as in SDKv2,
+// and the ignored ones survive.
+func TestAccRoleBinding_externalMetadataSubjectUpdate(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:               func() { testAccPreCheck(t) },
+		CheckDestroy:           testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		Steps: []resource.TestStep{
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				Config:                   roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_users(name, "alice"),
+				Check:                    checkUID,
+				ConfigStateChecks:        []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				PreConfig:                testAccRoleBindingAddExternalMetadata(t, name, false),
+				Config:                   roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_users(name, "alice", "bob"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckExternalMetadata(name),
+					testAccRoleBindingCheckLive(name, "", "alice", "bob"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.annotations.external.example.com/note"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.external.example.com/label"),
+					checkUID,
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				PreConfig:                testAccRoleBindingAddExternalMetadata(t, name, true),
+				Config:                   roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_users(name, "alice"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckExternalMetadata(name),
+					testAccRoleBindingCheckLive(name, "", "alice"),
+					checkUID,
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
+			},
+		},
+	})
+}
+
+// TestAccRoleBinding_firstManagedMetadataPreservesIgnored adds the first managed
+// annotation and label to a binding that already has ignored outside keys, then
+// removes them again. The ignored keys must survive both updates.
+func TestAccRoleBinding_firstManagedMetadataPreservesIgnored(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-rb")
+	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		CheckDestroy:             testAccRoleBindingCheckDestroy,
+		ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_basic(name),
+				Check:  checkUID,
+			},
+			{
+				PreConfig: testAccRoleBindingAddExternalMetadata(t, name, false),
+				Config:    roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_updated(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckExternalMetadata(name),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.example.com/note", "updated"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.managed-by", "terraform"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.annotations.external.example.com/note"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.external.example.com/label"),
+					checkUID,
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_basic(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckExternalMetadata(name),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.annotations.example.com/note"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.managed-by"),
+					checkUID,
+				),
+			},
+		},
+	})
+}
+
 // testAccRoleBindingCheckDestroy verifies that every RoleBinding in state was
 // deleted from the cluster.
 func testAccRoleBindingCheckDestroy(state *terraform.State) error {
@@ -896,18 +1174,115 @@ func testAccRoleBindingCheckLive(name, team string, subjects ...string) resource
 func testAccRoleBindingCheckSameUID() resource.TestCheckFunc {
 	var prior string
 	return func(state *terraform.State) error {
-		rs, ok := state.RootModule().Resources["kubernetes_role_binding_v1.test"]
-		if !ok {
-			return fmt.Errorf("missing kubernetes_role_binding_v1.test")
+		binding, err := testAccRoleBindingFromState(state)
+		if err != nil {
+			return err
 		}
-		uid := rs.Primary.Attributes["metadata.0.uid"]
-		if uid == "" {
-			return fmt.Errorf("missing RoleBinding UID")
-		}
+		uid := string(binding.UID)
 		if prior != "" && uid != prior {
 			return fmt.Errorf("RoleBinding replaced: UID %q became %q", prior, uid)
 		}
 		prior = uid
+		return nil
+	}
+}
+
+func testAccRoleBindingFromState(state *terraform.State) (*rbacv1api.RoleBinding, error) {
+	stored, ok := state.RootModule().Resources["kubernetes_role_binding_v1.test"]
+	if !ok {
+		stored, ok = state.RootModule().Resources["kubernetes_role_binding.test"]
+	}
+	if !ok {
+		return nil, fmt.Errorf("missing RoleBinding test resource")
+	}
+	conn, err := testAccRoleClient()
+	if err != nil {
+		return nil, err
+	}
+	namespace, name, err := kubernetes.IdParts(stored.Primary.ID)
+	if err != nil {
+		return nil, err
+	}
+	binding, err := conn.RbacV1().RoleBindings(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	uid := stored.Primary.Attributes["metadata.0.uid"]
+	if uid == "" || string(binding.UID) != uid {
+		return nil, fmt.Errorf("RoleBinding state UID %q differs from live UID %q", uid, binding.UID)
+	}
+	return binding, nil
+}
+
+func testAccRoleBindingCheckUnchanged() resource.TestCheckFunc {
+	var prior *rbacv1api.RoleBinding
+	return func(state *terraform.State) error {
+		binding, err := testAccRoleBindingFromState(state)
+		if err != nil {
+			return err
+		}
+		if prior != nil && !reflect.DeepEqual(prior, binding) {
+			return fmt.Errorf("RoleBinding changed during state-only migration: before=%+v after=%+v", prior, binding)
+		}
+		prior = binding.DeepCopy()
+		return nil
+	}
+}
+
+// testAccRoleBindingAddExternalMetadata adds an ignored annotation and label
+// outside Terraform. With outside, it also adds keys no ignore pattern matches.
+func testAccRoleBindingAddExternalMetadata(t *testing.T, name string, outside bool) func() {
+	return func() {
+		conn, err := testAccRoleClient()
+		if err != nil {
+			t.Fatal(err)
+		}
+		rb, err := conn.RbacV1().RoleBindings("default").Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rb.Annotations == nil {
+			rb.Annotations = map[string]string{}
+		}
+		if rb.Labels == nil {
+			rb.Labels = map[string]string{}
+		}
+		rb.Annotations["external.example.com/note"] = "preserve"
+		rb.Labels["external.example.com/label"] = "preserve"
+		if outside {
+			rb.Annotations["outside.example.com/note"] = "remove"
+			rb.Labels["outside.example.com/label"] = "remove"
+		}
+		if _, err := conn.RbacV1().RoleBindings("default").Update(context.Background(), rb, metav1.UpdateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// testAccRoleBindingCheckExternalMetadata checks the API object: the ignored keys
+// survived and the unignored outside keys are gone.
+func testAccRoleBindingCheckExternalMetadata(name string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		conn, err := testAccRoleClient()
+		if err != nil {
+			return err
+		}
+		rb, err := conn.RbacV1().RoleBindings("default").Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if rb.Annotations["external.example.com/note"] != "preserve" {
+			return fmt.Errorf("external annotation lost: %v", rb.Annotations)
+		}
+		if rb.Labels["external.example.com/label"] != "preserve" {
+			return fmt.Errorf("external label lost: %v", rb.Labels)
+		}
+		if _, exists := rb.Annotations["outside.example.com/note"]; exists {
+			return fmt.Errorf("non-ignored external annotation retained: %v", rb.Annotations)
+		}
+		if _, exists := rb.Labels["outside.example.com/label"]; exists {
+			return fmt.Errorf("non-ignored external label retained: %v", rb.Labels)
+		}
 		return nil
 	}
 }
@@ -922,6 +1297,13 @@ func testAccRoleBindingExpectIdentity(resourceName, name string) statecheck.Stat
 }
 
 // ── HCL config helpers ────────────────────────────────────────────────────────
+
+const roleBindingIgnoreMetadataConfig = `
+provider "kubernetes" {
+  ignore_annotations = ["^external[.]example[.]com/note$"]
+  ignore_labels      = ["^external[.]example[.]com/label$"]
+}
+`
 
 // testAccRoleBindingV1Config_users binds the admin Role to one User subject
 // per name, in the given order.
@@ -998,6 +1380,72 @@ resource "kubernetes_role_binding_v1" "test" {
 `, name, labels, subjects.String())
 }
 
+func testAccRoleBindingV1Config_subjectKinds(name, first, second string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = "default"
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+  subject {
+    kind      = %q
+    name      = "same-name"
+    namespace = "default"
+  }
+  subject {
+    kind      = %q
+    name      = "same-name"
+    namespace = "default"
+  }
+}
+`, name, first, second)
+}
+
+// testAccRoleBindingV1Config_subjectFields binds the admin Role to one subject
+// with the given kind, name and api_group; a missing key omits the argument. The
+// field named by unknown is read from a new terraform_data resource, so it is
+// unknown until apply.
+func testAccRoleBindingV1Config_subjectFields(name string, fields map[string]string, unknown string) string {
+	var data, attrs strings.Builder
+	for _, field := range []string{"kind", "name", "api_group"} {
+		value, ok := fields[field]
+		if !ok {
+			continue
+		}
+		expr := fmt.Sprintf("%q", value)
+		if field == unknown {
+			fmt.Fprintf(&data, `
+resource "terraform_data" "subject" {
+  input = %q
+}
+`, value)
+			expr = "terraform_data.subject.output"
+		}
+		fmt.Fprintf(&attrs, "    %s = %s\n", field, expr)
+	}
+	return data.String() + fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = "default"
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+  subject {
+%s    namespace = "default"
+  }
+}
+`, name, attrs.String())
+}
+
 // testAccRoleBindingV1Config_identityImport adds an identity import block
 // without namespace, so ImportState must default it.
 func testAccRoleBindingV1Config_identityImport(name, kind, apiVersion string) string {
@@ -1037,6 +1485,10 @@ resource "kubernetes_role_binding_v1" "test" {
 }
 
 func testAccRoleBindingV1Config_updated(name string) string {
+	return testAccRoleBindingV1Config_updatedRoleRef(name, "Role", "admin")
+}
+
+func testAccRoleBindingV1Config_updatedRoleRef(name, kind, role string) string {
 	return fmt.Sprintf(`
 resource "kubernetes_role_binding_v1" "test" {
   metadata {
@@ -1052,8 +1504,8 @@ resource "kubernetes_role_binding_v1" "test" {
 
   role_ref {
     api_group = "rbac.authorization.k8s.io"
-    kind      = "Role"
-    name      = "admin"
+    kind      = %[2]q
+    name      = %[3]q
   }
 
   subject {
@@ -1075,7 +1527,7 @@ resource "kubernetes_role_binding_v1" "test" {
     api_group = "rbac.authorization.k8s.io"
   }
 }
-`, name)
+`, name, kind, role)
 }
 
 func testAccRoleBindingV1Config_generateName(prefix string) string {

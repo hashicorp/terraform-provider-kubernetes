@@ -137,7 +137,7 @@ func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-migrate")
 	resourceName := "kubernetes_role_binding_v1.test"
 	config := testAccRoleBindingV1Config_emptyUserAPIGroup(name)
-	checkUID := testAccRoleBindingCheckSameUID()
+	checkUnchanged := testAccRoleBindingCheckUnchanged()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccRoleBindingCheckDestroy,
@@ -145,13 +145,13 @@ func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
 			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
-					checkUID,
+					checkUnchanged,
 				)},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
-					checkUID,
+					checkUnchanged,
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
@@ -234,6 +234,7 @@ func TestAccMigrateRoleBinding_noRefresh(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-migrate")
 	resourceName := "kubernetes_role_binding_v1.test"
 	config := testAccRoleBindingV1Config_basic(name)
+	checkUnchanged := testAccRoleBindingCheckUnchanged()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:               func() { testAccPreCheck(t) },
 		CheckDestroy:           testAccRoleBindingCheckDestroy,
@@ -242,10 +243,12 @@ func TestAccMigrateRoleBinding_noRefresh(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				ExternalProviders: releasedRoleBindingProvider(), Config: config,
+				Check:             checkUnchanged,
 				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
+				Check: checkUnchanged,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
 					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -316,7 +319,7 @@ func TestAccMigrateRoleBinding_emptyMetadataMaps(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-migrate")
 	resourceName := "kubernetes_role_binding_v1.test"
 	config := testAccRoleBindingV1Config_emptyMetadataMaps(name)
-	checkUID := testAccRoleBindingCheckSameUID()
+	checkUnchanged := testAccRoleBindingCheckUnchanged()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccRoleBindingCheckDestroy,
@@ -326,7 +329,7 @@ func TestAccMigrateRoleBinding_emptyMetadataMaps(t *testing.T) {
 				Config:            config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.%"),
-					checkUID,
+					checkUnchanged,
 				),
 			},
 			// SDKv2 stored the explicit empty maps as null; the framework keeps {}.
@@ -334,13 +337,75 @@ func TestAccMigrateRoleBinding_emptyMetadataMaps(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   config,
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					checkUnchanged,
+				),
+			},
+		},
+	})
+}
+
+// TestAccMigrateRoleBinding_externalMetadataSubjectUpdate creates the binding with
+// SDKv2, adds ignored metadata outside Terraform, then updates only the subjects
+// with the framework. The ignored keys must survive. Step 3 also adds unignored
+// keys, which are removed, as in SDKv2.
+func TestAccMigrateRoleBinding_externalMetadataSubjectUpdate(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:               func() { testAccPreCheck(t) },
+		CheckDestroy:           testAccRoleBindingCheckDestroy,
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: releasedRoleBindingProvider(),
+				Config:            roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_users(name, "alice"),
+				Check:             checkUID,
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+			},
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				PreConfig:                testAccRoleBindingAddExternalMetadata(t, name, false),
+				Config:                   roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_users(name, "alice", "bob"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckExternalMetadata(name),
+					testAccRoleBindingCheckLive(name, "", "alice", "bob"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.annotations.external.example.com/note"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.external.example.com/label"),
 					checkUID,
 				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				PreConfig:                testAccRoleBindingAddExternalMetadata(t, name, true),
+				Config:                   roleBindingIgnoreMetadataConfig + testAccRoleBindingV1Config_users(name, "alice"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccRoleBindingCheckExternalMetadata(name),
+					testAccRoleBindingCheckLive(name, "", "alice"),
+					checkUID,
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccMuxProtoV6ProviderFactories,
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
 			},
 		},
 	})

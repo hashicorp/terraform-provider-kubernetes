@@ -83,7 +83,7 @@ func expandJobV1Spec(j []interface{}) (batchv1.JobSpec, error) {
 		obj.ActiveDeadlineSeconds = ptr.To(int64(v))
 	}
 
-	if v, ok := in["backoff_limit"].(int); ok && v >= 0 {
+	if v, ok := in["backoff_limit"].(int); ok && v >= 0 && in["completion_mode"] != "Indexed" {
 		obj.BackoffLimit = ptr.To(int32(v))
 	}
 

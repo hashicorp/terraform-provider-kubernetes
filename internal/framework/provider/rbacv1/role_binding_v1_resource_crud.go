@@ -26,8 +26,6 @@ const (
 	roleBindingKind = "RoleBinding"
 )
 
-// ── Create ────────────────────────────────────────────────────────────────────
-
 func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan RoleBindingModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -54,7 +52,7 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 
 	obj := &rbacv1api.RoleBinding{
 		ObjectMeta: objMeta,
-		RoleRef:    expandRoleRef(plan.RoleRef[0]),
+		RoleRef:    expandRoleRef(plan.RoleRef),
 		Subjects:   expandSubjects(plan.Subject),
 	}
 
@@ -80,8 +78,6 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(out.Namespace, out.Name))...)
 }
-
-// ── Read ──────────────────────────────────────────────────────────────────────
 
 func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state RoleBindingModel
@@ -140,14 +136,12 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	state.Metadata = metadata
-	state.RoleRef = []RoleRefModel{flattenRoleRef(out.RoleRef)}
+	state.RoleRef = flattenRoleRef(out.RoleRef)
 	state.Subject = flattenSubjectsWithPrior(out.Subjects, state.Subject)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(out.Namespace, out.Name))...)
 }
-
-// ── Update ────────────────────────────────────────────────────────────────────
 
 func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan RoleBindingModel
@@ -247,8 +241,6 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(out.Namespace, out.Name))...)
 }
 
-// ── Delete ────────────────────────────────────────────────────────────────────
-
 func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state RoleBindingModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -282,8 +274,6 @@ func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		)
 	}
 }
-
-// ── ImportState ───────────────────────────────────────────────────────────────
 
 func (r *RoleBindingV1) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	id := req.ID

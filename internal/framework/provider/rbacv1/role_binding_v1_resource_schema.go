@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
@@ -120,37 +119,4 @@ func (r *RoleBindingV1) IdentitySchema(_ context.Context, _ resource.IdentitySch
 
 func (r *RoleBindingV1) UpgradeIdentity(_ context.Context) map[int64]resource.IdentityUpgrader {
 	return common.UpgradeNamespacedIdentity(roleBindingKind, rbacAPIVersion)
-}
-
-type subjectAPIGroupUseState struct{}
-
-func (subjectAPIGroupUseState) Description(context.Context) string {
-	return "Retains an omitted API group when the subject at the same list index is unchanged."
-}
-
-func (m subjectAPIGroupUseState) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (subjectAPIGroupUseState) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
-	if !req.ConfigValue.IsNull() || !req.PlanValue.IsUnknown() ||
-		req.StateValue.IsNull() || req.StateValue.IsUnknown() ||
-		req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
-		return
-	}
-
-	// Lists are positional: a different subject must not inherit this one's API group.
-	for _, field := range []string{"kind", "name"} {
-		var prior, planned types.String
-		fieldPath := req.Path.ParentPath().AtName(field)
-		resp.Diagnostics.Append(req.State.GetAttribute(ctx, fieldPath, &prior)...)
-		resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, fieldPath, &planned)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if prior.IsNull() || prior.IsUnknown() || planned.IsNull() || planned.IsUnknown() || !prior.Equal(planned) {
-			return
-		}
-	}
-	resp.PlanValue = req.StateValue
 }

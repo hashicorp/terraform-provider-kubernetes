@@ -11,43 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ── RoleRef helpers ───────────────────────────────────────────────────────────
-
-// expandRoleRef converts a RoleRefModel to a Kubernetes RoleRef API object.
-func expandRoleRef(m RoleRefModel) rbacv1api.RoleRef {
-	return rbacv1api.RoleRef{
-		APIGroup: m.APIGroup.ValueString(),
-		Kind:     m.Kind.ValueString(),
-		Name:     m.Name.ValueString(),
-	}
-}
-
-// flattenRoleRef converts a Kubernetes RoleRef API object to a RoleRefModel.
-func flattenRoleRef(in rbacv1api.RoleRef) RoleRefModel {
-	return RoleRefModel{
-		APIGroup: types.StringValue(in.APIGroup),
-		Kind:     types.StringValue(in.Kind),
-		Name:     types.StringValue(in.Name),
-	}
-}
-
-// ── Subject helpers ───────────────────────────────────────────────────────────
-
-// expandSubjects converts a slice of SubjectModel to Kubernetes Subject API objects.
-func expandSubjects(in []SubjectModel) []rbacv1api.Subject {
-	subjects := make([]rbacv1api.Subject, 0, len(in))
-	for _, s := range in {
-		subject := rbacv1api.Subject{
-			Kind:      s.Kind.ValueString(),
-			Name:      s.Name.ValueString(),
-			APIGroup:  s.APIGroup.ValueString(),
-			Namespace: s.Namespace.ValueString(),
-		}
-		subjects = append(subjects, subject)
-	}
-	return subjects
-}
-
 // flattenSubjectsWithPrior keeps a prior-state
 // api_group of "" when the API returns the canonical rbac.authorization.k8s.io for a
 // User or Group subject: the API server defaults an empty api_group for those kinds,
@@ -109,8 +72,6 @@ func applySubjectComputedFields(plan *[]SubjectModel, apiSubjects []rbacv1api.Su
 		}
 	}
 }
-
-// ── Subject change helper ─────────────────────────────────────────────────────
 
 // subjectsChanged mirrors SDKv2 d.HasChange("subject"). An unknown planned value comes from an unconfigured computed
 // field and keeps the state value, so it does not count as a change.

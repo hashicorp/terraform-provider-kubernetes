@@ -37,7 +37,8 @@ The version below is the first release containing each migration.
 | --- | --- | --- | --- |
 | Resource | `kubernetes_namespace_v1` | v3.3.0 | [Namespace resource](#resource-kubernetes_namespace_v1) |
 | Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
-| Resource | `kubernetes_role_binding_v1` | Unreleased | [RoleBinding resource](#resource-kubernetes_role_binding_v1) |
+| Resource | `kubernetes_role_binding_v1` | v3.5.0 | [RoleBinding resource](#resource-kubernetes_role_binding_v1) |
+| Resource | `kubernetes_cluster_role_binding_v1` | v3.5.0 | [ClusterRoleBinding resource](#resource-kubernetes_cluster_role_binding_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -133,6 +134,37 @@ moved {
 ```
 
 Resolve the configuration changes above and verify that the plan does not replace the Role. See the [Role resource reference](../resources/role_v1.md#migrating-from-kubernetes_role) for further migration details.
+
+## Resource: kubernetes_cluster_role_binding_v1
+
+- **Empty metadata maps:** Explicit `labels = {}` or `annotations = {}` can require a one-time in-place update from SDKv2's `null`. Conversely, a binding imported with an earlier provider version may have stored empty maps that now change to `null` when omitted from configuration. Neither replaces the binding.
+- **Empty subject API group:** A `User` or `Group` subject with `api_group = ""` gets a one-time in-place update. SDKv2 ignored the configured `""` and stored the API server's default, `rbac.authorization.k8s.io`; the configured `""` is now stored. Terraform displays the planned empty string as `null`, so the update looks like a removal:
+
+  ```text
+  ~ subject {
+      - api_group = "rbac.authorization.k8s.io" -> null
+    }
+  ```
+
+  Only Terraform state changes. Kubernetes stores `""` for these subjects as `rbac.authorization.k8s.io`, so the binding is neither modified nor replaced, and the next plan is empty. To avoid the update, omit `api_group` or set it to `rbac.authorization.k8s.io` before upgrading.
+- **Planned subject API group:** SDKv2 showed `api_group = (known after apply)` for both an omitted `api_group` and `api_group = ""`. Now only an omitted `api_group` is unknown, when the binding is created or a subject's `kind` or `name` changes; `api_group = ""` is planned as configured.
+- **Computed metadata:** During updates, `metadata[0].generation` and `metadata[0].resource_version` can be `(known after apply)` until read from the API. This does not itself indicate replacement.
+- **Plans without refresh:** Immediately after upgrading, `terraform plan -refresh=false` shows a one-time in-place update for a binding configured with `name`, because SDKv2 stored the unset `generate_name` as `""` and it is now `null`. A normal, refresh-enabled plan shows no change for it. Neither replaces the binding.
+- **Null map entries:** `metadata.labels` and `metadata.annotations` entries must contain non-null strings. Remove entries such as `owner = null` or provide string values. Omitting the whole map or setting it to `null` remains supported.
+- **Import:** Import IDs are the binding name. Identity imports require Terraform 1.12 or later. For a binding created with `generateName`, configure `generate_name` with the original prefix and omit `name` to avoid a replacement plan after import.
+
+### Moving from kubernetes_cluster_role_binding
+
+Terraform 1.8 or later supports moving from the deprecated `kubernetes_cluster_role_binding` resource to `kubernetes_cluster_role_binding_v1`. Change the resource type, update references, and add a `moved` block:
+
+```terraform
+moved {
+  from = kubernetes_cluster_role_binding.example
+  to   = kubernetes_cluster_role_binding_v1.example
+}
+```
+
+Moved state shows the same one-time updates for empty metadata maps and `api_group = ""`. Verify that the plan does not replace the binding. See the [ClusterRoleBinding resource reference](../resources/cluster_role_binding_v1.md#metadata-and-upgrades) for further details.
 
 ## Data source: kubernetes_namespace_v1
 

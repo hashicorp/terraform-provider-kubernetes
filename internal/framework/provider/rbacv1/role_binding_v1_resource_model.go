@@ -16,24 +16,6 @@ type RoleBindingModel struct {
 	Subject  []SubjectModel                   `tfsdk:"subject"`
 }
 
-// RoleRefModel represents the role_ref block — which Role or ClusterRole to grant.
-// All fields are ForceNew (RequiresReplace) because the Kubernetes API does not
-// allow patching roleRef after creation.
-type RoleRefModel struct {
-	APIGroup types.String `tfsdk:"api_group"`
-	Kind     types.String `tfsdk:"kind"`
-	Name     types.String `tfsdk:"name"`
-}
-
-// SubjectModel represents a single subject block — who receives the permissions.
-// Subjects can be a User, ServiceAccount, or Group.
-type SubjectModel struct {
-	APIGroup  types.String `tfsdk:"api_group"`
-	Kind      types.String `tfsdk:"kind"`
-	Name      types.String `tfsdk:"name"`
-	Namespace types.String `tfsdk:"namespace"`
-}
-
 // These raw shapes describe the frozen SDKv2 schema-version-0 state.
 type sdkv2RBMetadataElement struct {
 	Name            string            `json:"name"`

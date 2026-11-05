@@ -42,38 +42,6 @@ The version below is the first release containing each migration.
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
-## Resource: kubernetes_role_binding_v1
-
-- **Existing state:** Upgrading `kubernetes_role_binding_v1` does not require re-importing objects or manually editing state. Review the normalizations below before applying.
-- **Empty subject API groups:** SDKv2 could store `rbac.authorization.k8s.io` for a User or Group subject explicitly configured with `api_group = ""`. Upgrading may plan a one-time in-place update to preserve the configured empty string. Kubernetes continues to use its canonical API group; the next plan should be empty.
-- **Plans without refresh:** Immediately after upgrading from SDKv2, `terraform plan -refresh=false` may show a one-time in-place update normalizing an omitted `metadata.generate_name` from `""` to `null`. This does not replace the RoleBinding. Review a refresh-enabled plan before applying and confirm convergence afterward.
-- **Empty metadata maps:** Explicit empty maps and maps omitted after an earlier import may normalize between `{}` and `null` in a one-time in-place update.
-- **Null map entries:** Annotation and label entries must be non-null strings. Remove entries such as `owner = null` or supply string values. Omitting the whole map or setting it to `null` remains supported.
-- **Computed metadata:** `generation` and `resource_version` may be unknown until apply during updates. This does not itself indicate replacement.
-- **Import:** IDs must contain a non-empty namespace and name (`namespace/name`). Identity imports require Terraform 1.12 or later and default an omitted namespace to `default`. For generated bindings, configure the original `generate_name` prefix and omit `name`.
-
-### Configurations with both name and generate_name
-
-Setting both arguments is now rejected during planning, including `generate_name = ""`.
-
-- If `generate_name` is empty, remove it and keep `name`.
-- Otherwise, remove `name` and retain the original `generate_name`. The existing binding keeps its name.
-
-Removing or changing a stored non-empty prefix replaces the binding. Review the plan before applying.
-
-### Moving from kubernetes_role_binding
-
-Terraform 1.8 or later supports moving from the deprecated type. Rename the resource block to `kubernetes_role_binding_v1`, retain its configuration, update references, and add:
-
-```terraform
-moved {
-  from = kubernetes_role_binding.example
-  to   = kubernetes_role_binding_v1.example
-}
-```
-
-Review the move and any in-place normalization changes, then apply and confirm that the next plan is empty. Investigate unexpected replacement rather than removing state or re-importing.
-
 ## Resource: kubernetes_namespace_v1
 
 - **Empty metadata maps:** SDKv2 could store explicitly configured `annotations = {}` or `labels = {}` as `null`. Upgrading can produce a one-time in-place update to `{}`. Conversely, maps stored as `{}` by an earlier import can change to `null` when omitted from configuration. These changes do not require replacement and should settle after applying.
@@ -134,6 +102,47 @@ moved {
 ```
 
 Resolve the configuration changes above and verify that the plan does not replace the Role. See the [Role resource reference](../resources/role_v1.md#migrating-from-kubernetes_role) for further migration details.
+
+## Resource: kubernetes_role_binding_v1
+
+- **Existing state:** Upgrading `kubernetes_role_binding_v1` does not require re-importing objects or manually editing state. Review the normalizations below before applying.
+- **Empty subject API group:** A `User` or `Group` subject with `api_group = ""` gets a one-time in-place update. SDKv2 ignored the configured `""` and stored the API server's default, `rbac.authorization.k8s.io`; the configured `""` is now stored. Terraform displays the planned empty string as `null`, so the update looks like a removal:
+
+  ```text
+  ~ subject {
+      - api_group = "rbac.authorization.k8s.io" -> null
+    }
+  ```
+
+  Only Terraform state changes. Kubernetes stores `""` for these subjects as `rbac.authorization.k8s.io`, so the binding is neither modified nor replaced, and the next plan is empty. To avoid the update, omit `api_group` or set it to `rbac.authorization.k8s.io` before upgrading.
+- **Planned subject API group:** SDKv2 showed `api_group = (known after apply)` for both an omitted `api_group` and `api_group = ""`. Now only an omitted `api_group` is unknown, when the binding is created or a subject's `kind` or `name` changes; `api_group = ""` is planned as configured.
+- **Plans without refresh:** Immediately after upgrading from SDKv2, `terraform plan -refresh=false` may show a one-time in-place update normalizing an omitted `metadata.generate_name` from `""` to `null`. This does not replace the RoleBinding. Review a refresh-enabled plan before applying and confirm convergence afterward.
+- **Empty metadata maps:** Explicit empty maps and maps omitted after an earlier import may normalize between `{}` and `null` in a one-time in-place update.
+- **Null map entries:** Annotation and label entries must be non-null strings. Remove entries such as `owner = null` or supply string values. Omitting the whole map or setting it to `null` remains supported.
+- **Computed metadata:** `generation` and `resource_version` may be unknown until apply during updates. This does not itself indicate replacement.
+- **Import:** IDs must contain a non-empty namespace and name (`namespace/name`). Identity imports require Terraform 1.12 or later and default an omitted namespace to `default`. For generated bindings, configure the original `generate_name` prefix and omit `name`.
+
+### Configurations with both name and generate_name
+
+Setting both arguments is now rejected during planning, including `generate_name = ""`.
+
+- If `generate_name` is empty, remove it and keep `name`.
+- Otherwise, remove `name` and retain the original `generate_name`. The existing binding keeps its name.
+
+Removing or changing a stored non-empty prefix replaces the binding. Review the plan before applying.
+
+### Moving from kubernetes_role_binding
+
+Terraform 1.8 or later supports moving from the deprecated type. Rename the resource block to `kubernetes_role_binding_v1`, retain its configuration, update references, and add:
+
+```terraform
+moved {
+  from = kubernetes_role_binding.example
+  to   = kubernetes_role_binding_v1.example
+}
+```
+
+Review the move and any in-place normalization changes, then apply and confirm that the next plan is empty. Investigate unexpected replacement rather than removing state or re-importing.
 
 ## Resource: kubernetes_cluster_role_binding_v1
 

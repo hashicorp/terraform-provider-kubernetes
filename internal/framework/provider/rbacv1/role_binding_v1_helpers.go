@@ -11,42 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// flattenSubjectsWithPrior keeps a prior-state
-// api_group of "" when the API returns the canonical rbac.authorization.k8s.io for a
-// User or Group subject: the API server defaults an empty api_group for those kinds,
-// so the two values are equivalent and rewriting the configured "" would cause a
-// perpetual diff.
-func flattenSubjectsWithPrior(in []rbacv1api.Subject, prior []SubjectModel) []SubjectModel {
-	result := make([]SubjectModel, len(in))
-	for i, s := range in {
-		result[i] = flattenSubject(s)
-		if i >= len(prior) {
-			continue
-		}
-		p := prior[i]
-		if p.APIGroup.IsNull() || p.APIGroup.IsUnknown() || p.APIGroup.ValueString() != "" {
-			continue
-		}
-		if p.Kind.ValueString() != in[i].Kind || p.Name.ValueString() != in[i].Name {
-			continue
-		}
-		if (in[i].Kind == rbacv1api.UserKind || in[i].Kind == rbacv1api.GroupKind) &&
-			in[i].APIGroup == rbacv1api.GroupName {
-			result[i].APIGroup = types.StringValue("")
-		}
-	}
-	return result
-}
-
-func flattenSubject(s rbacv1api.Subject) SubjectModel {
-	return SubjectModel{
-		Kind:      types.StringValue(s.Kind),
-		Name:      types.StringValue(s.Name),
-		APIGroup:  types.StringValue(s.APIGroup),
-		Namespace: types.StringValue(s.Namespace),
-	}
-}
-
 // applySubjectComputedFields resolves unknown computed fields in plan subjects from the
 // Kubernetes API response, while preserving all configured values.
 //

@@ -39,9 +39,9 @@ func roleBindingV1Schema() schema.Schema {
 			// MetadataSchemaRBAC mirrors metadataSchemaRBAC("roleBinding", true, true) from SDKv2.
 			// It uses the RBAC path-segment name validator rather than DNS-subdomain, so names like
 			// "system:controller:foo" are accepted. generatableName=true, namespaced=true.
-			"metadata": common.MetadataSchemaRBAC("role binding", true, true),
+			"metadata": common.MetadataSchemaRBAC("roleBinding", true, true),
 			"role_ref": schema.ListNestedBlock{
-				MarkdownDescription: "RoleRef references the Role or ClusterRole granting the permissions defined in this binding.",
+				MarkdownDescription: "(Required) RoleRef references the Role or ClusterRole granting the permissions defined in this binding. Exactly one `role_ref` block must be present.",
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.RequiresReplace(),
 				},
@@ -74,7 +74,7 @@ func roleBindingV1Schema() schema.Schema {
 			},
 			// subject is a list of one or more entities that receive the permissions.
 			"subject": schema.ListNestedBlock{
-				MarkdownDescription: "Subjects defines the entities (users, service accounts, or groups) to bind the role to.",
+				MarkdownDescription: "(Required) Subjects defines the entities (users, service accounts, or groups) to bind the role to. At least one `subject` block must be present.",
 				Validators: []validator.List{
 					listvalidator.IsRequired(),
 					listvalidator.SizeAtLeast(1),

@@ -56,7 +56,7 @@ func (r *RoleBindingV1) Create(ctx context.Context, req resource.CreateRequest, 
 		Subjects:   expandSubjects(plan.Subject),
 	}
 
-	tflog.Debug(ctx, "Creating RoleBinding", map[string]any{"namespace": objMeta.Namespace, "name": objMeta.Name})
+	tflog.Info(ctx, "Creating RoleBinding", map[string]any{"namespace": objMeta.Namespace, "name": objMeta.Name})
 	out, err := conn.RbacV1().RoleBindings(objMeta.Namespace).Create(ctx, obj, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -105,7 +105,7 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	tflog.Debug(ctx, "Reading RoleBinding", map[string]any{"namespace": namespace, "name": name})
+	tflog.Info(ctx, "Reading RoleBinding", map[string]any{"namespace": namespace, "name": name})
 	out, err := conn.RbacV1().RoleBindings(namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		// Terraform before 1.12 does not send identity on refresh, but the
@@ -137,7 +137,7 @@ func (r *RoleBindingV1) Read(ctx context.Context, req resource.ReadRequest, resp
 
 	state.Metadata = metadata
 	state.RoleRef = flattenRoleRef(out.RoleRef)
-	state.Subject = flattenSubjectsWithPrior(out.Subjects, state.Subject)
+	state.Subject = flattenSubjects(out.Subjects, state.Subject)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, roleBindingIdentity(out.Namespace, out.Name))...)
@@ -210,7 +210,7 @@ func (r *RoleBindingV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	tflog.Debug(ctx, "Updating RoleBinding", map[string]any{"namespace": namespace, "name": name})
+	tflog.Info(ctx, "Updating RoleBinding", map[string]any{"namespace": namespace, "name": name})
 	out, err := conn.RbacV1().RoleBindings(namespace).Patch(
 		ctx,
 		name,
@@ -265,7 +265,7 @@ func (r *RoleBindingV1) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 
-	tflog.Debug(ctx, "Deleting RoleBinding", map[string]any{"namespace": namespace, "name": name})
+	tflog.Info(ctx, "Deleting RoleBinding", map[string]any{"namespace": namespace, "name": name})
 	err = conn.RbacV1().RoleBindings(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		resp.Diagnostics.AddError(

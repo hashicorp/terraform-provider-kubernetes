@@ -15,7 +15,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-const migratedRoleBindingProviderVersion = "3.2.1"
+// 3.4.0 is the last release that serves kubernetes_role_binding_v1 from SDKv2.
+const migratedRoleBindingProviderVersion = "3.4.0"
 const preIdentityRoleBindingProviderVersion = "2.37.1"
 
 func releasedRoleBindingProvider() map[string]resource.ExternalProvider {
@@ -136,15 +137,22 @@ func TestAccMigrateRoleBinding_emptyUserAPIGroup(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-migrate")
 	resourceName := "kubernetes_role_binding_v1.test"
 	config := testAccRoleBindingV1Config_emptyUserAPIGroup(name)
+	checkUID := testAccRoleBindingCheckSameUID()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccRoleBindingCheckDestroy,
 		Steps: []resource.TestStep{
 			{ExternalProviders: releasedRoleBindingProvider(), Config: config,
-				Check: resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io")},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", "rbac.authorization.k8s.io"),
+					checkUID,
+				)},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories, Config: config,
-				Check: resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.0.api_group", ""),
+					checkUID,
+				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
 					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -252,6 +260,7 @@ func TestAccMigrateRoleBinding_noRefresh(t *testing.T) {
 func TestAccMigrateRoleBinding_updateAndReplace(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-migrate")
 	resourceName := "kubernetes_role_binding_v1.test"
+	checkUID := testAccRoleBindingCheckSameUID()
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:               func() { testAccPreCheck(t) },
 		CheckDestroy:           testAccRoleBindingCheckDestroy,
@@ -261,6 +270,7 @@ func TestAccMigrateRoleBinding_updateAndReplace(t *testing.T) {
 				ExternalProviders: releasedRoleBindingProvider(),
 				Config:            testAccRoleBindingV1Config_basic(name),
 				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
+				Check:             checkUID,
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -276,7 +286,17 @@ func TestAccMigrateRoleBinding_updateAndReplace(t *testing.T) {
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
-				Check:             resource.TestCheckResourceAttr(resourceName, "subject.#", "3"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "3"),
+					checkUID,
+				),
+			},
+			// Only an import catches wrong computed values that Update writes to state.
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				ResourceName:             resourceName,
+				ImportState:              true,
+				ImportStateVerify:        true,
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -287,6 +307,40 @@ func TestAccMigrateRoleBinding_updateAndReplace(t *testing.T) {
 				},
 				ConfigStateChecks: []statecheck.StateCheck{testAccRoleBindingExpectIdentity(resourceName, name)},
 				Check:             resource.TestCheckResourceAttr(resourceName, "role_ref.0.kind", "ClusterRole"),
+			},
+		},
+	})
+}
+
+func TestAccMigrateRoleBinding_emptyMetadataMaps(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-migrate")
+	resourceName := "kubernetes_role_binding_v1.test"
+	config := testAccRoleBindingV1Config_emptyMetadataMaps(name)
+	checkUID := testAccRoleBindingCheckSameUID()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		CheckDestroy: testAccRoleBindingCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: releasedRoleBindingProvider(),
+				Config:            config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.0.labels.%"),
+					checkUID,
+				),
+			},
+			// SDKv2 stored the explicit empty maps as null; the framework keeps {}.
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   config,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate)},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "0"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "0"),
+					checkUID,
+				),
 			},
 		},
 	})

@@ -141,7 +141,8 @@ func TestRoleBindingReadMissingAndErrors(t *testing.T) {
 // verifies all computed fields are populated, and confirms import round-trips
 // without drift.
 func TestAccRoleBinding_basic(t *testing.T) {
-	name := acctest.RandomWithPrefix("tf-acc-rb")
+	// RBAC names may contain colons, as in SDKv2's TestAccKubernetesRoleBindingV1_basic.
+	name := "tf-acc-test:" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 	resourceName := "kubernetes_role_binding_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -889,6 +890,28 @@ func testAccRoleBindingCheckLive(name, team string, subjects ...string) resource
 	}
 }
 
+// testAccRoleBindingCheckSameUID records the binding UID on its first call and
+// fails if a later step sees a different UID, i.e. the binding was destroyed and
+// recreated instead of updated in place.
+func testAccRoleBindingCheckSameUID() resource.TestCheckFunc {
+	var prior string
+	return func(state *terraform.State) error {
+		rs, ok := state.RootModule().Resources["kubernetes_role_binding_v1.test"]
+		if !ok {
+			return fmt.Errorf("missing kubernetes_role_binding_v1.test")
+		}
+		uid := rs.Primary.Attributes["metadata.0.uid"]
+		if uid == "" {
+			return fmt.Errorf("missing RoleBinding UID")
+		}
+		if prior != "" && uid != prior {
+			return fmt.Errorf("RoleBinding replaced: UID %q became %q", prior, uid)
+		}
+		prior = uid
+		return nil
+	}
+}
+
 func testAccRoleBindingExpectIdentity(resourceName, name string) statecheck.StateCheck {
 	return statecheck.ExpectIdentity(resourceName, map[string]knownvalue.Check{
 		"api_version": knownvalue.StringExact("rbac.authorization.k8s.io/v1"),
@@ -1250,6 +1273,31 @@ resource "kubernetes_role_binding_v1" "test" {
     api_group = "rbac.authorization.k8s.io"
     kind      = "Role"
     name      = "admin"
+  }
+}
+`, name)
+}
+
+func testAccRoleBindingV1Config_emptyMetadataMaps(name string) string {
+	return fmt.Sprintf(`
+resource "kubernetes_role_binding_v1" "test" {
+  metadata {
+    name        = %[1]q
+    namespace   = "default"
+    labels      = {}
+    annotations = {}
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "admin"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
   }
 }
 `, name)

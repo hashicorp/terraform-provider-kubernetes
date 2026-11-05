@@ -13,6 +13,12 @@ Exactly one `metadata` block, exactly one `role_ref` block, and at least one `su
 
 For existing SDKv2-managed bindings, see the [Plugin Framework upgrade guide](../guides/plugin-framework-upgrade-guide.md#resource-kubernetes_role_binding_v1) before upgrading.
 
+A `User` or `Group` subject with `api_group = ""` shows a one-time in-place
+update after upgrading, displayed as `- api_group = "rbac.authorization.k8s.io" -> null`.
+SDKv2 stored the API server's default instead of the configured `""`. Only Terraform
+state changes; the binding is not modified or replaced. To avoid the update, omit
+`api_group` or set it to `rbac.authorization.k8s.io`.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage

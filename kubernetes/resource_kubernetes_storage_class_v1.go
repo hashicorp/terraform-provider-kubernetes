@@ -87,7 +87,6 @@ func resourceKubernetesStorageClassV1(deprecationMessage string) *schema.Resourc
 				Type:        schema.TypeList,
 				Description: "Restrict the node topologies where volumes can be dynamically provisioned.",
 				Optional:    true,
-				ForceNew:    true,
 				MaxItems:    1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
@@ -214,6 +213,10 @@ func resourceKubernetesStorageClassV1Update(ctx context.Context, d *schema.Resou
 			Path:  "/allowVolumeExpansion",
 			Value: newVal,
 		})
+	}
+	if d.HasChange("allowed_topologies") {
+		oldVal, newVal := d.GetChange("allowed_topologies")
+		ops = append(ops, patchStorageClassAllowedTopologies(oldVal.([]interface{}), newVal.([]interface{}))...)
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {

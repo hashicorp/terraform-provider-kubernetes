@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -240,6 +242,33 @@ func TestAccKubernetesStorageClassV1_allowedTopologies_minikube(t *testing.T) {
 					testAccCheckStorageClassV1Parameters(&conf, map[string]string{}),
 				),
 			},
+			{
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologiesModified(name, "k8s.io/minikube-hostpath"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.#", "3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "allowed_topologies.0.match_label_expressions.0.values.*", "us-west1-c"),
+					testAccCheckStorageClassV1AllowedTopologyValues(&conf, []string{"us-west1-a", "us-west1-b", "us-west1-c"}),
+				),
+			},
+			{
+				Config: testAccKubernetesStorageClassV1Config_allowedTopologiesRemoved(name, "k8s.io/minikube-hostpath"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStorageClassV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "allowed_topologies.#", "0"),
+					testAccCheckStorageClassV1AllowedTopologyValues(&conf, nil),
+				),
+			},
 		},
 	})
 }
@@ -276,6 +305,26 @@ func TestAccKubernetesStorageClassV1_generatedName(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccCheckStorageClassV1AllowedTopologyValues(m *api.StorageClass, expected []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		var given []string
+		for _, term := range m.AllowedTopologies {
+			for _, req := range term.MatchLabelExpressions {
+				given = append(given, req.Values...)
+			}
+		}
+		sort.Strings(given)
+		if len(expected) == 0 && len(given) == 0 {
+			return nil
+		}
+		if !reflect.DeepEqual(given, expected) {
+			return fmt.Errorf("%s allowed topology values don't match.\nExpected: %q\nGiven: %q",
+				m.Name, expected, given)
+		}
+		return nil
+	}
 }
 
 func testAccCheckStorageClassV1Parameters(m *api.StorageClass, expected map[string]string) resource.TestCheckFunc {
@@ -464,6 +513,38 @@ func testAccKubernetesStorageClassV1Config_allowedTopologies(name, provisioner s
       ]
     }
   }
+}
+`, name, provisioner)
+}
+
+func testAccKubernetesStorageClassV1Config_allowedTopologiesModified(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner = "%s"
+  allowed_topologies {
+    match_label_expressions {
+      key = "topology.kubernetes.io/zone"
+      values = [
+        "us-west1-a",
+        "us-west1-b",
+        "us-west1-c"
+      ]
+    }
+  }
+}
+`, name, provisioner)
+}
+
+func testAccKubernetesStorageClassV1Config_allowedTopologiesRemoved(name, provisioner string) string {
+	return fmt.Sprintf(`resource "kubernetes_storage_class_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  storage_provisioner = "%s"
 }
 `, name, provisioner)
 }

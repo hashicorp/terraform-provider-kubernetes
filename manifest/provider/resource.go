@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
@@ -83,66 +84,81 @@ func IsResourceNamespaced(gvk schema.GroupVersionKind, m meta.RESTMapper) (bool,
 // TFTypeFromOpenAPI generates a tftypes.Type representation of a Kubernetes resource
 // designated by the supplied GroupVersionKind resource id
 func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.GroupVersionKind, status bool) (tftypes.Type, map[string]string, error) {
-	var tsch tftypes.Type
+
+	if oapiV3, err := ps.getOAPIv3Foundry(gvk.GroupVersion()); err == nil {
+		return getTypeByGVK(gvk, status, oapiV3, "OpenAPI v3")
+	}
+
+	var tfo tftypes.Object
 	var hints map[string]string
 
-	oapi, err := ps.getOAPIv2Foundry()
-	if err != nil {
-		return nil, hints, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
-	}
 	// check if GVK is from a CRD
-	crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk)
+	oapiV2, err := ps.getOAPIv2Foundry()
 	if err != nil {
-		return nil, hints, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
+		return nil, hints, fmt.Errorf("cannot get OpenAPI foundry: %w", err)
 	}
-	if crdSchema != nil {
-		js, err := json.Marshal(openapi.SchemaToSpec("", crdSchema.(map[string]interface{})))
+
+	if crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk); err != nil {
+		return nil, hints, fmt.Errorf("failed to look up GVK (%v) among available CRDs: %w", gvk, err)
+	} else if crdSchema != nil {
+		js, err := json.Marshal(openapi.CRDSchemaToSpec(gvk, crdSchema.(map[string]interface{})))
 		if err != nil {
-			return nil, hints, fmt.Errorf("CRD schema fails to marshal into JSON: %s", err)
+			return nil, hints, fmt.Errorf("CRD schema fails to marshal into JSON: %w", err)
 		}
-		oapiv3, err := openapi.NewFoundryFromSpecV3(js)
+		oapiV3, err := openapi.NewFoundryFromSpecV3(js)
 		if err != nil {
 			return nil, hints, err
 		}
-		tsch, hints, err = oapiv3.GetTypeByGVK(gvk)
+		tfo, hints, err = getTypeByGVK(gvk, status, oapiV3, "CRD schema")
 		if err != nil {
-			return nil, hints, fmt.Errorf("failed to generate tftypes for GVK [%s] from CRD schema: %s", gvk.String(), err)
+			return nil, hints, err
 		}
-	}
-	if tsch == nil {
-		// Not a CRD type - look GVK up in cluster OpenAPI spec
-		tsch, hints, err = oapi.GetTypeByGVK(gvk)
+	} else {
+		// Not a CRD type - look GVK up in cluster OpenAPI v2 spec
+		tfo, hints, err = getTypeByGVK(gvk, status, oapiV2, "OpenAPI v2")
 		if err != nil {
-			return nil, hints, fmt.Errorf("cannot get resource type from OpenAPI (%s): %s", gvk.String(), err)
+			return nil, hints, err
 		}
-	}
-	// remove "status" attribute from resource type
-	if tsch.Is(tftypes.Object{}) && !status {
-		ot := tsch.(tftypes.Object)
-		atts := make(map[string]tftypes.Type)
-		for k, t := range ot.AttributeTypes {
-			if k != "status" {
-				atts[k] = t
-			}
-		}
-		// types from CRDs only contain specific attributes
-		// we need to backfill metadata and apiVersion/kind attributes
-		if _, ok := atts["apiVersion"]; !ok {
-			atts["apiVersion"] = tftypes.String
-		}
-		if _, ok := atts["kind"]; !ok {
-			atts["kind"] = tftypes.String
-		}
-		metaType, _, err := oapi.GetTypeByGVK(openapi.ObjectMetaGVK)
-		if err != nil {
-			return nil, hints, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %s", err)
-		}
-		atts["metadata"] = metaType.(tftypes.Object)
-
-		tsch = tftypes.Object{AttributeTypes: atts}
 	}
 
-	return tsch, hints, nil
+	// types from CRDs only contain specific attributes
+	// we need to backfill metadata and apiVersion/kind attributes
+	atts := maps.Clone(tfo.AttributeTypes)
+	if _, ok := atts["apiVersion"]; !ok {
+		atts["apiVersion"] = tftypes.String
+	}
+	if _, ok := atts["kind"]; !ok {
+		atts["kind"] = tftypes.String
+	}
+	metaType, _, err := oapiV2.GetTypeByGVK(openapi.ObjectMetaGVK)
+	if err != nil {
+		return nil, hints, fmt.Errorf("failed to generate tftypes for v1.ObjectMeta: %w", err)
+	}
+	atts["metadata"] = metaType.(tftypes.Object)
+	tfo.AttributeTypes = atts
+
+	return tfo, hints, nil
+}
+
+// getTypeByGVK retrieves a terraform type from an OpenAPI fondry given a GVK, verifies it's an Object and
+// optionally removes the "status" attribute.
+func getTypeByGVK(gvk schema.GroupVersionKind, status bool, oapi openapi.Foundry, source string) (tftypes.Object, map[string]string, error) {
+	tft, hints, err := oapi.GetTypeByGVK(gvk)
+	if err != nil {
+		return tftypes.Object{}, hints, fmt.Errorf("cannot get resource type from %s (%v): %w", source, gvk, err)
+	}
+	if !tft.Is(tftypes.Object{}) {
+		return tftypes.Object{}, hints, fmt.Errorf("did not resolve into an object type (%v)", gvk)
+	}
+	tfo := tft.(tftypes.Object)
+	if !status {
+		if _, present := tfo.AttributeTypes["status"]; present {
+			tfo.AttributeTypes = maps.Clone(tfo.AttributeTypes)
+			delete(tfo.AttributeTypes, "status")
+		}
+	}
+
+	return tfo, hints, err
 }
 
 func mapRemoveNulls(in map[string]interface{}) map[string]interface{} {

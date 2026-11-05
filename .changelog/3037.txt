@@ -1,0 +1,11 @@
+```release-note:note
+`resource/kubernetes_resource_quota_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax, and adding resource identity, including upgrades from versions before identity support. `moved` blocks from the deprecated `kubernetes_resource_quota` resource are supported with Terraform 1.8 or later. Quantities in `spec.hard` that are written differently from the API's canonical form (for example `2048Mi`, which the API returns as `2Gi`) may produce a one-time in-place update after upgrading or moving; it does not change the Kubernetes object, and state keeps the spelling from the configuration. An unset `metadata.generate_name` is now stored as null instead of an empty string. Import IDs require a non-empty namespace and name.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_resource_quota_v1`: `null` is no longer accepted as a value in `metadata.labels`, `metadata.annotations` or `spec.hard`. Earlier versions accepted it and silently dropped the entry. Remove those entries or provide string values.
+```
+
+```release-note:bug
+`resource/kubernetes_resource_quota_v1`: Fix a provider crash when `spec` is an empty block (`spec {}`) or `spec.hard` is an empty map.
+```

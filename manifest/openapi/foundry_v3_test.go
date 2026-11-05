@@ -45,7 +45,7 @@ func TestNewFoundryFromSpecV3(t *testing.T) {
 	if crd == nil || crd.Value == nil {
 		t.Fail()
 	}
-	if crd.Value.Type != "object" {
+	if getFirstSchemaType(crd.Value.Type) != "object" {
 		t.Fail()
 	}
 	if crd.Value.Properties == nil {
@@ -55,14 +55,14 @@ func TestNewFoundryFromSpecV3(t *testing.T) {
 	if !ok {
 		t.Fail()
 	}
-	if foo.Value.Type != "string" {
+	if getFirstSchemaType(foo.Value.Type) != "string" {
 		t.Fail()
 	}
 	bar, ok := crd.Value.Properties["bar"]
 	if !ok {
 		t.Fail()
 	}
-	if bar.Value.Type != "number" {
+	if getFirstSchemaType(bar.Value.Type) != "number" {
 		t.Fail()
 	}
 }

@@ -428,6 +428,52 @@ func TestMorphValueToType(t *testing.T) {
 			},
 			Out: tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue),
 		},
+		// x-kubernetes-preserve-unknown-fields is a dynamic destination.
+		// The type is known at plan time even when the value is not.
+		"string->dynamic": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.String, "hello"),
+				T: tftypes.DynamicPseudoType,
+			},
+			Out: tftypes.NewValue(tftypes.String, "hello"),
+		},
+		"string(unknown value)->dynamic": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+				T: tftypes.DynamicPseudoType,
+			},
+			Out: tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+		},
+		"number(unknown value)->dynamic": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Number, tftypes.UnknownValue),
+				T: tftypes.DynamicPseudoType,
+			},
+			Out: tftypes.NewValue(tftypes.Number, tftypes.UnknownValue),
+		},
+		"bool(unknown value)->dynamic": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue),
+				T: tftypes.DynamicPseudoType,
+			},
+			Out: tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue),
+		},
+		"object(unknown string)->map(dynamic)": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"known":   tftypes.String,
+					"pending": tftypes.String,
+				}}, map[string]tftypes.Value{
+					"known":   tftypes.NewValue(tftypes.String, "already"),
+					"pending": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+				}),
+				T: tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+			},
+			Out: tftypes.NewValue(tftypes.Map{ElementType: tftypes.DynamicPseudoType}, map[string]tftypes.Value{
+				"known":   tftypes.NewValue(tftypes.String, "already"),
+				"pending": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+			}),
+		},
 
 		// Translations that won't work without the values.
 		"number(unkown value)->string": {

@@ -16,6 +16,11 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 		return tftypes.Value{}, fmt.Errorf("type cannot be nil")
 	}
 	if !v.IsKnown() {
+		// A dynamic destination keeps the value's concrete type. Map and
+		// list elements have to share one type.
+		if t.Is(tftypes.DynamicPseudoType) {
+			return v, nil
+		}
 		return tftypes.NewValue(t, tftypes.UnknownValue), nil
 	}
 	switch {

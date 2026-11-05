@@ -229,6 +229,7 @@ func TestAccRole_ruleSetValidation(t *testing.T) {
 				// Empty strings and sets are schema-valid even when Kubernetes
 				// would reject a particular rule; validate these at plan time.
 				resource.ParallelTest(t, resource.TestCase{
+					PreCheck:                 func() { testAccPreCheck(t) },
 					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 					Steps:                    []resource.TestStep{step},
 				})
@@ -244,6 +245,7 @@ func TestAccRole_noOpUpdate(t *testing.T) {
 	resourceVersion := tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey("resource_version")
 	config := strings.Replace(testAccRoleConfig_noResourceNames(name), "metadata {", "metadata {\n    labels = {}", 1)
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		CheckDestroy:             testAccRoleCheckDestroy,
 		Steps: []resource.TestStep{
@@ -298,6 +300,7 @@ func TestAccRole_importInvalidID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "tf-acc-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				CheckDestroy:             testAccRoleCheckDestroy,
 				Steps: []resource.TestStep{
@@ -322,6 +325,7 @@ func TestAccRole_importInvalidIdentity(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			name := "tf-acc-test-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				CheckDestroy:             testAccRoleCheckDestroy,
 				TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
@@ -349,6 +353,7 @@ func TestAccRole_basic(t *testing.T) {
 	resourceName := "kubernetes_role_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -427,6 +432,7 @@ func TestAccRole_generatedName(t *testing.T) {
 	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -469,6 +475,7 @@ func TestAccRole_metadataUpdate(t *testing.T) {
 	resourceName := "kubernetes_role_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -503,6 +510,7 @@ func TestAccRole_resourceNames(t *testing.T) {
 	resourceName := "kubernetes_role_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -526,6 +534,7 @@ func TestAccRole_ruleTransitions(t *testing.T) {
 	resourceName := "kubernetes_role_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -591,6 +600,7 @@ func TestAccRole_identity(t *testing.T) {
 	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -638,6 +648,7 @@ func TestAccRole_nameAndGenerateName(t *testing.T) {
 	// API ignores generate_name whenever name is present. See the note on
 	// TestAccRole_movedFromAlias_nameAndGenerateName for the upgrade impact.
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -655,6 +666,7 @@ func TestAccRole_nullMetadata(t *testing.T) {
 	// validateAnnotations. Role previously accepted it and silently dropped the key, so
 	// every later plan showed the key being added back.
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -688,6 +700,7 @@ func TestAccRole_missingRule(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -701,6 +714,7 @@ func TestAccRole_missingRule(t *testing.T) {
 
 func TestAccRole_missingMetadata(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -716,6 +730,7 @@ func TestAccRole_duplicateMetadata(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -733,6 +748,7 @@ func TestAccRole_disappears(t *testing.T) {
 	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -1024,6 +1040,7 @@ func TestAccRole_identityImportDefaultNamespace(t *testing.T) {
 	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
@@ -1085,6 +1102,7 @@ import {
 
 func TestAccRole_invalidAnnotationKey(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -1098,6 +1116,7 @@ func TestAccRole_invalidAnnotationKey(t *testing.T) {
 
 func TestAccRole_invalidLabelValue(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		CheckDestroy:             testAccRoleCheckDestroy,
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{

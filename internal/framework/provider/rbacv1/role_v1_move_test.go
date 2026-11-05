@@ -60,6 +60,7 @@ func testAccRoleMoveRunner(version string) roleScenarioRunner {
 			importIgnore = []string{prefix + "%", prefix + "example.kubernetes.io/owner"}
 		}
 		resource.ParallelTest(t, resource.TestCase{
+			PreCheck:               func() { testAccPreCheck(t) },
 			CheckDestroy:           testAccRoleCheckDestroy,
 			TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
 			Steps: []resource.TestStep{
@@ -178,6 +179,7 @@ func testAccRoleMoveWithUpdate(t *testing.T, name, config, updated, verb string,
 	}
 	updateChecks = append(updateChecks, resource.TestCheckTypeSetElemAttr(resourceName, "rule.0.verbs.*", verb))
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:               func() { testAccPreCheck(t) },
 		CheckDestroy:           testAccRoleCheckDestroy,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
 		Steps: []resource.TestStep{

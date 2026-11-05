@@ -694,3 +694,128 @@ func testAccKubernetesClusterRoleBindingConfigBug_step_2(name string) string {
 }
 `, name)
 }
+
+func TestAccKubernetesClusterRoleBinding_subjectNamespace(t *testing.T) {
+	var conf rbacv1.ClusterRoleBinding
+	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_cluster_role_binding.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesClusterRoleBindingDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesClusterRoleBindingConfig_subjectNamespace(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "4"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "ServiceAccount"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.namespace", "default"),
+					resource.TestCheckResourceAttr(resourceName, "subject.1.kind", "Group"),
+					resource.TestCheckResourceAttr(resourceName, "subject.1.namespace", ""),
+					resource.TestCheckResourceAttr(resourceName, "subject.2.kind", "User"),
+					resource.TestCheckResourceAttr(resourceName, "subject.2.namespace", ""),
+					resource.TestCheckResourceAttr(resourceName, "subject.3.kind", "ServiceAccount"),
+					resource.TestCheckResourceAttr(resourceName, "subject.3.namespace", "kube-system"),
+					testAccCheckKubernetesClusterRoleBindingSubjectNamespaces(&conf, []string{"default", "", "", "kube-system"}),
+				),
+			},
+			{
+				// Removing the leading ServiceAccount shifts the other subjects down one
+				// index. The namespace it held in state must not be carried over to the
+				// Group that now occupies index 0.
+				Config: testAccKubernetesClusterRoleBindingConfig_subjectNamespaceRemoved(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesClusterRoleBindingExists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "subject.#", "2"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.kind", "Group"),
+					resource.TestCheckResourceAttr(resourceName, "subject.0.namespace", ""),
+					resource.TestCheckResourceAttr(resourceName, "subject.1.kind", "User"),
+					resource.TestCheckResourceAttr(resourceName, "subject.1.namespace", ""),
+					testAccCheckKubernetesClusterRoleBindingSubjectNamespaces(&conf, []string{"", ""}),
+				),
+			},
+		},
+	})
+}
+
+func testAccCheckKubernetesClusterRoleBindingSubjectNamespaces(obj *rbacv1.ClusterRoleBinding, expected []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if len(obj.Subjects) != len(expected) {
+			return fmt.Errorf("expected %d subjects, got %d", len(expected), len(obj.Subjects))
+		}
+		for i, ns := range expected {
+			if obj.Subjects[i].Namespace != ns {
+				return fmt.Errorf("subject[%d] (%s %q): expected namespace %q, got %q",
+					i, obj.Subjects[i].Kind, obj.Subjects[i].Name, ns, obj.Subjects[i].Namespace)
+			}
+		}
+		return nil
+	}
+}
+
+func testAccKubernetesClusterRoleBindingConfig_subjectNamespace(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind = "ServiceAccount"
+    name = "default"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "notagroup"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = "kube-system"
+  }
+}
+`, name)
+}
+
+func testAccKubernetesClusterRoleBindingConfig_subjectNamespaceRemoved(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role_binding" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "notagroup"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "notauser"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+`, name)
+}

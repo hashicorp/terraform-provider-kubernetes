@@ -151,6 +151,9 @@ func flattenLifeCycle(in *v1.Lifecycle) []interface{} {
 	if in.PreStop != nil {
 		att["pre_stop"] = flattenLifecycleHandler(in.PreStop)
 	}
+	if in.StopSignal != nil {
+		att["stop_signal"] = string(*in.StopSignal)
+	}
 
 	return []interface{}{att}
 }
@@ -805,6 +808,10 @@ func expandLifeCycle(l []interface{}) *v1.Lifecycle {
 	}
 	if v, ok := in["pre_stop"].([]interface{}); ok && len(v) > 0 {
 		obj.PreStop = expandLifecycleHandlers(v)
+	}
+	if v, ok := in["stop_signal"].(string); ok && v != "" {
+		sig := v1.Signal(v)
+		obj.StopSignal = &sig
 	}
 	return obj
 }

@@ -366,6 +366,10 @@ func Provider() *schema.Provider {
 		res.Meta, res.Diagnostics = providerConfigure(ctx, req.ResourceData, p.TerraformVersion)
 	}
 
+	for _, r := range p.ResourcesMap {
+		injectBootstrapConnection(r)
+	}
+
 	return p
 }
 
@@ -465,7 +469,7 @@ func (k providerMetadata) DiscoveryClient() (discovery.DiscoveryInterface, error
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVersion string) (interface{}, diag.Diagnostics) {
 	// Config initialization
-	cfg, diags := initializeConfiguration(d)
+	cfg, diags := initializeConfiguration(d, true)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -506,7 +510,12 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData, terraformVer
 	return m, diag.Diagnostics{}
 }
 
-func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.Diagnostics) {
+type configGetter interface {
+	Get(key string) interface{}
+	GetOk(key string) (interface{}, bool)
+}
+
+func initializeConfiguration(d configGetter, allowEnvLookup bool) (*restclient.Config, diag.Diagnostics) {
 	diags := make(diag.Diagnostics, 0)
 	overrides := &clientcmd.ConfigOverrides{}
 	loader := &clientcmd.ClientConfigLoadingRules{}
@@ -519,7 +528,7 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, diag.D
 		for _, p := range v {
 			configPaths = append(configPaths, p.(string))
 		}
-	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
+	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); allowEnvLookup && v != "" {
 		// NOTE we have to do this here because the schema
 		// does not yet allow you to set a default for a TypeList
 		configPaths = filepath.SplitList(v)

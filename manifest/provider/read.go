@@ -87,7 +87,14 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		})
 		return resp, nil
 	}
-	rm, err := s.getRestMapper()
+
+	clients, clientDiags := s.providerClients(resState)
+	if len(clientDiags) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, clientDiags...)
+		return resp, nil
+	}
+
+	rm, err := clients.RestMapper()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -106,7 +113,7 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 		return resp, nil
 	}
 
-	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	objectType, th, err := clients.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -127,7 +134,7 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	}
 	s.logger.Trace("[ReadResource]", "[unstructured.FromTFValue]", dump(cu))
 
-	client, err := s.getDynamicClient()
+	client, err := clients.DynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -189,6 +196,10 @@ func (s *RawProviderServer) ReadResource(ctx context.Context, req *tfprotov5.Rea
 	rawState["object"] = morph.UnknownToNull(nobj)
 
 	nsVal := tftypes.NewValue(currentState.Type(), rawState)
+	nsVal, err = nullifyWriteOnlyConnection(nsVal)
+	if err != nil {
+		return resp, err
+	}
 	newState, err := tfprotov5.NewDynamicValue(nsVal.Type(), nsVal)
 	if err != nil {
 		return resp, err

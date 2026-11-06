@@ -19,6 +19,7 @@ A DaemonSet ensures that all (or some) Nodes run a copy of a Pod. As nodes are a
 
 ### Optional
 
+- `bootstrap_connection` (Block List, Max: 1) Connection settings used while this resource is being created, replacing the provider connection configuration in whole. After creation the provider connection configuration will be used. This is to support creating resources when the credentials are not available at plan time (e.g. when creating a cluster and configuring it in the same stack). For managing resources in multiple clusters use aliased providers instead. (see [below for nested schema](#nestedblock--bootstrap_connection))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_rollout` (Boolean) Wait for the rollout of the deployment to complete. Defaults to true.
 
@@ -179,8 +180,6 @@ Optional:
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
 
 
-
-
 <a id="nestedblock--spec--template--spec--affinity--node_affinity--required_during_scheduling_ignored_during_execution"></a>
 ### Nested Schema for `spec.template.spec.affinity.node_affinity.required_during_scheduling_ignored_during_execution`
 
@@ -217,9 +216,6 @@ Required:
 Optional:
 
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
-
-
-
 
 
 <a id="nestedblock--spec--template--spec--affinity--pod_affinity"></a>
@@ -268,9 +264,6 @@ Optional:
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
 
 
-
-
-
 <a id="nestedblock--spec--template--spec--affinity--pod_affinity--required_during_scheduling_ignored_during_execution"></a>
 ### Nested Schema for `spec.template.spec.affinity.pod_affinity.required_during_scheduling_ignored_during_execution`
 
@@ -299,9 +292,6 @@ Optional:
 - `key` (String) The label key that the selector applies to.
 - `operator` (String) A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
-
-
-
 
 
 <a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity"></a>
@@ -350,9 +340,6 @@ Optional:
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
 
 
-
-
-
 <a id="nestedblock--spec--template--spec--affinity--pod_anti_affinity--required_during_scheduling_ignored_during_execution"></a>
 ### Nested Schema for `spec.template.spec.affinity.pod_anti_affinity.required_during_scheduling_ignored_during_execution`
 
@@ -381,10 +368,6 @@ Optional:
 - `key` (String) The label key that the selector applies to.
 - `operator` (String) A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
-
-
-
-
 
 
 <a id="nestedblock--spec--template--spec--container"></a>
@@ -482,8 +465,6 @@ Optional:
 - `optional` (Boolean) Specify whether the Secret or its key must be defined.
 
 
-
-
 <a id="nestedblock--spec--template--spec--container--env_from"></a>
 ### Nested Schema for `spec.template.spec.container.env_from`
 
@@ -515,7 +496,6 @@ Required:
 Optional:
 
 - `optional` (Boolean) Specify whether the Secret must be defined
-
 
 
 <a id="nestedblock--spec--template--spec--container--lifecycle"></a>
@@ -563,14 +543,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--container--lifecycle--post_start--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.container.lifecycle.post_start.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop"></a>
@@ -610,15 +588,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--container--lifecycle--pre_stop--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.container.lifecycle.pre_stop.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
-
 
 
 <a id="nestedblock--spec--template--spec--container--liveness_probe"></a>
@@ -676,14 +651,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--container--liveness_probe--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.container.liveness_probe.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--container--port"></a>
@@ -756,14 +729,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--container--readiness_probe--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.container.readiness_probe.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--container--resources"></a>
@@ -817,7 +788,6 @@ Optional:
 
 - `localhost_profile` (String) Localhost Profile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work.
 - `type` (String) Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.
-
 
 
 <a id="nestedblock--spec--template--spec--container--startup_probe"></a>
@@ -875,14 +845,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--container--startup_probe--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.container.startup_probe.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--container--volume_mount"></a>
@@ -928,7 +896,6 @@ Required:
 Optional:
 
 - `value` (String) Value of the option. Optional: Defaults to empty.
-
 
 
 <a id="nestedblock--spec--template--spec--host_aliases"></a>
@@ -1043,8 +1010,6 @@ Optional:
 - `optional` (Boolean) Specify whether the Secret or its key must be defined.
 
 
-
-
 <a id="nestedblock--spec--template--spec--init_container--env_from"></a>
 ### Nested Schema for `spec.template.spec.init_container.env_from`
 
@@ -1076,7 +1041,6 @@ Required:
 Optional:
 
 - `optional` (Boolean) Specify whether the Secret must be defined
-
 
 
 <a id="nestedblock--spec--template--spec--init_container--lifecycle"></a>
@@ -1124,14 +1088,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--init_container--lifecycle--post_start--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.init_container.lifecycle.post_start.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop"></a>
@@ -1171,15 +1133,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--init_container--lifecycle--pre_stop--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.init_container.lifecycle.pre_stop.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
-
 
 
 <a id="nestedblock--spec--template--spec--init_container--liveness_probe"></a>
@@ -1237,14 +1196,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--init_container--liveness_probe--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.init_container.liveness_probe.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--init_container--port"></a>
@@ -1317,14 +1274,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--init_container--readiness_probe--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.init_container.readiness_probe.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--init_container--resources"></a>
@@ -1378,7 +1333,6 @@ Optional:
 
 - `localhost_profile` (String) Localhost Profile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work.
 - `type` (String) Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.
-
 
 
 <a id="nestedblock--spec--template--spec--init_container--startup_probe"></a>
@@ -1436,14 +1390,12 @@ Optional:
 - `value` (String) The header field value
 
 
-
 <a id="nestedblock--spec--template--spec--init_container--startup_probe--tcp_socket"></a>
 ### Nested Schema for `spec.template.spec.init_container.startup_probe.tcp_socket`
 
 Required:
 
 - `port` (String) Number or name of the port to access on the container. Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
-
 
 
 <a id="nestedblock--spec--template--spec--init_container--volume_mount"></a>
@@ -1542,7 +1494,6 @@ Optional:
 - `run_as_username` (String) The UserName in Windows to run the entrypoint of the container process. Defaults to the user specified in image metadata if unspecified. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.
 
 
-
 <a id="nestedblock--spec--template--spec--toleration"></a>
 ### Nested Schema for `spec.template.spec.toleration`
 
@@ -1585,8 +1536,6 @@ Optional:
 - `key` (String) The label key that the selector applies to.
 - `operator` (String) A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
-
-
 
 
 <a id="nestedblock--spec--template--spec--volume"></a>
@@ -1691,7 +1640,6 @@ Optional:
 - `namespace` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 
 
-
 <a id="nestedblock--spec--template--spec--volume--cinder"></a>
 ### Nested Schema for `spec.template.spec.volume.cinder`
 
@@ -1725,7 +1673,6 @@ Optional:
 - `path` (String) The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.
 
 
-
 <a id="nestedblock--spec--template--spec--volume--csi"></a>
 ### Nested Schema for `spec.template.spec.volume.csi`
 
@@ -1746,7 +1693,6 @@ Optional:
 Optional:
 
 - `name` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-
 
 
 <a id="nestedblock--spec--template--spec--volume--downward_api"></a>
@@ -1790,8 +1736,6 @@ Required:
 Optional:
 
 - `divisor` (String)
-
-
 
 
 <a id="nestedblock--spec--template--spec--volume--empty_dir"></a>
@@ -1863,8 +1807,6 @@ Optional:
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
 
 
-
-
 <a id="nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--metadata"></a>
 ### Nested Schema for `spec.template.spec.volume.ephemeral.volume_claim_template.metadata`
 
@@ -1872,8 +1814,6 @@ Optional:
 
 - `annotations` (Map of String) An unstructured key value map stored with the persistent volume claim that may be used to store arbitrary metadata. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 - `labels` (Map of String) Map of string keys and values that can be used to organize and categorize (scope and select) the persistent volume claim. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
-
-
 
 
 <a id="nestedblock--spec--template--spec--volume--fc"></a>
@@ -1911,7 +1851,6 @@ Optional:
 
 - `name` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 - `namespace` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-
 
 
 <a id="nestedblock--spec--template--spec--volume--flocker"></a>
@@ -2067,7 +2006,6 @@ Optional:
 - `path` (String) The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.
 
 
-
 <a id="nestedblock--spec--template--spec--volume--projected--sources--downward_api"></a>
 ### Nested Schema for `spec.template.spec.volume.projected.sources.downward_api`
 
@@ -2110,8 +2048,6 @@ Optional:
 - `divisor` (String)
 
 
-
-
 <a id="nestedblock--spec--template--spec--volume--projected--sources--secret"></a>
 ### Nested Schema for `spec.template.spec.volume.projected.sources.secret`
 
@@ -2131,7 +2067,6 @@ Optional:
 - `path` (String) The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.
 
 
-
 <a id="nestedblock--spec--template--spec--volume--projected--sources--service_account_token"></a>
 ### Nested Schema for `spec.template.spec.volume.projected.sources.service_account_token`
 
@@ -2143,8 +2078,6 @@ Optional:
 
 - `audience` (String) Audience is the intended audience of the token
 - `expiration_seconds` (Number) ExpirationSeconds is the expected duration of validity of the service account token. It defaults to 1 hour and must be at least 10 minutes (600 seconds).
-
-
 
 
 <a id="nestedblock--spec--template--spec--volume--quobyte"></a>
@@ -2188,7 +2121,6 @@ Optional:
 - `namespace` (String) Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
 
 
-
 <a id="nestedblock--spec--template--spec--volume--secret"></a>
 ### Nested Schema for `spec.template.spec.volume.secret`
 
@@ -2209,7 +2141,6 @@ Optional:
 - `path` (String) The relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.
 
 
-
 <a id="nestedblock--spec--template--spec--volume--vsphere_volume"></a>
 ### Nested Schema for `spec.template.spec.volume.vsphere_volume`
 
@@ -2220,9 +2151,6 @@ Required:
 Optional:
 
 - `fs_type` (String) Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-
-
-
 
 
 <a id="nestedblock--spec--selector"></a>
@@ -2241,7 +2169,6 @@ Optional:
 - `key` (String) The label key that the selector applies to.
 - `operator` (String) A key's relationship to a set of values. Valid operators ard `In`, `NotIn`, `Exists` and `DoesNotExist`.
 - `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
-
 
 
 <a id="nestedblock--spec--strategy"></a>
@@ -2264,6 +2191,41 @@ Optional:
 - `max_unavailable` (String) The maximum number of DaemonSet pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of total number of DaemonSet pods at the start of the update (ex: 10%). Absolute number is calculated from percentage by rounding up. This cannot be 0 if MaxSurge is 0 Default value is 1. Example: when this is set to 30%, at most 30% of the total number of nodes that should be running the daemon pod (i.e. status.desiredNumberScheduled) can have their pods stopped for an update at any given time. The update starts by stopping at most 30% of those DaemonSet pods and then brings up new DaemonSet pods in their place. Once the new pods are available, it then proceeds onto other DaemonSet pods, thus ensuring that at least 70% of original number of DaemonSet pods are available at all times during the update.
 
 
+<a id="nestedblock--bootstrap_connection"></a>
+### Nested Schema for `bootstrap_connection`
+
+Optional:
+
+- `client_certificate` (String, Sensitive) PEM-encoded client certificate for TLS authentication.
+- `client_key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
+- `cluster_ca_certificate` (String) PEM-encoded root certificates bundle for TLS authentication.
+- `config_context` (String) Context to choose from the config file.
+- `config_context_auth_info` (String) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`).
+- `config_context_cluster` (String) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`).
+- `config_path` (String) A path to a kube config file.
+- `config_paths` (List of String) A list of paths to the kube config files.
+- `exec` (Block List, Max: 1) Configuration block to use an exec-based credential plugin, e.g. call an external command to receive user credentials. (see [below for nested schema](#nestedblock--bootstrap_connection--exec))
+- `host` (String) The hostname (in form of URI) of the Kubernetes API.
+- `insecure` (Boolean) Whether the server should be accessed without verifying the TLS certificate. Defaults to `false`.
+- `password` (String, Sensitive) The password to use for HTTP basic authentication when accessing the Kubernetes API.
+- `proxy_url` (String) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported.
+- `tls_server_name` (String) Server name passed to the server for SNI and is used in the client to check server certificates against.
+- `token` (String, Sensitive) Token of your service account.
+- `username` (String) The username to use for HTTP basic authentication when accessing the Kubernetes API.
+
+<a id="nestedblock--bootstrap_connection--exec"></a>
+### Nested Schema for `bootstrap_connection.exec`
+
+Required:
+
+- `api_version` (String) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1`.
+- `command` (String) Command to execute.
+
+Optional:
+
+- `args` (List of String) List of arguments to pass when executing the plugin.
+- `env` (Map of String, Sensitive) Map of environment variables to set when executing the plugin.
+
 
 <a id="nestedblock--timeouts"></a>
 ### Nested Schema for `timeouts`
@@ -2273,8 +2235,6 @@ Optional:
 - `create` (String)
 - `delete` (String)
 - `update` (String)
-
-
 
 
 ## Example Usage

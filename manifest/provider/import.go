@@ -76,7 +76,9 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-	rm, err := s.getRestMapper()
+	clients := &resourceClients{ps: s}
+
+	rm, err := clients.RestMapper()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -85,7 +87,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 		})
 		return resp, nil
 	}
-	client, err := s.getDynamicClient()
+	client, err := clients.DynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -137,7 +139,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	}
 	s.logger.Trace("[ImportResourceState]", "[API Resource]", ro)
 
-	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+	objectType, th, err := clients.TFTypeFromOpenAPI(ctx, gvk, false)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -174,6 +176,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	timeoutsType := rt.(tftypes.Object).AttributeTypes["timeouts"]
 	fmType := rt.(tftypes.Object).AttributeTypes["field_manager"]
 	cmpType := rt.(tftypes.Object).AttributeTypes["computed_fields"]
+	connType := rt.(tftypes.Object).AttributeTypes["bootstrap_connection"]
 
 	newState["manifest"] = tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{}}, nil)
 	newState["object"] = morph.UnknownToNull(nobj)
@@ -182,6 +185,7 @@ func (s *RawProviderServer) ImportResourceState(ctx context.Context, req *tfprot
 	newState["timeouts"] = tftypes.NewValue(timeoutsType, nil)
 	newState["field_manager"] = tftypes.NewValue(fmType, nil)
 	newState["computed_fields"] = tftypes.NewValue(cmpType, nil)
+	newState["bootstrap_connection"] = tftypes.NewValue(connType, nil)
 
 	nsVal := tftypes.NewValue(rt, newState)
 

@@ -82,16 +82,16 @@ func IsResourceNamespaced(gvk schema.GroupVersionKind, m meta.RESTMapper) (bool,
 
 // TFTypeFromOpenAPI generates a tftypes.Type representation of a Kubernetes resource
 // designated by the supplied GroupVersionKind resource id
-func (ps *RawProviderServer) TFTypeFromOpenAPI(ctx context.Context, gvk schema.GroupVersionKind, status bool) (tftypes.Type, map[string]string, error) {
+func (rc *resourceClients) TFTypeFromOpenAPI(ctx context.Context, gvk schema.GroupVersionKind, status bool) (tftypes.Type, map[string]string, error) {
 	var tsch tftypes.Type
 	var hints map[string]string
 
-	oapi, err := ps.getOAPIv2Foundry()
+	oapi, err := rc.OAPIFoundry()
 	if err != nil {
 		return nil, hints, fmt.Errorf("cannot get OpenAPI foundry: %s", err)
 	}
 	// check if GVK is from a CRD
-	crdSchema, err := ps.lookUpGVKinCRDs(ctx, gvk)
+	crdSchema, err := rc.lookUpGVKinCRDs(ctx, gvk)
 	if err != nil {
 		return nil, hints, fmt.Errorf("failed to look up GVK [%s] among available CRDs: %s", gvk.String(), err)
 	}
@@ -201,9 +201,9 @@ func RemoveServerSideFields(in map[string]interface{}) map[string]interface{} {
 	return in
 }
 
-func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.GroupVersionKind) (interface{}, error) {
+func (rc *resourceClients) lookUpGVKinCRDs(ctx context.Context, gvk schema.GroupVersionKind) (interface{}, error) {
 	// check CRD versions
-	crds, err := ps.fetchCRDs(ctx)
+	crds, err := rc.fetchCRDs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -249,13 +249,13 @@ func (ps *RawProviderServer) lookUpGVKinCRDs(ctx context.Context, gvk schema.Gro
 	return nil, nil
 }
 
-func (ps *RawProviderServer) fetchCRDs(ctx context.Context) ([]unstructured.Unstructured, error) {
-	return ps.crds.Get(func() ([]unstructured.Unstructured, error) {
-		c, err := ps.getDynamicClient()
+func (rc *resourceClients) fetchCRDs(ctx context.Context) ([]unstructured.Unstructured, error) {
+	fetch := func() ([]unstructured.Unstructured, error) {
+		c, err := rc.DynamicClient()
 		if err != nil {
 			return nil, err
 		}
-		m, err := ps.getRestMapper()
+		m, err := rc.RestMapper()
 		if err != nil {
 			return nil, err
 		}
@@ -277,7 +277,12 @@ func (ps *RawProviderServer) fetchCRDs(ctx context.Context) ([]unstructured.Unst
 		}
 
 		return crds, nil
-	})
+	}
+
+	if rc.clientConfig == nil {
+		return rc.ps.crds.Get(fetch)
+	}
+	return rc.ps.crdsByKey.Get(rc.key, fetch)
 }
 
 // privateStateSchema describes the structure of the private state payload that

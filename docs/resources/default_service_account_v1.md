@@ -21,6 +21,7 @@ The `kubernetes_default_service_account_v1` resource behaves differently from no
 ### Optional
 
 - `automount_service_account_token` (Boolean) Enable automatic mounting of the service account token
+- `bootstrap_connection` (Block List, Max: 1) Connection settings used while this resource is being created, replacing the provider connection configuration in whole. After creation the provider connection configuration will be used. This is to support creating resources when the credentials are not available at plan time (e.g. when creating a cluster and configuring it in the same stack). For managing resources in multiple clusters use aliased providers instead. (see [below for nested schema](#nestedblock--bootstrap_connection))
 - `image_pull_secret` (Block Set) A list of references to secrets in the same namespace to use for pulling any images in pods that reference this Service Account. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod (see [below for nested schema](#nestedblock--image_pull_secret))
 - `secret` (Block Set) A list of secrets allowed to be used by pods running using this Service Account. More info: https://kubernetes.io/docs/concepts/configuration/secret (see [below for nested schema](#nestedblock--secret))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
@@ -45,6 +46,43 @@ Read-Only:
 - `generation` (Number) A sequence number representing a specific generation of the desired state.
 - `resource_version` (String) An opaque value that represents the internal version of this service account that can be used by clients to determine when service account has changed. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
 - `uid` (String) The unique in time and space value for this service account. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+
+
+<a id="nestedblock--bootstrap_connection"></a>
+### Nested Schema for `bootstrap_connection`
+
+Optional:
+
+- `client_certificate` (String, Sensitive) PEM-encoded client certificate for TLS authentication.
+- `client_key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
+- `cluster_ca_certificate` (String) PEM-encoded root certificates bundle for TLS authentication.
+- `config_context` (String) Context to choose from the config file.
+- `config_context_auth_info` (String) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`).
+- `config_context_cluster` (String) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`).
+- `config_path` (String) A path to a kube config file.
+- `config_paths` (List of String) A list of paths to the kube config files.
+- `exec` (Block List, Max: 1) Configuration block to use an exec-based credential plugin, e.g. call an external command to receive user credentials. (see [below for nested schema](#nestedblock--bootstrap_connection--exec))
+- `host` (String) The hostname (in form of URI) of the Kubernetes API.
+- `insecure` (Boolean) Whether the server should be accessed without verifying the TLS certificate. Defaults to `false`.
+- `password` (String, Sensitive) The password to use for HTTP basic authentication when accessing the Kubernetes API.
+- `proxy_url` (String) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported.
+- `tls_server_name` (String) Server name passed to the server for SNI and is used in the client to check server certificates against.
+- `token` (String, Sensitive) Token of your service account.
+- `username` (String) The username to use for HTTP basic authentication when accessing the Kubernetes API.
+
+<a id="nestedblock--bootstrap_connection--exec"></a>
+### Nested Schema for `bootstrap_connection.exec`
+
+Required:
+
+- `api_version` (String) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1`.
+- `command` (String) Command to execute.
+
+Optional:
+
+- `args` (List of String) List of arguments to pass when executing the plugin.
+- `env` (Map of String, Sensitive) Map of environment variables to set when executing the plugin.
+
 
 
 <a id="nestedblock--image_pull_secret"></a>

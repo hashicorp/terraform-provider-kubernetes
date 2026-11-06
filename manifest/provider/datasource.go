@@ -80,7 +80,21 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		return resp, nil
 	}
 
-	rm, err := s.getRestMapper()
+	clients, connectionUnknown, clientDiags := s.clientsFor(dsConfig)
+	if len(clientDiags) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, clientDiags...)
+		return resp, nil
+	}
+	if connectionUnknown {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  `"bootstrap_connection" block contains values that are not yet known`,
+			Detail:   `This data source's "bootstrap_connection" block references a value that will only be known after apply.`,
+		})
+		return resp, nil
+	}
+
+	rm, err := clients.RestMapper()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -90,7 +104,7 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 		return resp, nil
 	}
 
-	client, err := s.getDynamicClient()
+	client, err := clients.DynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -126,7 +140,7 @@ func (s *RawProviderServer) ReadPluralDataSource(ctx context.Context, req *tfpro
 	}
 	rcl := client.Resource(gvr)
 
-	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
+	objectType, th, err := clients.TFTypeFromOpenAPI(ctx, gvk, true)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -275,7 +289,21 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 		return resp, nil
 	}
 
-	rm, err := s.getRestMapper()
+	clients, connectionUnknown, clientDiags := s.clientsFor(dsConfig)
+	if len(clientDiags) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, clientDiags...)
+		return resp, nil
+	}
+	if connectionUnknown {
+		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+			Severity: tfprotov5.DiagnosticSeverityError,
+			Summary:  `"bootstrap_connection" block contains values that are not yet known`,
+			Detail:   `This data source's "bootstrap_connection" block references a value that will only be known after apply.`,
+		})
+		return resp, nil
+	}
+
+	rm, err := clients.RestMapper()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -285,7 +313,7 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 		return resp, nil
 	}
 
-	client, err := s.getDynamicClient()
+	client, err := clients.DynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
@@ -321,7 +349,7 @@ func (s *RawProviderServer) ReadSingularDataSource(ctx context.Context, req *tfp
 	}
 	rcl := client.Resource(gvr)
 
-	objectType, th, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
+	objectType, th, err := clients.TFTypeFromOpenAPI(ctx, gvk, true)
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

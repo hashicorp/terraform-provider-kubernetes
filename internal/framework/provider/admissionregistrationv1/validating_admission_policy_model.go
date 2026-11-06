@@ -9,10 +9,11 @@ import (
 )
 
 type ValidatingAdmissionPolicyModel struct {
-	Timeouts timeouts.Value                     `tfsdk:"timeouts"`
-	ID       types.String                       `tfsdk:"id"`
-	Metadata MetadataModel                      `tfsdk:"metadata"`
-	Spec     ValidatingAdmissionPolicySpecModel `tfsdk:"spec"`
+	Timeouts            timeouts.Value                     `tfsdk:"timeouts"`
+	ID                  types.String                       `tfsdk:"id"`
+	Metadata            MetadataModel                      `tfsdk:"metadata"`
+	Spec                ValidatingAdmissionPolicySpecModel `tfsdk:"spec"`
+	BootstrapConnection []BootstrapConnectionModel         `tfsdk:"bootstrap_connection"`
 }
 
 type MetadataModel struct {

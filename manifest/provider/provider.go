@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 )
 
 // GetObjectTypeFromSchema returns a tftypes.Type that can wholy represent the schema input
@@ -61,6 +63,263 @@ func GetDataSourceType(name string) (tftypes.Type, error) {
 		return tftypes.DynamicPseudoType, fmt.Errorf("unknown data source %q: cannot find schema", name)
 	}
 	return GetObjectTypeFromSchema(rsch), nil
+}
+
+func connectionBlockSchema() *tfprotov5.SchemaNestedBlock {
+	return &tfprotov5.SchemaNestedBlock{
+		TypeName: util.BootstrapConnectionKey,
+		Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+		MinItems: 0,
+		MaxItems: 1,
+		Block: &tfprotov5.SchemaBlock{
+			Description: util.BootstrapConnectionDescription,
+			BlockTypes: []*tfprotov5.SchemaNestedBlock{
+				{
+					TypeName: "exec",
+					Nesting:  tfprotov5.SchemaNestedBlockNestingModeList,
+					MinItems: 0,
+					MaxItems: 1,
+					Block: &tfprotov5.SchemaBlock{
+						Description: util.BootstrapConnectionExecDescription,
+						Attributes: []*tfprotov5.SchemaAttribute{
+							{
+								Name:        "api_version",
+								Type:        tftypes.String,
+								Required:    true,
+								Description: util.BootstrapConnectionExecAPIVersionDescription,
+								WriteOnly:   true,
+							},
+							{
+								Name:        "command",
+								Type:        tftypes.String,
+								Required:    true,
+								Description: util.BootstrapConnectionExecCommandDescription,
+								WriteOnly:   true,
+							},
+							{
+								Name:        "env",
+								Type:        tftypes.Map{ElementType: tftypes.String},
+								Optional:    true,
+								WriteOnly:   true,
+								Sensitive:   true,
+								Description: util.BootstrapConnectionExecEnvDescription,
+							},
+							{
+								Name:        "args",
+								Type:        tftypes.List{ElementType: tftypes.String},
+								Optional:    true,
+								Description: util.BootstrapConnectionExecArgsDescription,
+								WriteOnly:   true,
+							},
+						},
+					},
+				},
+			},
+			Attributes: []*tfprotov5.SchemaAttribute{
+				{
+					Name:        "host",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionHostDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "username",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionUsernameDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "password",
+					Type:        tftypes.String,
+					Optional:    true,
+					WriteOnly:   true,
+					Sensitive:   true,
+					Description: util.BootstrapConnectionPasswordDescription,
+				},
+				{
+					Name:        "insecure",
+					Type:        tftypes.Bool,
+					Optional:    true,
+					Description: util.BootstrapConnectionInsecureDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "tls_server_name",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionTLSServerNameDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "client_certificate",
+					Type:        tftypes.String,
+					Optional:    true,
+					WriteOnly:   true,
+					Sensitive:   true,
+					Description: util.BootstrapConnectionClientCertificateDescription,
+				},
+				{
+					Name:        "client_key",
+					Type:        tftypes.String,
+					Optional:    true,
+					WriteOnly:   true,
+					Sensitive:   true,
+					Description: util.BootstrapConnectionClientKeyDescription,
+				},
+				{
+					Name:        "cluster_ca_certificate",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionClusterCACertificateDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "config_paths",
+					Type:        tftypes.List{ElementType: tftypes.String},
+					Optional:    true,
+					Description: util.BootstrapConnectionConfigPathsDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "config_path",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionConfigPathDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "config_context",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionConfigContextDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "config_context_cluster",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionConfigContextClusterDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "config_context_auth_info",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionConfigContextAuthInfoDescription,
+					WriteOnly:   true,
+				},
+				{
+					Name:        "token",
+					Type:        tftypes.String,
+					Optional:    true,
+					WriteOnly:   true,
+					Sensitive:   true,
+					Description: util.BootstrapConnectionTokenDescription,
+				},
+				{
+					Name:        "proxy_url",
+					Type:        tftypes.String,
+					Optional:    true,
+					Description: util.BootstrapConnectionProxyURLDescription,
+					WriteOnly:   true,
+				},
+			},
+		},
+	}
+}
+
+var writeOnlyConnectionAttributes = map[string][]string{
+	"": {
+		"host", "username", "password", "insecure", "tls_server_name",
+		"client_certificate", "client_key", "cluster_ca_certificate",
+		"config_paths", "config_path", "config_context", "config_context_cluster",
+		"config_context_auth_info", "token", "proxy_url",
+	},
+	"exec": {"api_version", "command", "env", "args"},
+}
+
+func writeOnlyConnectionAttributesSet(resourceConfig map[string]tftypes.Value) []string {
+	connVal, ok := resourceConfig["bootstrap_connection"]
+	if !ok || connVal.IsNull() {
+		return nil
+	}
+	var connBlock []tftypes.Value
+	if err := connVal.As(&connBlock); err != nil || len(connBlock) == 0 || connBlock[0].IsNull() {
+		return nil
+	}
+	var connMap map[string]tftypes.Value
+	if err := connBlock[0].As(&connMap); err != nil {
+		return nil
+	}
+
+	var set []string
+	for _, name := range writeOnlyConnectionAttributes[""] {
+		if v, ok := connMap[name]; ok && !v.IsNull() {
+			set = append(set, name)
+		}
+	}
+
+	execVal, ok := connMap["exec"]
+	if !ok || execVal.IsNull() {
+		return set
+	}
+	var execBlock []tftypes.Value
+	if err := execVal.As(&execBlock); err != nil || len(execBlock) == 0 || execBlock[0].IsNull() {
+		return set
+	}
+	var execMap map[string]tftypes.Value
+	if err := execBlock[0].As(&execMap); err != nil {
+		return set
+	}
+	for _, name := range writeOnlyConnectionAttributes["exec"] {
+		if v, ok := execMap[name]; ok && !v.IsNull() {
+			set = append(set, "exec."+name)
+		}
+	}
+	return set
+}
+
+func nullifyWriteOnlyConnection(v tftypes.Value) (tftypes.Value, error) {
+	if v.IsNull() || !v.IsKnown() {
+		return v, nil
+	}
+	return tftypes.Transform(v, func(path *tftypes.AttributePath, val tftypes.Value) (tftypes.Value, error) {
+		steps := path.Steps()
+		// connection -> [index] -> attr  (3 steps), or
+		// connection -> [index] -> exec -> [index] -> attr  (5 steps)
+		if len(steps) != 3 && len(steps) != 5 {
+			return val, nil
+		}
+		root, ok := steps[0].(tftypes.AttributeName)
+		if !ok || string(root) != "bootstrap_connection" {
+			return val, nil
+		}
+
+		block := ""
+		if len(steps) == 5 {
+			nested, ok := steps[2].(tftypes.AttributeName)
+			if !ok {
+				return val, nil
+			}
+			block = string(nested)
+		}
+		attr, ok := steps[len(steps)-1].(tftypes.AttributeName)
+		if !ok {
+			return val, nil
+		}
+
+		for _, name := range writeOnlyConnectionAttributes[block] {
+			if string(attr) == name {
+				if val.IsNull() {
+					return val, nil
+				}
+				return tftypes.NewValue(val.Type(), nil), nil
+			}
+		}
+		return val, nil
+	})
 }
 
 // GetProviderResourceSchema contains the definitions of all supported resources
@@ -176,6 +435,7 @@ func GetProviderResourceSchema() map[string]*tfprotov5.Schema {
 							},
 						},
 					},
+					connectionBlockSchema(),
 				},
 				Attributes: []*tfprotov5.SchemaAttribute{
 					{
@@ -267,6 +527,7 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 							},
 						},
 					},
+					connectionBlockSchema(),
 				},
 			},
 		},
@@ -317,6 +578,9 @@ func GetProviderDataSourceSchema() map[string]*tfprotov5.Schema {
 						Optional:    true,
 						Description: "Limit is a maximum number of responses to return for a list call.",
 					},
+				},
+				BlockTypes: []*tfprotov5.SchemaNestedBlock{
+					connectionBlockSchema(),
 				},
 			},
 		},

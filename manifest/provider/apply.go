@@ -134,7 +134,42 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		computedFields[atp.String()] = atp
 	}
 
-	c, err := s.getDynamicClient()
+	var clients *resourceClients
+	var clientDiags []*tfprotov5.Diagnostic
+	var usedConnectionBlock bool
+	if applyPlannedState.IsNull() {
+		priorConnVals := make(map[string]tftypes.Value)
+		if err := applyPriorState.As(&priorConnVals); err != nil {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  "Failed to extract prior resource state values",
+				Detail:   err.Error(),
+			})
+			return resp, nil
+		}
+		usedConnectionBlock = hasConnectionBlock(priorConnVals)
+		clients, clientDiags = s.providerClients(priorConnVals)
+	} else {
+		if cv, ok := confVals["bootstrap_connection"]; ok {
+			plannedStateVal["bootstrap_connection"] = cv
+		}
+		var connectionUnknown bool
+		clients, connectionUnknown, clientDiags = s.clientsFor(plannedStateVal)
+		if connectionUnknown {
+			resp.Diagnostics = append(resp.Diagnostics, &tfprotov5.Diagnostic{
+				Severity: tfprotov5.DiagnosticSeverityError,
+				Summary:  `"bootstrap_connection" block contains values that are not yet known`,
+				Detail:   "This should not happen at apply time. If this error is reproducible, please report this issue to the provider maintainers.",
+			})
+			return resp, nil
+		}
+	}
+	if len(clientDiags) > 0 {
+		resp.Diagnostics = append(resp.Diagnostics, clientDiags...)
+		return resp, nil
+	}
+
+	c, err := clients.DynamicClient()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics,
 			&tfprotov5.Diagnostic{
@@ -144,7 +179,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			})
 		return resp, nil
 	}
-	m, err := s.getRestMapper()
+	m, err := clients.RestMapper()
 	if err != nil {
 		resp.Diagnostics = append(resp.Diagnostics,
 			&tfprotov5.Diagnostic{
@@ -178,7 +213,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		tsch, th, err := s.TFTypeFromOpenAPI(ctx, gvk, false)
+		tsch, th, err := clients.TFTypeFromOpenAPI(ctx, gvk, false)
 		if err != nil {
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
@@ -406,7 +441,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 			return resp, nil
 		}
 
-		wt, _, err := s.TFTypeFromOpenAPI(ctx, gvk, true)
+		wt, _, err := clients.TFTypeFromOpenAPI(ctx, gvk, true)
 		if err != nil {
 			return resp, fmt.Errorf("failed to determine resource type ID: %s", err)
 		}
@@ -477,6 +512,10 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 		plannedStateVal["object"] = morph.UnknownToNull(compObj)
 
 		newStateVal := tftypes.NewValue(applyPlannedState.Type(), plannedStateVal)
+		newStateVal, err = nullifyWriteOnlyConnection(newStateVal)
+		if err != nil {
+			return resp, err
+		}
 		s.logger.Trace("[ApplyResourceChange][Apply]", "new state value", dump(newStateVal))
 
 		newResState, err := tfprotov5.NewDynamicValue(newStateVal.Type(), newStateVal)
@@ -551,7 +590,20 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 
 		err = rs.Delete(ctxDeadline, rname, metav1.DeleteOptions{})
 		if err != nil {
-			if apierrors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) && usedConnectionBlock {
+				resp.Diagnostics = append(resp.Diagnostics,
+					&tfprotov5.Diagnostic{
+						Severity: tfprotov5.DiagnosticSeverityError,
+						Summary:  fmt.Sprintf("Resource %q was not found when deleting it", rname),
+						Detail: fmt.Sprintf("The resource %q was not found in the Kubernetes API.\n\n"+
+							"This resource has a \"bootstrap_connection\" block, but deleting it uses the provider's "+
+							"configuration, so this response is ambiguous - the object may already be gone, or the "+
+							"provider may be configured against a different cluster than the one the resource was "+
+							"created in.\n\nCheck that the provider for this resource targets the same cluster as its "+
+							"\"bootstrap_connection\" block. If the object is genuinely gone, remove it from state with "+
+							"\"terraform state rm\".", rname),
+					})
+			} else if apierrors.IsNotFound(err) {
 				s.logger.Trace("[ApplyResourceChange][Delete]", "Resource is already deleted")
 
 				resp.Diagnostics = append(resp.Diagnostics,
@@ -560,6 +612,7 @@ func (s *RawProviderServer) ApplyResourceChange(ctx context.Context, req *tfprot
 						Summary:  fmt.Sprintf("Resource %q was already deleted", rname),
 						Detail:   fmt.Sprintf("The resource %q was not found in the Kubernetes API. This may be due to the resource being already deleted.", rname),
 					})
+				resp.NewState = req.PlannedState
 			} else {
 				resp.Diagnostics = append(resp.Diagnostics,
 					&tfprotov5.Diagnostic{

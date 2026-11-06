@@ -17,3 +17,22 @@ func (c *cache[T]) Get(f func() (T, error)) (T, error) {
 	})
 	return c.value, c.err
 }
+
+type keyedCache[T any] struct {
+	mu sync.Mutex
+	m  map[uint64]*cache[T]
+}
+
+func (kc *keyedCache[T]) Get(key uint64, f func() (T, error)) (T, error) {
+	kc.mu.Lock()
+	c, ok := kc.m[key]
+	if !ok {
+		c = &cache[T]{}
+		if kc.m == nil {
+			kc.m = make(map[uint64]*cache[T])
+		}
+		kc.m[key] = c
+	}
+	kc.mu.Unlock()
+	return c.Get(f)
+}

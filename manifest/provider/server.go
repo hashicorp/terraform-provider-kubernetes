@@ -46,6 +46,14 @@ type RawProviderServer struct {
 	crds                        cache[[]unstructured.Unstructured]
 	checkValidCredentialsResult cache[[]*tfprotov5.Diagnostic]
 
+	dynamicClients               keyedCache[dynamic.Interface]
+	discoveryClients             keyedCache[discovery.DiscoveryInterface]
+	restMappers                  keyedCache[meta.RESTMapper]
+	restClients                  keyedCache[rest.Interface]
+	oapiFoundries                keyedCache[openapi.Foundry]
+	crdsByKey                    keyedCache[[]unstructured.Unstructured]
+	checkValidCredentialsResults keyedCache[[]*tfprotov5.Diagnostic]
+
 	hostTFVersion string
 }
 

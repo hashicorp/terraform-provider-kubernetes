@@ -16,7 +16,8 @@ func (r *ValidatingAdmissionPolicy) Schema(ctx context.Context, req resource.Sch
 	resp.Schema = schema.Schema{
 		MarkdownDescription: `Validating Admission Policy Resource`,
 		Blocks: map[string]schema.Block{
-			"timeouts": timeouts.BlockAll(ctx),
+			"timeouts":             timeouts.BlockAll(ctx),
+			"bootstrap_connection": bootstrapConnectionBlock(),
 		},
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

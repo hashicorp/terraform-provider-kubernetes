@@ -19,6 +19,7 @@ A Deployment ensures that a specified number of pod “replicas” are running a
 
 ### Optional
 
+- `bootstrap_connection` (Block List, Max: 1) Connection settings used while this resource is being created, replacing the provider connection configuration in whole. After creation the provider connection configuration will be used. This is to support creating resources when the credentials are not available at plan time (e.g. when creating a cluster and configuring it in the same stack). For managing resources in multiple clusters use aliased providers instead. (see [below for nested schema](#nestedblock--bootstrap_connection))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_rollout` (Boolean) Wait for the rollout of the deployment to complete. Defaults to true.
 
@@ -2260,6 +2261,43 @@ Optional:
 - `max_surge` (String) The maximum number of pods that can be scheduled above the desired number of pods. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). This can not be 0 if MaxUnavailable is 0. Absolute number is calculated from percentage by rounding up. Defaults to 25%. Example: when this is set to 30%, the new RC can be scaled up immediately when the rolling update starts, such that the total number of old and new pods do not exceed 130% of desired pods. Once old pods have been killed, new RC can be scaled up further, ensuring that total number of pods running at any time during the update is atmost 130% of desired pods.
 - `max_unavailable` (String) The maximum number of pods that can be unavailable during the update. Value can be an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). Absolute number is calculated from percentage by rounding down. This can not be 0 if MaxSurge is 0. Defaults to 25%. Example: when this is set to 30%, the old RC can be scaled down to 70% of desired pods immediately when the rolling update starts. Once new pods are ready, old RC can be scaled down further, followed by scaling up the new RC, ensuring that the total number of pods available at all times during the update is at least 70% of desired pods.
 
+
+
+
+<a id="nestedblock--bootstrap_connection"></a>
+### Nested Schema for `bootstrap_connection`
+
+Optional:
+
+- `client_certificate` (String, Sensitive) PEM-encoded client certificate for TLS authentication.
+- `client_key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
+- `cluster_ca_certificate` (String) PEM-encoded root certificates bundle for TLS authentication.
+- `config_context` (String) Context to choose from the config file.
+- `config_context_auth_info` (String) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`).
+- `config_context_cluster` (String) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`).
+- `config_path` (String) A path to a kube config file.
+- `config_paths` (List of String) A list of paths to the kube config files.
+- `exec` (Block List, Max: 1) Configuration block to use an exec-based credential plugin, e.g. call an external command to receive user credentials. (see [below for nested schema](#nestedblock--bootstrap_connection--exec))
+- `host` (String) The hostname (in form of URI) of the Kubernetes API.
+- `insecure` (Boolean) Whether the server should be accessed without verifying the TLS certificate. Defaults to `false`.
+- `password` (String, Sensitive) The password to use for HTTP basic authentication when accessing the Kubernetes API.
+- `proxy_url` (String) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported.
+- `tls_server_name` (String) Server name passed to the server for SNI and is used in the client to check server certificates against.
+- `token` (String, Sensitive) Token of your service account.
+- `username` (String) The username to use for HTTP basic authentication when accessing the Kubernetes API.
+
+<a id="nestedblock--bootstrap_connection--exec"></a>
+### Nested Schema for `bootstrap_connection.exec`
+
+Required:
+
+- `api_version` (String) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1`.
+- `command` (String) Command to execute.
+
+Optional:
+
+- `args` (List of String) List of arguments to pass when executing the plugin.
+- `env` (Map of String, Sensitive) Map of environment variables to set when executing the plugin.
 
 
 

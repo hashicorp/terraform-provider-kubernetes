@@ -160,11 +160,34 @@ func (s *RawProviderServer) ValidateResourceTypeConfig(ctx context.Context, req 
 		})
 	}
 
+	resp.Diagnostics = append(resp.Diagnostics, validateWriteOnlySupport(configVal, req.ClientCapabilities)...)
+
 	return resp, nil
 }
 
-func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (diags []*tfprotov5.Diagnostic) {
-	rm, err := s.getRestMapper()
+func validateWriteOnlySupport(configVal map[string]tftypes.Value, caps *tfprotov5.ValidateResourceTypeConfigClientCapabilities) (diags []*tfprotov5.Diagnostic) {
+	if caps != nil && caps.WriteOnlyAttributesAllowed {
+		return nil
+	}
+	set := writeOnlyConnectionAttributesSet(configVal)
+	if len(set) == 0 {
+		return nil
+	}
+	return []*tfprotov5.Diagnostic{{
+		Severity:  tfprotov5.DiagnosticSeverityError,
+		Summary:   `"bootstrap_connection" requires Terraform 1.11 or later`,
+		Attribute: tftypes.NewAttributePath().WithAttributeName("bootstrap_connection"),
+		Detail: fmt.Sprintf("This resource sets %s in its \"bootstrap_connection\" block. The whole block is "+
+			"write-only, so that nothing it holds - credentials for the target cluster above all - is ever "+
+			"written to Terraform state, and write-only attributes require Terraform 1.11 or later.\n\n"+
+			"Either upgrade Terraform, or remove the \"bootstrap_connection\" block and configure a provider for the "+
+			"target cluster instead - which requires that the cluster already exists when Terraform starts.",
+			strings.Join(set, ", ")),
+	}}
+}
+
+func (rc *resourceClients) validateResourceOnline(manifest *tftypes.Value) (diags []*tfprotov5.Diagnostic) {
+	rm, err := rc.RestMapper()
 	if err != nil {
 		diags = append(diags, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,

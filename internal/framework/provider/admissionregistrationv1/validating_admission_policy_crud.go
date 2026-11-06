@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
+	"github.com/hashicorp/terraform-provider-kubernetes/util"
 
 	arv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,7 +37,7 @@ func (r *ValidatingAdmissionPolicy) Create(ctx context.Context, req resource.Cre
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
+	conn, err := bootstrapClientset(r.SDKv2Meta, plan.BootstrapConnection)
 	if err != nil {
 		resp.Diagnostics.AddError("kubernetes client error", err.Error())
 		return
@@ -90,6 +91,11 @@ func (r *ValidatingAdmissionPolicy) Read(ctx context.Context, req resource.ReadR
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	if len(state.BootstrapConnection) > 0 && !kubernetes.ProviderIsConfigured(r.SDKv2Meta()) {
+		resp.Diagnostics.AddError(util.ProviderRequiredSummary, util.ProviderRequiredDetail)
+		return
+	}
 
 	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
@@ -147,6 +153,11 @@ func (r *ValidatingAdmissionPolicy) Update(ctx context.Context, req resource.Upd
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	if len(plan.BootstrapConnection) > 0 && !kubernetes.ProviderIsConfigured(r.SDKv2Meta()) {
+		resp.Diagnostics.AddError(util.ProviderRequiredSummary, util.ProviderRequiredDetail)
+		return
+	}
 
 	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {
@@ -214,6 +225,11 @@ func (r *ValidatingAdmissionPolicy) Delete(ctx context.Context, req resource.Del
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	if len(state.BootstrapConnection) > 0 && !kubernetes.ProviderIsConfigured(r.SDKv2Meta()) {
+		resp.Diagnostics.AddError(util.ProviderRequiredSummary, util.ProviderRequiredDetail)
+		return
+	}
 
 	conn, err := r.SDKv2Meta().(kubernetes.KubeClientsets).MainClientset()
 	if err != nil {

@@ -19,6 +19,7 @@ Ingress is a collection of rules that allow inbound connections to reach the end
 
 ### Optional
 
+- `bootstrap_connection` (Block List, Max: 1) Connection settings used while this resource is being created, replacing the provider connection configuration in whole. After creation the provider connection configuration will be used. This is to support creating resources when the credentials are not available at plan time (e.g. when creating a cluster and configuring it in the same stack). For managing resources in multiple clusters use aliased providers instead. (see [below for nested schema](#nestedblock--bootstrap_connection))
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait_for_load_balancer` (Boolean) Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.
 
@@ -180,6 +181,43 @@ Optional:
 
 - `hosts` (List of String) hosts is a list of hosts included in the TLS certificate. The values in this list must match the name/s used in the tlsSecret. Defaults to the wildcard host setting for the loadbalancer controller fulfilling this Ingress, if left unspecified.
 - `secret_name` (String) secretName is the name of the secret used to terminate TLS traffic on port 443. Field is left optional to allow TLS routing based on SNI hostname alone. If the SNI host in a listener conflicts with the "Host" header field used by an IngressRule, the SNI host is used for termination and value of the "Host" header is used for routing.
+
+
+
+<a id="nestedblock--bootstrap_connection"></a>
+### Nested Schema for `bootstrap_connection`
+
+Optional:
+
+- `client_certificate` (String, Sensitive) PEM-encoded client certificate for TLS authentication.
+- `client_key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
+- `cluster_ca_certificate` (String) PEM-encoded root certificates bundle for TLS authentication.
+- `config_context` (String) Context to choose from the config file.
+- `config_context_auth_info` (String) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`).
+- `config_context_cluster` (String) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`).
+- `config_path` (String) A path to a kube config file.
+- `config_paths` (List of String) A list of paths to the kube config files.
+- `exec` (Block List, Max: 1) Configuration block to use an exec-based credential plugin, e.g. call an external command to receive user credentials. (see [below for nested schema](#nestedblock--bootstrap_connection--exec))
+- `host` (String) The hostname (in form of URI) of the Kubernetes API.
+- `insecure` (Boolean) Whether the server should be accessed without verifying the TLS certificate. Defaults to `false`.
+- `password` (String, Sensitive) The password to use for HTTP basic authentication when accessing the Kubernetes API.
+- `proxy_url` (String) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported.
+- `tls_server_name` (String) Server name passed to the server for SNI and is used in the client to check server certificates against.
+- `token` (String, Sensitive) Token of your service account.
+- `username` (String) The username to use for HTTP basic authentication when accessing the Kubernetes API.
+
+<a id="nestedblock--bootstrap_connection--exec"></a>
+### Nested Schema for `bootstrap_connection.exec`
+
+Required:
+
+- `api_version` (String) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1`.
+- `command` (String) Command to execute.
+
+Optional:
+
+- `args` (List of String) List of arguments to pass when executing the plugin.
+- `env` (Map of String, Sensitive) Map of environment variables to set when executing the plugin.
 
 
 

@@ -20,11 +20,47 @@ spec (Block, Min: 1, Max: 1) Specification of the desired behavior of the Valida
 
 ### Optional
 
+- `bootstrap_connection` (Block List) Connection settings used while this resource is being created, for a cluster that does not exist yet when the provider is configured and so cannot be reached by any provider configuration during that apply. Reading and destroying the resource use its provider instead, so the resource still needs a provider configured for the same cluster - to manage resources across several clusters, use aliased provider configurations rather than this block. Not merged with the provider block, and unlike the provider block it does not fall back to KUBE_* environment variables. The credential attributes are write-only: they are never persisted to state, so Terraform 1.11 or later is required to set them. (see below for nested schema)
 - `timeouts` (Block) Configurable timeout for CRUD operations (see below for nested schema)
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+<a id="nestedblock--bootstrap_connection"></a>
+Nested Schema for `bootstrap_connection`
+
+Optional:
+
+- `client_certificate` (String, Sensitive) PEM-encoded client certificate for TLS authentication.
+- `client_key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
+- `cluster_ca_certificate` (String) PEM-encoded root certificates bundle for TLS authentication.
+- `config_context` (String) Context to choose from the config file.
+- `config_context_auth_info` (String) Authentication info context of the kube config (name of the kubeconfig user, `--user` flag in `kubectl`).
+- `config_context_cluster` (String) Cluster context of the kube config (name of the kubeconfig cluster, `--cluster` flag in `kubectl`).
+- `config_path` (String) A path to a kube config file.
+- `config_paths` (List of String) A list of paths to the kube config files.
+- `exec` (Block List) Configuration block to use an exec-based credential plugin, e.g. call an external command to receive user credentials. (see below for nested schema)
+- `host` (String) The hostname (in form of URI) of the Kubernetes API.
+- `insecure` (Boolean) Whether the server should be accessed without verifying the TLS certificate. Defaults to `false`.
+- `password` (String, Sensitive) The password to use for HTTP basic authentication when accessing the Kubernetes API.
+- `proxy_url` (String) URL to the proxy to be used for all API requests. URLs with "http", "https", and "socks5" schemes are supported.
+- `tls_server_name` (String) Server name passed to the server for SNI and is used in the client to check server certificates against.
+- `token` (String, Sensitive) Token of your service account.
+- `username` (String) The username to use for HTTP basic authentication when accessing the Kubernetes API.
+
+<a id="nestedblock--bootstrap_connection--exec"></a>
+Nested Schema for `bootstrap_connection.exec`
+
+Required:
+
+- `api_version` (String) API version to use when decoding the ExecCredentials resource, e.g. `client.authentication.k8s.io/v1`.
+- `command` (String) Command to execute.
+
+Optional:
+
+- `args` (List of String) List of arguments to pass when executing the plugin.
+- `env` (Map of String, Sensitive) Map of environment variables to set when executing the plugin.
 
 <a id="nestedblock--metadata"></a>
 Nested Schema for `metadata`

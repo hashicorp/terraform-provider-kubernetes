@@ -137,7 +137,7 @@ func getTypeFromSchema(elem *openapi3.Schema, stackdepth uint64, typeCache *sync
 				typeCache.Store(h, t)
 			}
 			return t, nil
-		case elem.AdditionalProperties != nil && elem.Items == nil: // "overriden" array - translates to a tftypes.Tuple
+		case elem.AdditionalProperties != nil && elem.Items == nil: // "overridden" array - translates to a tftypes.Tuple
 			it, err := resolveSchemaRef(elem.AdditionalProperties, defs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve schema for items: %s", err)

@@ -673,7 +673,7 @@ func morphObjectToType(v tftypes.Value, t tftypes.Type, p *tftypes.AttributePath
 	return tftypes.Value{}, diags
 }
 
-// ValueToTypePath "normalizes" AttributePaths of values into a form that only describes the type hyerarchy.
+// ValueToTypePath "normalizes" AttributePaths of values into a form that only describes the type hierarchy.
 // this is used when comparing value paths to type hints generated during the translation from OpenAPI into tftypes.
 func ValueToTypePath(a *tftypes.AttributePath) *tftypes.AttributePath {
 	if a == nil {

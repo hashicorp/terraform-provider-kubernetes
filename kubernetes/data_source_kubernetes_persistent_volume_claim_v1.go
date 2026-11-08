@@ -78,6 +78,12 @@ func dataSourceKubernetesPersistentVolumeClaimV1(deprecationMessage string) *sch
 							Optional:    true,
 							Computed:    true,
 						},
+						"volume_attributes_class_name": {
+							Type:        schema.TypeString,
+							Description: "Name of the volume attributes class used by this claim.",
+							Optional:    true,
+							Computed:    true,
+						},
 						"volume_mode": {
 							Type:        schema.TypeString,
 							Description: "Defines what type of volume is required by the claim.",

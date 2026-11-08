@@ -26,6 +26,9 @@ func flattenPersistentVolumeClaimSpec(in corev1.PersistentVolumeClaimSpec) []int
 	if in.StorageClassName != nil {
 		att["storage_class_name"] = *in.StorageClassName
 	}
+	if in.VolumeAttributesClassName != nil {
+		att["volume_attributes_class_name"] = *in.VolumeAttributesClassName
+	}
 	if in.VolumeMode != nil {
 		att["volume_mode"] = in.VolumeMode
 	}
@@ -87,6 +90,9 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 	}
 	if v, ok := in["storage_class_name"].(string); ok && v != "" {
 		obj.StorageClassName = ptr.To(v)
+	}
+	if v, ok := in["volume_attributes_class_name"].(string); ok && v != "" {
+		obj.VolumeAttributesClassName = ptr.To(v)
 	}
 	if v, ok := in["volume_mode"].(string); ok && v != "" {
 		obj.VolumeMode = ptr.To(corev1.PersistentVolumeMode(v))

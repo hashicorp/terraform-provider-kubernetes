@@ -269,6 +269,16 @@ func resourceKubernetesServiceSchemaV1() map[string]*schema.Schema {
 							},
 						},
 					},
+					"traffic_distribution": {
+						Type:        schema.TypeString,
+						Description: "Specifies the preferred strategy for distributing traffic to Service endpoints. Default to K8s default routing strategy when not set. Valid options are `PreferSameZone`, `PreferSameNode`, `PreferClose` (deprecated since K8s 1.35)",
+						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							corev1.ServiceTrafficDistributionPreferSameZone,
+							corev1.ServiceTrafficDistributionPreferSameNode,
+							corev1.ServiceTrafficDistributionPreferClose,
+						}, false),
+					},
 					"type": {
 						Type:        schema.TypeString,
 						Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types",

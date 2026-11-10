@@ -14,13 +14,13 @@ This resource allows Terraform to manage data within a pre-existing Secret. This
 
 ### Required
 
-- `data` (Map of String) The data we want to add to the Secret.
-- `metadata` (Block List, Min: 1, Max: 1) (see [below for nested schema](#nestedblock--metadata))
+- `data` (Map of String) Data to be stored in the Kubernetes Secret.
+- `metadata` (Block List, Min: 1, Max: 1) Metadata for the kubernetes Secret. (see [below for nested schema](#nestedblock--metadata))
 
 ### Optional
 
-- `field_manager` (String) Set the name of the field manager for the specified labels.
-- `force` (Boolean) Force overwriting data that is managed outside of Terraform.
+- `field_manager` (String) Set the name of the field manager for the specified labels
+- `force` (Boolean) Flag to force updates to the Kubernetes Secret.
 
 ### Read-Only
 
@@ -36,6 +36,9 @@ Required:
 Optional:
 
 - `namespace` (String) The namespace of the Secret.
+
+
+
 
 ## Example Usage
 
@@ -54,5 +57,3 @@ resource "kubernetes_secret_v1_data" "example" {
 ## Import
 
 This resource does not support the `import` command. As this resource operates on Kubernetes resources that already exist, creating the resource is equivalent to importing it.
-
-

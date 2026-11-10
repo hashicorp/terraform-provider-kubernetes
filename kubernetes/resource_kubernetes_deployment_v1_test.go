@@ -1654,7 +1654,7 @@ resource "kubernetes_deployment_v1" "test" {
           }
           env_from {
             config_map_ref {
-              name = kubernetes_config_map_v1.test.metadata.0.name
+              name = kubernetes_config_map.test.metadata.0.name
             }
             prefix = "CONFIG"
           }
@@ -1711,7 +1711,7 @@ resource "kubernetes_secret_v1" "test" {
 }
 
 
-resource "kubernetes_config_map_v1" "test" {
+resource "kubernetes_config_map" "test" {
   metadata {
     name      = "%s-test"
     namespace = kubernetes_namespace.test.metadata.0.name

@@ -103,6 +103,7 @@ func testAccRoleMigrationFrom(t *testing.T, version, config string, planCheck pl
 		importIgnore = []string{prefix + "%", prefix + "example.kubernetes.io/owner"}
 	}
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -311,6 +312,7 @@ func TestAccRole_UpgradeFromSDKv2(t *testing.T) {
 	var uid string
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
 		CheckDestroy: testAccRoleCheckDestroy,
 		Steps: []resource.TestStep{
 			{
@@ -388,6 +390,7 @@ func testAccRoleNullMetadataMigration(t *testing.T, sourceType string, targetCon
 		var uid string
 
 		resource.ParallelTest(t, resource.TestCase{
+			PreCheck:     func() { testAccPreCheck(t) },
 			CheckDestroy: testAccRoleCheckDestroy,
 			TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 				tfversion.SkipBelow(tfversion.Version1_8_0),

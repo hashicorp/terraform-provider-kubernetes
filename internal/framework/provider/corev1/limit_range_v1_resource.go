@@ -223,9 +223,9 @@ func (r *LimitRangeV1) MoveState(ctx context.Context) []resource.StateMover {
 					},
 					Namespace: types.StringValue(m.Namespace),
 				}
-				meta.Labels, diags = sdkv2MapToFramework(ctx, m.Labels)
+				meta.Labels, diags = common.SDKv2MapToFramework(ctx, m.Labels)
 				resp.Diagnostics.Append(diags...)
-				meta.Annotations, diags = sdkv2MapToFramework(ctx, m.Annotations)
+				meta.Annotations, diags = common.SDKv2MapToFramework(ctx, m.Annotations)
 				resp.Diagnostics.Append(diags...)
 
 				// SDKv2 writes "" for an unset generate_name; the framework uses null.
@@ -284,15 +284,15 @@ func sdkv2LimitRangeSpecToFramework(ctx context.Context, sdkSpec []sdkv2LimitRan
 		}
 		var d diag.Diagnostics
 
-		item.Default, d = sdkv2MapToFramework(ctx, l.Default)
+		item.Default, d = common.SDKv2MapToFramework(ctx, l.Default)
 		diags.Append(d...)
-		item.DefaultRequest, d = sdkv2MapToFramework(ctx, l.DefaultRequest)
+		item.DefaultRequest, d = common.SDKv2MapToFramework(ctx, l.DefaultRequest)
 		diags.Append(d...)
-		item.Max, d = sdkv2MapToFramework(ctx, l.Max)
+		item.Max, d = common.SDKv2MapToFramework(ctx, l.Max)
 		diags.Append(d...)
-		item.MaxLimitRequestRatio, d = sdkv2MapToFramework(ctx, l.MaxLimitRequestRatio)
+		item.MaxLimitRequestRatio, d = common.SDKv2MapToFramework(ctx, l.MaxLimitRequestRatio)
 		diags.Append(d...)
-		item.Min, d = sdkv2MapToFramework(ctx, l.Min)
+		item.Min, d = common.SDKv2MapToFramework(ctx, l.Min)
 		diags.Append(d...)
 
 		items[i] = item

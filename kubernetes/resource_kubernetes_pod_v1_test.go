@@ -1837,7 +1837,7 @@ resource "kubernetes_secret_v1" "test_from" {
   }
 }
 
-resource "kubernetes_config_map_v1" "test" {
+resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
   }
@@ -1847,7 +1847,7 @@ resource "kubernetes_config_map_v1" "test" {
   }
 }
 
-resource "kubernetes_config_map_v1" "test_from" {
+resource "kubernetes_config_map" "test_from" {
   metadata {
     name = "%s-from"
   }
@@ -1888,7 +1888,7 @@ resource "kubernetes_pod_v1" "test" {
         name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
         value_from {
           config_map_key_ref {
-            name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
+            name     = "${kubernetes_config_map.test.metadata.0.name}"
             key      = "one"
             optional = true
           }
@@ -1897,7 +1897,7 @@ resource "kubernetes_pod_v1" "test" {
 
       env_from {
         config_map_ref {
-          name     = "${kubernetes_config_map_v1.test_from.metadata.0.name}"
+          name     = "${kubernetes_config_map.test_from.metadata.0.name}"
           optional = true
         }
         prefix = "FROM_CM_"
@@ -2415,7 +2415,7 @@ resource "kubernetes_pod_v1" "test" {
 }
 
 func testAccKubernetesPodV1ConfigWithConfigMapVolume(secretName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
   }
@@ -2471,7 +2471,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg"
 
       config_map {
-        name         = "${kubernetes_config_map_v1.test.metadata.0.name}"
+        name         = "${kubernetes_config_map.test.metadata.0.name}"
         default_mode = "0777"
       }
     }
@@ -2480,7 +2480,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg-item"
 
       config_map {
-        name = "${kubernetes_config_map_v1.test.metadata.0.name}"
+        name = "${kubernetes_config_map.test.metadata.0.name}"
 
         items {
           key  = "one"
@@ -2493,7 +2493,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg-item-with-mode"
 
       config_map {
-        name = "${kubernetes_config_map_v1.test.metadata.0.name}"
+        name = "${kubernetes_config_map.test.metadata.0.name}"
 
         items {
           key  = "one"
@@ -2507,7 +2507,7 @@ resource "kubernetes_pod_v1" "test" {
       name = "cfg-binary"
 
       config_map {
-        name = "${kubernetes_config_map_v1.test.metadata.0.name}"
+        name = "${kubernetes_config_map.test.metadata.0.name}"
 
         items {
           key  = "raw"
@@ -2570,7 +2570,7 @@ resource "kubernetes_pod_v1" "test" {
 }
 
 func testAccKubernetesPodV1ProjectedVolume(cfgMapName, cfgMap2Name, secretName, podName, imageName string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
   }
@@ -2584,7 +2584,7 @@ func testAccKubernetesPodV1ProjectedVolume(cfgMapName, cfgMap2Name, secretName, 
   }
 }
 
-resource "kubernetes_config_map_v1" "test2" {
+resource "kubernetes_config_map" "test2" {
   metadata {
     name = "%s"
   }
@@ -2647,7 +2647,7 @@ resource "kubernetes_pod_v1" "test" {
         default_mode = "0777"
         sources {
           config_map {
-            name = "${kubernetes_config_map_v1.test.metadata.0.name}"
+            name = "${kubernetes_config_map.test.metadata.0.name}"
             items {
               key  = "raw"
               path = "raw.txt"
@@ -2656,7 +2656,7 @@ resource "kubernetes_pod_v1" "test" {
         }
         sources {
           config_map {
-            name = "${kubernetes_config_map_v1.test2.metadata.0.name}"
+            name = "${kubernetes_config_map.test2.metadata.0.name}"
             items {
               key  = "raw"
               path = "raw-again.txt"
@@ -3104,7 +3104,7 @@ resource "kubernetes_secret_v1" "test_from" {
   }
 }
 
-resource "kubernetes_config_map_v1" "test" {
+resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
   }
@@ -3114,7 +3114,7 @@ resource "kubernetes_config_map_v1" "test" {
   }
 }
 
-resource "kubernetes_config_map_v1" "test_from" {
+resource "kubernetes_config_map" "test_from" {
   metadata {
     name = "%s-from"
   }
@@ -3159,7 +3159,7 @@ resource "kubernetes_pod_v1" "test" {
         name = "EXPORTED_VARIABLE_FROM_CONFIG_MAP"
         value_from {
           config_map_key_ref {
-            name     = "${kubernetes_config_map_v1.test.metadata.0.name}"
+            name     = "${kubernetes_config_map.test.metadata.0.name}"
             key      = "one"
             optional = true
           }
@@ -3168,7 +3168,7 @@ resource "kubernetes_pod_v1" "test" {
 
       env_from {
         config_map_ref {
-          name     = "${kubernetes_config_map_v1.test_from.metadata.0.name}"
+          name     = "${kubernetes_config_map.test_from.metadata.0.name}"
           optional = true
         }
         prefix = "FROM_CM_"
@@ -3469,7 +3469,7 @@ resource "kubernetes_role_binding" "authentication_reader" {
   }
 }
 
-resource "kubernetes_config_map_v1" "scheduler_config" {
+resource "kubernetes_config_map" "scheduler_config" {
   metadata {
     name      = "${var.scheduler_name}-config"
     namespace = var.namespace
@@ -3531,7 +3531,7 @@ resource "kubernetes_pod_v1" "scheduler" {
     volume {
       name = "config-volume"
       config_map {
-        name = kubernetes_config_map_v1.scheduler_config.metadata.0.name
+        name = kubernetes_config_map.scheduler_config.metadata.0.name
       }
     }
   }

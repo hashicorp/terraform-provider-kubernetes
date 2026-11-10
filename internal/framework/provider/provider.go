@@ -198,6 +198,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
 		rbacv1.NewClusterRoleBindingV1,
+		corev1.NewConfigMapV1,
 		corev1.NewNamespaceV1,
 		rbacv1.NewRoleBindingV1,
 		rbacv1.NewRoleV1,

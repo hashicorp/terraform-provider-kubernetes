@@ -257,8 +257,8 @@ func Provider() *schema.Provider {
 			"kubernetes_service_account_v1":         resourceKubernetesServiceAccountV1(""),
 			"kubernetes_default_service_account":    resourceKubernetesDefaultServiceAccountV1("Deprecated; use kubernetes_default_service_account_v1."),
 			"kubernetes_default_service_account_v1": resourceKubernetesDefaultServiceAccountV1(""),
+			// kubernetes_config_map_v1 has migrated to the Plugin Framework provider (internal/framework/provider/corev1).
 			"kubernetes_config_map":                 resourceKubernetesConfigMapV1("Deprecated; use kubernetes_config_map_v1."),
-			"kubernetes_config_map_v1":              resourceKubernetesConfigMapV1(""),
 			"kubernetes_config_map_v1_data":         resourceKubernetesConfigMapV1Data(),
 			"kubernetes_secret":                     resourceKubernetesSecretV1("Deprecated; use kubernetes_secret_v1."),
 			"kubernetes_secret_v1":                  resourceKubernetesSecretV1(""),

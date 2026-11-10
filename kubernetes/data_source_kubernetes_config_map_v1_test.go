@@ -14,7 +14,7 @@ import (
 // TestAccKubernetesDataSourceConfigMap_basic tests that the data source is able to read
 // plaintext data, binary data, annotation, label, and name of the config map resource.
 func TestAccKubernetesDataSourceConfigMapV1_basic(t *testing.T) {
-	resourceName := "kubernetes_config_map_v1.test"
+	resourceName := "kubernetes_config_map.test"
 	dataSourceName := "data.kubernetes_config_map_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -69,7 +69,7 @@ func TestAccKubernetesDataSourceConfigMapV1_not_found(t *testing.T) {
 // testAccKubernetesDataSourceConfigMapConfig_basic provides the terraform config
 // used to test basic functionality of the config_map data source.
 func testAccKubernetesDataSourceConfigMapV1_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -96,7 +96,7 @@ func testAccKubernetesDataSourceConfigMapV1_basic(name string) string {
 func testAccKubernetesDataSourceConfigMapV1_read() string {
 	return `data "kubernetes_config_map_v1" "test" {
   metadata {
-    name = "${kubernetes_config_map_v1.test.metadata.0.name}"
+    name = "${kubernetes_config_map.test.metadata.0.name}"
   }
 }
 `

@@ -3,6 +3,10 @@
 
 package kubernetes
 
+// This file retains its historical _v1 name, but kubernetes_config_map_v1 has migrated
+// to the Plugin Framework (internal/framework/provider/corev1). It contains acceptance
+// tests for the deprecated, unversioned SDKv2 resource kubernetes_config_map.
+
 import (
 	"context"
 	"fmt"
@@ -23,10 +27,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-func TestAccKubernetesConfigMapV1_basic(t *testing.T) {
+func TestAccKubernetesConfigMap_basic(t *testing.T) {
 	var conf corev1.ConfigMap
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_config_map_v1.test"
+	resourceName := "kubernetes_config_map.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -118,10 +122,10 @@ func TestAccKubernetesConfigMapV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesConfigMapV1_binaryData(t *testing.T) {
+func TestAccKubernetesConfigMap_binaryData(t *testing.T) {
 	var conf corev1.ConfigMap
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_config_map_v1.test"
+	resourceName := "kubernetes_config_map.test"
 	baseDir := "."
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) != "kubernetes" { // running from test binary
@@ -159,7 +163,7 @@ func TestAccKubernetesConfigMapV1_binaryData(t *testing.T) {
 func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 	var conf corev1.ConfigMap
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_config_map_v1.test"
+	resourceName := "kubernetes_config_map.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -192,7 +196,7 @@ func TestAccKubernetesConfigMap_generatedName(t *testing.T) {
 func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 	var conf corev1.ConfigMap
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_config_map_v1.test"
+	resourceName := "kubernetes_config_map.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -239,9 +243,9 @@ func TestAccKubernetesConfigMap_immutable(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesConfigMapV1_identity(t *testing.T) {
+func TestAccKubernetesConfigMap_identity(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_config_map_v1.test"
+	resourceName := "kubernetes_config_map.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -340,7 +344,7 @@ func testAccCheckKubernetesConfigMapV1Exists(n string, obj *corev1.ConfigMap) re
 }
 
 func testAccKubernetesConfigMapV1Config_nodata(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -362,7 +366,7 @@ func testAccKubernetesConfigMapV1Config_nodata(name string) string {
 }
 
 func testAccKubernetesConfigMapV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -387,7 +391,7 @@ func testAccKubernetesConfigMapV1Config_basic(name string) string {
 }
 
 func testAccKubernetesConfigMapV1Config_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -412,7 +416,7 @@ func testAccKubernetesConfigMapV1Config_modified(name string) string {
 }
 
 func testAccKubernetesConfigMapV1Config_noData(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     name = "%s"
   }
@@ -421,7 +425,7 @@ func testAccKubernetesConfigMapV1Config_noData(name string) string {
 }
 
 func testAccKubernetesConfigMapV1Config_generatedName(prefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -435,7 +439,7 @@ func testAccKubernetesConfigMapV1Config_generatedName(prefix string) string {
 }
 
 func testAccKubernetesConfigMapV1Config_binaryData(prefix string, bd string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -452,7 +456,7 @@ func testAccKubernetesConfigMapV1Config_binaryData(prefix string, bd string) str
 }
 
 func testAccKubernetesConfigMapV1Config_binaryData2(prefix string, bd string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -471,7 +475,7 @@ func testAccKubernetesConfigMapV1Config_binaryData2(prefix string, bd string) st
 }
 
 func testAccKubernetesConfigMapV1Config_immutable(name string, immutable bool, data string) string {
-	return fmt.Sprintf(`resource "kubernetes_config_map_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_config_map" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"

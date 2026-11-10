@@ -1,0 +1,19 @@
+```release-note:note
+`resource/kubernetes_config_map_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and resource identity, including upgrades from versions before identity support. `moved` blocks from the deprecated `kubernetes_config_map` resource are supported with Terraform 1.8 or later. Explicit empty `labels`, `annotations`, `data` or `binary_data` maps may require a one-time in-place update; this does not replace the Config Map. Identity imports default an omitted namespace to `default`. See the Plugin Framework upgrade guide for details.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_config_map_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected during plan, including `generate_name = ""`. Earlier versions allowed it, but the Kubernetes API ignores `generate_name` whenever `name` is set. To keep the existing Config Map, remove `generate_name` if it is empty (`""`); otherwise remove `name` and keep `generate_name`. Making the other change replaces the Config Map.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_config_map_v1`: `null` is no longer accepted as a value in `metadata.labels`, `metadata.annotations`, `data` or `binary_data`. Earlier versions accepted it and silently dropped the entry.
+```
+
+```release-note:note
+`resource/kubernetes_config_map_v1`: Import IDs require a non-empty namespace and name.
+```
+
+```release-note:note
+`resource/kubernetes_config_map_v1`: Updates now set `immutable` with a JSON patch `add` operation instead of `replace`. The result is the same, and it also works on an imported Config Map whose `immutable` field was never set.
+```

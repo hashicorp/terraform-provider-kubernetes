@@ -204,10 +204,10 @@ func serviceAccountMoveState(ctx context.Context, defaultAccount bool) []resourc
 				metadata.GenerateName = types.StringValue(*generateName)
 			}
 		}
-		labels, diags := sdkv2MapToFramework(ctx, m.Labels)
+		labels, diags := common.SDKv2MapToFramework(ctx, m.Labels)
 		resp.Diagnostics.Append(diags...)
 		metadata.Labels = labels
-		annotations, diags := sdkv2MapToFramework(ctx, m.Annotations)
+		annotations, diags := common.SDKv2MapToFramework(ctx, m.Annotations)
 		resp.Diagnostics.Append(diags...)
 		metadata.Annotations = annotations
 		model := ServiceAccountV1Model{

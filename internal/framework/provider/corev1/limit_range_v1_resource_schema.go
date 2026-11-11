@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -67,12 +68,16 @@ func limitRangeItemBlock() schema.ListNestedBlock {
 					Optional:    true,
 				},
 				// Optional+Computed: the API server back-fills default_request from default
-				// when the user omits it for Container limits.
+				// when the user omits it for Container limits. UseStateForUnknown keeps the
+				// prior value when it is not configured, as SDKv2's Optional+Computed did, so
+				// an update to another attribute neither re-plans it as unknown nor lets the
+				// server back-fill it again from a changed default.
 				"default_request": schema.MapAttribute{
-					Description: "The default resource requirement request value by resource name if resource request is omitted.",
-					ElementType: types.StringType,
-					Optional:    true,
-					Computed:    true,
+					Description:   "The default resource requirement request value by resource name if resource request is omitted.",
+					ElementType:   types.StringType,
+					Optional:      true,
+					Computed:      true,
+					PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 				},
 				"max": schema.MapAttribute{
 					Description: "Max usage constraints on this kind by resource name.",

@@ -91,7 +91,7 @@ func (r *LimitRangeV1) Create(ctx context.Context, req resource.CreateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	plan.Spec = flatSpec
+	plan.Spec = mergePlannedLimitRangeSpec(plan.Spec, flatSpec)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
@@ -160,6 +160,12 @@ func (r *LimitRangeV1) Read(ctx context.Context, req resource.ReadRequest, resp 
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// A configured `spec {}` holds no limits, which flatten reports as no block.
+	// Keep the empty block so the plan after apply stays empty.
+	if len(spec) == 0 && len(state.Spec) > 0 {
+		spec = []LimitRangeSpecModel{{Limit: []LimitRangeItemModel{}}}
 	}
 
 	state.ID = types.StringValue(kubernetes.BuildId(out.ObjectMeta))
@@ -257,7 +263,7 @@ func (r *LimitRangeV1) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	plan.Spec = flatSpec
+	plan.Spec = mergePlannedLimitRangeSpec(plan.Spec, flatSpec)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
@@ -328,18 +334,22 @@ func expandLimitRangeSpec(ctx context.Context, spec []LimitRangeSpecModel, isNew
 		}
 
 		// default_request is forbidden for Pod limits even though the API echoes it back.
-		// SDKv2 raised an error only on create (isNew), matching the original behaviour.
+		// SDKv2 raised an error only on create (isNew) and, on update, silently dropped it
+		// rather than sending it; the carried-over state value must not reach the API.
 		if !l.DefaultRequest.IsNull() && !l.DefaultRequest.IsUnknown() {
-			if item.Type == corev1.LimitTypePod && isNew {
-				diags.AddError(
-					"Invalid limit configuration",
-					fmt.Sprintf("limit[%d].default_request cannot be set for Pod limit", i),
-				)
-				return out, diags
+			if item.Type == corev1.LimitTypePod {
+				if isNew && len(l.DefaultRequest.Elements()) > 0 {
+					diags.AddError(
+						"Invalid limit configuration",
+						fmt.Sprintf("limit[%d].default_request cannot be set for Pod limit", i),
+					)
+					return out, diags
+				}
+			} else {
+				rl, d := expandResourceMap(ctx, l.DefaultRequest)
+				diags.Append(d...)
+				item.DefaultRequest = rl
 			}
-			rl, d := expandResourceMap(ctx, l.DefaultRequest)
-			diags.Append(d...)
-			item.DefaultRequest = rl
 		}
 
 		if !l.Default.IsNull() && !l.Default.IsUnknown() {
@@ -370,6 +380,35 @@ func expandLimitRangeSpec(ctx context.Context, spec []LimitRangeSpecModel, isNew
 	}
 	out.Limits = items
 	return out, diags
+}
+
+// mergePlannedLimitRangeSpec returns the spec to write to state after Create/Update.
+//
+// Terraform requires every known planned value to survive apply unchanged. The API
+// server canonicalises quantities ("1000m" -> "1") and back-fills default and
+// default_request, so the response cannot simply replace the plan. Planned values are
+// kept as written; only unknown values (default_request, Optional+Computed) are
+// resolved from the response, and a later Read reports any real divergence as drift.
+func mergePlannedLimitRangeSpec(planned, fromAPI []LimitRangeSpecModel) []LimitRangeSpecModel {
+	if len(planned) == 0 {
+		return planned
+	}
+	out := make([]LimitRangeSpecModel, len(planned))
+	for si, ps := range planned {
+		limits := make([]LimitRangeItemModel, len(ps.Limit))
+		copy(limits, ps.Limit)
+		for i := range limits {
+			if !limits[i].DefaultRequest.IsUnknown() {
+				continue
+			}
+			limits[i].DefaultRequest = types.MapNull(types.StringType)
+			if si < len(fromAPI) && i < len(fromAPI[si].Limit) {
+				limits[i].DefaultRequest = fromAPI[si].Limit[i].DefaultRequest
+			}
+		}
+		out[si] = LimitRangeSpecModel{Limit: limits}
+	}
+	return out
 }
 
 // expandResourceMap converts a types.Map of quantity strings into a corev1.ResourceList.

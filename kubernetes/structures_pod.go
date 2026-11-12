@@ -227,6 +227,9 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	if in.FSGroupChangePolicy != nil {
 		att["fs_group_change_policy"] = *in.FSGroupChangePolicy
 	}
+	if in.SELinuxChangePolicy != nil {
+		att["se_linux_change_policy"] = string(*in.SELinuxChangePolicy)
+	}
 	if len(in.SupplementalGroups) > 0 {
 		att["supplemental_groups"] = newInt64Set(schema.HashSchema(&schema.Schema{
 			Type: schema.TypeInt,
@@ -1032,6 +1035,10 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 	if v, ok := in["fs_group_change_policy"].(string); ok && v != "" {
 		policy := v1.PodFSGroupChangePolicy(v)
 		obj.FSGroupChangePolicy = &policy
+	}
+	if v, ok := in["se_linux_change_policy"].(string); ok && v != "" {
+		policy := v1.PodSELinuxChangePolicy(v)
+		obj.SELinuxChangePolicy = &policy
 	}
 	if v, ok := in["windows_options"].([]interface{}); ok && len(v) > 0 {
 		obj.WindowsOptions = expandWindowsOptions(v)

@@ -331,11 +331,21 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 					},
 					"fs_group_change_policy": {
 						Type:        schema.TypeString,
-						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume before being exposed inside Pod. This field will only apply to volume types which support fsGroup based ownership(and permissions). It will have no effect on ephemeral volume types such as: secret, configmaps and emptydir.",
+						Description: "fsGroupChangePolicy defines behavior of changing ownership and permission of the volume...",
 						Optional:    true,
 						ValidateFunc: validation.StringInSlice([]string{
 							string(corev1.FSGroupChangeAlways),
 							string(corev1.FSGroupChangeOnRootMismatch),
+						}, false),
+						ForceNew: !isUpdatable,
+					},
+					"se_linux_change_policy": {
+						Type:        schema.TypeString,
+						Description: "seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.",
+						Optional:    true,
+						ValidateFunc: validation.StringInSlice([]string{
+							string(corev1.SELinuxChangePolicyRecursive),
+							string(corev1.SELinuxChangePolicyMountOption),
 						}, false),
 						ForceNew: !isUpdatable,
 					},

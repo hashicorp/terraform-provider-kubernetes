@@ -141,6 +141,16 @@ func TestToTFValue(t *testing.T) {
 			Out: tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{}),
 			Err: nil,
 		},
+		"list (nil)": {
+			In:  sampleInType{nil, tftypes.List{ElementType: tftypes.String}},
+			Out: tftypes.NewValue(tftypes.List{ElementType: tftypes.String}, []tftypes.Value{}),
+			Err: nil,
+		},
+		"set (nil)": {
+			In:  sampleInType{nil, tftypes.Set{ElementType: tftypes.String}},
+			Out: tftypes.NewValue(tftypes.Set{ElementType: tftypes.String}, []tftypes.Value{}),
+			Err: nil,
+		},
 		"set": {
 			In: sampleInType{[]interface{}{"test1", "test2"}, tftypes.Set{ElementType: tftypes.String}},
 			Out: tftypes.NewValue(tftypes.Set{ElementType: tftypes.String}, []tftypes.Value{

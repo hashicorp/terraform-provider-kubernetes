@@ -51,6 +51,17 @@ func flattenValidatingWebhook(in admissionregistrationv1.ValidatingWebhook) map[
 		att["timeout_seconds"] = *in.TimeoutSeconds
 	}
 
+	if len(in.MatchConditions) > 0 {
+		mc := []interface{}{}
+		for _, c := range in.MatchConditions {
+			mc = append(mc, map[string]interface{}{
+				"name":       c.Name,
+				"expression": c.Expression,
+			})
+		}
+		att["match_conditions"] = mc
+	}
+
 	return att
 }
 
@@ -102,6 +113,18 @@ func expandValidatingWebhook(in map[string]interface{}) admissionregistrationv1.
 
 	if v, ok := in["timeout_seconds"].(int); ok {
 		obj.TimeoutSeconds = ptr.To(int32(v))
+	}
+
+	if v, ok := in["match_conditions"].([]interface{}); ok && len(v) > 0 {
+		mc := []admissionregistrationv1.MatchCondition{}
+		for _, c := range v {
+			m := c.(map[string]interface{})
+			mc = append(mc, admissionregistrationv1.MatchCondition{
+				Name:       m["name"].(string),
+				Expression: m["expression"].(string),
+			})
+		}
+		obj.MatchConditions = mc
 	}
 
 	return obj

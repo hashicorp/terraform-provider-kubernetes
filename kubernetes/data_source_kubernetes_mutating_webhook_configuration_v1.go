@@ -107,6 +107,24 @@ func dataSourceKubernetesMutatingWebhookConfigurationV1() *schema.Resource {
 							Description: webhookDoc["timeoutSeconds"],
 							Computed:    true,
 						},
+						"match_conditions": {
+							Type:     schema.TypeList,
+							Computed: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"name": {
+										Type:        schema.TypeString,
+										Description: "The name of the match condition.",
+										Required:    true,
+									},
+									"expression": {
+										Type:        schema.TypeString,
+										Description: "Represents the expression which will be evaluated by the API.",
+										Required:    true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},

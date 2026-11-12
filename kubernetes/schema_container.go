@@ -839,12 +839,22 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 		},
 		"se_linux_options": {
 			Type:        schema.TypeList,
-			Description: "The SELinux context to be applied to the container. If unspecified, the container runtime will allocate a random SELinux context for each container. May also be set in PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+			Description: "The SELinux context to be applied to the container...",
 			Optional:    true,
 			MaxItems:    1,
 			Elem: &schema.Resource{
 				Schema: seLinuxOptionsField(isUpdatable),
 			},
+		},
+		"proc_mount": {
+			Type:        schema.TypeString,
+			Description: "procMount denotes the type of proc mount to use for the containers. The default is DefaultProcMount which uses the container runtime defaults for readonly paths and masked paths. Requires the ProcMountType feature flag to be enabled.",
+			Optional:    true,
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.DefaultProcMount),
+				string(api.UnmaskedProcMount),
+			}, false),
+			ForceNew: !isUpdatable,
 		},
 	}
 

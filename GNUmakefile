@@ -135,16 +135,22 @@ vet:
 #   DOCKER_VOLUME_OPTS="rw,Z"
 # For more info, see https://docs.docker.com/storage/bind-mounts/#configure-the-selinux-label
 DOCKER?=$(shell which docker)
-ifeq ($(strip $(DOCKER)),)
-$(error "Docker binary could not be found in PATH. Please install docker, or specify an alternative by setting DOCKER=/path/to/binary")
-endif
 DOCKER_VOLUME_OPTS?="rw"
 DOCKER_SELINUX := $(shell which setenforce)
 ifeq ($(.SHELLSTATUS),0)
 DOCKER_VOLUME_OPTS="rw,Z"
 endif
 
-docs-lint: tools
+doc-generate:
+	@bash scripts/doc-one.sh generate "$(KIND)" "$(NAME)" "$(OVERWRITE)"
+
+doc-check:
+	@bash scripts/doc-one.sh check "$(KIND)" "$(NAME)"
+
+docs-docker-check:
+	@test -n "$(DOCKER)" || { echo "Docker binary could not be found in PATH. Please install docker, or specify an alternative by setting DOCKER=/path/to/binary"; exit 1; }
+
+docs-lint: docs-docker-check tools
 	@echo "==> Checking website against linters..."
 	@misspell -error -source=text ./docs || (echo; \
 		echo "Unexpected mispelling found in website files."; \
@@ -172,7 +178,7 @@ docs-lint: tools
 	@echo "==> Checking for broken links..."
 	@scripts/markdown-link-check.sh "$(DOCKER)" "$(DOCKER_RUN_OPTS)" "$(DOCKER_VOLUME_OPTS)" "$(PROVIDER_DIR)"
 
-docs-lint-fix: tools
+docs-lint-fix: docs-docker-check tools
 	@echo "==> Applying automatic website linter fixes..."
 	@misspell -w -source=text ./docs
 	@echo "==> Running markdownlint-cli --fix using DOCKER='$(DOCKER)', DOCKER_RUN_OPTS='$(DOCKER_RUN_OPTS)' and DOCKER_VOLUME_OPTS='$(DOCKER_VOLUME_OPTS)'"
@@ -181,3 +187,4 @@ docs-lint-fix: tools
 	@terrafmt fmt ./docs --pattern '*.markdown'
 
 .PHONY: build test testacc frameworkacc tools vet fmt fmtcheck terrafmt test-compile depscheck tests-lint tests-lint-fix docs-lint docs-lint-fix changelog changelog-entry
+.PHONY: doc-generate doc-check docs-docker-check

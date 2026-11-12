@@ -23,41 +23,6 @@ An EndpointSlice contains references to a set of network endpoints. This data so
 - `id` (String) The ID of this resource.
 - `port` (List of Object) port specifies the list of network ports exposed by each endpoint in this slice. Each port must have a unique name. Each slice may include a maximum of 100 ports. (see [below for nested schema](#nestedatt--port))
 
-<a id="nestedatt--endpoint"></a>
-### Nested Schema for `endpoint`
-
-Read-Only:
-
-- `addresses` (List of String) addresses of this endpoint. The contents of this field are interpreted according to the corresponding EndpointSlice addressType field.
-- `condition` (List of Object) condition contains information about the current status of the endpoint. (see [below for nested schema](#nestedobjatt--endpoint--condition))
-- `hostname` (String) hostname of this endpoint. This field may be used by consumers of endpoints to distinguish endpoints from each other.
-- `node_name` (String) nodeName represents the name of the Node hosting this endpoint. This can be used to determine endpoints local to a Node.
-- `target_ref` (List of Object) targetRef is a reference to a Kubernetes object that represents this endpoint. (see [below for nested schema](#nestedobjatt--endpoint--target_ref))
-- `zone` (String) zone is the name of the Zone this endpoint exists in.
-
-<a id="nestedobjatt--endpoint--condition"></a>
-### Nested Schema for `endpoint.condition`
-
-Read-Only:
-
-- `ready` (Boolean) ready indicates that this endpoint is prepared to receive traffic, according to whatever system is managing the endpoint.
-- `serving` (Boolean) serving is identical to ready except that it is set regardless of the terminating state of endpoints.
-- `terminating` (Boolean) terminating indicates that this endpoint is terminating.
-
-
-<a id="nestedobjatt--endpoint--target_ref"></a>
-### Nested Schema for `endpoint.target_ref`
-
-Read-Only:
-
-- `field_path` (String) If referring to a piece of an object instead of an entire object, this string should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-- `name` (String) Name of the referent.
-- `namespace` (String) Namespace of the referent.
-- `resource_version` (String) Specific resourceVersion to which this reference is made, if any.
-- `uid` (String) If referring to a piece of an object instead of an entire object, this string should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
-
-
-
 <a id="nestedblock--metadata"></a>
 ### Nested Schema for `metadata`
 
@@ -76,15 +41,50 @@ Read-Only:
 - `uid` (String) The unique in time and space value for this endpoint_slice. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
 
 
+<a id="nestedatt--endpoint"></a>
+### Nested Schema for `endpoint`
+
+Read-Only:
+
+- `addresses` (List of String)
+- `condition` (List of Object) (see [below for nested schema](#nestedobjatt--endpoint--condition))
+- `hostname` (String)
+- `node_name` (String)
+- `target_ref` (List of Object) (see [below for nested schema](#nestedobjatt--endpoint--target_ref))
+- `zone` (String)
+
+<a id="nestedobjatt--endpoint--condition"></a>
+### Nested Schema for `endpoint.condition`
+
+Read-Only:
+
+- `ready` (Boolean)
+- `serving` (Boolean)
+- `terminating` (Boolean)
+
+
+<a id="nestedobjatt--endpoint--target_ref"></a>
+### Nested Schema for `endpoint.target_ref`
+
+Read-Only:
+
+- `field_path` (String)
+- `name` (String)
+- `namespace` (String)
+- `resource_version` (String)
+- `uid` (String)
+
+
+
 <a id="nestedatt--port"></a>
 ### Nested Schema for `port`
 
 Read-Only:
 
-- `app_protocol` (String) The application protocol for this port. This is used as a hint for implementations to offer richer behavior for protocols that they understand.
-- `name` (String) name represents the name of this port. All ports in an EndpointSlice must have a unique name.
-- `port` (String) port represents the port number of the endpoint.
-- `protocol` (String) protocol represents the IP protocol for this port. Must be UDP, TCP, or SCTP. Default is TCP.
+- `app_protocol` (String)
+- `name` (String)
+- `port` (String)
+- `protocol` (String)
 
 
 
@@ -101,9 +101,8 @@ data "kubernetes_endpoint_slice_v1" "example" {
 
 output "endpoint_addresses" {
   value = flatten([
-    for e in data.kubernetes_endpoint_slice_v1.example.endpoint : 
+    for e in data.kubernetes_endpoint_slice_v1.example.endpoint :
     e.addresses if e.condition[0].ready
   ])
 }
 ```
-

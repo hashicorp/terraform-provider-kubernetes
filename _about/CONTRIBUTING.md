@@ -60,8 +60,7 @@ This quick guide covers best practices for adding a new Resource.
 4. Scaffold an empty/new resource.
 5. Add Acceptance Tests(s) for the resource.
 6. Run Acceptance Tests(s) for this resource. 
-7. Add documentation for this resource in the appropriate `docs/resources/<TYPE>_<VERSION>.go.md` file.
-<!-- 7. Add Documentation for this resource by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}). -->
+7. Add documentation for this resource in the appropriate `docs/resources/<TYPE>_<VERSION>.go.md` by following [Documentation Generation](#documentation-generation).
 8. Execute `make docs-lint` and `make tests-lint` commands 
 9. Create a Pull Request for your changes. 
 
@@ -74,13 +73,53 @@ A best and recommended practice is reuse constants from the Kuberentes packages 
 4. Scaffold an empty/new resource.
 5. Add Acceptance Tests(s) for the data source.
 6. Run Acceptance Tests(s) for this data source. 
-7. Add documentation for this data source in the appropriate `docs/data-sources/<TYPE>_<VERSION>.md` file.
-<!-- 7. Add Documentation for this data source by editing the `.md.tmpl` file to include the appropriate [Data Fields](https://pkg.go.dev/text/template) and executing `tfplugindocs generate` command [see Terraform PluginDocs](https://github.com/hashicorp/terraform-plugin-docs#data-fields) then inspecting the corresponding `.md` file in the `/docs` to see all changes. The Data Fields that are currently apart of the templates are those for the Schema ({{ .SchemaMarkdown }}), Name ({{ .Name }}) and ({{ .Description }}).     -->
+7. Add documentation for this data source in the appropriate `docs/data-sources/<TYPE>_<VERSION>.md` by following [Documentation Generation](#documentation-generation).
 8. Execute `make docs-lint` and `make tests-lint` commands 
 9. Create a Pull Request for your changes. 
 
-<!-- ### Adding/Editing Documentation
-All Documentation is edited in the `.md.tmpl` file. Please note that the `tfplugindocs generate` command should be executed to ensure it is updated and reflected in the `.md` files.  -->
+### Documentation Generation
+
+Use `make doc-generate` to generate documentation for a resource or data source
+and `make doc-check` to verify that its published page is up to date.
+
+Install the Go version from [go.mod](../go.mod), Terraform **1.16.4**, Git and `jq`. The helper runs tfplugindocs **v0.25.0**
+as a versioned tool, without changing the provider's module dependencies.
+
+1. Ensure the resource or data source is registered in the provider.
+2. Create or update its template and the examples referenced by that template:
+
+   | Kind | Template | Generated documentation |
+   | --- | --- | --- |
+   | Resource | `templates/resources/<TYPE>_<VERSION>.md.tmpl` | `docs/resources/<TYPE>_<VERSION>.md` |
+   | Data source | `templates/data-sources/<TYPE>_<VERSION>.md.tmpl` | `docs/data-sources/<TYPE>_<VERSION>.md` |
+
+   Edit schema descriptions in Go and explanatory text in the template. Use
+   `{{ .SchemaMarkdown }}` for schema documentation and `tffile` to include examples.
+   An explicit template is required. Before using an existing legacy template,
+   compare it with the published page and preserve its examples, caveats, category
+   and import guidance; legacy templates may be out of date.
+3. Generate and check the page using the commands below.
+4. Review the generated diff and include both source changes and the generated
+   documentation in your pull request. Run `make docs-lint` and relevant code tests.
+
+Replace `<TYPE>_<VERSION>` with the short registered name, without the
+`kubernetes_` prefix or a file extension. Use the actual short name for resources
+or data sources whose names have no version suffix or contain additional suffixes.
+The quotes below keep the placeholder shell-safe; replace it before running.
+
+```shell
+make doc-generate KIND=resources NAME='<TYPE>_<VERSION>'
+make doc-check KIND=resources NAME='<TYPE>_<VERSION>'
+
+make doc-generate KIND=data-sources NAME='<TYPE>_<VERSION>'
+make doc-check KIND=data-sources NAME='<TYPE>_<VERSION>'
+```
+
+`doc-check` reports differences and exits nonzero without changing published
+files. `doc-generate` shows the diff before updating the selected page. It refuses
+to replace differing uncommitted destination content unless you explicitly add
+`OVERWRITE=1`; review or save those edits first. An already matching page is left
+untouched, even if it is uncommitted.
 
 ## Testing
 
@@ -121,4 +160,3 @@ Please refer to our [ChangeLog Guide](../CHANGELOG_GUIDE.md).
 ## Creating & Submiting a PR
 
 Please refer to this [guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork).
-

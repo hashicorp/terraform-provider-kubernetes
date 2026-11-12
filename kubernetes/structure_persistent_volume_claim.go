@@ -116,3 +116,17 @@ func expandResourceRequirements(l []interface{}) (*corev1.VolumeResourceRequirem
 	}
 	return obj, nil
 }
+
+func flattenPersistentVolumeClaimStatus(in corev1.PersistentVolumeClaimStatus) []interface{} {
+	att := make(map[string]interface{})
+	if in.Phase != "" {
+		att["phase"] = string(in.Phase)
+	}
+	if len(in.AccessModes) > 0 {
+		att["access_modes"] = flattenPersistentVolumeAccessModes(in.AccessModes)
+	}
+	if len(in.Capacity) > 0 {
+		att["capacity"] = flattenResourceList(in.Capacity)
+	}
+	return []interface{}{att}
+}

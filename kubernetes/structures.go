@@ -335,8 +335,12 @@ func expandResourceQuotaSpec(s []interface{}) (*api.ResourceQuotaSpec, error) {
 	}
 	m := s[0].(map[string]interface{})
 
-	if v, ok := m["hard"]; ok {
-		list, err := expandMapToResourceList(v.(map[string]interface{}))
+	if v, ok := m["hard"]; ok && v != nil {
+		hardMap, ok := v.(map[string]interface{})
+		if !ok {
+			return out, fmt.Errorf("unexpected type for hard: %T", v)
+		}
+		list, err := expandMapToResourceList(hardMap)
 		if err != nil {
 			return out, err
 		}

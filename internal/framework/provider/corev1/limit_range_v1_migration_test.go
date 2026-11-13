@@ -169,6 +169,13 @@ func TestAccLimitRange_UpgradeFromSDKV2_completeGenerateName(t *testing.T) {
 	testAccLimitRangeMigration(t, testAccKubernetesLimitRangeV1MigrationConfig_completeGenerateName(prefix, ns))
 }
 
+// Spec limit maps explicitly set to empty map `{}`: SDKv2 treats `{}` as absent,
+// and the plan modifier ensures the Framework provider also plans an empty diff.
+func TestAccLimitRange_UpgradeFromSDKV2_emptySpecMaps(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccLimitRangeMigration(t, testAccKubernetesLimitRangeV1MigrationConfig_emptySpecMaps(name))
+}
+
 // Multiple limits in a single spec block.
 func TestAccLimitRange_UpgradeFromSDKV2_multipleLimits(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -525,6 +532,37 @@ resource "kubernetes_limit_range_v1" "test" {
     labels      = {}
     name        = %[1]q
     namespace   = kubernetes_namespace_v1.test.metadata.0.name
+  }
+}
+`, name)
+}
+
+func testAccKubernetesLimitRangeV1MigrationConfig_emptySpecMaps(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+  }
+
+  spec {
+    limit {
+      type                    = "Container"
+      default                 = { cpu = "200m", memory = "256Mi" }
+      min                     = {}
+      max_limit_request_ratio = {}
+    }
+
+    limit {
+      type = "Pod"
+      max  = { cpu = "2" }
+      min  = {}
+    }
   }
 }
 `, name)

@@ -233,6 +233,52 @@ func TestAccKubernetesLimitRangeV1_multipleLimits(t *testing.T) {
 	})
 }
 
+// Explicit empty map `{}` on spec.limit attributes: ensures fresh apply and subsequent plan
+// produce no perpetual diffs.
+func TestAccKubernetesLimitRangeV1_emptySpecMaps(t *testing.T) {
+	var conf corev1api.LimitRange
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesLimitRangeV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesLimitRangeV1Config_emptySpecMaps(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesLimitRangeV1Exists(limitRangeResourceName, &conf),
+					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.#", "2"),
+					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.0.type", "Container"),
+					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.0.default.cpu", "200m"),
+					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.0.default.memory", "256Mi"),
+					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.1.type", "Pod"),
+					resource.TestCheckResourceAttr(limitRangeResourceName, "spec.0.limit.1.max.cpu", "2"),
+				),
+			},
+			{
+				// Subsequent plan must be completely empty (no perpetual diff).
+				Config: testAccKubernetesLimitRangeV1Config_emptySpecMaps(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				ResourceName:            limitRangeResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesLimitRangeV1Config_emptySpecMaps(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 // Identity import: an `import { identity = {...} }` block carries no ID string, so
 // ImportState must build the ID from the identity.
 func TestAccKubernetesLimitRangeV1_identityImport(t *testing.T) {
@@ -633,6 +679,37 @@ resource "kubernetes_limit_range_v1" "test" {
   }
 }
 `, ns, prefix)
+}
+
+func testAccKubernetesLimitRangeV1Config_emptySpecMaps(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "test" {
+  metadata {
+    name = %[1]q
+  }
+}
+
+resource "kubernetes_limit_range_v1" "test" {
+  metadata {
+    name      = %[1]q
+    namespace = kubernetes_namespace_v1.test.metadata.0.name
+  }
+
+  spec {
+    limit {
+      type                    = "Container"
+      default                 = { cpu = "200m", memory = "256Mi" }
+      min                     = {}
+      max_limit_request_ratio = {}
+    }
+
+    limit {
+      type = "Pod"
+      max  = { cpu = "2" }
+      min  = {}
+    }
+  }
+}
+`, name)
 }
 
 func testAccKubernetesLimitRangeV1Config_typeChange(name string) string {

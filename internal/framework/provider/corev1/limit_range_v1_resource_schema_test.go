@@ -7,150 +7,147 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	corev1api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func nonNullState() tfsdk.State {
-	s := schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"min": schema.MapAttribute{ElementType: types.StringType, Optional: true},
-		},
-	}
-	raw := tftypes.NewValue(s.Type().TerraformType(context.Background()), map[string]tftypes.Value{
-		"min": tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, nil),
-	})
-	return tfsdk.State{Schema: s, Raw: raw}
-}
-
-func nonNullPlan() tfsdk.Plan {
-	s := schema.Schema{
-		Attributes: map[string]schema.Attribute{
-			"min": schema.MapAttribute{ElementType: types.StringType, Optional: true},
-		},
-	}
-	raw := tftypes.NewValue(s.Type().TerraformType(context.Background()), map[string]tftypes.Value{
-		"min": tftypes.NewValue(tftypes.Map{ElementType: tftypes.String}, nil),
-	})
-	return tfsdk.Plan{Schema: s, Raw: raw}
-}
-
-func TestSuppressEmptyMapDiffs(t *testing.T) {
+func TestFlattenResourceList_emptyPreservation(t *testing.T) {
 	ctx := context.Background()
-	emptyMap, _ := types.MapValueFrom(ctx, types.StringType, map[string]string{})
-	nonEmptyMap, _ := types.MapValueFrom(ctx, types.StringType, map[string]string{"cpu": "100m"})
+	emptyMap, diags := types.MapValueFrom(ctx, types.StringType, map[string]string{})
+	if diags.HasError() {
+		t.Fatalf("failed to create empty map: %s", diags)
+	}
 	nullMap := types.MapNull(types.StringType)
 
 	cases := []struct {
-		name     string
-		config   types.Map
-		state    types.Map
-		plan     types.Map
-		stateRaw tfsdk.State
-		planRaw  tfsdk.Plan
-		wantPlan types.Map
+		name      string
+		list      corev1api.ResourceList
+		prior     types.Map
+		wantNull  bool
+		wantEmpty bool
 	}{
 		{
-			name:     "config is empty map and state is null: retains null state",
-			config:   emptyMap,
-			state:    nullMap,
-			plan:     emptyMap,
-			stateRaw: nonNullState(),
-			planRaw:  nonNullPlan(),
-			wantPlan: nullMap,
+			name:      "empty list with null prior returns null",
+			list:      corev1api.ResourceList{},
+			prior:     nullMap,
+			wantNull:  true,
+			wantEmpty: false,
 		},
 		{
-			name:     "config is null and state is empty map: retains empty map state",
-			config:   nullMap,
-			state:    emptyMap,
-			plan:     nullMap,
-			stateRaw: nonNullState(),
-			planRaw:  nonNullPlan(),
-			wantPlan: emptyMap,
+			name:      "nil list with null prior returns null",
+			list:      nil,
+			prior:     nullMap,
+			wantNull:  true,
+			wantEmpty: false,
 		},
 		{
-			name:     "config is empty map and state is empty map: retains empty map",
-			config:   emptyMap,
-			state:    emptyMap,
-			plan:     emptyMap,
-			stateRaw: nonNullState(),
-			planRaw:  nonNullPlan(),
-			wantPlan: emptyMap,
+			name:      "empty list with empty map prior returns empty map",
+			list:      corev1api.ResourceList{},
+			prior:     emptyMap,
+			wantNull:  false,
+			wantEmpty: true,
 		},
 		{
-			name:     "config is null and state is null: retains null",
-			config:   nullMap,
-			state:    nullMap,
-			plan:     nullMap,
-			stateRaw: nonNullState(),
-			planRaw:  nonNullPlan(),
-			wantPlan: nullMap,
-		},
-		{
-			name:     "config has values and state is null: preserves planned values",
-			config:   nonEmptyMap,
-			state:    nullMap,
-			plan:     nonEmptyMap,
-			stateRaw: nonNullState(),
-			planRaw:  nonNullPlan(),
-			wantPlan: nonEmptyMap,
-		},
-		{
-			name:     "config is empty map and state has values: preserves planned empty map",
-			config:   emptyMap,
-			state:    nonEmptyMap,
-			plan:     emptyMap,
-			stateRaw: nonNullState(),
-			planRaw:  nonNullPlan(),
-			wantPlan: emptyMap,
-		},
-		{
-			name:     "creating resource (state raw null): does not modify plan",
-			config:   emptyMap,
-			state:    nullMap,
-			plan:     emptyMap,
-			stateRaw: tfsdk.State{},
-			planRaw:  nonNullPlan(),
-			wantPlan: emptyMap,
-		},
-		{
-			name:     "destroying resource (plan raw null): does not modify plan",
-			config:   nullMap,
-			state:    emptyMap,
-			plan:     nullMap,
-			stateRaw: nonNullState(),
-			planRaw:  tfsdk.Plan{},
-			wantPlan: nullMap,
+			name: "populated list returns map regardless of prior",
+			list: corev1api.ResourceList{
+				corev1api.ResourceCPU: resource.MustParse("200m"),
+			},
+			prior:     nullMap,
+			wantNull:  false,
+			wantEmpty: false,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := suppressEmptyMapDiffs()
-
-			req := planmodifier.MapRequest{
-				ConfigValue: tc.config,
-				StateValue:  tc.state,
-				PlanValue:   tc.plan,
-				State:       tc.stateRaw,
-				Plan:        tc.planRaw,
+			got, d := flattenResourceList(ctx, tc.list, tc.prior)
+			if d.HasError() {
+				t.Fatalf("unexpected diagnostics: %s", d)
 			}
-			resp := &planmodifier.MapResponse{
-				PlanValue: tc.plan,
+			if tc.wantNull && !got.IsNull() {
+				t.Errorf("got %s, want null", got)
 			}
-
-			m.PlanModifyMap(ctx, req, resp)
-
-			if resp.Diagnostics.HasError() {
-				t.Fatalf("unexpected diagnostics: %s", resp.Diagnostics)
+			if tc.wantEmpty {
+				if got.IsNull() {
+					t.Errorf("got null, want empty map")
+				} else if len(got.Elements()) != 0 {
+					t.Errorf("got %d elements, want 0", len(got.Elements()))
+				}
 			}
-			if !resp.PlanValue.Equal(tc.wantPlan) {
-				t.Errorf("PlanValue = %s, want %s (config=%s, state=%s)",
-					resp.PlanValue, tc.wantPlan, tc.config, tc.state)
+			if !tc.wantNull && !tc.wantEmpty {
+				if got.IsNull() || len(got.Elements()) == 0 {
+					t.Errorf("got %s, want populated map", got)
+				}
 			}
 		})
+	}
+}
+
+func TestFlattenLimitRangeSpec_emptyPreservation(t *testing.T) {
+	ctx := context.Background()
+	emptyMap, _ := types.MapValueFrom(ctx, types.StringType, map[string]string{})
+	nullMap := types.MapNull(types.StringType)
+
+	spec := corev1api.LimitRangeSpec{
+		Limits: []corev1api.LimitRangeItem{
+			{
+				Type: corev1api.LimitTypeContainer,
+				Default: corev1api.ResourceList{
+					corev1api.ResourceCPU: resource.MustParse("200m"),
+				},
+				Min: corev1api.ResourceList{},
+			},
+		},
+	}
+
+	priorWithEmpty := []LimitRangeSpecModel{
+		{
+			Limit: []LimitRangeItemModel{
+				{
+					Type:    types.StringValue("Container"),
+					Default: types.MapNull(types.StringType),
+					Min:     emptyMap,
+				},
+			},
+		},
+	}
+
+	priorWithNull := []LimitRangeSpecModel{
+		{
+			Limit: []LimitRangeItemModel{
+				{
+					Type:    types.StringValue("Container"),
+					Default: types.MapNull(types.StringType),
+					Min:     nullMap,
+				},
+			},
+		},
+	}
+
+	// Case 1: prior had empty map for Min -> flattened model keeps empty map for Min
+	got, d := flattenLimitRangeSpec(ctx, spec, priorWithEmpty)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %s", d)
+	}
+	if len(got) == 0 || len(got[0].Limit) == 0 {
+		t.Fatalf("unexpected empty flattened spec: %v", got)
+	}
+	if got[0].Limit[0].Min.IsNull() {
+		t.Errorf("Min is null, want empty map")
+	} else if len(got[0].Limit[0].Min.Elements()) != 0 {
+		t.Errorf("Min has %d elements, want 0", len(got[0].Limit[0].Min.Elements()))
+	}
+
+	// Case 2: prior had null for Min -> flattened model keeps null for Min
+	got, d = flattenLimitRangeSpec(ctx, spec, priorWithNull)
+	if d.HasError() {
+		t.Fatalf("unexpected diagnostics: %s", d)
+	}
+	if len(got) == 0 || len(got[0].Limit) == 0 {
+		t.Fatalf("unexpected empty flattened spec: %v", got)
+	}
+	if !got[0].Limit[0].Min.IsNull() {
+		t.Errorf("Min is %s, want null", got[0].Limit[0].Min)
 	}
 }

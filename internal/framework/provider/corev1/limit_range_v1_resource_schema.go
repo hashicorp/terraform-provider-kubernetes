@@ -63,10 +63,9 @@ func limitRangeItemBlock() schema.ListNestedBlock {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"default": schema.MapAttribute{
-					Description:   "Default resource requirement limit value by resource name if resource limit is omitted.",
-					ElementType:   types.StringType,
-					Optional:      true,
-					PlanModifiers: []planmodifier.Map{suppressEmptyMapDiffs()},
+					Description: "Default resource requirement limit value by resource name if resource limit is omitted.",
+					ElementType: types.StringType,
+					Optional:    true,
 				},
 				// Optional+Computed: the API server back-fills default_request from default
 				// when the user omits it for Container limits. UseStateForUnknown keeps the
@@ -78,25 +77,22 @@ func limitRangeItemBlock() schema.ListNestedBlock {
 					ElementType:   types.StringType,
 					Optional:      true,
 					Computed:      true,
-					PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown(), suppressEmptyMapDiffs()},
+					PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
 				},
 				"max": schema.MapAttribute{
-					Description:   "Max usage constraints on this kind by resource name.",
-					ElementType:   types.StringType,
-					Optional:      true,
-					PlanModifiers: []planmodifier.Map{suppressEmptyMapDiffs()},
+					Description: "Max usage constraints on this kind by resource name.",
+					ElementType: types.StringType,
+					Optional:    true,
 				},
 				"max_limit_request_ratio": schema.MapAttribute{
-					Description:   "The named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.",
-					ElementType:   types.StringType,
-					Optional:      true,
-					PlanModifiers: []planmodifier.Map{suppressEmptyMapDiffs()},
+					Description: "The named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.",
+					ElementType: types.StringType,
+					Optional:    true,
 				},
 				"min": schema.MapAttribute{
-					Description:   "Min usage constraints on this kind by resource name.",
-					ElementType:   types.StringType,
-					Optional:      true,
-					PlanModifiers: []planmodifier.Map{suppressEmptyMapDiffs()},
+					Description: "Min usage constraints on this kind by resource name.",
+					ElementType: types.StringType,
+					Optional:    true,
 				},
 				"type": schema.StringAttribute{
 					Description: "Type of resource that this limit applies to.",
@@ -104,38 +100,6 @@ func limitRangeItemBlock() schema.ListNestedBlock {
 				},
 			},
 		},
-	}
-}
-
-// suppressEmptyMapDiffs treats null and empty maps as semantically equal to prevent
-// perpetual diffs when a user explicitly configures `{}` and the API returns null (or vice versa).
-func suppressEmptyMapDiffs() planmodifier.Map {
-	return emptyMapSuppressModifier{}
-}
-
-type emptyMapSuppressModifier struct{}
-
-func (emptyMapSuppressModifier) Description(context.Context) string {
-	return "Treats null and empty maps as semantically equal when both state and config represent an empty collection."
-}
-
-func (m emptyMapSuppressModifier) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (emptyMapSuppressModifier) PlanModifyMap(ctx context.Context, req planmodifier.MapRequest, resp *planmodifier.MapResponse) {
-	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
-		return
-	}
-	if req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	configEmpty := req.ConfigValue.IsNull() || len(req.ConfigValue.Elements()) == 0
-	stateEmpty := req.StateValue.IsNull() || (!req.StateValue.IsUnknown() && len(req.StateValue.Elements()) == 0)
-
-	if configEmpty && stateEmpty {
-		resp.PlanValue = req.StateValue
 	}
 }
 

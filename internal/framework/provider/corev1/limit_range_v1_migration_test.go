@@ -169,11 +169,12 @@ func TestAccLimitRange_UpgradeFromSDKV2_completeGenerateName(t *testing.T) {
 	testAccLimitRangeMigration(t, testAccKubernetesLimitRangeV1MigrationConfig_completeGenerateName(prefix, ns))
 }
 
-// Spec limit maps explicitly set to empty map `{}`: SDKv2 treats `{}` as absent,
-// and the plan modifier ensures the Framework provider also plans an empty diff.
+// Spec limit maps explicitly set to empty map `{}`: SDKv2 stores null for `min = {}`,
+// so the first plan after upgrade reconciles null→{} with a one-time in-place update.
+// Subsequent plans remain empty.
 func TestAccLimitRange_UpgradeFromSDKV2_emptySpecMaps(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	testAccLimitRangeMigration(t, testAccKubernetesLimitRangeV1MigrationConfig_emptySpecMaps(name))
+	testAccLimitRangeMigrationExpectingUpdate(t, testAccKubernetesLimitRangeV1MigrationConfig_emptySpecMaps(name))
 }
 
 // Multiple limits in a single spec block.

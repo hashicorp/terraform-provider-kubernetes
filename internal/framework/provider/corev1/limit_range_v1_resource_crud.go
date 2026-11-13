@@ -86,7 +86,7 @@ func (r *LimitRangeV1) Create(ctx context.Context, req resource.CreateRequest, r
 	// spec.limit[*].default_request is Optional+Computed: the API server back-fills it
 	// when omitted. The plan carries it as unknown, so we must resolve it from the
 	// response rather than writing unknown back to state.
-	flatSpec, flatDiags := flattenLimitRangeSpec(ctx, out.Spec)
+	flatSpec, flatDiags := flattenLimitRangeSpec(ctx, out.Spec, plan.Spec)
 	resp.Diagnostics.Append(flatDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -156,7 +156,7 @@ func (r *LimitRangeV1) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	spec, diags := flattenLimitRangeSpec(ctx, out.Spec)
+	spec, diags := flattenLimitRangeSpec(ctx, out.Spec, state.Spec)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -258,7 +258,7 @@ func (r *LimitRangeV1) Update(ctx context.Context, req resource.UpdateRequest, r
 	plan.Metadata[0].Generation = types.Int64Value(out.Generation)
 
 	// Resolve default_request (Optional+Computed) from the API response.
-	flatSpec, flatDiags := flattenLimitRangeSpec(ctx, out.Spec)
+	flatSpec, flatDiags := flattenLimitRangeSpec(ctx, out.Spec, plan.Spec)
 	resp.Diagnostics.Append(flatDiags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -435,10 +435,15 @@ func expandResourceMap(ctx context.Context, m types.Map) (corev1.ResourceList, d
 // flattenLimitRangeSpec converts the Kubernetes LimitRangeSpec into the Framework model.
 // Empty spec (no limits) returns nil — matching SDKv2's return of []interface{}{} which
 // the Framework treats as a null/absent block list.
-func flattenLimitRangeSpec(ctx context.Context, in corev1.LimitRangeSpec) ([]LimitRangeSpecModel, diag.Diagnostics) {
+func flattenLimitRangeSpec(ctx context.Context, in corev1.LimitRangeSpec, prior []LimitRangeSpecModel) ([]LimitRangeSpecModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	if len(in.Limits) == 0 {
 		return nil, diags
+	}
+
+	var priorLimits []LimitRangeItemModel
+	if len(prior) > 0 {
+		priorLimits = prior[0].Limit
 	}
 
 	items := make([]LimitRangeItemModel, len(in.Limits))
@@ -446,17 +451,21 @@ func flattenLimitRangeSpec(ctx context.Context, in corev1.LimitRangeSpec) ([]Lim
 		item := LimitRangeItemModel{
 			Type: types.StringValue(string(l.Type)),
 		}
+		var priorItem LimitRangeItemModel
+		if i < len(priorLimits) {
+			priorItem = priorLimits[i]
+		}
 		var d diag.Diagnostics
 
-		item.Default, d = flattenResourceList(ctx, l.Default)
+		item.Default, d = flattenResourceList(ctx, l.Default, priorItem.Default)
 		diags.Append(d...)
-		item.DefaultRequest, d = flattenResourceList(ctx, l.DefaultRequest)
+		item.DefaultRequest, d = flattenResourceList(ctx, l.DefaultRequest, priorItem.DefaultRequest)
 		diags.Append(d...)
-		item.Max, d = flattenResourceList(ctx, l.Max)
+		item.Max, d = flattenResourceList(ctx, l.Max, priorItem.Max)
 		diags.Append(d...)
-		item.MaxLimitRequestRatio, d = flattenResourceList(ctx, l.MaxLimitRequestRatio)
+		item.MaxLimitRequestRatio, d = flattenResourceList(ctx, l.MaxLimitRequestRatio, priorItem.MaxLimitRequestRatio)
 		diags.Append(d...)
-		item.Min, d = flattenResourceList(ctx, l.Min)
+		item.Min, d = flattenResourceList(ctx, l.Min, priorItem.Min)
 		diags.Append(d...)
 
 		items[i] = item
@@ -465,10 +474,13 @@ func flattenLimitRangeSpec(ctx context.Context, in corev1.LimitRangeSpec) ([]Lim
 }
 
 // flattenResourceList converts a corev1.ResourceList to a types.Map of quantity strings.
-// A nil/empty ResourceList returns a null map, preserving SDKv2's behaviour where an
-// absent resource constraint stored nothing (null) rather than an empty map.
-func flattenResourceList(ctx context.Context, l corev1.ResourceList) (types.Map, diag.Diagnostics) {
+// A nil/empty ResourceList returns a null map if prior state was null or empty, preserving
+// SDKv2's behaviour, while retaining an empty map if prior state had an explicit empty map ({}).
+func flattenResourceList(ctx context.Context, l corev1.ResourceList, prior types.Map) (types.Map, diag.Diagnostics) {
 	if len(l) == 0 {
+		if !prior.IsNull() && !prior.IsUnknown() && len(prior.Elements()) == 0 {
+			return types.MapValueFrom(ctx, types.StringType, map[string]string{})
+		}
 		return types.MapNull(types.StringType), nil
 	}
 	m := make(map[string]string, len(l))

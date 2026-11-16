@@ -300,6 +300,7 @@ func Provider() *schema.Provider {
 			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(""),
 
 			// autoscaling
+			"kubernetes_horizontal_pod_autoscaler":    resourceKubernetesHorizontalPodAutoscaler(),
 			"kubernetes_horizontal_pod_autoscaler_v1": resourceKubernetesHorizontalPodAutoscalerV1(),
 			"kubernetes_horizontal_pod_autoscaler_v2": resourceKubernetesHorizontalPodAutoscalerV2(),
 

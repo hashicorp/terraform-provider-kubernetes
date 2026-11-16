@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - v3-major-release
+      - 'release/**'
     paths:
       - 'kubernetes/*.go'
       - 'internal/framework/**'

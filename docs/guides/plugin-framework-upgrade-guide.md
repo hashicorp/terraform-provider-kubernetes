@@ -39,6 +39,7 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
 | Resource | `kubernetes_role_binding_v1` | v3.5.0 | [RoleBinding resource](#resource-kubernetes_role_binding_v1) |
 | Resource | `kubernetes_cluster_role_binding_v1` | v3.5.0 | [ClusterRoleBinding resource](#resource-kubernetes_cluster_role_binding_v1) |
+| Resource | `kubernetes_horizontal_pod_autoscaler_v1` | v3.6.0 | [HorizontalPodAutoscaler v1 resource](#resource-kubernetes_horizontal_pod_autoscaler_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -174,6 +175,39 @@ moved {
 ```
 
 Moved state shows the same one-time updates for empty metadata maps and `api_group = ""`. Verify that the plan does not replace the binding. See the [ClusterRoleBinding resource reference](../resources/cluster_role_binding_v1.md#metadata-and-upgrades) for further details.
+
+## Resource: kubernetes_horizontal_pod_autoscaler_v1
+
+- **Existing state:** Upgrading `kubernetes_horizontal_pod_autoscaler_v1` does not require re-importing objects or manually editing state. The resource still uses the `autoscaling/v1` API.
+- **Empty metadata maps:** Explicit `labels = {}` or `annotations = {}` can require a one-time in-place update from SDKv2's `null`. Conversely, an autoscaler imported with an earlier provider version may have stored empty maps that now change to `null` when omitted from configuration. Neither replaces the autoscaler.
+- **Computed metadata:** During updates, `metadata[0].generation` and `metadata[0].resource_version` can be `(known after apply)` until read from the API. This does not itself indicate replacement.
+- **Plans without refresh:** Immediately after upgrading, `terraform plan -refresh=false` may show a one-time in-place update, because SDKv2 stored an omitted `metadata.generate_name` and `spec.scale_target_ref.api_version` as `""` and they are now `null`. Terraform hides the `""` to `null` change, so the plan may only show `generation` and `resource_version` as `(known after apply)`. A normal, refresh-enabled plan shows no change. Applying it does not modify or replace the autoscaler.
+- **Null map entries:** `metadata.labels` and `metadata.annotations` entries must contain non-null strings. Remove entries such as `owner = null` or provide string values. Omitting the whole map or setting it to `null` remains supported.
+- **Import:** Import IDs must contain a non-empty namespace and name (`namespace/name`). For an autoscaler created with `generateName`, configure `generate_name` with the original prefix and omit `name` to avoid a replacement plan after import.
+
+### Configurations with both name and generate_name
+
+Setting both `metadata.name` and `metadata.generate_name` is now rejected during planning, including `generate_name = ""`.
+
+- If `generate_name` is empty, remove it and keep `name`.
+- Otherwise, remove `name` and retain the original `generate_name`. The existing autoscaler keeps its name.
+
+Removing or changing a stored non-empty prefix replaces the autoscaler. Review the plan before applying.
+
+### Moving from kubernetes_horizontal_pod_autoscaler
+
+Terraform 1.8 or later supports moving from the deprecated `kubernetes_horizontal_pod_autoscaler` resource to `kubernetes_horizontal_pod_autoscaler_v1`, when its configuration uses only `target_cpu_utilization_percentage` for scaling. Change the resource type, keep its configuration, update references, and add a `moved` block:
+
+```terraform
+moved {
+  from = kubernetes_horizontal_pod_autoscaler.example
+  to   = kubernetes_horizontal_pod_autoscaler_v1.example
+}
+```
+
+The move is rejected when the existing state contains `spec.metric` or `spec.behavior` blocks, because `autoscaling/v1` cannot represent them. Keep those autoscalers on `kubernetes_horizontal_pod_autoscaler` until moving to `kubernetes_horizontal_pod_autoscaler_v2` is supported.
+
+Verify that the plan does not replace the autoscaler, apply it, and confirm that the next plan is empty. See the [HorizontalPodAutoscaler v1 resource reference](../resources/horizontal_pod_autoscaler_v1.md#migrating-from-kubernetes_horizontal_pod_autoscaler) for further details.
 
 ## Data source: kubernetes_namespace_v1
 

@@ -501,3 +501,9 @@ Horizontal Pod Autoscaler can be imported using the namespace and name, e.g.
 ```
 $ terraform import kubernetes_horizontal_pod_autoscaler.example default/terraform-example
 ```
+
+## Moving to `kubernetes_horizontal_pod_autoscaler_v1`
+
+An autoscaler that scales only on `target_cpu_utilization_percentage`, without `metric` or
+`behavior` blocks, can move to `kubernetes_horizontal_pod_autoscaler_v1` without replacement.
+See [Migrating from `kubernetes_horizontal_pod_autoscaler`](horizontal_pod_autoscaler_v1.md#migrating-from-kubernetes_horizontal_pod_autoscaler).

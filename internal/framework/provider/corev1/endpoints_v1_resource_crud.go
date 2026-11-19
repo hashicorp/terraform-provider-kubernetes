@@ -1,6 +1,10 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
+// kubernetes_endpoints_v1 manages the core/v1 Endpoints API, which Kubernetes
+// deprecated in v1.33 in favour of EndpointSlice; SA1019 is expected here.
+//
+//nolint:staticcheck
 package corev1
 
 import (
@@ -81,14 +85,7 @@ func (e *EndpointsV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(endpointsAPIVersion),
-			Kind:       types.StringValue(endpointsKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, endpointsIdentity(out.Namespace, out.Name))...)
 }
 
 // Read implements [resource.Resource].
@@ -121,6 +118,15 @@ func (e *EndpointsV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 	ep, err := conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			// SDKv2 never stored an identity for this resource, and Terraform before 1.12
+			// does not send one, but the framework still requires it when Read removes a
+			// missing resource.
+			if resp.Identity != nil && resp.Identity.Raw.IsNull() {
+				resp.Diagnostics.Append(resp.Identity.Set(ctx, endpointsIdentity(namespace, name))...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+			}
 			tflog.Info(ctx, "Endpoints no longer exists, removing from state", map[string]any{"id": id})
 			resp.State.RemoveResource(ctx)
 			return
@@ -159,14 +165,7 @@ func (e *EndpointsV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(endpointsAPIVersion),
-			Kind:       types.StringValue(endpointsKind),
-			Name:       types.StringValue(ep.Name),
-		},
-		Namespace: types.StringValue(ep.Namespace),
-	})...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, endpointsIdentity(ep.Namespace, ep.Name))...)
 }
 
 // Update implements [resource.Resource].
@@ -244,14 +243,7 @@ func (e *EndpointsV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, common.NamespacedResourceIdentity{
-		ResourceIdentity: common.ResourceIdentity{
-			APIVersion: types.StringValue(endpointsAPIVersion),
-			Kind:       types.StringValue(endpointsKind),
-			Name:       types.StringValue(out.Name),
-		},
-		Namespace: types.StringValue(out.Namespace),
-	})...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, endpointsIdentity(out.Namespace, out.Name))...)
 }
 
 // Delete implements [resource.Resource].
@@ -289,6 +281,17 @@ func (e *EndpointsV1) Delete(ctx context.Context, req resource.DeleteRequest, re
 		}
 		resp.Diagnostics.AddError("Failed to delete endpoints", err.Error())
 		return
+	}
+}
+
+func endpointsIdentity(namespace, name string) common.NamespacedResourceIdentity {
+	return common.NamespacedResourceIdentity{
+		ResourceIdentity: common.ResourceIdentity{
+			APIVersion: types.StringValue(endpointsAPIVersion),
+			Kind:       types.StringValue(endpointsKind),
+			Name:       types.StringValue(name),
+		},
+		Namespace: types.StringValue(namespace),
 	}
 }
 

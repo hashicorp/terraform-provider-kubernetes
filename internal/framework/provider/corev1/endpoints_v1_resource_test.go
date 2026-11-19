@@ -1,6 +1,9 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
+// These tests exercise the deprecated core/v1 Endpoints API; SA1019 is expected here.
+//
+//nolint:staticcheck
 package corev1_test
 
 import (
@@ -17,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -215,6 +219,91 @@ func TestEndpointsUpdateNoPatch(t *testing.T) {
 	}
 }
 
+// TestEndpointsReadMissingAndErrors covers Read paths acceptance tests do not reach.
+// State upgraded from SDKv2 and Terraform before 1.12 carry no identity, so removing a
+// missing Endpoints must set identity first; other API errors must keep state and identity.
+func TestEndpointsReadMissingAndErrors(t *testing.T) {
+	ctx := context.Background()
+	for _, status := range []int{http.StatusNotFound, http.StatusForbidden, http.StatusInternalServerError} {
+		for _, storedIdentity := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%d/identity=%t", status, storedIdentity), func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					if req.Method != http.MethodGet || req.URL.Path != "/api/v1/namespaces/team/endpoints/web" {
+						t.Errorf("unexpected request: %s %s", req.Method, req.URL.Path)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(status)
+					if err := json.NewEncoder(w).Encode(metav1.Status{
+						TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"},
+						Status:   metav1.StatusFailure, Code: int32(status), Message: http.StatusText(status),
+					}); err != nil {
+						t.Error(err)
+					}
+				}))
+				defer server.Close()
+				conn, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+				if err != nil {
+					t.Fatal(err)
+				}
+				r := &corev1.EndpointsV1{SDKv2Meta: func() any { return endpointsUpdateClientsets{client: conn} }}
+				var schemaResponse fwresource.SchemaResponse
+				r.Schema(ctx, fwresource.SchemaRequest{}, &schemaResponse)
+				raw := tfprotov6.RawState{JSON: []byte(`{
+					"id":"team/web",
+					"metadata":[{"name":"web","namespace":"team","uid":"uid-1","resource_version":"10",
+					"generation":1,"labels":null,"annotations":null,"generate_name":null}],
+					"subset":[{"address":[{"ip":"10.0.0.4","hostname":null,"node_name":null}],
+					"not_ready_address":null,"port":[{"name":null,"port":80,"protocol":"TCP"}]}]
+				}`)}
+				value, err := raw.Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
+				if err != nil {
+					t.Fatal(err)
+				}
+				state := tfsdk.State{Schema: schemaResponse.Schema, Raw: value}
+				identitySchema := common.NamespacedIdentitySchema()
+				identity := tfsdk.ResourceIdentity{
+					Schema: identitySchema, Raw: tftypes.NewValue(identitySchema.Type().TerraformType(ctx), nil),
+				}
+				wantIdentity := common.NamespacedResourceIdentity{
+					ResourceIdentity: common.ResourceIdentity{
+						Name: types.StringValue("web"), Kind: types.StringValue("Endpoints"),
+						APIVersion: types.StringValue("v1"),
+					},
+					Namespace: types.StringValue("team"),
+				}
+				if storedIdentity {
+					if status == http.StatusNotFound {
+						// A distinct value proves an existing identity is not rebuilt.
+						wantIdentity.Name = types.StringValue("existing-web")
+					}
+					if diags := identity.Set(ctx, wantIdentity); diags.HasError() {
+						t.Fatal(diags)
+					}
+				}
+				responseIdentity := identity
+				response := fwresource.ReadResponse{State: state, Identity: &responseIdentity}
+				r.Read(ctx, fwresource.ReadRequest{State: state, Identity: &identity}, &response)
+				if status == http.StatusNotFound {
+					if response.Diagnostics.HasError() || !response.State.Raw.IsNull() {
+						t.Fatalf("missing Endpoints must be removed: %v", response.Diagnostics)
+					}
+					var got common.NamespacedResourceIdentity
+					if diags := response.Identity.Get(ctx, &got); diags.HasError() {
+						t.Fatal(diags)
+					}
+					if got != wantIdentity {
+						t.Fatalf("identity = %#v, want %#v", got, wantIdentity)
+					}
+					return
+				}
+				if !response.Diagnostics.HasError() || !response.State.Raw.Equal(state.Raw) || !response.Identity.Raw.Equal(identity.Raw) {
+					t.Fatalf("API failure must preserve state and identity: %v", response.Diagnostics)
+				}
+			})
+		}
+	}
+}
+
 func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 	var conf api.Endpoints
 	resourceName := "kubernetes_endpoints_v1.test"
@@ -256,34 +345,46 @@ func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "subset.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.%", "3"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.address.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.address.0.%", "3"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.address.0.ip", "10.0.0.5"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.port.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.port.0.name", "httptransport"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.port.0.port", "82"),
-					resource.TestCheckResourceAttr(resourceName, "subset.0.port.0.protocol", "TCP"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.#", "3"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.1.name", "httpstransport"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.1.port", "443"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.1.protocol", "TCP"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.2.name", "httpstransport2"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.2.port", "444"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.2.protocol", "TCP"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.0.name", "aaaa"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.0.port", "442"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.port.0.protocol", "TCP"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.address.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.address.0.%", "3"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.address.0.ip", "10.0.0.7"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.address.1.%", "3"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.address.1.ip", "10.0.0.6"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.address.1.hostname", "test-hostname"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.not_ready_address.0.%", "3"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.not_ready_address.0.ip", "10.0.0.10"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.not_ready_address.1.ip", "10.0.0.11"),
-					resource.TestCheckResourceAttr(resourceName, "subset.1.not_ready_address.1.%", "3"),
+					// subset, address, not_ready_address and port are sets: Terraform orders their
+					// elements by value, so assert membership rather than positional indexes.
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*", map[string]string{
+						"address.#": "1",
+						"port.#":    "1",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*", map[string]string{
+						"address.#":           "2",
+						"not_ready_address.#": "2",
+						"port.#":              "3",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.address.*", map[string]string{
+						"ip": "10.0.0.5",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.address.*", map[string]string{
+						"ip":        "10.0.0.6",
+						"hostname":  "test-hostname",
+						"node_name": "test-nodename",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.address.*", map[string]string{
+						"ip": "10.0.0.7",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.not_ready_address.*", map[string]string{
+						"ip": "10.0.0.10",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.not_ready_address.*", map[string]string{
+						"ip": "10.0.0.11",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.port.*", map[string]string{
+						"name": "httptransport", "port": "82", "protocol": "TCP",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.port.*", map[string]string{
+						"name": "httpstransport", "port": "443", "protocol": "TCP",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.port.*", map[string]string{
+						"name": "httpstransport2", "port": "444", "protocol": "TCP",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "subset.*.port.*", map[string]string{
+						"name": "aaaa", "port": "442", "protocol": "TCP",
+					}),
 				),
 			},
 			{

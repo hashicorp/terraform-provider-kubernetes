@@ -1,0 +1,3 @@
+```release-note:enhancement
+`resource/kubernetes_endpoints_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and resource identity. `moved` blocks from the deprecated `kubernetes_endpoints` resource are supported with Terraform 1.8 or later.
+```

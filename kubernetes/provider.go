@@ -266,7 +266,6 @@ func Provider() *schema.Provider {
 			"kubernetes_pod":                        resourceKubernetesPodV1("Deprecated; use kubernetes_pod_v1."),
 			"kubernetes_pod_v1":                     resourceKubernetesPodV1(""),
 			"kubernetes_endpoints":                  resourceKubernetesEndpointsV1("Deprecated; use kubernetes_endpoints_v1."),
-			"kubernetes_endpoints_v1":               resourceKubernetesEndpointsV1(""),
 			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSliceV1(),
 			"kubernetes_env":                        resourceKubernetesEnv(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRangeV1("Deprecated; use kubernetes_limit_range_v1."),

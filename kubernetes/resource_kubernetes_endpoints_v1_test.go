@@ -1,8 +1,8 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-// NOTE this API has been deprecated and the resource should be removed
-// in the next major provider version.
+// kubernetes_endpoints_v1 is now implemented by the framework provider. These
+// tests remain here to cover the deprecated, unversioned kubernetes_endpoints resource.
 //
 //nolint:all
 package kubernetes
@@ -22,7 +22,7 @@ import (
 
 func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 	var conf api.Endpoints
-	resourceName := "kubernetes_endpoints_v1.test"
+	resourceName := "kubernetes_endpoints.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -114,7 +114,7 @@ func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 func TestAccKubernetesEndpointsV1_generatedName(t *testing.T) {
 	var conf api.Endpoints
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_endpoints_v1.test"
+	resourceName := "kubernetes_endpoints.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -152,7 +152,7 @@ func testAccCheckKubernetesEndpointV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_endpoints_v1" {
+		if rs.Type != "kubernetes_endpoints" {
 			continue
 		}
 
@@ -201,7 +201,7 @@ func testAccCheckKubernetesEndpointV1Exists(n string, obj *api.Endpoints) resour
 }
 
 func testAccKubernetesEndpointsV1_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -229,7 +229,7 @@ func testAccKubernetesEndpointsV1_basic(name string) string {
 }
 
 func testAccKubernetesEndpointsV1_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -287,7 +287,7 @@ func testAccKubernetesEndpointsV1_modified(name string) string {
 }
 
 func testAccKubernetesEndpointsV1_generatedName(prefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     generate_name = "%s"
   }

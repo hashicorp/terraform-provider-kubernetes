@@ -692,6 +692,64 @@ func TestAccKubernetesDeploymentV1_with_container_security_context_seccomp_local
 	})
 }
 
+func TestAccKubernetesDeploymentV1_with_container_security_context_app_armor_profile(t *testing.T) {
+	var conf appsv1.Deployment
+
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_deployment_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextAppArmorProfile(deploymentName, imageName, "Unconfined"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.type", "Unconfined"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.type", "Unconfined"),
+				),
+			},
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextAppArmorProfile(deploymentName, imageName, "RuntimeDefault"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.type", "RuntimeDefault"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.type", "RuntimeDefault"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDeploymentV1_with_container_security_context_app_armor_localhost_profile(t *testing.T) {
+	var conf appsv1.Deployment
+
+	deploymentName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_deployment_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDeploymentV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextAppArmorProfileLocalhost(deploymentName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDeploymentV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.localhost_profile", "profiles/audit.json"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.localhost_profile", "profiles/audit.json"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDeploymentV1_with_volume_mount(t *testing.T) {
 	var conf appsv1.Deployment
 
@@ -2334,6 +2392,106 @@ func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextRunAsGroup(d
   }
 }
 `, deploymentName, imageName, imageName)
+}
+
+func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextAppArmorProfile(deploymentName, imageName, appArmorProfileType string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          app_armor_profile {
+            type = "%s"
+          }
+        }
+        container {
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
+
+          security_context {
+            app_armor_profile {
+              type = "%s"
+            }
+          }
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+}
+`, deploymentName, appArmorProfileType, imageName, appArmorProfileType)
+}
+
+func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextAppArmorProfileLocalhost(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_deployment_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          app_armor_profile {
+            type              = "Localhost"
+            localhost_profile = "profiles/audit.json"
+          }
+        }
+        container {
+          image   = "%s"
+          name    = "containername"
+          command = ["sleep", "300"]
+
+          security_context {
+            app_armor_profile {
+              type              = "Localhost"
+              localhost_profile = "profiles/audit.json"
+            }
+          }
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+}
+`, deploymentName, imageName)
 }
 
 func testAccKubernetesDeploymentV1ConfigWithContainerSecurityContextSeccompProfile(deploymentName, imageName, seccompProfileType string) string {

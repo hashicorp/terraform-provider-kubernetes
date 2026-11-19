@@ -167,6 +167,30 @@ func resourcesFieldV0() map[string]*schema.Schema {
 	}
 }
 
+func appArmorProfileField(isUpdatable bool) map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		"localhost_profile": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			ForceNew:    !isUpdatable,
+			Default:     "",
+			Description: "Localhost Profile indicates a profile defined in a file on the node should be used. The profile must be preconfigured on the node to work.",
+		},
+		"type": {
+			Type:     schema.TypeString,
+			Optional: true,
+			ForceNew: !isUpdatable,
+			Default:  string(api.AppArmorProfileTypeUnconfined),
+			ValidateFunc: validation.StringInSlice([]string{
+				string(api.AppArmorProfileTypeLocalhost),
+				string(api.AppArmorProfileTypeRuntimeDefault),
+				string(api.AppArmorProfileTypeUnconfined),
+			}, false),
+			Description: "Type indicates which kind of AppArmor profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.",
+		},
+	}
+}
+
 func seccompProfileField(isUpdatable bool) map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"localhost_profile": {
@@ -186,7 +210,7 @@ func seccompProfileField(isUpdatable bool) map[string]*schema.Schema {
 				string(api.SeccompProfileTypeRuntimeDefault),
 				string(api.SeccompProfileTypeUnconfined),
 			}, false),
-			Description: "Type indicates which kind of seccomp profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.",
+			Description: "Type indicates which kind of AppArmor profile will be applied. Valid options are: Localhost, RuntimeDefault, Unconfined.",
 		},
 	}
 }
@@ -769,6 +793,15 @@ func securityContextSchema(isUpdatable bool) *schema.Resource {
 			Default:     true,
 			ForceNew:    !isUpdatable,
 			Description: `AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN`,
+		},
+		"app_armor_profile": {
+			Type:        schema.TypeList,
+			Description: "The app_armor options to use by the container.",
+			Optional:    true,
+			MaxItems:    1,
+			Elem: &schema.Resource{
+				Schema: appArmorProfileField(isUpdatable),
+			},
 		},
 		"capabilities": {
 			Type:        schema.TypeList,

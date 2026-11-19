@@ -209,6 +209,9 @@ func flattenPodDNSConfigOptions(options []v1.PodDNSConfigOption) []interface{} {
 func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 	att := make(map[string]interface{})
 
+	if in.AppArmorProfile != nil {
+		att["app_armor_profile"] = flattenAppArmorProfile(in.AppArmorProfile)
+	}
 	if in.FSGroup != nil {
 		att["fs_group"] = strconv.Itoa(int(*in.FSGroup))
 	}
@@ -247,6 +250,17 @@ func flattenPodSecurityContext(in *v1.PodSecurityContext) []interface{} {
 		return []interface{}{att}
 	}
 	return []interface{}{}
+}
+
+func flattenAppArmorProfile(in *v1.AppArmorProfile) []interface{} {
+	att := make(map[string]interface{})
+	if in.Type != "" {
+		att["type"] = in.Type
+		if in.Type == "Localhost" {
+			att["localhost_profile"] = in.LocalhostProfile
+		}
+	}
+	return []interface{}{att}
 }
 
 func flattenSeccompProfile(in *v1.SeccompProfile) []interface{} {
@@ -993,6 +1007,9 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 		return obj, nil
 	}
 	in := l[0].(map[string]interface{})
+	if v, ok := in["app_armor_profile"].([]interface{}); ok && len(v) > 0 {
+		obj.AppArmorProfile = expandAppArmorProfile(v)
+	}
 	if v, ok := in["fs_group"].(string); ok && v != "" {
 		i, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
@@ -1055,6 +1072,23 @@ func expandSysctls(l []interface{}) []v1.Sysctl {
 
 	}
 	return sysctls
+}
+
+func expandAppArmorProfile(l []interface{}) *v1.AppArmorProfile {
+	if len(l) == 0 || l[0] == nil {
+		return &v1.AppArmorProfile{}
+	}
+	in := l[0].(map[string]interface{})
+	obj := &v1.AppArmorProfile{}
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.AppArmorProfileType(v)
+		if v == "Localhost" {
+			if lp, ok := in["localhost_profile"].(string); ok {
+				obj.LocalhostProfile = &lp
+			}
+		}
+	}
+	return obj
 }
 
 func expandSeccompProfile(l []interface{}) *v1.SeccompProfile {

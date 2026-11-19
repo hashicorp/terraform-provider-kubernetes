@@ -357,6 +357,63 @@ func TestAccKubernetesDaemonSetV1_with_container_security_context_seccomp_localh
 	})
 }
 
+func TestAccKubernetesDaemonSetV1_with_container_security_context_app_armor_profile(t *testing.T) {
+	var conf appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	imageName := busyboxImage
+	resourceName := "kubernetes_daemon_set_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextAppArmorProfile(name, imageName, "Unconfined"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.type", "Unconfined"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.type", "Unconfined"),
+				),
+			},
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextAppArmorProfile(name, imageName, "RuntimeDefault"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.type", "RuntimeDefault"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.type", "RuntimeDefault"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesDaemonSetV1_with_container_security_context_app_armor_localhost_profile(t *testing.T) {
+	var conf appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_daemon_set_v1.test"
+	imageName := busyboxImage
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesDaemonSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextAppArmorProfileLocalhost(name, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.security_context.0.app_armor_profile.0.localhost_profile", "profiles/audit.json"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.template.0.spec.0.container.0.security_context.0.app_armor_profile.0.localhost_profile", "profiles/audit.json"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 	var conf appsv1.DaemonSet
 
@@ -1165,6 +1222,106 @@ func testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextSeccompProfil
 
           security_context {
             seccomp_profile {
+              type              = "Localhost"
+              localhost_profile = "profiles/audit.json"
+            }
+          }
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+  wait_for_rollout = false
+}
+`, deploymentName, imageName)
+}
+
+func testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextAppArmorProfile(deploymentName, imageName, appArmorProfileType string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          app_armor_profile {
+            type = "%s"
+          }
+        }
+        container {
+          image = "%s"
+          name  = "containername"
+
+          security_context {
+            app_armor_profile {
+              type = "%s"
+            }
+          }
+        }
+        termination_grace_period_seconds = 1
+      }
+    }
+  }
+  wait_for_rollout = false
+}
+`, deploymentName, appArmorProfileType, imageName, appArmorProfileType)
+}
+
+func testAccKubernetesDaemonSetV1ConfigWithContainerSecurityContextAppArmorProfileLocalhost(deploymentName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_daemon_set_v1" "test" {
+  metadata {
+    name = "%s"
+
+    labels = {
+      Test = "TfAcceptanceTest"
+    }
+  }
+
+  spec {
+    selector {
+      match_labels = {
+        Test = "TfAcceptanceTest"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          Test = "TfAcceptanceTest"
+        }
+      }
+
+      spec {
+        security_context {
+          app_armor_profile {
+            type              = "Localhost"
+            localhost_profile = "profiles/audit.json"
+          }
+        }
+        container {
+          image = "%s"
+          name  = "containername"
+
+          security_context {
+            app_armor_profile {
               type              = "Localhost"
               localhost_profile = "profiles/audit.json"
             }

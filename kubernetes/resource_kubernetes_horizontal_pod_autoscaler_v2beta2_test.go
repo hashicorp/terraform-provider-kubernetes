@@ -43,7 +43,7 @@ func TestAccKubernetesHorizontalPodAutoscalerV2Beta2_minimal(t *testing.T) {
 			{
 				Config: testAccKubernetesHorizontalPodAutoscalerV2Beta2Config_minimal(name),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					testAccCheckKubernetesHorizontalPodAutoscalerV2Exists(resourceName),
+					testAccCheckKubernetesHorizontalPodAutoscalerV2Beta2Exists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.annotations.test", "test"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.labels.%", "1"),

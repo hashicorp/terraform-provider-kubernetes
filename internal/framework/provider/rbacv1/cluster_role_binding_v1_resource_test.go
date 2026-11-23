@@ -826,9 +826,9 @@ func TestAccClusterRoleBinding_metadataValidation(t *testing.T) {
 	for _, tc := range []struct{ name, metadata, errorPattern string }{
 		{"nullLabel", `labels = { x = null }`, "value must be a string"},
 		{"nullAnnotation", `annotations = { x = null }`, "value must be a string"},
-		{"invalidLabelKey", `labels = { "invalid/key/extra" = "value" }`, "qualified name"},
+		{"invalidLabelKey", `labels = { "invalid/key/extra" = "value" }`, `valid\s+label\s+key`},
 		{"invalidLabelValue", `labels = { x = "invalid value" }`, "valid label must be an empty string"},
-		{"invalidAnnotationKey", `annotations = { "invalid/key/extra" = "value" }`, "qualified name"},
+		{"invalidAnnotationKey", `annotations = { "invalid/key/extra" = "value" }`, `valid\s+label\s+key`},
 		{"nameConflict", `generate_name = "tf-acc:"`, "cannot be specified when"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

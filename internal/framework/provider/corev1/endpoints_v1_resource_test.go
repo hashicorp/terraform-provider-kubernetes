@@ -23,12 +23,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/mux"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	api "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -458,11 +466,13 @@ func testAccCheckKubernetesEndpointV1Destroy(s *terraform.State) error {
 		}
 
 		resp, err := client.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("Endpoint still exists: %s", rs.Primary.ID)
-			}
+		if apierrors.IsNotFound(err) {
+			continue
 		}
+		if err != nil {
+			return fmt.Errorf("checking destruction of Endpoints %q: %w", rs.Primary.ID, err)
+		}
+		return fmt.Errorf("Endpoints %q still exists (uid %s)", rs.Primary.ID, resp.UID)
 	}
 
 	return nil
@@ -601,4 +611,652 @@ func testAccKubernetesEndpointsV1_generatedName(prefix string) string {
   }
 }
 `, prefix)
+}
+
+// TestAccKubernetesEndpointsV1_explicitEmptyStrings verifies that explicitly empty
+// hostname, node_name and port name values converge. The API omits them, so without
+// preserving the configured "" every plan would show an in-place update.
+func TestAccKubernetesEndpointsV1_explicitEmptyStrings(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	checkUID := testAccCheckEndpointsSameUID()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesEndpointsV1_explicitEmptyStrings(name, 80),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPreRefresh:  []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkUID,
+					resource.TestCheckTypeSetElemNestedAttrs(endpointsResourceName, "subset.*.address.*", map[string]string{
+						"ip": "10.0.0.4", "hostname": "", "node_name": "",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(endpointsResourceName, "subset.*.not_ready_address.*", map[string]string{
+						"ip": "10.0.0.5", "hostname": "",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(endpointsResourceName, "subset.*.port.*", map[string]string{
+						"name": "", "port": "80", "protocol": "TCP",
+					}),
+				),
+			},
+			{
+				Config: testAccKubernetesEndpointsV1_explicitEmptyStrings(name, 80),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				Config: testAccKubernetesEndpointsV1_explicitEmptyStrings(name, 81),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkUID,
+					resource.TestCheckTypeSetElemNestedAttrs(endpointsResourceName, "subset.*.port.*", map[string]string{
+						"name": "", "port": "81", "protocol": "TCP",
+					}),
+				),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesEndpointsV1_protocolDefault changes protocol from UDP to omitted,
+// which must plan the schema default TCP as an in-place update.
+func TestAccKubernetesEndpointsV1_protocolDefault(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	checkUID := testAccCheckEndpointsSameUID()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesEndpointsV1_protocol(name, `protocol = "UDP"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkUID,
+					resource.TestCheckTypeSetElemNestedAttrs(endpointsResourceName, "subset.*.port.*", map[string]string{
+						"port": "53", "protocol": "UDP",
+					}),
+				),
+			},
+			{
+				Config: testAccKubernetesEndpointsV1_protocol(name, ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkUID,
+					resource.TestCheckTypeSetElemNestedAttrs(endpointsResourceName, "subset.*.port.*", map[string]string{
+						"port": "53", "protocol": "TCP",
+					}),
+					testAccCheckEndpointsLive(name, func(ep *api.Endpoints) error {
+						if got := ep.Subsets[0].Ports[0].Protocol; got != api.ProtocolTCP {
+							return fmt.Errorf("live protocol = %q, want TCP", got)
+						}
+						return nil
+					}),
+				),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesEndpointsV1_subsetRemoval removes every subset in place and adds
+// one back, converging after each step.
+func TestAccKubernetesEndpointsV1_subsetRemoval(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	checkUID := testAccCheckEndpointsSameUID()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesEndpointsV1_basic(name),
+				Check:  resource.ComposeAggregateTestCheckFunc(checkUID, resource.TestCheckResourceAttr(endpointsResourceName, "subset.#", "1")),
+			},
+			{
+				Config: testAccKubernetesEndpointsV1_noSubset(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkUID,
+					resource.TestCheckResourceAttr(endpointsResourceName, "subset.#", "0"),
+					testAccCheckEndpointsLive(name, func(ep *api.Endpoints) error {
+						if len(ep.Subsets) != 0 {
+							return fmt.Errorf("live subsets = %v, want none", ep.Subsets)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testAccKubernetesEndpointsV1_basic(name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(checkUID, resource.TestCheckResourceAttr(endpointsResourceName, "subset.#", "1")),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesEndpointsV1_disappears deletes the Endpoints out of band; refresh
+// must remove it from state and plan a create.
+func TestAccKubernetesEndpointsV1_disappears(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesEndpointsV1_basic(name),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(endpointsResourceName, "metadata.0.name", name),
+					testAccEndpointsDeleteOutOfBand(name),
+				),
+				ExpectNonEmptyPlan: true,
+			},
+			{
+				Config: testAccKubernetesEndpointsV1_basic(name),
+				Check:  resource.TestCheckResourceAttr(endpointsResourceName, "metadata.0.name", name),
+			},
+		},
+	})
+}
+
+// TestAccKubernetesEndpointsV1_validation covers plan-time validation inherited from the
+// SDKv2 schema and the two documented tightenings.
+func TestAccKubernetesEndpointsV1_validation(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	subset := `
+  subset {
+    address {
+      ip = "10.0.0.4"
+    }
+  }`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      `resource "kubernetes_endpoints_v1" "test" {` + subset + "\n}\n",
+				ExpectError: regexp.MustCompile(`(?s)Block metadata must have a configuration value.*as required`),
+			},
+			{
+				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name = %q
+  }
+  metadata {
+    name = %q
+  }%s
+}
+`, name, name, subset),
+				ExpectError: regexp.MustCompile(`list must contain at most 1 elements`),
+			},
+			{
+				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name          = %q
+    generate_name = "tf-acc-"
+  }%s
+}
+`, name, subset),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
+			},
+			{
+				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name   = %q
+    labels = { owner = null }
+  }%s
+}
+`, name, subset),
+				ExpectError: regexp.MustCompile(`value must be a string`),
+			},
+			{
+				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name = %q
+  }
+  subset {
+    port {
+      name = "http"
+    }
+  }
+}
+`, name),
+				ExpectError: regexp.MustCompile(`(?s)Missing required argument.*"port"`),
+			},
+			{
+				// SDKv2 silently dropped an empty subset, leaving an update in every plan.
+				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name = %q
+  }
+  subset {}
+}
+`, name),
+				ExpectError: regexp.MustCompile(`(?s)Invalid subset.*at least one address or not_ready_address`),
+			},
+			{
+				// Kubernetes rejected this at apply in SDKv2 too; it now fails at plan.
+				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name = %q
+  }
+  subset {
+    port {
+      port = 80
+    }
+  }
+}
+`, name),
+				ExpectError: regexp.MustCompile(`(?s)Invalid subset.*at least one address or not_ready_address`),
+			},
+		},
+	})
+}
+
+func TestAccKubernetesEndpointsV1_identity(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		Steps: []resource.TestStep{
+			{
+				Config:            testAccKubernetesEndpointsV1_basic(name),
+				ConfigStateChecks: []statecheck.StateCheck{testAccEndpointsExpectIdentity(name)},
+			},
+			{
+				// Import blocks already assert a no-op plan and unchanged identity.
+				ResourceName:    endpointsResourceName,
+				ImportState:     true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity,
+			},
+		},
+	})
+}
+
+// TestAccKubernetesEndpointsV1_identityImportDefaultNamespace verifies that an identity
+// import without namespace targets the default namespace, as for kubernetes_role_binding_v1.
+func TestAccKubernetesEndpointsV1_identityImportDefaultNamespace(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		Steps: []resource.TestStep{
+			{Config: testAccKubernetesEndpointsV1_basic(name)},
+			{
+				ResourceName:           endpointsResourceName,
+				ImportState:            true,
+				ImportStateKind:        resource.ImportBlockWithResourceIdentity,
+				ImportStateConfigExact: true,
+				Config:                 testAccKubernetesEndpointsV1_identityImport(name, "Endpoints", "v1"),
+			},
+			{
+				Config:            testAccKubernetesEndpointsV1_basic(name),
+				ConfigPlanChecks:  resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
+				ConfigStateChecks: []statecheck.StateCheck{testAccEndpointsExpectIdentity(name)},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesEndpointsV1_importInvalidIdentity(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-acc-test")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+		Steps: []resource.TestStep{
+			{Config: testAccKubernetesEndpointsV1_basic(name)},
+			{
+				ResourceName: endpointsResourceName, ImportState: true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity, ImportStateConfigExact: true,
+				Config:      testAccKubernetesEndpointsV1_identityImport(name, "EndpointSlice", "v1"),
+				ExpectError: regexp.MustCompile("invalid identity import"),
+			},
+			{
+				ResourceName: endpointsResourceName, ImportState: true,
+				ImportStateKind: resource.ImportBlockWithResourceIdentity, ImportStateConfigExact: true,
+				Config:      testAccKubernetesEndpointsV1_identityImport(name, "Endpoints", "discovery.k8s.io/v1"),
+				ExpectError: regexp.MustCompile("invalid identity import"),
+			},
+		},
+	})
+}
+
+func testAccEndpointsExpectIdentity(name string) statecheck.StateCheck {
+	return statecheck.ExpectIdentity(endpointsResourceName, map[string]knownvalue.Check{
+		"api_version": knownvalue.StringExact("v1"),
+		"kind":        knownvalue.StringExact("Endpoints"),
+		"name":        knownvalue.StringExact(name),
+		"namespace":   knownvalue.StringExact("default"),
+	})
+}
+
+// testAccCheckEndpointsSameUID records the UID on its first call and fails if a later
+// step sees a different one, i.e. the Endpoints was replaced instead of updated.
+func testAccCheckEndpointsSameUID() resource.TestCheckFunc {
+	var prior string
+	return func(state *terraform.State) error {
+		rs, ok := state.RootModule().Resources[endpointsResourceName]
+		if !ok {
+			rs, ok = state.RootModule().Resources["kubernetes_endpoints.test"]
+		}
+		if !ok {
+			return fmt.Errorf("missing Endpoints test resource")
+		}
+		uid := rs.Primary.Attributes["metadata.0.uid"]
+		if uid == "" {
+			return fmt.Errorf("Endpoints has no uid in state")
+		}
+		if prior != "" && uid != prior {
+			return fmt.Errorf("Endpoints replaced: uid %q became %q", prior, uid)
+		}
+		prior = uid
+		return nil
+	}
+}
+
+func testAccCheckEndpointsLive(name string, check func(*api.Endpoints) error) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		client, err := mainClientset()
+		if err != nil {
+			return err
+		}
+		ep, err := client.CoreV1().Endpoints(metav1.NamespaceDefault).Get(context.Background(), name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		return check(ep)
+	}
+}
+
+func testAccEndpointsDeleteOutOfBand(name string) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
+		client, err := mainClientset()
+		if err != nil {
+			return err
+		}
+		return client.CoreV1().Endpoints(metav1.NamespaceDefault).Delete(context.Background(), name, metav1.DeleteOptions{})
+	}
+}
+
+func testAccKubernetesEndpointsV1_explicitEmptyStrings(name string, port int) string {
+	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name = %q
+  }
+  subset {
+    address {
+      ip        = "10.0.0.4"
+      hostname  = ""
+      node_name = ""
+    }
+    not_ready_address {
+      ip       = "10.0.0.5"
+      hostname = ""
+    }
+    port {
+      name     = ""
+      port     = %d
+      protocol = "TCP"
+    }
+  }
+  subset {
+    address {
+      ip = "10.0.0.4"
+    }
+    port {
+      port     = %d
+      protocol = "TCP"
+    }
+  }
+}
+`, name, port, port+1000)
+}
+
+func testAccKubernetesEndpointsV1_protocol(name, protocol string) string {
+	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name = %q
+  }
+  subset {
+    address {
+      ip = "10.0.0.4"
+    }
+    port {
+      name = "dns"
+      port = 53
+      %s
+    }
+  }
+}
+`, name, protocol)
+}
+
+func testAccKubernetesEndpointsV1_noSubset(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    annotations = {
+      TestAnnotationOne = "one"
+      TestAnnotationTwo = "two"
+    }
+    labels = {
+      TestLabelOne   = "one"
+      TestLabelTwo   = "two"
+      TestLabelThree = "three"
+    }
+    name = %q
+  }
+}
+`, name)
+}
+
+func testAccKubernetesEndpointsV1_identityImport(name, kind, apiVersion string) string {
+	return testAccKubernetesEndpointsV1_basic(name) + fmt.Sprintf(`
+import {
+  to = kubernetes_endpoints_v1.test
+  identity = {
+    name        = %q
+    kind        = %q
+    api_version = %q
+  }
+}
+`, name, kind, apiVersion)
+}
+
+// Metadata kept out of Terraform state must survive updates to the other metadata map and
+// to subset. Mirrors TestAccKubernetesNamespaceV1_updateDoesNotAffectIgnoredMetadata: a key
+// can be absent from state as an internal key, filtered by common.FlattenMetadata as
+// SDKv2's isInternalKey did, or through the provider's ignore_annotations / ignore_labels,
+// which need the muxed server so the provider block is honoured. The key never appears in
+// plan or state, so the assertions read the live object.
+func TestAccKubernetesEndpointsV1_updateDoesNotAffectIgnoredMetadata(t *testing.T) {
+	muxFactories := map[string]func() (tfprotov6.ProviderServer, error){
+		"kubernetes": func() (tfprotov6.ProviderServer, error) {
+			return mux.MuxServer(context.Background(), "test")
+		},
+	}
+
+	for _, tc := range []struct {
+		name          string
+		ignored       string // the map Terraform does not manage
+		managed       string // the map the update changes
+		key           string
+		providerBlock string
+		factories     map[string]func() (tfprotov6.ProviderServer, error)
+	}{
+		{
+			name: "internal annotation survives updates", ignored: "annotations", managed: "labels",
+			key: ignoredMetadataKey, factories: testAccProtoV6ProviderFactories,
+		},
+		{
+			name: "internal label survives updates", ignored: "labels", managed: "annotations",
+			key: ignoredMetadataKey, factories: testAccProtoV6ProviderFactories,
+		},
+		{
+			name: "ignore_annotations survives updates", ignored: "annotations", managed: "labels",
+			key:           "outside.example/keep",
+			providerBlock: "provider \"kubernetes\" {\n  ignore_annotations = [\"^outside[.]example/keep$\"]\n}\n",
+			factories:     muxFactories,
+		},
+		{
+			name: "ignore_labels survives updates", ignored: "labels", managed: "annotations",
+			key:           "outside.example/keep",
+			providerBlock: "provider \"kubernetes\" {\n  ignore_labels = [\"^outside[.]example/keep$\"]\n}\n",
+			factories:     muxFactories,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := acctest.RandomWithPrefix("tf-acc-test")
+			checkUID := testAccCheckEndpointsSameUID()
+
+			config := func(value, ignoredMap string, port int) string {
+				return tc.providerBlock + testAccKubernetesEndpointsV1_managedMetadata(name, tc.managed, value, ignoredMap, port)
+			}
+			settles := func(preApply ...plancheck.PlanCheck) resource.ConfigPlanChecks {
+				return resource.ConfigPlanChecks{
+					PreApply:             preApply,
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				}
+			}
+			update := settles(plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate))
+			ignoredMapIs := func(check knownvalue.Check) []statecheck.StateCheck {
+				return []statecheck.StateCheck{statecheck.ExpectKnownValue(endpointsResourceName,
+					tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey(tc.ignored), check)}
+			}
+			survived := func(value string) resource.TestCheckFunc {
+				return resource.ComposeAggregateTestCheckFunc(
+					checkUID,
+					resource.TestCheckResourceAttr(endpointsResourceName, "metadata.0."+tc.managed+".managed", value),
+					testAccCheckIgnoredEndpointsMetadata(name, tc.ignored, tc.key),
+				)
+			}
+
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: tc.factories,
+				CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+				Steps: []resource.TestStep{
+					{
+						Config:           config("before", "", 80),
+						ConfigPlanChecks: settles(),
+						Check:            checkUID,
+					},
+					{
+						// Another controller writes the key Terraform does not manage.
+						PreConfig:         func() { testAccInjectIgnoredEndpointsMetadata(t, name, tc.ignored, tc.key) },
+						Config:            config("before", "", 80),
+						ConfigPlanChecks:  settles(plancheck.ExpectEmptyPlan()),
+						ConfigStateChecks: ignoredMapIs(knownvalue.Null()),
+						Check:             survived("before"),
+					},
+					{
+						Config:            config("after", "", 80),
+						ConfigPlanChecks:  update,
+						ConfigStateChecks: ignoredMapIs(knownvalue.Null()),
+						Check:             survived("after"),
+					},
+					{
+						// A subset-only update replaces /subsets and must not touch metadata.
+						Config:            config("after", "", 81),
+						ConfigPlanChecks:  update,
+						ConfigStateChecks: ignoredMapIs(knownvalue.Null()),
+						Check:             survived("after"),
+					},
+					{
+						// null -> {} on the ignored map changes state only.
+						Config:            config("after", tc.ignored+" = {}", 81),
+						ConfigPlanChecks:  update,
+						ConfigStateChecks: ignoredMapIs(knownvalue.MapExact(map[string]knownvalue.Check{})),
+						Check:             survived("after"),
+					},
+					{
+						// and back, {} -> null.
+						Config:            config("after", "", 81),
+						ConfigPlanChecks:  update,
+						ConfigStateChecks: ignoredMapIs(knownvalue.Null()),
+						Check:             survived("after"),
+					},
+				},
+			})
+		})
+	}
+}
+
+// testAccKubernetesEndpointsV1_managedMetadata manages one key in field. ignoredMap is ""
+// to leave the other map out of the configuration, or a line such as `annotations = {}`.
+func testAccKubernetesEndpointsV1_managedMetadata(name, field, value, ignoredMap string, port int) string {
+	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    %s = {
+      managed = %q
+    }
+    %s
+    name = %q
+  }
+  subset {
+    address {
+      ip = "10.0.0.4"
+    }
+    port {
+      port = %d
+    }
+  }
+}
+`, field, value, ignoredMap, name, port)
+}
+
+// testAccInjectIgnoredEndpointsMetadata writes key into one of the Endpoints' metadata
+// maps, standing in for another controller.
+func testAccInjectIgnoredEndpointsMetadata(t *testing.T, name, field, key string) {
+	t.Helper()
+
+	client, err := mainClientset()
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch := fmt.Sprintf(`{"metadata":{%q:{%q:"controller-owned"}}}`, field, key)
+	if _, err := client.CoreV1().Endpoints(metav1.NamespaceDefault).Patch(context.Background(), name,
+		k8stypes.MergePatchType, []byte(patch), metav1.PatchOptions{}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testAccCheckIgnoredEndpointsMetadata(name, field, key string) resource.TestCheckFunc {
+	return testAccCheckEndpointsLive(name, func(ep *api.Endpoints) error {
+		live := map[string]map[string]string{"annotations": ep.Annotations, "labels": ep.Labels}
+		if got := live[field][key]; got != "controller-owned" {
+			return fmt.Errorf("ignored %s[%q] = %q, expected %q (live: %v)", field, key, got, "controller-owned", live[field])
+		}
+		return nil
+	})
 }

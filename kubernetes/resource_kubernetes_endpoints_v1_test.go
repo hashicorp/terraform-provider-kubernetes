@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -162,11 +163,13 @@ func testAccCheckKubernetesEndpointV1Destroy(s *terraform.State) error {
 		}
 
 		resp, err := conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("Endpoint still exists: %s", rs.Primary.ID)
-			}
+		if errors.IsNotFound(err) {
+			continue
 		}
+		if err != nil {
+			return fmt.Errorf("checking destruction of Endpoints %q: %w", rs.Primary.ID, err)
+		}
+		return fmt.Errorf("Endpoints %q still exists (uid %s)", rs.Primary.ID, resp.UID)
 	}
 
 	return nil

@@ -11,7 +11,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -44,8 +48,11 @@ func (e *EndpointsV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	if len(plan.Metadata) == 0 {
-		resp.Diagnostics.AddError("Missing metadata", "At least one metadata block is required.")
+	// The schema already requires exactly one metadata block. This turns a plan that
+	// bypassed validation into a diagnostic instead of an index-out-of-range panic.
+	if len(plan.Metadata) != 1 {
+		resp.Diagnostics.AddError("Invalid metadata",
+			fmt.Sprintf("Expected exactly one metadata block in the plan, got %d.", len(plan.Metadata)))
 		return
 	}
 
@@ -84,6 +91,7 @@ func (e *EndpointsV1) Create(ctx context.Context, req resource.CreateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	resp.Diagnostics.Append(setEndpointsFrameworkStateMarker(ctx, resp.Private)...)
 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, endpointsIdentity(out.Namespace, out.Name))...)
 }
@@ -153,7 +161,16 @@ func (e *EndpointsV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 	}}
 
 	if len(ep.Subsets) > 0 {
-		state.Subset = flattenEndpointsSubsets(ep.Subsets)
+		flattened := flattenEndpointsSubsets(ep.Subsets)
+		frameworkState, markerDiags := hasEndpointsFrameworkStateMarker(ctx, req.Private)
+		resp.Diagnostics.Append(markerDiags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if frameworkState {
+			preserveExplicitEmptyStrings(state.Subset, flattened)
+		}
+		state.Subset = flattened
 	} else if len(state.Subset) > 0 {
 		state.Subset = []EndpointsSubsetModel{}
 	} else {
@@ -164,6 +181,7 @@ func (e *EndpointsV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	resp.Diagnostics.Append(setEndpointsFrameworkStateMarker(ctx, resp.Private)...)
 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, endpointsIdentity(ep.Namespace, ep.Name))...)
 }
@@ -201,8 +219,26 @@ func (e *EndpointsV1) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
+	// As in Create, this supplements the schema validators rather than replacing them.
+	if len(plan.Metadata) != 1 || len(state.Metadata) != 1 {
+		resp.Diagnostics.AddError("Invalid metadata",
+			fmt.Sprintf("Expected exactly one metadata block in plan and state, got %d and %d.", len(plan.Metadata), len(state.Metadata)))
+		return
+	}
+
+	// Compare as sets, mirroring SDKv2 d.HasChange("subset"): element order is not
+	// significant, and a null and an empty set both mean no subsets.
+	var planSubset, stateSubset types.Set
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("subset"), &planSubset)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("subset"), &stateSubset)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	subsetsUnchanged := planSubset.Equal(stateSubset) ||
+		(len(planSubset.Elements()) == 0 && len(stateSubset.Elements()) == 0)
+
 	ops := common.MetadataPatchOps("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel)
-	if !reflect.DeepEqual(state.Subset, plan.Subset) {
+	if !subsetsUnchanged {
 		subsets := expandEndpointsSubsets(plan.Subset)
 		ops = append(ops, &kubernetes.ReplaceOperation{
 			Path:  "/subsets",
@@ -242,6 +278,7 @@ func (e *EndpointsV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	resp.Diagnostics.Append(setEndpointsFrameworkStateMarker(ctx, resp.Private)...)
 
 	resp.Diagnostics.Append(resp.Identity.Set(ctx, endpointsIdentity(out.Namespace, out.Name))...)
 }
@@ -389,13 +426,10 @@ func flattenEndpointsPorts(in []api.EndpointPort) []EndpointsPortModel {
 		m := EndpointsPortModel{
 			Port:     types.Int64Value(int64(n.Port)),
 			Name:     types.StringNull(),
-			Protocol: types.StringValue("TCP"),
+			Protocol: types.StringValue(string(n.Protocol)),
 		}
 		if n.Name != "" {
 			m.Name = types.StringValue(n.Name)
-		}
-		if n.Protocol != "" {
-			m.Protocol = types.StringValue(string(n.Protocol))
 		}
 		att[i] = m
 	}
@@ -421,4 +455,101 @@ func flattenEndpointsSubsets(in []api.EndpointSubset) []EndpointsSubsetModel {
 		att[i] = m
 	}
 	return att
+}
+
+// endpointsFrameworkStateKey marks state written by this implementation. SDKv2 stored
+// "" for both unset and explicitly empty strings, so its state cannot tell them apart.
+// Without the marker Read normalizes "" to null; with it, a "" in prior state came
+// from configuration and is preserved so explicit empty strings converge.
+const endpointsFrameworkStateKey = "endpoints_framework_state"
+
+type privateStateReader interface {
+	GetKey(ctx context.Context, key string) ([]byte, diag.Diagnostics)
+}
+
+type privateStateWriter interface {
+	SetKey(ctx context.Context, key string, value []byte) diag.Diagnostics
+}
+
+func hasEndpointsFrameworkStateMarker(ctx context.Context, private privateStateReader) (bool, diag.Diagnostics) {
+	value, diags := private.GetKey(ctx, endpointsFrameworkStateKey)
+	return len(value) > 0, diags
+}
+
+func setEndpointsFrameworkStateMarker(ctx context.Context, private privateStateWriter) diag.Diagnostics {
+	// The framework always initializes Private; only direct calls in unit tests leave it nil.
+	if private == nil || reflect.ValueOf(private).IsNil() {
+		return nil
+	}
+	return private.SetKey(ctx, endpointsFrameworkStateKey, []byte(`true`))
+}
+
+type endpointsAddressKey struct {
+	subset   string
+	notReady bool
+	ip       string
+}
+
+type endpointsPortKey struct {
+	subset   string
+	port     int64
+	protocol string
+}
+
+// endpointsSubsetPortsKey identifies a subset by its port numbers and protocols, so the
+// same IP or port in two subsets is matched only within its own subset.
+func endpointsSubsetPortsKey(ports []EndpointsPortModel) string {
+	keys := make([]string, len(ports))
+	for i, p := range ports {
+		keys[i] = fmt.Sprintf("%d/%s", p.Port.ValueInt64(), p.Protocol.ValueString())
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, ",")
+}
+
+// preserveExplicitEmptyStrings restores "" for hostname, node_name and port name where
+// the API omitted the field and prior state held "". Subsets are matched by their ports,
+// addresses within them by readiness and IP, and ports by number and protocol.
+func preserveExplicitEmptyStrings(prior, current []EndpointsSubsetModel) {
+	emptyHostname := map[endpointsAddressKey]bool{}
+	emptyNodeName := map[endpointsAddressKey]bool{}
+	emptyPortName := map[endpointsPortKey]bool{}
+	isEmpty := func(v types.String) bool { return !v.IsNull() && !v.IsUnknown() && v.ValueString() == "" }
+
+	for _, subset := range prior {
+		subsetKey := endpointsSubsetPortsKey(subset.Port)
+		for notReady, addresses := range map[bool][]EndpointsAddressModel{false: subset.Address, true: subset.NotReadyAddress} {
+			for _, a := range addresses {
+				key := endpointsAddressKey{subset: subsetKey, notReady: notReady, ip: a.IP.ValueString()}
+				emptyHostname[key] = emptyHostname[key] || isEmpty(a.Hostname)
+				emptyNodeName[key] = emptyNodeName[key] || isEmpty(a.NodeName)
+			}
+		}
+		for _, p := range subset.Port {
+			key := endpointsPortKey{subset: subsetKey, port: p.Port.ValueInt64(), protocol: p.Protocol.ValueString()}
+			emptyPortName[key] = emptyPortName[key] || isEmpty(p.Name)
+		}
+	}
+
+	for i := range current {
+		subsetKey := endpointsSubsetPortsKey(current[i].Port)
+		for notReady, addresses := range map[bool][]EndpointsAddressModel{false: current[i].Address, true: current[i].NotReadyAddress} {
+			for j := range addresses {
+				key := endpointsAddressKey{subset: subsetKey, notReady: notReady, ip: addresses[j].IP.ValueString()}
+				if addresses[j].Hostname.IsNull() && emptyHostname[key] {
+					addresses[j].Hostname = types.StringValue("")
+				}
+				if addresses[j].NodeName.IsNull() && emptyNodeName[key] {
+					addresses[j].NodeName = types.StringValue("")
+				}
+			}
+		}
+		for j := range current[i].Port {
+			p := &current[i].Port[j]
+			key := endpointsPortKey{subset: subsetKey, port: p.Port.ValueInt64(), protocol: p.Protocol.ValueString()}
+			if p.Name.IsNull() && emptyPortName[key] {
+				p.Name = types.StringValue("")
+			}
+		}
+	}
 }

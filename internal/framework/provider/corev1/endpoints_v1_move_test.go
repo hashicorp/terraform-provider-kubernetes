@@ -35,13 +35,11 @@ moved {
 `
 }
 
-func testAccEndpointsMoveState(t *testing.T, sdkv2Version, config string) {
+// testAccEndpointsMoveState moves SDKv2 alias state to kubernetes_endpoints_v1, checks
+// the expected plan without replacement, then updates the moved resource in place.
+func testAccEndpointsMoveState(t *testing.T, config, updated string, check plancheck.PlanCheck) {
 	t.Helper()
-	testAccEndpointsMoveStateWithPlanCheck(t, sdkv2Version, config, plancheck.ExpectEmptyPlan())
-}
-
-func testAccEndpointsMoveStateWithPlanCheck(t *testing.T, sdkv2Version, config string, check plancheck.PlanCheck) {
-	t.Helper()
+	checkUID := testAccCheckEndpointsSameUID()
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t) },
@@ -51,20 +49,27 @@ func testAccEndpointsMoveStateWithPlanCheck(t *testing.T, sdkv2Version, config s
 		CheckDestroy: testAccCheckKubernetesEndpointV1Destroy,
 		Steps: []resource.TestStep{
 			{
-				ExternalProviders: map[string]resource.ExternalProvider{
-					"kubernetes": {
-						VersionConstraint: sdkv2Version,
-						Source:            "hashicorp/kubernetes",
-					},
-				},
-				Config: testAccEndpointsMoveStateSource(config),
+				ExternalProviders: endpointsSDKv2Provider(),
+				Config:            testAccEndpointsMoveStateSource(config),
+				Check:             checkUID,
 			},
 			{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   testAccEndpointsMoveStateTarget(config),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{check},
+					PreApply:             []plancheck.PlanCheck{check},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
+				Check: checkUID,
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   testAccEndpointsMoveStateTarget(updated),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: checkUID,
 			},
 		},
 	})
@@ -72,27 +77,28 @@ func testAccEndpointsMoveStateWithPlanCheck(t *testing.T, sdkv2Version, config s
 
 func TestAccEndpoints_MoveStateFromUnversioned(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	testAccEndpointsMoveState(t, sdkv2ProviderVersion, testAccKubernetesEndpointsV1_basic(name))
+	testAccEndpointsMoveState(t, testAccKubernetesEndpointsV1_basic(name), testAccKubernetesEndpointsV1_modified(name), plancheck.ExpectEmptyPlan())
 }
 
 func TestAccEndpoints_MoveStateFromUnversioned_generatedName(t *testing.T) {
 	prefix := fmt.Sprintf("tf-migration-test-%s-", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	testAccEndpointsMoveState(t, sdkv2ProviderVersion, testAccKubernetesEndpointsV1_generatedName(prefix))
+	updated := strings.Replace(testAccKubernetesEndpointsV1_generatedName(prefix), "port     = 80", "port     = 81", 1)
+	testAccEndpointsMoveState(t, testAccKubernetesEndpointsV1_generatedName(prefix), updated, plancheck.ExpectEmptyPlan())
 }
 
 func TestAccEndpoints_MoveStateFromUnversioned_modified(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	testAccEndpointsMoveState(t, sdkv2ProviderVersion, testAccKubernetesEndpointsV1_modified(name))
+	testAccEndpointsMoveState(t, testAccKubernetesEndpointsV1_modified(name), testAccKubernetesEndpointsV1_basic(name), plancheck.ExpectEmptyPlan())
 }
 
-func TestAccEndpoints_MoveStateFromUnversionedPreIdentity_basic(t *testing.T) {
+// MoveState normalizes SDKv2's "" to null, so explicitly empty values are written
+// back once in place, as after an upgrade.
+func TestAccEndpoints_MoveStateFromUnversioned_explicitEmptyStrings(t *testing.T) {
 	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	testAccEndpointsMoveState(t, sdkv2PreIdentityProviderVersion, testAccKubernetesEndpointsV1_basic(name))
-}
-
-func TestAccEndpoints_MoveStateFromUnversionedPreIdentity_modified(t *testing.T) {
-	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	testAccEndpointsMoveState(t, sdkv2PreIdentityProviderVersion, testAccKubernetesEndpointsV1_modified(name))
+	testAccEndpointsMoveState(t,
+		testAccKubernetesEndpointsV1_explicitEmptyStrings(name, 80),
+		testAccKubernetesEndpointsV1_explicitEmptyStrings(name, 81),
+		plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate))
 }
 
 func TestEndpointsMoveState(t *testing.T) {
@@ -280,6 +286,64 @@ func TestEndpointsMoveState(t *testing.T) {
 			if !response.TargetState.Raw.IsNull() || !response.TargetIdentity.Raw.IsNull() {
 				t.Fatal("unsupported or invalid source must not produce state or identity")
 			}
+		})
+	}
+}
+
+// The move must preserve metadata written by another controller, and so must the first
+// update after it. Mirrors TestAccNamespace_MoveStateFromUnversioned_ignoredMetadataSurvivesUpdate:
+// moved state is equally free of the unmanaged key.
+func TestAccEndpoints_MoveStateFromUnversioned_ignoredMetadataSurvivesUpdate(t *testing.T) {
+	for _, tc := range []struct{ ignored, managed string }{
+		{ignored: "annotations", managed: "labels"},
+		{ignored: "labels", managed: "annotations"},
+	} {
+		t.Run(tc.ignored, func(t *testing.T) {
+			name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+			checkUID := testAccCheckEndpointsSameUID()
+			before := testAccKubernetesEndpointsV1_managedMetadata(name, tc.managed, "before", "", 80)
+			after := testAccKubernetesEndpointsV1_managedMetadata(name, tc.managed, "after", "", 81)
+
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck: func() { testAccPreCheck(t) },
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+					tfversion.SkipBelow(tfversion.Version1_8_0),
+				},
+				CheckDestroy: testAccCheckKubernetesEndpointV1Destroy,
+				Steps: []resource.TestStep{
+					{
+						ExternalProviders: endpointsSDKv2Provider(),
+						Config:            testAccEndpointsMoveStateSource(before),
+						Check:             checkUID,
+					},
+					{
+						PreConfig:                func() { testAccInjectIgnoredEndpointsMetadata(t, name, tc.ignored, ignoredMetadataKey) },
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   testAccEndpointsMoveStateTarget(before),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							checkUID,
+							testAccCheckIgnoredEndpointsMetadata(name, tc.ignored, ignoredMetadataKey),
+						),
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   testAccEndpointsMoveStateTarget(after),
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate)},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							checkUID,
+							resource.TestCheckResourceAttr(endpointsResourceName, "metadata.0."+tc.managed+".managed", "after"),
+							testAccCheckIgnoredEndpointsMetadata(name, tc.ignored, ignoredMetadataKey),
+						),
+					},
+				},
+			})
 		})
 	}
 }

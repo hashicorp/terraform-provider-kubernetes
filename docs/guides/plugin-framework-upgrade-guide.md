@@ -39,6 +39,7 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
 | Resource | `kubernetes_role_binding_v1` | v3.5.0 | [RoleBinding resource](#resource-kubernetes_role_binding_v1) |
 | Resource | `kubernetes_cluster_role_binding_v1` | v3.5.0 | [ClusterRoleBinding resource](#resource-kubernetes_cluster_role_binding_v1) |
+| Resource | `kubernetes_endpoints_v1` | v3.6.0 | [Endpoints resource](#resource-kubernetes_endpoints_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -174,6 +175,41 @@ moved {
 ```
 
 Moved state shows the same one-time updates for empty metadata maps and `api_group = ""`. Verify that the plan does not replace the binding. See the [ClusterRoleBinding resource reference](../resources/cluster_role_binding_v1.md#metadata-and-upgrades) for further details.
+
+## Resource: kubernetes_endpoints_v1
+
+- **Existing state:** Upgrading `kubernetes_endpoints_v1` does not require re-importing objects or manually editing state. A refresh-enabled plan is empty for configurations that omit `hostname`, `node_name` and port `name`.
+- **Explicitly empty strings:** SDKv2 stored `""` both for omitted and for explicitly empty `hostname`, `node_name` and port `name` values. The first refresh after upgrading stores omitted values as `null`, so a configuration that sets any of them to `""` shows a one-time in-place update of the affected `subset`. The Endpoints object is not replaced, and the next plan is empty. To avoid the update, remove the empty values from the configuration before upgrading.
+- **Plans without refresh:** Immediately after upgrading, `terraform plan -refresh=false` shows a one-time in-place update of `subset`, and of `metadata.generate_name` for Endpoints configured with `name`, because SDKv2 stored these unset values as `""`. A normal, refresh-enabled plan shows no change for them. Neither replaces the Endpoints.
+- **Empty metadata maps:** Endpoints imported with an earlier provider version may have stored empty `labels` or `annotations` maps that now change to `null` when omitted from configuration, in a one-time in-place update.
+- **Null map entries:** `metadata.labels` and `metadata.annotations` entries must contain non-null strings. Remove entries such as `owner = null` or provide string values. Omitting the whole map or setting it to `null` remains supported.
+- **Subsets without addresses:** Each `subset` must now contain at least one `address` or `not_ready_address`, and planning fails otherwise. SDKv2 silently dropped an empty `subset {}` block, so the Endpoints had no subsets and every plan showed an update. A subset with only `port` blocks was already rejected by Kubernetes during apply, and now fails earlier. Because this fails during validation, it blocks every plan in the configuration, including `terraform destroy`, until fixed. Remove the empty block, or add an `address` or `not_ready_address` to it, before planning, applying, or destroying.
+- **Computed metadata:** During updates, `metadata[0].generation` and `metadata[0].resource_version` can be `(known after apply)` until read from the API. This does not itself indicate replacement.
+- **Resource identity:** The resource now supports resource identity. The first refresh after upgrading records it. Identity imports require Terraform 1.12 or later and default an omitted `namespace` to `default`.
+- **Downgrading:** Once the upgraded provider has written the state, earlier provider versions refuse it with `Resource instance managed by newer provider version`, because SDKv2 `kubernetes_endpoints_v1` did not support resource identity. Back up state before upgrading if you might need to roll back.
+- **Import:** Import IDs have the form `namespace/name`. For Endpoints created with `generate_name`, configure the original prefix and omit `name` to avoid a replacement plan after import.
+
+### Configurations with both name and generate_name
+
+Setting both arguments is now rejected during planning, including `generate_name = ""`.
+
+- If `generate_name` is empty, remove it and keep `name`.
+- Otherwise, remove `name` and retain the original `generate_name`. The existing Endpoints keeps its name.
+
+Removing or changing a stored non-empty prefix replaces the Endpoints. Review the plan before applying.
+
+### Moving from kubernetes_endpoints
+
+Terraform 1.8 or later supports moving from the deprecated `kubernetes_endpoints` resource to `kubernetes_endpoints_v1`. Change the resource type, update references, and add a `moved` block:
+
+```terraform
+moved {
+  from = kubernetes_endpoints.example
+  to   = kubernetes_endpoints_v1.example
+}
+```
+
+Moved state shows the same one-time update for explicitly empty `hostname`, `node_name` and port `name` values. Verify that the plan does not replace the Endpoints, then apply and confirm that the next plan is empty.
 
 ## Data source: kubernetes_namespace_v1
 

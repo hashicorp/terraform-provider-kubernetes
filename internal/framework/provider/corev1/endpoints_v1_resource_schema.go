@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
@@ -22,6 +23,7 @@ func (e *EndpointsV1) Schema(ctx context.Context, req resource.SchemaRequest, re
 		Description: "An Endpoints resource is an abstraction, linked to a Service, which defines the list of endpoints that actually implement the service.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
+				Description:   "The unique ID for this terraform resource in the form `namespace/name`.",
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -29,8 +31,9 @@ func (e *EndpointsV1) Schema(ctx context.Context, req resource.SchemaRequest, re
 		Blocks: map[string]schema.Block{
 			"metadata": common.NamespacedMetadataSchema("endpoints", true),
 			"subset": schema.SetNestedBlock{
-				Description: "Set of addresses and ports that comprise a service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors",
+				Description: "Set of addresses and ports that comprise a service. Each subset must contain at least one `address` or `not_ready_address`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors",
 				NestedObject: schema.NestedBlockObject{
+					Validators: []validator.Object{endpointsSubsetAddressesValidator{}},
 					Blocks: map[string]schema.Block{
 						"address": schema.SetNestedBlock{
 							Description: "IP address which offers the related ports that are marked as ready. These endpoints should be considered safe for load balancers and clients to utilize.",
@@ -110,4 +113,36 @@ func (e *EndpointsV1) Schema(ctx context.Context, req resource.SchemaRequest, re
 // IdentitySchema implements [resource.ResourceWithIdentity].
 func (e *EndpointsV1) IdentitySchema(ctx context.Context, req resource.IdentitySchemaRequest, resp *resource.IdentitySchemaResponse) {
 	resp.IdentitySchema = common.NamespacedIdentitySchema()
+}
+
+// endpointsSubsetAddressesValidator rejects a subset with neither address nor
+// not_ready_address during planning. Kubernetes rejects such a subset, and SDKv2
+// silently dropped an empty subset {} block, leaving an update in every plan.
+type endpointsSubsetAddressesValidator struct{}
+
+func (v endpointsSubsetAddressesValidator) Description(context.Context) string {
+	return "subset must contain at least one address or not_ready_address"
+}
+
+func (v endpointsSubsetAddressesValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v endpointsSubsetAddressesValidator) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	attributes := req.ConfigValue.Attributes()
+	for _, name := range []string{"address", "not_ready_address"} {
+		addresses, ok := attributes[name].(types.Set)
+		if !ok {
+			continue
+		}
+		// Dynamic blocks can be unknown until apply; Kubernetes still validates them then.
+		if addresses.IsUnknown() || len(addresses.Elements()) > 0 {
+			return
+		}
+	}
+	resp.Diagnostics.AddAttributeError(req.Path, "Invalid subset",
+		"Each subset must contain at least one address or not_ready_address block. Kubernetes rejects a subset without addresses.")
 }

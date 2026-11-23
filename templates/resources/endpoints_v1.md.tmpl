@@ -9,11 +9,35 @@ description: |-
 
 {{ .Description }}
 
+Exactly one `metadata` block is required. `subset`, `address`, `not_ready_address` and `port` are sets, so their order is not significant.
+
+For existing SDKv2-managed Endpoints, see the [Plugin Framework upgrade guide](../guides/plugin-framework-upgrade-guide.md#resource-kubernetes_endpoints_v1) before upgrading.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage
 
 {{tffile "examples/resources/endpoints_v1/example_1.tf"}}
+
+## Migrating from kubernetes_endpoints
+
+Terraform 1.8 or later can move state from the deprecated `kubernetes_endpoints` resource without recreating the Endpoints. Rename the resource type, update references, and add a `moved` block:
+
+```terraform
+moved {
+  from = kubernetes_endpoints.example
+  to   = kubernetes_endpoints_v1.example
+}
+```
+
+## Migration to Plugin Framework
+
+`kubernetes_endpoints_v1` is implemented using the Terraform Plugin Framework. Existing state written by the SDKv2 implementation is supported without re-importing the Endpoints. A `moved` block is only needed when upgrading from the deprecated `kubernetes_endpoints` type. See the [Plugin Framework upgrade guide](../guides/plugin-framework-upgrade-guide.md#resource-kubernetes_endpoints_v1) for details.
+
+- **Both name and generate_name:** Configurations specifying both `metadata.name` and `metadata.generate_name` are rejected during planning, including `generate_name = ""`. If `generate_name` is empty, remove it and keep `name`. Otherwise, remove `name` and keep `generate_name`; the Endpoints keeps its current name.
+- **Null map entries:** An individual label or annotation value of `null` is rejected during planning. SDKv2 accepted these entries but silently dropped them from the Kubernetes object. Remove them or provide string values.
+- **Explicitly empty strings:** After upgrading, an explicit `hostname = ""`, `node_name = ""` or port `name = ""` shows a one-time in-place update, because SDKv2 could not distinguish it from an unset value. The Endpoints is not replaced, and the next plan is empty.
+- **Resource identity:** The resource now records a resource identity. Earlier provider versions refuse state written after the upgrade, so back up state before upgrading if you might need to roll back.
 
 ## Import
 
@@ -22,3 +46,7 @@ An Endpoints resource can be imported using its namespace and name, e.g.
 ```
 $ terraform import kubernetes_endpoints_v1.example default/terraform-name
 ```
+
+Identity import requires Terraform 1.12 or later. Use `api_version = "v1"`, `kind = "Endpoints"`, and the Endpoints' `name`; an omitted `namespace` defaults to `default`.
+
+For Endpoints created with `generate_name`, configure the original prefix and omit `name` after import to avoid replacement.

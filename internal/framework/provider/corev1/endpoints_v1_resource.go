@@ -194,13 +194,10 @@ func (e *EndpointsV1) MoveState(ctx context.Context) []resource.StateMover {
 							port := EndpointsPortModel{
 								Port:     types.Int64Value(p.Port),
 								Name:     types.StringNull(),
-								Protocol: types.StringValue("TCP"),
+								Protocol: types.StringValue(p.Protocol),
 							}
 							if p.Name != "" {
 								port.Name = types.StringValue(p.Name)
-							}
-							if p.Protocol != "" {
-								port.Protocol = types.StringValue(p.Protocol)
 							}
 							ports = append(ports, port)
 						}

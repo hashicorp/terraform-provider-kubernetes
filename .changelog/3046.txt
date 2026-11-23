@@ -1,5 +1,5 @@
 ```release-note:note
-`resource/kubernetes_endpoints_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and supporting existing state without re-import. The resource now supports resource identity, including identity-based import with Terraform 1.12 or later. Moving from the deprecated `kubernetes_endpoints` type with a `moved` block is supported with Terraform 1.8 or later. Immediately after upgrading, `terraform plan -refresh=false` may show a one-time in-place update normalizing unset `hostname`, `node_name` and port `name` values from `""` to null, and resources imported with an earlier provider version may show a one-time in-place update of empty `annotations` or `labels` maps to null. These updates do not replace the Endpoints.
+`resource/kubernetes_endpoints_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and supporting existing state without re-import. The resource now supports resource identity, including identity-based import with Terraform 1.12 or later; once the upgraded provider has written the state, earlier provider versions refuse it, so back up state before upgrading if you might need to roll back. Moving from the deprecated `kubernetes_endpoints` type with a `moved` block is supported with Terraform 1.8 or later. Some Endpoints show a one-time in-place update after upgrading, never a replacement: explicitly empty `hostname`, `node_name` or port `name` values, Endpoints imported with an earlier provider version whose empty `labels` or `annotations` maps are omitted from configuration, and, with `terraform plan -refresh=false`, unset `hostname`, `node_name`, port `name` and `generate_name` values that SDKv2 stored as `""`. See the Plugin Framework upgrade guide for details.
 ```
 
 ```release-note:breaking-change
@@ -8,4 +8,8 @@
 
 ```release-note:breaking-change
 `resource/kubernetes_endpoints_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected at plan time, including `generate_name = ""`. Previously the Kubernetes API silently ignored `generate_name` when `name` was set. To keep the existing Endpoints, remove `generate_name` if it is empty; otherwise remove `name` and retain the original `generate_name`.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_endpoints_v1`: Each `subset` must now contain at least one `address` or `not_ready_address`; otherwise validation fails, blocking plan, apply and destroy until the configuration is fixed. SDKv2 silently dropped an empty `subset {}` block, leaving the Endpoints without subsets and an update in every plan. Remove the empty block or add an `address` or `not_ready_address` to it.
 ```

@@ -84,6 +84,17 @@ jobs:
           version: v${{ env.KIND_VERSION }}
           node_image: kindest/node:${{ matrix.kubernetes_version }}
           config: .github/config/acceptance_tests_kind_config.yaml
+      # Required by the gatewaynetworkingv1 acceptance tests; keep in sync with sigs.k8s.io/gateway-api in go.mod.
+      - name: Install Gateway API CRDs
+        env:
+          GATEWAY_API_VERSION: v1.6.3
+          GATEWAY_API_SHA256: 356c2b8e286a964dc20995435659ad1095386329974793af10bbfe3eff977fe5
+        run: |
+          curl -fsSL -o "${RUNNER_TEMP}/gateway-api-standard-install.yaml" \
+            "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
+          echo "${GATEWAY_API_SHA256}  ${RUNNER_TEMP}/gateway-api-standard-install.yaml" | sha256sum --check --strict
+          kubectl apply --server-side -f "${RUNNER_TEMP}/gateway-api-standard-install.yaml"
+          kubectl wait --for=condition=Established --timeout=90s crd/gatewayclasses.gateway.networking.k8s.io
       - name: Run Acceptance Test Suite
         env:
           KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}

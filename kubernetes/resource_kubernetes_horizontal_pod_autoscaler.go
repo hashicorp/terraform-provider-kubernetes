@@ -32,8 +32,11 @@ func resourceKubernetesHorizontalPodAutoscaler() *schema.Resource {
 }
 
 func resourceKubernetesHorizontalPodAutoscalerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if useV2Beta2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Create(ctx, d, meta)
+	if useV2(d) {
+		if diags := createHorizontalPodAutoscalerV2(ctx, d, meta); diags.HasError() {
+			return diags
+		}
+		return resourceKubernetesHorizontalPodAutoscalerRead(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -72,8 +75,8 @@ func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schem
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-	if useV2Beta2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Read(ctx, d, meta)
+	if useV2(d) {
+		return readHorizontalPodAutoscalerV2(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -92,9 +95,13 @@ func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schem
 		return diag.FromErr(err)
 	}
 
-	// NOTE: this is needed for import
-	if _, exists := hpa.ObjectMeta.GetAnnotations()["autoscaling.alpha.kubernetes.io/metrics"]; exists {
-		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Read(ctx, d, meta)
+	// NOTE: this is needed for import. The API server stores autoscaling/v2-only
+	// fields (non-CPU metrics and behavior) in these annotations on the v1 object.
+	annotations := hpa.ObjectMeta.GetAnnotations()
+	_, hasMetrics := annotations["autoscaling.alpha.kubernetes.io/metrics"]
+	_, hasBehavior := annotations["autoscaling.alpha.kubernetes.io/behavior"]
+	if hasMetrics || hasBehavior {
+		return readHorizontalPodAutoscalerV2(ctx, d, meta)
 	}
 
 	log.Printf("[INFO] Received horizontal pod autoscaler: %#v", hpa)
@@ -114,8 +121,11 @@ func resourceKubernetesHorizontalPodAutoscalerRead(ctx context.Context, d *schem
 }
 
 func resourceKubernetesHorizontalPodAutoscalerUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if useV2Beta2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Update(ctx, d, meta)
+	if useV2(d) {
+		if diags := updateHorizontalPodAutoscalerV2(ctx, d, meta); diags.HasError() {
+			return diags
+		}
+		return resourceKubernetesHorizontalPodAutoscalerRead(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -149,8 +159,8 @@ func resourceKubernetesHorizontalPodAutoscalerUpdate(ctx context.Context, d *sch
 }
 
 func resourceKubernetesHorizontalPodAutoscalerDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if useV2Beta2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Delete(ctx, d, meta)
+	if useV2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Delete(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -178,8 +188,8 @@ func resourceKubernetesHorizontalPodAutoscalerDelete(ctx context.Context, d *sch
 }
 
 func resourceKubernetesHorizontalPodAutoscalerExists(ctx context.Context, d *schema.ResourceData, meta interface{}) (bool, error) {
-	if useV2Beta2(d) {
-		return resourceKubernetesHorizontalPodAutoscalerV2Beta2Exists(ctx, d, meta)
+	if useV2(d) {
+		return resourceKubernetesHorizontalPodAutoscalerV2Exists(ctx, d, meta)
 	}
 
 	conn, err := meta.(KubeClientsets).MainClientset()
@@ -203,14 +213,14 @@ func resourceKubernetesHorizontalPodAutoscalerExists(ctx context.Context, d *sch
 	return true, err
 }
 
-func useV2Beta2(d *schema.ResourceData) bool {
+func useV2(d *schema.ResourceData) bool {
 	if len(d.Get("spec.0.metric").([]interface{})) > 0 {
-		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a metric field")
+		log.Printf("[INFO] Using autoscaling/v2 because this resource has a metric field")
 		return true
 	}
 
 	if len(d.Get("spec.0.behavior").([]interface{})) > 0 {
-		log.Printf("[INFO] Using autoscaling/v2beta2 because this resource has a behavior field")
+		log.Printf("[INFO] Using autoscaling/v2 because this resource has a behavior field")
 		return true
 	}
 

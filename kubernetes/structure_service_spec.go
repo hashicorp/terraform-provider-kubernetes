@@ -250,14 +250,14 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 		obj.ExternalIPs = sliceOfString(v.List())
 	}
 	if v, ok := in["internal_traffic_policy"].(string); ok && v != "" {
-		p := v1.ServiceInternalTrafficPolicyType(v)
+		p := v1.ServiceInternalTrafficPolicy(v)
 		obj.InternalTrafficPolicy = &p
 	}
 	if v, ok := in["ip_families"].([]interface{}); ok && len(v) > 0 {
 		obj.IPFamilies = expandIPFamilies(v)
 	}
 	if v, ok := in["ip_family_policy"].(string); ok && len(v) > 0 {
-		p := v1.IPFamilyPolicyType(v)
+		p := v1.IPFamilyPolicy(v)
 		obj.IPFamilyPolicy = &p
 	}
 	if v, ok := in["session_affinity"].(string); ok {
@@ -279,7 +279,7 @@ func expandServiceSpec(l []interface{}) v1.ServiceSpec {
 		obj.PublishNotReadyAddresses = v
 	}
 	if v, ok := in["external_traffic_policy"].(string); ok {
-		obj.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicyType(v)
+		obj.ExternalTrafficPolicy = v1.ServiceExternalTrafficPolicy(v)
 	}
 	if v, ok := in["health_check_node_port"].(int); ok {
 		obj.HealthCheckNodePort = int32(v)

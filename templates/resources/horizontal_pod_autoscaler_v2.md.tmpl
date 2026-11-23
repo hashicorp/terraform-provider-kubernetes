@@ -99,11 +99,11 @@ Other changes:
 - The state schema version increases. Once version 4.0 has written the state, provider 3.x cannot read it, so back up the state before upgrading.
 - Version 3.x always sent `behavior`, so Kubernetes filled in its default scaling rules, and it sent a 0 second `stabilization_window_seconds` when that argument was omitted. Version 4.0 sends only the configured values. Existing autoscalers keep their current values. New autoscalers without `stabilization_window_seconds` use the Kubernetes default of 300 seconds for scale down. A `stabilization_window_seconds` that version 3.x stored as `0` for an autoscaler where Kubernetes has no value is read as unset on the first refresh; this changes only Terraform state.
 - `select_policy` can be omitted. In version 3.x, a `scale_up` or `scale_down` block without `select_policy` failed with `Unsupported value: ""`.
-- `target_cpu_utilization_percentage` is still accepted, but `autoscaling/v2` has no such field and the provider never sends it. Use a `Resource` metric instead.
+- `target_cpu_utilization_percentage` is still accepted, but `autoscaling/v2` has no such field and the provider never sends it. To scale on CPU, set a `metric` of type `Resource` with `name = "cpu"`, or use `kubernetes_horizontal_pod_autoscaler_v1`.
 
 ### Moving from other resource types
 
-With Terraform 1.8 or later, a `moved` block can move an autoscaler from `kubernetes_horizontal_pod_autoscaler_v2beta2` or `kubernetes_horizontal_pod_autoscaler` without recreating it:
+With Terraform 1.8 or later, a `moved` block can move an autoscaler from `kubernetes_horizontal_pod_autoscaler_v2beta2`, which version 4.0 removes, or from `kubernetes_horizontal_pod_autoscaler` without recreating it:
 
 ```terraform
 moved {

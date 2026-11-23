@@ -1,0 +1,7 @@
+```release-note:new-resource
+`kubernetes_gateway_class_v1`: Add a new resource for managing a Gateway API v1 GatewayClass.
+```
+
+```release-note:new-data-source
+`kubernetes_gateway_class_v1`: Add a new data source for reading a Gateway API v1 GatewayClass.
+```

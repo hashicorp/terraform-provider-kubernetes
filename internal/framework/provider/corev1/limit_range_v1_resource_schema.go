@@ -29,74 +29,63 @@ func (r *LimitRangeV1) Schema(ctx context.Context, req resource.SchemaRequest, r
 		},
 		Blocks: map[string]schema.Block{
 			"metadata": common.NamespacedMetadataSchema("limit range", true),
-			"spec":     limitRangeSpecBlock(),
-		},
-	}
-}
-
-// limitRangeSpecBlock mirrors the SDKv2 spec schema:
-//
-//	Optional TypeList MaxItems:1 with an Elem: *schema.Resource.
-//
-// The framework equivalent is a ListNestedBlock with SizeAtMost(1). The block is
-// Optional (no IsRequired()), matching SDKv2 — users may omit spec entirely.
-func limitRangeSpecBlock() schema.ListNestedBlock {
-	return schema.ListNestedBlock{
-		Description: "Spec defines the limits enforced. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
-		Validators: []validator.List{
-			listvalidator.SizeAtMost(1),
-		},
-		NestedObject: schema.NestedBlockObject{
-			Blocks: map[string]schema.Block{
-				"limit": limitRangeItemBlock(),
-			},
-		},
-	}
-}
-
-// limitRangeItemBlock mirrors the SDKv2 spec.limit schema:
-//
-//	Optional TypeList with resource-quantity TypeMap children.
-func limitRangeItemBlock() schema.ListNestedBlock {
-	return schema.ListNestedBlock{
-		Description: "Limits is the list of objects that are enforced.",
-		NestedObject: schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{
-				"default": schema.MapAttribute{
-					Description: "Default resource requirement limit value by resource name if resource limit is omitted.",
-					ElementType: types.StringType,
-					Optional:    true,
+			// SDKv2: Optional TypeList MaxItems:1 with an Elem: *schema.Resource.
+			// The framework equivalent is a ListNestedBlock with SizeAtMost(1). The
+			// block is Optional (no IsRequired()), matching SDKv2 — users may omit
+			// spec entirely.
+			"spec": schema.ListNestedBlock{
+				Description: "Spec defines the limits enforced. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status",
+				Validators: []validator.List{
+					listvalidator.SizeAtMost(1),
 				},
-				// Optional+Computed: the API server back-fills default_request from default
-				// when the user omits it for Container limits. UseStateForUnknown keeps the
-				// prior value when it is not configured, as SDKv2's Optional+Computed did, so
-				// an update to another attribute neither re-plans it as unknown nor lets the
-				// server back-fill it again from a changed default.
-				"default_request": schema.MapAttribute{
-					Description:   "The default resource requirement request value by resource name if resource request is omitted.",
-					ElementType:   types.StringType,
-					Optional:      true,
-					Computed:      true,
-					PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
-				},
-				"max": schema.MapAttribute{
-					Description: "Max usage constraints on this kind by resource name.",
-					ElementType: types.StringType,
-					Optional:    true,
-				},
-				"max_limit_request_ratio": schema.MapAttribute{
-					Description: "The named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.",
-					ElementType: types.StringType,
-					Optional:    true,
-				},
-				"min": schema.MapAttribute{
-					Description: "Min usage constraints on this kind by resource name.",
-					ElementType: types.StringType,
-					Optional:    true,
-				},
-				"type": schema.StringAttribute{
-					Description: "Type of resource that this limit applies to.",
-					Optional:    true,
+				NestedObject: schema.NestedBlockObject{
+					Blocks: map[string]schema.Block{
+						// SDKv2 spec.limit: Optional TypeList with resource-quantity
+						// TypeMap children.
+						"limit": schema.ListNestedBlock{
+							Description: "Limits is the list of objects that are enforced.",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"default": schema.MapAttribute{
+										Description: "Default resource requirement limit value by resource name if resource limit is omitted.",
+										ElementType: types.StringType,
+										Optional:    true,
+									},
+									// Optional+Computed: the API server back-fills default_request from default
+									// when the user omits it for Container limits. UseStateForUnknown keeps the
+									// prior value when it is not configured, as SDKv2's Optional+Computed did, so
+									// an update to another attribute neither re-plans it as unknown nor lets the
+									// server back-fill it again from a changed default.
+									"default_request": schema.MapAttribute{
+										Description:   "The default resource requirement request value by resource name if resource request is omitted.",
+										ElementType:   types.StringType,
+										Optional:      true,
+										Computed:      true,
+										PlanModifiers: []planmodifier.Map{mapplanmodifier.UseStateForUnknown()},
+									},
+									"max": schema.MapAttribute{
+										Description: "Max usage constraints on this kind by resource name.",
+										ElementType: types.StringType,
+										Optional:    true,
+									},
+									"max_limit_request_ratio": schema.MapAttribute{
+										Description: "The named resource must have a request and limit that are both non-zero where limit divided by request is less than or equal to the enumerated value; this represents the max burst for the named resource.",
+										ElementType: types.StringType,
+										Optional:    true,
+									},
+									"min": schema.MapAttribute{
+										Description: "Min usage constraints on this kind by resource name.",
+										ElementType: types.StringType,
+										Optional:    true,
+									},
+									"type": schema.StringAttribute{
+										Description: "Type of resource that this limit applies to.",
+										Optional:    true,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

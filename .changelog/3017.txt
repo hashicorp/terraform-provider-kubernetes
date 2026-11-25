@@ -79,39 +79,7 @@
 ```
 
 ```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add `hostname_override` to the Pod spec to set the hostname a Pod sees without changing its DNS records, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add the `resources` object argument to the Pod spec for pod-level `limits` and `requests` shared by all containers, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add Dynamic Resource Allocation support with `resource_claims` in the Pod spec and `claims` in container and init container `resources`, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add `resize_policy` to containers and init containers to set whether an in-place resize of `cpu` or `memory` restarts the container, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Accept `OnFailure` and `Never` for container and init container `restart_policy`, and add `restart_policy_rules` to restart a container on chosen exit codes, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add the `env.value_from.file_key_ref` object argument to set an environment variable from a key of an env file in an `empty_dir` volume, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add the `cluster_trust_bundle` object argument to `volume.projected.sources` to project ClusterTrustBundle trust anchors into a file, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add the `pod_certificate` object argument to `volume.projected.sources` to project a private key and certificate chain that the kubelet requests and rotates, on clusters that support the feature.
-```
-
-```release-note:enhancement
-`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add `volume_attributes_class_name` to `volume.ephemeral.volume_claim_template.spec`, on clusters that support the feature.
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add Pod `hostname_override`, pod-level `resources`, Dynamic Resource Allocation `resource_claims` and container `resources.claims`, container `resize_policy` and `restart_policy_rules`, the `OnFailure` and `Never` container restart policies, `env.value_from.file_key_ref`, the `cluster_trust_bundle` and `pod_certificate` projected volume sources, and `volume_attributes_class_name` in ephemeral volume claim templates. Availability depends on the Kubernetes version.
 ```
 
 ```release-note:enhancement

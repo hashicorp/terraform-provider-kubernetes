@@ -379,15 +379,63 @@ The six Framework workload resources share the following optional Kubernetes fea
 - `host_users = false` runs a Pod in an isolated Linux user namespace. The cluster and nodes must support [user namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/), including the required kernel and container runtime capabilities. Omitting the argument keeps the existing behavior.
 - Container and init container `security_context.proc_mount` accepts `Default` or `Unmasked`. `Unmasked` requires `host_users = false` and cluster support for the [ProcMountType feature](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#managing-access-to-the-proc-filesystem).
 - `volume.image` mounts an OCI image or artifact as a read-only volume. It requires [image volume support](https://kubernetes.io/docs/concepts/storage/volumes/#image) in Kubernetes and the container runtime. Before Kubernetes 1.35 the `ImageVolume` feature gate must be enabled explicitly.
-- `hostname_override` sets the hostname a Pod sees without changing its DNS records, taking precedence over `hostname` and `subdomain`; see [Pod hostname settings](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-hostname-and-subdomain-field). It cannot be combined with `host_network = true` or `set_hostname_as_fqdn = true`. The `HostnameOverride` feature is enabled by default from Kubernetes 1.35.
-- `resources` in the Pod spec sets `limits` and `requests` for the Pod as a whole, shared by its containers, for example `resources = { limits = { cpu = "1", memory = "1Gi" } }`. Kubernetes accepts only `cpu`, `memory` and `hugepages-<size>` for [pod-level resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#pod-level-resource-specification) and does not support them for Windows Pods. The `PodLevelResources` feature is beta and enabled by default from Kubernetes 1.34. The container `resources` argument is unchanged.
-- `resource_claims` in the Pod spec and `claims` in a container or init container `resources` object request devices through [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/). Each Pod claim names either an existing ResourceClaim or a ResourceClaimTemplate, and a container uses a claim by its name, for example `resource_claims = [{ name = "gpu", resource_claim_template_name = "single-gpu" }]` with `resources = { claims = [{ name = "gpu" }] }`. The provider has no resource for ResourceClaim or ResourceClaimTemplate objects; create them with `kubernetes_manifest`. Dynamic Resource Allocation is stable and enabled by default from Kubernetes 1.34.
-- Container and init container `resize_policy` sets, for `cpu` or `memory`, whether an in-place resize restarts the container, for example `resize_policy = [{ resource_name = "memory", restart_policy = "RestartContainer" }]`; see [container resize policies](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/#container-resize-policies). It only matters to clients that resize a running Pod: the provider does not, and still replaces a standalone Pod when its container `resources` change. In-place resize is enabled by default from Kubernetes 1.33.
-- Container and init container `restart_policy` accepts `Always`, `OnFailure` and `Never`, and `restart_policy_rules` restarts a container on chosen exit codes, for example `restart_policy = "Never"` with `restart_policy_rules = [{ action = "Restart", exit_codes = { operator = "In", values = [42] } }]`; see [container restart rules](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-restart-rules). A container with rules must also set `restart_policy`. The `ContainerRestartRules` feature is beta and enabled by default from Kubernetes 1.35, and the `RestartAllContainers` action from 1.36. `restart_policy = "Always"` on an init container, a sidecar, does not depend on it.
-- `env.value_from.file_key_ref` sets an environment variable from a key of an env file that an init container writes to an `empty_dir` volume, for example `value_from { file_key_ref = { volume_name = "config", path = "config.env", key = "DB_ADDRESS" } }`; see [environment variables from a file](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-via-file/). The `EnvFiles` feature is beta and enabled by default from Kubernetes 1.35. A cluster without it rejects the variable as having no source.
-- `cluster_trust_bundle` in a `volume.projected.sources` block projects the trust anchors of [ClusterTrustBundle](https://kubernetes.io/docs/concepts/storage/projected-volumes/#clustertrustbundle) objects into a file, selected by `name` or by `signer_name` with a `label_selector`, for example `sources { cluster_trust_bundle = { name = "example", path = "ca.crt" } }`. Each object is one projected source, written after the sources of the blocks in the same `sources` block. The feature is stable and enabled by default from Kubernetes 1.37.
-- `pod_certificate` in a `volume.projected.sources` block projects a private key and a certificate chain that the kubelet requests from a signer and rotates, for example `sources { pod_certificate = { signer_name = "example.com/signer", key_type = "ECDSAP256", credential_bundle_path = "credentials.pem" } }`; see [podCertificate projected volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/#podcertificate). Set `credential_bundle_path`, or `key_path` and `certificate_chain_path`. The feature is stable and enabled by default from Kubernetes 1.37.
-- `volume.ephemeral.volume_claim_template.spec.volume_attributes_class_name` names a [VolumeAttributesClass](https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/) for the claim of a generic ephemeral volume, enabled by default from Kubernetes 1.34. Like the other arguments of that claim template, changing it replaces the resource. A cluster with the feature disabled keeps the name in the Pod but creates the claim without the class; the provider's dry run only detects API servers that predate the field.
+
+The resources also accept these arguments for features of Kubernetes 1.33 to 1.37. An older cluster does not support them; leave them unset there.
+
+| Argument | Purpose | Enabled by default from |
+| --- | --- | --- |
+| `hostname_override` | Hostname the Pod sees, without changing its DNS records. Not with `host_network = true` or `set_hostname_as_fqdn = true`. | 1.35 |
+| `resources` in the Pod spec | [Pod-level](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#pod-level-resource-specification) `limits` and `requests`, for `cpu`, `memory` and `hugepages-<size>`. Not for Windows Pods. | 1.34 |
+| `resource_claims`, and `claims` in container `resources` | Devices through [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/). Create the ResourceClaim or ResourceClaimTemplate with `kubernetes_manifest`. | 1.34 |
+| Container `resize_policy` | Whether an [in-place resize](https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/#container-resize-policies) of `cpu` or `memory` restarts the container. The provider does not resize in place: a standalone Pod is still replaced when its container `resources` change. | 1.33 |
+| Container `restart_policy` values `OnFailure` and `Never`, and `restart_policy_rules` | [Restart a container](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-restart-rules) on chosen exit codes. A container with rules must set `restart_policy`. An init container with `Always`, a sidecar, works as before. | 1.35 |
+| `env.value_from.file_key_ref` | Environment variable from a key of an [env file](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-via-file/) in an `empty_dir` volume. An older cluster rejects the variable as having no source. | 1.35 |
+| `cluster_trust_bundle` in `volume.projected.sources` | Projects [ClusterTrustBundle](https://kubernetes.io/docs/concepts/storage/projected-volumes/#clustertrustbundle) trust anchors into a file. | 1.37 |
+| `pod_certificate` in `volume.projected.sources` | Projects a private key and certificate chain that the kubelet [requests and rotates](https://kubernetes.io/docs/concepts/storage/projected-volumes/#podcertificate). | 1.37 |
+| `volume_attributes_class_name` in `volume.ephemeral.volume_claim_template.spec` | [VolumeAttributesClass](https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/) of the claim. Changing it replaces the resource. | 1.34 |
+
+They use object and list-of-object syntax:
+
+```terraform
+spec {
+  hostname_override = "worker"
+  resources         = { limits = { cpu = "1", memory = "1Gi" } }
+  resource_claims   = [{ name = "gpu", resource_claim_template_name = "single-gpu" }]
+
+  container {
+    name                 = "app"
+    image                = "registry.example.com/app:1.0"
+    resources            = { claims = [{ name = "gpu" }] }
+    resize_policy        = [{ resource_name = "memory", restart_policy = "RestartContainer" }]
+    restart_policy       = "Never"
+    restart_policy_rules = [{ action = "Restart", exit_codes = { operator = "In", values = [42] } }]
+
+    env {
+      name = "DB_ADDRESS"
+      value_from {
+        file_key_ref = { volume_name = "config", path = "config.env", key = "DB_ADDRESS" }
+      }
+    }
+  }
+
+  volume {
+    name = "config"
+    empty_dir {}
+  }
+
+  volume {
+    name = "identity"
+    projected {
+      sources {
+        cluster_trust_bundle = { name = "example", path = "ca.crt" }
+      }
+      sources {
+        pod_certificate = { signer_name = "example.com/signer", key_type = "ECDSAP256", credential_bundle_path = "credentials.pem" }
+      }
+    }
+  }
+}
+```
 
 For example, on a cluster that supports these features:
 
@@ -455,7 +503,7 @@ lifecycle {
 
 For a Windows container, use `security_context { windows_options = { run_as_username = "ContainerUser" } }` instead. Existing parent blocks keep their syntax.
 
-For isolated user namespaces, `Unmasked` proc mounts, image volumes, AppArmor profiles, supplemental group and SELinux policies, affinity label keys, lifecycle sleep, recursive read-only mounts, hostname overrides, pod-level resources, resource claims, container resize policies, container restart policies and rules other than a sidecar's `Always`, environment variables from a file, cluster trust bundle and Pod certificate projections, the attributes class of an ephemeral volume claim, and a nonzero StatefulSet `ordinals.start`, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. The provider also checks the write response; neither check verifies node or container runtime support.
+For isolated user namespaces, `Unmasked` proc mounts, image volumes, AppArmor profiles, supplemental group and SELinux policies, affinity label keys, lifecycle sleep, recursive read-only mounts, a nonzero StatefulSet `ordinals.start`, and the arguments in the table above, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. The provider also checks the write response; neither check verifies node or container runtime support.
 
 Changes to these immutable settings replace standalone Pods and Jobs. Controller template changes may roll out Pods; CronJob changes apply to new Jobs. Existing state without these attributes is upgraded automatically, and leaving them unconfigured does not enable the features.
 

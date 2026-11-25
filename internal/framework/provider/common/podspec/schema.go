@@ -243,6 +243,7 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 			"node_selector":                   b.emptyCompatibleMap(immutable),
 			"priority_class_name":             b.str(false, !b.o.Template, immutable, ""), // admission sets a Pod's default class
 			"readiness_gate":                  b.references("condition_type", immutable),
+			"resources":                       b.podResourcesAttribute(),
 			"restart_policy":                  b.str(false, false, immutable, b.o.RestartPolicy, stringvalidator.OneOf(restartPolicy...)),
 			"runtime_class_name":              b.str(false, false, immutable, ""),
 			"scheduler_name":                  b.str(false, true, immutable, ""),
@@ -280,6 +281,23 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 			"volume":                     b.block(b.podVolumeObject(), 0, 0, updatable),
 		},
 	}
+}
+
+// Kubernetes fills in the quantities of a Pod, never the object itself, so
+// only the maps are computed.
+func (b builder) podResourcesAttribute() schema.SingleNestedAttribute {
+	limits, requests := b.quantityMap(true, immutable), b.quantityMap(true, immutable)
+	limits.Description = "Maximum amount of each resource that the containers of the Pod may use together."
+	requests.Description = "Amount of each resource reserved for the Pod. When omitted for a Pod that sets limits, Kubernetes derives the requests from the container requests or from the limits."
+	a := schema.SingleNestedAttribute{
+		Optional:    true,
+		Description: "Compute resources for the Pod as a whole, shared by its containers. Kubernetes accepts only cpu, memory and hugepages-<size> here, and does not support Windows Pods. An omitted limits or requests keeps the values Kubernetes holds; use {} to clear them. Requires Kubernetes 1.34 or later, or the PodLevelResources feature gate on Kubernetes 1.32 and 1.33.",
+		Attributes:  map[string]schema.Attribute{"limits": limits, "requests": requests},
+	}
+	if b.replace(immutable) {
+		a.PlanModifiers = []planmodifier.Object{podObjectPresenceRequiresReplace{}}
+	}
+	return a
 }
 
 // references is an attribute list of objects, set with assignment syntax.

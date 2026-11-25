@@ -144,6 +144,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 	}
 	raw := block(map[string]interface{}{
 		"set_hostname_as_fqdn": false, "hostname_override": "override.example",
+		"resources": map[string]interface{}{"limits": map[string]interface{}{"cpu": "1"}, "requests": map[string]interface{}{}},
 		"security_context": block(map[string]interface{}{
 			"app_armor_profile":          map[string]interface{}{"type": "RuntimeDefault"},
 			"supplemental_groups_policy": "Strict", "se_linux_change_policy": "Recursive",
@@ -207,6 +208,10 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		if !strings.Contains(encoded, key) || strings.Contains(legacyFields, key) {
 			t.Fatalf("%s must be present only in Framework flattening", field)
 		}
+	}
+	podResources := map[string]interface{}{"limits": map[string]string{"cpu": "1"}, "requests": map[string]string{}}
+	if diff := cmp.Diff(podResources, flat[0].(map[string]interface{})["resources"]); diff != "" || legacy[0].(map[string]interface{})["resources"] != nil {
+		t.Fatalf("pod-level resources must be present only in Framework flattening:\n%s", diff)
 	}
 	flatContainer := flat[0].(map[string]interface{})["container"].([]interface{})[0].(map[string]interface{})
 	mounts := flatContainer["volume_mount"].([]interface{})

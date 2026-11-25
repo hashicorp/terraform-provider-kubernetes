@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -28,6 +29,7 @@ import (
 func TestPodFeatureRetention(t *testing.T) {
 	expected := corev1.PodSpec{
 		HostUsers: ptr.To(false),
+		Resources: &corev1.ResourceRequirements{Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1000m")}},
 		Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{ProcMount: ptr.To(corev1.UnmaskedProcMount)},
 			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}}}},
 		InitContainers: []corev1.Container{{Name: "init", SecurityContext: &corev1.SecurityContext{ProcMount: ptr.To(corev1.UnmaskedProcMount)}}},
@@ -45,6 +47,10 @@ func TestPodFeatureRetention(t *testing.T) {
 			actual.Volumes = append([]corev1.Volume{{Name: "injected"}}, actual.Volumes...)
 		}},
 		"host users dropped": {edit: func(actual *corev1.PodSpec) { actual.HostUsers = nil }, want: "UserNamespacesSupport"},
+		"requests defaulted": {edit: func(actual *corev1.PodSpec) {
+			actual.Resources = &corev1.ResourceRequirements{Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1")}, Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1")}}
+		}},
+		"limit rewritten": {edit: func(actual *corev1.PodSpec) { actual.Resources.Limits[corev1.ResourceCPU] = resource.MustParse("2") }, want: "PodLevelResources"},
 		"proc mount rewritten": {edit: func(actual *corev1.PodSpec) {
 			actual.Containers[0].SecurityContext.ProcMount = ptr.To(corev1.DefaultProcMount)
 		}, want: "ProcMountType"},
@@ -98,6 +104,9 @@ func TestPodFeatureRetention(t *testing.T) {
 	}{
 		"set_hostname_as_fqdn": {spec: corev1.PodSpec{SetHostnameAsFQDN: ptr.To(true)}},
 		"hostname_override":    {gated: true, spec: corev1.PodSpec{HostnameOverride: ptr.To("override")}},
+		"Pod-level resources": {gated: true, spec: corev1.PodSpec{Resources: &corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1")},
+		}}},
 		"app_armor_profile": {gated: true, spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
 			AppArmorProfile: &corev1.AppArmorProfile{Type: corev1.AppArmorProfileTypeRuntimeDefault},
 		}}},

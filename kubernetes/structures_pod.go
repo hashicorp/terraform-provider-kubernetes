@@ -847,6 +847,14 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.RestartPolicy = v1.RestartPolicy(v)
 	}
 
+	if v, ok := in["resources"].(map[string]interface{}); ok {
+		resources, err := expandContainerResourceRequirements([]interface{}{v})
+		if err != nil {
+			return obj, err
+		}
+		obj.Resources = resources
+	}
+
 	if v, ok := in["security_context"].([]interface{}); ok && len(v) > 0 {
 		ctx, err := expandPodSecurityContext(v)
 		if err != nil {
@@ -1754,6 +1762,9 @@ func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 	}
 	if spec.HostnameOverride != nil {
 		object["hostname_override"] = *spec.HostnameOverride
+	}
+	if spec.Resources != nil {
+		object["resources"] = flattenContainerResourceRequirements(*spec.Resources)[0]
 	}
 	if spec.SecurityContext != nil && (spec.SecurityContext.AppArmorProfile != nil || spec.SecurityContext.SupplementalGroupsPolicy != nil || spec.SecurityContext.SELinuxChangePolicy != nil) {
 		securityContext := map[string]interface{}{}

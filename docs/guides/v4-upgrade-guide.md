@@ -380,6 +380,7 @@ The six Framework workload resources share the following optional Kubernetes fea
 - Container and init container `security_context.proc_mount` accepts `Default` or `Unmasked`. `Unmasked` requires `host_users = false` and cluster support for the [ProcMountType feature](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#managing-access-to-the-proc-filesystem).
 - `volume.image` mounts an OCI image or artifact as a read-only volume. It requires [image volume support](https://kubernetes.io/docs/concepts/storage/volumes/#image) in Kubernetes and the container runtime. Before Kubernetes 1.35 the `ImageVolume` feature gate must be enabled explicitly.
 - `hostname_override` sets the hostname a Pod sees without changing its DNS records, taking precedence over `hostname` and `subdomain`; see [Pod hostname settings](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-hostname-and-subdomain-field). It cannot be combined with `host_network = true` or `set_hostname_as_fqdn = true`. The `HostnameOverride` feature is enabled by default from Kubernetes 1.35.
+- `resources` in the Pod spec sets `limits` and `requests` for the Pod as a whole, shared by its containers, for example `resources = { limits = { cpu = "1", memory = "1Gi" } }`. Kubernetes accepts only `cpu`, `memory` and `hugepages-<size>` for [pod-level resources](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#pod-level-resource-specification) and does not support them for Windows Pods. The `PodLevelResources` feature is beta and enabled by default from Kubernetes 1.34. The container `resources` argument is unchanged.
 
 For example, on a cluster that supports these features:
 
@@ -447,7 +448,7 @@ lifecycle {
 
 For a Windows container, use `security_context { windows_options = { run_as_username = "ContainerUser" } }` instead. Existing parent blocks keep their syntax.
 
-For isolated user namespaces, `Unmasked` proc mounts, image volumes, AppArmor profiles, supplemental group and SELinux policies, affinity label keys, lifecycle sleep, recursive read-only mounts, hostname overrides, and a nonzero StatefulSet `ordinals.start`, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. The provider also checks the write response; neither check verifies node or container runtime support.
+For isolated user namespaces, `Unmasked` proc mounts, image volumes, AppArmor profiles, supplemental group and SELinux policies, affinity label keys, lifecycle sleep, recursive read-only mounts, hostname overrides, pod-level resources, and a nonzero StatefulSet `ordinals.start`, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. The provider also checks the write response; neither check verifies node or container runtime support.
 
 Changes to these immutable settings replace standalone Pods and Jobs. Controller template changes may roll out Pods; CronJob changes apply to new Jobs. Existing state without these attributes is upgraded automatically, and leaving them unconfigured does not enable the features.
 

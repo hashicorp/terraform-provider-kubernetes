@@ -68,7 +68,7 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 				want["spec.volume.image"] = true
 				want["spec.volume.image.reference"] = false
 				want["spec.volume.image.pull_policy"] = false
-				for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
+				for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "resources", "resources.limits", "resources.requests", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
 					want["spec."+field] = true
 				}
 				for _, affinity := range []string{"pod_affinity", "pod_anti_affinity"} {
@@ -267,6 +267,35 @@ func TestImageVolumeObjectPlan(t *testing.T) {
 				t.Fatalf("replace = %t, want %t; diagnostics = %v", response.RequiresReplace, tc.replace, response.Diagnostics)
 			}
 		})
+	}
+}
+
+// Pod-level resources replace an immutable owner when added or removed; a
+// respelled quantity is left to the quantity maps.
+func TestPodResourcesPresencePlan(t *testing.T) {
+	attributes := map[string]attr.Type{"limits": types.MapType{ElemType: types.StringType}, "requests": types.MapType{ElemType: types.StringType}}
+	resources := func(cpu string) types.Object {
+		limits := types.MapValueMust(types.StringType, map[string]attr.Value{"cpu": types.StringValue(cpu)})
+		return types.ObjectValueMust(attributes, map[string]attr.Value{"limits": limits, "requests": types.MapUnknown(types.StringType)})
+	}
+	absent := types.ObjectNull(attributes)
+	for name, tc := range map[string]struct {
+		state, plan types.Object
+		replace     bool
+	}{
+		"absent":    {absent, absent, false},
+		"added":     {absent, resources("1"), true},
+		"removed":   {resources("1"), absent, true},
+		"respelled": {resources("1"), resources("1000m"), false},
+		"unknown":   {resources("1"), types.ObjectUnknown(attributes), true},
+	} {
+		raw := tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+		var response planmodifier.ObjectResponse
+		podObjectPresenceRequiresReplace{}.PlanModifyObject(context.Background(), planmodifier.ObjectRequest{
+			State: tfsdk.State{Raw: raw}, Plan: tfsdk.Plan{Raw: raw}, StateValue: tc.state, PlanValue: tc.plan}, &response)
+		if response.RequiresReplace != tc.replace {
+			t.Errorf("%s: replace = %t, want %t", name, response.RequiresReplace, tc.replace)
+		}
 	}
 }
 

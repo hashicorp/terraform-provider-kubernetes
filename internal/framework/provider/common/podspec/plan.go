@@ -325,6 +325,23 @@ func (podOptionalObjectRequiresReplace) PlanModifyObject(ctx context.Context, re
 	resp.RequiresReplace = !configured.IsFullyKnown() || !Satisfies(req.StateValue, req.PlanValue)
 }
 
+// Unlike a container's, the resources of a Pod are absent until set. Their
+// quantities are compared by the child modifiers, after normalization.
+type podObjectPresenceRequiresReplace struct{}
+
+func (podObjectPresenceRequiresReplace) Description(context.Context) string {
+	return "adding or removing this object requires replacement"
+}
+func (m podObjectPresenceRequiresReplace) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+func (podObjectPresenceRequiresReplace) PlanModifyObject(_ context.Context, req planmodifier.ObjectRequest, resp *planmodifier.ObjectResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || req.StateValue.IsUnknown() {
+		return
+	}
+	resp.RequiresReplace = req.PlanValue.IsUnknown() || req.StateValue.IsNull() != req.PlanValue.IsNull()
+}
+
 // Unlike an API-computed field, omitting an optional policy restores its default.
 type podDefaultedStringRequiresReplace struct{ fallback string }
 
@@ -372,6 +389,7 @@ func (podResourcesRequiresReplace) podRequiresReplacement()       {}
 func (podHostUsersRequiresReplace) podRequiresReplacement()       {}
 func (podProcMountRequiresReplace) podRequiresReplacement()       {}
 func (podOptionalObjectRequiresReplace) podRequiresReplacement()  {}
+func (podObjectPresenceRequiresReplace) podRequiresReplacement()  {}
 func (podDefaultedStringRequiresReplace) podRequiresReplacement() {}
 
 func (m podStringRequiresReplace) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {

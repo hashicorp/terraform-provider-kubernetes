@@ -43,7 +43,7 @@ func NormalizeFeatureDefaults(spec *corev1.PodSpec) {
 // dry-run checks API admission only; node and container-runtime support is
 // still required to run the Pod.
 func HasGatedFeatures(spec *corev1.PodSpec) bool {
-	if spec.HostUsers != nil && !*spec.HostUsers || spec.HostnameOverride != nil {
+	if spec.HostUsers != nil && !*spec.HostUsers || spec.HostnameOverride != nil || spec.Resources != nil {
 		return true
 	}
 	if sc := spec.SecurityContext; sc != nil && (sc.SupplementalGroupsPolicy != nil || sc.SELinuxChangePolicy != nil || sc.AppArmorProfile != nil) {
@@ -88,6 +88,10 @@ func CheckPodFeaturePreservation(expected, actual *corev1.PodSpec) error {
 	}
 	if !sameConfiguredPointer(expected.HostnameOverride, actual.HostnameOverride) {
 		return featureNotPreserved("hostname_override", "HostnameOverride")
+	}
+	// Kubernetes may add quantities to the pod-level resources of a Pod.
+	if want, got := expected.Resources, actual.Resources; want != nil && (got == nil || !hasQuantities(got.Limits, want.Limits) || !hasQuantities(got.Requests, want.Requests)) {
+		return featureNotPreserved("Pod-level resources", "PodLevelResources")
 	}
 	if want := expected.SecurityContext; want != nil {
 		got := actual.SecurityContext
@@ -214,6 +218,15 @@ func sameConfiguredPointer[T comparable](expected, actual *T) bool {
 
 func sameDefaultedPointer[T comparable](expected, actual *T, fallback T) bool {
 	return sameConfiguredPointer(expected, actual) || expected != nil && actual == nil && *expected == fallback
+}
+
+func hasQuantities(actual, expected corev1.ResourceList) bool {
+	for name, want := range expected {
+		if got, ok := actual[name]; !ok || got.Cmp(want) != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func sameAppArmor(expected, actual *corev1.AppArmorProfile) bool {

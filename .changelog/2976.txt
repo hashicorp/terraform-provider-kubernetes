@@ -1,0 +1,7 @@
+```release-note:note
+`resource/kubernetes_cluster_role_binding_v1`: Migrated from SDKv2 to the Plugin Framework, keeping the existing configuration syntax. `moved` blocks from the deprecated `kubernetes_cluster_role_binding` resource are supported with Terraform 1.8 or later. Some bindings show a one-time in-place update after upgrading, never a replacement: explicitly empty `labels` or `annotations`, a `User` or `Group` subject with `api_group = ""` (shown as `- api_group = "rbac.authorization.k8s.io" -> null`; only Terraform state changes, not the binding), and a binding named with `name` when planned with `-refresh=false`.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_cluster_role_binding_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry.
+```

@@ -5,7 +5,7 @@ on:
     inputs:
       kindVersion:
         description: The kind version
-        default: 0.20.0
+        default: 0.33.0
       runTests:
         description: The regex passed to the -run option of `go test`
         default: "^TestAcc"
@@ -17,7 +17,7 @@ on:
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.30.0' }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.33.0' }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
 jobs:
   acceptance_tests_kind:
@@ -43,7 +43,7 @@ jobs:
         with:
           wait: 2m
           version: v${{ env.KIND_VERSION }}
-          node_image: kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a
+          node_image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
           config: .github/config/acceptance_tests_kind_config.yaml
       - name: Run Acceptance Test Suite
         env:

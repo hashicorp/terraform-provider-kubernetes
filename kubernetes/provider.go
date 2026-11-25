@@ -299,24 +299,21 @@ func Provider() *schema.Provider {
 			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(""),
 
 			// autoscaling
-			"kubernetes_horizontal_pod_autoscaler":         resourceKubernetesHorizontalPodAutoscaler(),
-			"kubernetes_horizontal_pod_autoscaler_v1":      resourceKubernetesHorizontalPodAutoscalerV1(),
-			"kubernetes_horizontal_pod_autoscaler_v2beta2": resourceKubernetesHorizontalPodAutoscalerV2Beta2(),
-			"kubernetes_horizontal_pod_autoscaler_v2":      resourceKubernetesHorizontalPodAutoscalerV2(),
+			"kubernetes_horizontal_pod_autoscaler":    resourceKubernetesHorizontalPodAutoscaler(),
+			"kubernetes_horizontal_pod_autoscaler_v1": resourceKubernetesHorizontalPodAutoscalerV1(),
+			"kubernetes_horizontal_pod_autoscaler_v2": resourceKubernetesHorizontalPodAutoscalerV2(),
 
 			// certificates
 			"kubernetes_certificate_signing_request":    resourceKubernetesCertificateSigningRequest(),
 			"kubernetes_certificate_signing_request_v1": resourceKubernetesCertificateSigningRequestV1(),
 
 			// rbac
-			"kubernetes_role":                    resourceKubernetesRoleV1("Deprecated; use kubernetes_role_v1."),
-			"kubernetes_role_v1":                 resourceKubernetesRoleV1(""),
-			"kubernetes_role_binding":            resourceKubernetesRoleBindingV1("Deprecated; use kubernetes_role_binding_v1."),
-			"kubernetes_role_binding_v1":         resourceKubernetesRoleBindingV1(""),
-			"kubernetes_cluster_role":            resourceKubernetesClusterRoleV1("Deprecated; use kubernetes_cluster_role_v1."),
-			"kubernetes_cluster_role_v1":         resourceKubernetesClusterRoleV1(""),
-			"kubernetes_cluster_role_binding":    resourceKubernetesClusterRoleBindingV1("Deprecated; use kubernetes_cluster_role_binding_v1."),
-			"kubernetes_cluster_role_binding_v1": resourceKubernetesClusterRoleBindingV1(""),
+			// kubernetes_role_v1, kubernetes_role_binding_v1 and kubernetes_cluster_role_binding_v1 have migrated to the Plugin Framework provider (internal/framework/provider/rbacv1).
+			"kubernetes_role":                 resourceKubernetesRoleV1("Deprecated; use kubernetes_role_v1."),
+			"kubernetes_role_binding":         resourceKubernetesRoleBindingV1("Deprecated; use kubernetes_role_binding_v1."),
+			"kubernetes_cluster_role":         resourceKubernetesClusterRoleV1("Deprecated; use kubernetes_cluster_role_v1."),
+			"kubernetes_cluster_role_v1":      resourceKubernetesClusterRoleV1(""),
+			"kubernetes_cluster_role_binding": resourceKubernetesClusterRoleBindingV1("Deprecated; use kubernetes_cluster_role_binding_v1."),
 
 			// networking
 			"kubernetes_ingress":           resourceKubernetesIngressV1Beta1("Deprecated; use kubernetes_ingress_v1."),

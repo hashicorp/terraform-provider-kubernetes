@@ -181,8 +181,8 @@ func (r *ServiceV1) decodeServiceState(ctx context.Context, raw []byte, version 
 		},
 		Namespace: types.StringValue(meta.Namespace),
 	}
-	metadata.Annotations, diags = sdkv2MapToFramework(ctx, meta.Annotations)
-	labels, d := sdkv2MapToFramework(ctx, meta.Labels)
+	metadata.Annotations, diags = common.SDKv2MapToFramework(ctx, meta.Annotations)
+	labels, d := common.SDKv2MapToFramework(ctx, meta.Labels)
 	diags.Append(d...)
 	metadata.Labels = labels
 	spec, d := serviceStateSpec(ctx, prior.Spec[0])
@@ -227,7 +227,7 @@ func serviceStateSpec(ctx context.Context, in sdkv2ServiceSpecV1) (ServiceV1Spec
 	diags.Append(d...)
 	out.LoadBalancerSourceRanges, d = types.SetValueFrom(ctx, types.StringType, in.LoadBalancerSourceRanges)
 	diags.Append(d...)
-	out.Selector, d = sdkv2MapToFramework(ctx, in.Selector)
+	out.Selector, d = common.SDKv2MapToFramework(ctx, in.Selector)
 	diags.Append(d...)
 	out.Ports = make([]ServiceV1PortModel, len(in.Ports))
 	for i, port := range in.Ports {

@@ -147,7 +147,7 @@ func getManagedSecretData(managedFields []v1.ManagedFieldsEntry, manager string)
 			continue
 		}
 		var mm map[string]any
-		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
+		err := json.Unmarshal(m.FieldsV1.GetRawBytes(), &mm)
 		if err != nil {
 			return nil, err
 		}

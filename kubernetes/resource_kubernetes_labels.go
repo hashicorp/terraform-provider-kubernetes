@@ -177,7 +177,7 @@ func getManagedLabels(managedFields []v1.ManagedFieldsEntry, manager string) (ma
 			continue
 		}
 		var mm map[string]interface{}
-		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
+		err := json.Unmarshal(m.FieldsV1.GetRawBytes(), &mm)
 		if err != nil {
 			return nil, err
 		}

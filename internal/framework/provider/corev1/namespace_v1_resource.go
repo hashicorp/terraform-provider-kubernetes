@@ -64,39 +64,8 @@ func (n *NamespaceV1) Configure(_ context.Context, req resource.ConfigureRequest
 	n.SDKv2Meta = sdkv2Meta
 }
 
-// sdkv2Meta resolves the SDKv2 provider metadata into the two interfaces this resource
-// needs. The call is deferred until the request rather than made in Configure, because the
-// mux server configures the SDKv2 provider independently and its meta is not populated
-// until that happens.
-//
-// Everything is checked: Configure returns early when ProviderData is nil, so SDKv2Meta can
-// legitimately be nil here, and an unexpected type must be a diagnostic rather than a panic
-// that takes the plugin process down.
 func (n *NamespaceV1) sdkv2Meta() (kubernetes.KubeClientsets, kubernetes.MetadataFilters, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
-	if n.SDKv2Meta == nil {
-		diags.AddError("Provider not configured",
-			"The SDKv2 provider metadata is unavailable. This is a bug in the provider.")
-		return nil, nil, diags
-	}
-
-	meta := n.SDKv2Meta()
-	clients, ok := meta.(kubernetes.KubeClientsets)
-	if !ok {
-		diags.AddError("Unexpected provider data",
-			fmt.Sprintf("Expected kubernetes.KubeClientsets, got %T. This is a bug in the provider.", meta))
-		return nil, nil, diags
-	}
-
-	filters, ok := meta.(kubernetes.MetadataFilters)
-	if !ok {
-		diags.AddError("Unexpected provider data",
-			fmt.Sprintf("Expected kubernetes.MetadataFilters, got %T. This is a bug in the provider.", meta))
-		return nil, nil, diags
-	}
-
-	return clients, filters, diags
+	return common.ResolveSDKv2Meta(n.SDKv2Meta)
 }
 
 // ImportState implements [resource.ResourceWithImportState].
@@ -210,9 +179,9 @@ func (n *NamespaceV1) MoveState(ctx context.Context) []resource.StateMover {
 						UID:             types.StringValue(m.UID),
 					},
 				}
-				meta.Labels, diags = sdkv2MapToFramework(ctx, m.Labels)
+				meta.Labels, diags = common.SDKv2MapToFramework(ctx, m.Labels)
 				resp.Diagnostics.Append(diags...)
-				meta.Annotations, diags = sdkv2MapToFramework(ctx, m.Annotations)
+				meta.Annotations, diags = common.SDKv2MapToFramework(ctx, m.Annotations)
 				resp.Diagnostics.Append(diags...)
 
 				// SDKv2 writes "" for an unset generate_name, where the framework needs null.
@@ -252,16 +221,6 @@ func (n *NamespaceV1) MoveState(ctx context.Context) []resource.StateMover {
 			},
 		},
 	}
-}
-
-// sdkv2MapToFramework keeps SDKv2's null-vs-empty distinction: a nil Go map (JSON null)
-// becomes a typed null, {} stays a known empty map. Never leave the field unset instead — a
-// zero-value types.Map carries no element type and fails to write to state.
-func sdkv2MapToFramework(ctx context.Context, m map[string]string) (types.Map, diag.Diagnostics) {
-	if m == nil {
-		return types.MapNull(types.StringType), nil
-	}
-	return types.MapValueFrom(ctx, types.StringType, m)
 }
 
 // timeoutsAttributeTypes reads the timeouts block's attributes from the schema, so a rebuilt

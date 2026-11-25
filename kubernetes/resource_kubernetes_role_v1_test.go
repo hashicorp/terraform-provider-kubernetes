@@ -3,6 +3,10 @@
 
 package kubernetes
 
+// This file retains its historical _v1 name, but kubernetes_role_v1 has migrated
+// to the Plugin Framework. It contains acceptance tests for the deprecated,
+// unversioned SDKv2 resource kubernetes_role.
+
 import (
 	"context"
 	"fmt"
@@ -20,10 +24,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-func TestAccKubernetesRoleV1_basic(t *testing.T) {
+func TestAccKubernetesRole_basic(t *testing.T) {
 	var conf rbacv1.Role
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_role_v1.test"
+	resourceName := "kubernetes_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -87,8 +91,8 @@ func TestAccKubernetesRoleV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesRoleV1_identity(t *testing.T) {
-	resourceName := "kubernetes_role_v1.test"
+func TestAccKubernetesRole_identity(t *testing.T) {
+	resourceName := "kubernetes_role.test"
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -121,10 +125,10 @@ func TestAccKubernetesRoleV1_identity(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesRoleV1_generatedName(t *testing.T) {
+func TestAccKubernetesRole_generatedName(t *testing.T) {
 	var conf rbacv1.Role
 	prefix := "tf-acc-test-gen:"
-	resourceName := "kubernetes_role_v1.test"
+	resourceName := "kubernetes_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -148,10 +152,10 @@ func TestAccKubernetesRoleV1_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesRoleV1_Bug(t *testing.T) {
+func TestAccKubernetesRole_Bug(t *testing.T) {
 	var conf rbacv1.Role
 	name := fmt.Sprintf("tf-acc-test:%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_role_v1.test"
+	resourceName := "kubernetes_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -223,7 +227,7 @@ func TestAccKubernetesRoleV1_Bug(t *testing.T) {
 }
 
 func testAccKubernetesRoleV1Config_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -256,7 +260,7 @@ func testAccKubernetesRoleV1Config_basic(name string) string {
 }
 
 func testAccKubernetesRoleV1Config_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -281,7 +285,7 @@ func testAccKubernetesRoleV1Config_modified(name string) string {
 }
 
 func testAccKubernetesRoleV1Config_generatedName(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -331,7 +335,7 @@ func testAccCheckKubernetesRoleV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_role_v1" {
+		if rs.Type != "kubernetes_role" {
 			continue
 		}
 
@@ -352,7 +356,7 @@ func testAccCheckKubernetesRoleV1Destroy(s *terraform.State) error {
 }
 
 func testAccKubernetesRoleV1ConfigBug_step_0(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -380,7 +384,7 @@ func testAccKubernetesRoleV1ConfigBug_step_0(name string) string {
 }
 
 func testAccKubernetesRoleV1ConfigBug_step_1(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     name      = "%s"
     namespace = "default"
@@ -402,7 +406,7 @@ func testAccKubernetesRoleV1ConfigBug_step_1(name string) string {
 }
 
 func testAccKubernetesRoleV1ConfigBug_step_2(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_role" "test" {
   metadata {
     name      = "%s"
     namespace = "default"

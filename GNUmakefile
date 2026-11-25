@@ -86,7 +86,7 @@ test-service-cli:
 	env -u TF_ACC TF_KUBERNETES_SERVICE_CLI_TESTS=1 go test ./internal/framework/provider/corev1 -run '^TestServiceCLI_' -count=1 -timeout=30m
 
 frameworkacc:
-	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
+	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
 
 test-compile:
 	@if [ "$(TEST)" = "./..." ]; then \

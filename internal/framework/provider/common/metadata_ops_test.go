@@ -30,6 +30,41 @@ func tfMap(kv map[string]string) types.Map {
 	return types.MapValueMust(types.StringType, elems)
 }
 
+func TestPopulateNamespacedMetadataFromResponse(t *testing.T) {
+	for _, plannedMap := range []types.Map{
+		types.MapNull(types.StringType),
+		tfMap(map[string]string{}),
+		tfMap(map[string]string{"managed": "value"}),
+	} {
+		for _, generateName := range []types.String{types.StringNull(), types.StringValue("prefix-")} {
+			metadata := NamespacedMetadataModel{
+				MetadataModel: MetadataModel{
+					MetadataBase: MetadataBase{
+						Name: types.StringUnknown(), UID: types.StringUnknown(),
+						Generation: types.Int64Unknown(), ResourceVersion: types.StringUnknown(),
+						Labels: plannedMap, Annotations: plannedMap,
+					},
+					GenerateName: generateName,
+				},
+				Namespace: types.StringUnknown(),
+			}
+			PopulateNamespacedMetadataFromResponse(&metadata, metav1.ObjectMeta{
+				Name: "reader", Namespace: "team", UID: "uid-1", Generation: 2, ResourceVersion: "20",
+				Labels: map[string]string{"external": "value"}, Annotations: map[string]string{"external": "value"},
+				GenerateName: "server-",
+			})
+			if metadata.Name.ValueString() != "reader" || metadata.Namespace.ValueString() != "team" ||
+				metadata.UID.ValueString() != "uid-1" || metadata.Generation.ValueInt64() != 2 ||
+				metadata.ResourceVersion.ValueString() != "20" {
+				t.Fatalf("server-assigned metadata not populated: %#v", metadata)
+			}
+			if !metadata.Labels.Equal(plannedMap) || !metadata.Annotations.Equal(plannedMap) || !metadata.GenerateName.Equal(generateName) {
+				t.Fatalf("planned metadata was overwritten: %#v", metadata)
+			}
+		}
+	}
+}
+
 func TestBaseMetadataConversion(t *testing.T) {
 	ctx := context.Background()
 	apiMetadata := metav1.ObjectMeta{

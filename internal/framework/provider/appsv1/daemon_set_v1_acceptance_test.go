@@ -402,7 +402,7 @@ func TestAccKubernetesDaemonSetV1_with_resource_requirements(t *testing.T) {
 				Config: testAccKubernetesDaemonSetV1ConfigWithEmptyResourceRequirements(daemonSetName, imageName),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("template").AtSliceIndex(0).AtMapKey("spec").AtSliceIndex(0).AtMapKey("container").AtSliceIndex(0).AtMapKey("resources"), knownvalue.ObjectExact(map[string]knownvalue.Check{
-						"limits": knownvalue.MapSizeExact(0), "requests": knownvalue.MapSizeExact(0),
+						"limits": knownvalue.MapSizeExact(0), "requests": knownvalue.MapSizeExact(0), "claims": knownvalue.Null(),
 					})),
 				},
 				Check: resource.ComposeAggregateTestCheckFunc(

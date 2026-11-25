@@ -325,7 +325,7 @@ persistent_volume_claim_retention_policy = {
 
 `persistent_volume_claim_retention_policy = {}` selects `Retain` for both children, including when an existing policy uses `Delete`. Preserve the previous values during a syntax-only upgrade. Omitting the object keeps the prior or API-computed policy.
 
-`update_strategy` and `volume_claim_template` keep their block syntax, including the claim template's `resources` block. If old state contains more than one retention policy, migration reports an error instead of choosing one; reduce it to one policy with the previous provider before upgrading.
+`update_strategy` and `volume_claim_template` keep their block syntax, including the claim template's `resources` block. Removing the `update_strategy` block returns the StatefulSet to the default `RollingUpdate` strategy. If old state contains more than one retention policy, migration reports an error instead of choosing one; reduce it to one policy with the previous provider before upgrading.
 
 ### kubernetes_pod_v1
 

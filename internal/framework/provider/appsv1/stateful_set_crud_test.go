@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 )
 
 // State written by SDKv2 holds null where the configuration holds {}; the API
@@ -56,6 +57,22 @@ func TestStatefulSetPatchSpecsSkipsNoOpChanges(t *testing.T) {
 			}
 			if got := len(ops) > 0; got != tc.patch {
 				t.Errorf("patch = %t, want %t", got, tc.patch)
+			}
+		})
+	}
+}
+
+// Removing the update_strategy block returns the StatefulSet to the API default.
+func TestStatefulSetPatchSpecsResetsRemovedUpdateStrategy(t *testing.T) {
+	for name, live := range map[string]appsv1.StatefulSetUpdateStrategy{
+		"OnDelete":  {Type: appsv1.OnDeleteStatefulSetStrategyType},
+		"partition": {Type: appsv1.RollingUpdateStatefulSetStrategyType, RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{Partition: ptr.To(int32(2))}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			spec := appsv1.StatefulSetSpec{UpdateStrategy: live}
+			_, to := statefulSetPatchSpecs(spec, appsv1.StatefulSetSpec{}, spec)
+			if to.UpdateStrategy.Type != appsv1.RollingUpdateStatefulSetStrategyType || to.UpdateStrategy.RollingUpdate != nil {
+				t.Errorf("update strategy = %+v, want RollingUpdate with no rolling update", to.UpdateStrategy)
 			}
 		})
 	}

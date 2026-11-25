@@ -307,6 +307,21 @@ func TestAccKubernetesStatefulSetV1_Update(t *testing.T) {
 				),
 			},
 			{
+				// Removing the block returns the StatefulSet to the default strategy.
+				Config: strings.Replace(testAccKubernetesStatefulSetV1ConfigUpdateStrategyOnDelete(name, imageName),
+					"    update_strategy {\n      type = \"OnDelete\"\n    }\n", "", 1),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.update_strategy.#", "0"),
+					func(*terraform.State) error {
+						if got := conf.Spec.UpdateStrategy.Type; got != appsv1.RollingUpdateStatefulSetStrategyType {
+							return fmt.Errorf("live update strategy is %q, want RollingUpdate", got)
+						}
+						return nil
+					},
+				),
+			},
+			{
 				Config: testAccKubernetesStatefulSetV1ConfigUpdateTemplate(name, imageName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesStatefulSetV1Exists(resourceName, &conf),

@@ -485,7 +485,8 @@ func statefulSetPatchSpecs(original, desired, live appsv1.StatefulSetSpec) (apps
 		from.Replicas, to.Replicas = nil, nil
 	}
 	from.UpdateStrategy, to.UpdateStrategy = live.UpdateStrategy, *live.UpdateStrategy.DeepCopy()
-	if desired.UpdateStrategy.Type != "" {
+	switch {
+	case desired.UpdateStrategy.Type != "":
 		to.UpdateStrategy.Type = desired.UpdateStrategy.Type
 		switch {
 		case desired.UpdateStrategy.RollingUpdate != nil:
@@ -496,6 +497,9 @@ func statefulSetPatchSpecs(original, desired, live appsv1.StatefulSetSpec) (apps
 		case original.UpdateStrategy.RollingUpdate != nil || desired.UpdateStrategy.Type == appsv1.OnDeleteStatefulSetStrategyType:
 			to.UpdateStrategy.RollingUpdate = nil
 		}
+	case original.UpdateStrategy.Type != "":
+		// A removed update_strategy block returns to the API default.
+		to.UpdateStrategy = appsv1.StatefulSetUpdateStrategy{Type: appsv1.RollingUpdateStatefulSetStrategyType}
 	}
 	if desired.PersistentVolumeClaimRetentionPolicy == nil {
 		from.PersistentVolumeClaimRetentionPolicy, to.PersistentVolumeClaimRetentionPolicy = live.PersistentVolumeClaimRetentionPolicy, live.PersistentVolumeClaimRetentionPolicy

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	sdkschema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
@@ -66,7 +68,7 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 				want["spec.volume.image"] = true
 				want["spec.volume.image.reference"] = false
 				want["spec.volume.image.pull_policy"] = false
-				for _, field := range []string{"set_hostname_as_fqdn", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
+				for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
 					want["spec."+field] = true
 				}
 				for _, affinity := range []string{"pod_affinity", "pod_anti_affinity"} {
@@ -939,6 +941,36 @@ func TestDNSSearchRule(t *testing.T) {
 		podStringRule("dns-search").ValidateString(context.Background(), validator.StringRequest{ConfigValue: types.StringValue(search)}, &resp)
 		if got := !resp.Diagnostics.HasError(); got != valid {
 			t.Errorf("%q valid = %t, want %t", search, got, valid)
+		}
+	}
+}
+
+// Kubernetes accepts hostnameOverride only as a DNS subdomain of at most 64
+// characters, off the host network and without setHostnameAsFQDN.
+func TestHostnameOverrideValidation(t *testing.T) {
+	ctx := context.Background()
+	b := For(Deployment())
+	s := schema.Schema{Blocks: map[string]schema.Block{"spec": b.Spec}}
+	at := path.Root("spec").AtListIndex(0).AtName("hostname_override")
+	for raw, valid := range map[string]bool{
+		`"override.example","host_network":false,"set_hostname_as_fqdn":false`: true,
+		`"override","host_network":true`:                                       false,
+		`"override","set_hostname_as_fqdn":true`:                               false,
+		`"Override"`:                                                           false,
+		`"` + strings.Repeat("a", 63) + `.b"`:                                  false,
+	} {
+		config, err := (&tfprotov6.RawState{JSON: []byte(`{"spec":[{"hostname_override":` + raw + `}]}`)}).Unmarshal(s.Type().TerraformType(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := validator.StringRequest{Path: at, Config: tfsdk.Config{Schema: s, Raw: config}}
+		var resp validator.StringResponse
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, at, &req.ConfigValue)...)
+		for _, v := range b.Spec.NestedObject.Attributes["hostname_override"].(schema.StringAttribute).Validators {
+			v.ValidateString(ctx, req, &resp)
+		}
+		if got := !resp.Diagnostics.HasError(); got != valid {
+			t.Errorf("%s valid = %t, want %t: %v", raw, got, valid, resp.Diagnostics)
 		}
 	}
 }

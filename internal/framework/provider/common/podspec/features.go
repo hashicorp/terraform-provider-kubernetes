@@ -43,7 +43,7 @@ func NormalizeFeatureDefaults(spec *corev1.PodSpec) {
 // dry-run checks API admission only; node and container-runtime support is
 // still required to run the Pod.
 func HasGatedFeatures(spec *corev1.PodSpec) bool {
-	if spec.HostUsers != nil && !*spec.HostUsers {
+	if spec.HostUsers != nil && !*spec.HostUsers || spec.HostnameOverride != nil {
 		return true
 	}
 	if sc := spec.SecurityContext; sc != nil && (sc.SupplementalGroupsPolicy != nil || sc.SELinuxChangePolicy != nil || sc.AppArmorProfile != nil) {
@@ -85,6 +85,9 @@ func CheckPodFeaturePreservation(expected, actual *corev1.PodSpec) error {
 	}
 	if expected.SetHostnameAsFQDN != nil && *expected.SetHostnameAsFQDN != (actual.SetHostnameAsFQDN != nil && *actual.SetHostnameAsFQDN) {
 		return featureNotPreserved("set_hostname_as_fqdn", "SetHostnameAsFQDN")
+	}
+	if !sameConfiguredPointer(expected.HostnameOverride, actual.HostnameOverride) {
+		return featureNotPreserved("hostname_override", "HostnameOverride")
 	}
 	if want := expected.SecurityContext; want != nil {
 		got := actual.SecurityContext

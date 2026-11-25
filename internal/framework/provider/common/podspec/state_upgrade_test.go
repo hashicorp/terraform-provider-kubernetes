@@ -101,7 +101,7 @@ func TestPodFeatureStateMigration(t *testing.T) {
 				b := For(option)
 				raw := `{"spec":[{"container":[{"name":"app","security_context":[{}]}],"init_container":[{"name":"init","security_context":[{}]}],"volume":[{"name":"data","empty_dir":[{}]}]}]}`
 				if populated {
-					raw = `{"spec":[{"host_users":false,"container":[{"name":"app","security_context":[{"proc_mount":"Unmasked"}]}],"init_container":[{"name":"init","security_context":[{"proc_mount":"Unmasked"}]}],"volume":[{"name":"data","image":[{"reference":"registry.example/data:v1","pull_policy":"IfNotPresent"}]}]}]}`
+					raw = `{"spec":[{"host_users":false,"hostname_override":"override","container":[{"name":"app","security_context":[{"proc_mount":"Unmasked"}]}],"init_container":[{"name":"init","security_context":[{"proc_mount":"Unmasked"}]}],"volume":[{"name":"data","image":[{"reference":"registry.example/data:v1","pull_policy":"IfNotPresent"}]}]}]}`
 				}
 				var object map[string]any
 				if err := json.Unmarshal([]byte(raw), &object); err != nil {
@@ -136,8 +136,11 @@ func TestPodFeatureStateMigration(t *testing.T) {
 					if live.HostUsers == nil || *live.HostUsers || live.Containers[0].SecurityContext.ProcMount == nil || *live.Containers[0].SecurityContext.ProcMount != corev1.UnmaskedProcMount || live.InitContainers[0].SecurityContext.ProcMount == nil || live.Volumes[0].Image == nil || live.Volumes[0].Image.Reference != "registry.example/data:v1" {
 						t.Fatalf("configured features lost: %#v", live)
 					}
-				} else if live.HostUsers != nil || live.Containers[0].SecurityContext.ProcMount != nil || live.InitContainers[0].SecurityContext.ProcMount != nil || live.Volumes[0].Image != nil {
+				} else if live.HostUsers != nil || live.HostnameOverride != nil || live.Containers[0].SecurityContext.ProcMount != nil || live.InitContainers[0].SecurityContext.ProcMount != nil || live.Volumes[0].Image != nil {
 					t.Fatalf("legacy omission changed API payload: %#v", live)
+				} else {
+					// A value the server or a webhook adds is not adopted.
+					live.HostnameOverride = ptr.To("admission")
 				}
 				refreshed, d := b.RefreshSpec(ctx, live, baseline, path.Root("spec"))
 				if d.HasError() {
@@ -148,7 +151,7 @@ func TestPodFeatureStateMigration(t *testing.T) {
 					t.Fatal(d)
 				}
 				at := path.Root("spec").AtListIndex(0)
-				paths := []path.Path{at.AtName("host_users"), at.AtName("set_hostname_as_fqdn"), at.AtName("volume").AtListIndex(0).AtName("image")}
+				paths := []path.Path{at.AtName("host_users"), at.AtName("set_hostname_as_fqdn"), at.AtName("hostname_override"), at.AtName("volume").AtListIndex(0).AtName("image")}
 				for _, kind := range []string{"container", "init_container"} {
 					for _, name := range []string{"proc_mount", "app_armor_profile", "windows_options"} {
 						paths = append(paths, at.AtName(kind).AtListIndex(0).AtName("security_context").AtListIndex(0).AtName(name))

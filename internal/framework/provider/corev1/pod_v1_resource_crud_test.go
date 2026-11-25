@@ -97,6 +97,7 @@ func TestPodFeatureRetention(t *testing.T) {
 		gated bool
 	}{
 		"set_hostname_as_fqdn": {spec: corev1.PodSpec{SetHostnameAsFQDN: ptr.To(true)}},
+		"hostname_override":    {gated: true, spec: corev1.PodSpec{HostnameOverride: ptr.To("override")}},
 		"app_armor_profile": {gated: true, spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
 			AppArmorProfile: &corev1.AppArmorProfile{Type: corev1.AppArmorProfileTypeRuntimeDefault},
 		}}},

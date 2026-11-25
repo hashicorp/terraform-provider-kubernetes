@@ -224,6 +224,8 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 	if b.replace(immutable) {
 		hostUsers.PlanModifiers = append(hostUsers.PlanModifiers, podHostUsersRequiresReplace{})
 	}
+	hostnameOverride := b.optionalString(immutable, podStringRule("hostname-override"), podHostnameOverrideConflicts{})
+	hostnameOverride.Description = "Hostname the Pod sees, taking precedence over hostname and subdomain without changing the Pod's DNS records. Must be a DNS subdomain of at most 64 characters. Cannot be set with host_network = true or set_hostname_as_fqdn = true. Requires Kubernetes 1.35 or later, or the HostnameOverride feature gate on Kubernetes 1.34."
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
 			"active_deadline_seconds":         b.integer(false, false, updatable, 0, int64validator.AtLeast(1)),
@@ -235,6 +237,7 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 			"host_pid":                        b.boolean(false, immutable, false),
 			"host_users":                      hostUsers,
 			"hostname":                        b.str(false, true, immutable, ""),
+			"hostname_override":               hostnameOverride,
 			"image_pull_secrets":              b.references("name", immutable),
 			"node_name":                       b.str(false, true, immutable, ""),
 			"node_selector":                   b.emptyCompatibleMap(immutable),
@@ -418,6 +421,12 @@ func (v podStringRule) ValidateString(_ context.Context, req validator.StringReq
 		if s != "." {
 			messages = utilValidation.IsDNS1123SubdomainWithUnderscore(strings.TrimSuffix(s, "."))
 		}
+	case "hostname-override":
+		// A hostname is limited to 64 characters, less than a DNS subdomain allows.
+		messages = utilValidation.IsDNS1123Subdomain(s)
+		if len(s) > 64 {
+			messages = append(messages, "must be no more than 64 characters")
+		}
 	case "port":
 		if n, err := strconv.Atoi(s); err == nil {
 			messages = utilValidation.IsValidPortNum(n)
@@ -465,6 +474,28 @@ func (v podStringRule) ValidateString(_ context.Context, req validator.StringReq
 	}
 	for _, message := range messages {
 		resp.Diagnostics.AddAttributeError(req.Path, "Invalid Attribute Value", message)
+	}
+}
+
+// Kubernetes rejects hostnameOverride on a host-network Pod and with setHostnameAsFQDN.
+type podHostnameOverrideConflicts struct{}
+
+func (podHostnameOverrideConflicts) Description(context.Context) string {
+	return "cannot be set when host_network or set_hostname_as_fqdn is true"
+}
+func (v podHostnameOverrideConflicts) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+func (podHostnameOverrideConflicts) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+	for _, name := range []string{"host_network", "set_hostname_as_fqdn"} {
+		var enabled types.Bool
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, req.Path.ParentPath().AtName(name), &enabled)...)
+		if enabled.ValueBool() {
+			resp.Diagnostics.AddAttributeError(req.Path, "Invalid Attribute Combination", fmt.Sprintf("hostname_override cannot be set when %s is true.", name))
+		}
 	}
 }
 

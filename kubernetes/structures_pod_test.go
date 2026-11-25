@@ -143,7 +143,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		}),
 	}
 	raw := block(map[string]interface{}{
-		"set_hostname_as_fqdn": false,
+		"set_hostname_as_fqdn": false, "hostname_override": "override.example",
 		"security_context": block(map[string]interface{}{
 			"app_armor_profile":          map[string]interface{}{"type": "RuntimeDefault"},
 			"supplemental_groups_policy": "Strict", "se_linux_change_policy": "Recursive",
@@ -202,7 +202,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacyFields := fmt.Sprintf("%#v", legacy)
-	for _, field := range []string{"set_hostname_as_fqdn", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys"} {
+	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys"} {
 		key := `"` + field + `":`
 		if !strings.Contains(encoded, key) || strings.Contains(legacyFields, key) {
 			t.Fatalf("%s must be present only in Framework flattening", field)

@@ -773,7 +773,7 @@ func podProcMountPath(key string) bool {
 
 func podOptionalFeaturePath(key string) bool {
 	switch key {
-	case "spec.set_hostname_as_fqdn", "spec.security_context.supplemental_groups_policy", "spec.security_context.se_linux_change_policy":
+	case "spec.set_hostname_as_fqdn", "spec.hostname_override", "spec.security_context.supplemental_groups_policy", "spec.security_context.se_linux_change_policy":
 		return true
 	}
 	for _, object := range []string{"spec.security_context.app_armor_profile", "spec.container.security_context.app_armor_profile", "spec.init_container.security_context.app_armor_profile", "spec.container.security_context.windows_options", "spec.init_container.security_context.windows_options"} {

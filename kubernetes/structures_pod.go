@@ -808,6 +808,9 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	if v, ok := in["set_hostname_as_fqdn"].(bool); ok {
 		obj.SetHostnameAsFQDN = ptr.To(v)
 	}
+	if v, ok := in["hostname_override"].(string); ok && v != "" {
+		obj.HostnameOverride = ptr.To(v)
+	}
 
 	if v, ok := in["image_pull_secrets"].([]interface{}); ok {
 		cs := expandLocalObjectReferenceArray(v)
@@ -1748,6 +1751,9 @@ func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 	}
 	if spec.SetHostnameAsFQDN != nil {
 		object["set_hostname_as_fqdn"] = *spec.SetHostnameAsFQDN
+	}
+	if spec.HostnameOverride != nil {
+		object["hostname_override"] = *spec.HostnameOverride
 	}
 	if spec.SecurityContext != nil && (spec.SecurityContext.AppArmorProfile != nil || spec.SecurityContext.SupplementalGroupsPolicy != nil || spec.SecurityContext.SELinuxChangePolicy != nil) {
 		securityContext := map[string]interface{}{}

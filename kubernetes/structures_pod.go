@@ -1925,12 +1925,16 @@ func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 	}
 	images := make(map[string]*v1.ImageVolumeSource)
 	projected := make(map[string]*v1.ProjectedVolumeSource)
+	attributesClasses := make(map[string]string)
 	for _, volume := range spec.Volumes {
 		if volume.Image != nil {
 			images[volume.Name] = volume.Image
 		}
 		if volume.Projected != nil {
 			projected[volume.Name] = volume.Projected
+		}
+		if volume.Ephemeral != nil && volume.Ephemeral.VolumeClaimTemplate != nil && volume.Ephemeral.VolumeClaimTemplate.Spec.VolumeAttributesClassName != nil {
+			attributesClasses[volume.Name] = *volume.Ephemeral.VolumeClaimTemplate.Spec.VolumeAttributesClassName
 		}
 	}
 	volumes, _ := object["volume"].([]interface{})
@@ -1939,6 +1943,10 @@ func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 		name, _ := volume["name"].(string)
 		if source := projected[name]; source != nil {
 			flattenFrameworkProjectedSources(source, volume)
+		}
+		if class, ok := attributesClasses[name]; ok {
+			template := volume["ephemeral"].([]interface{})[0].(map[string]interface{})["volume_claim_template"].([]interface{})[0].(map[string]interface{})
+			template["spec"].([]interface{})[0].(map[string]interface{})["volume_attributes_class_name"] = class
 		}
 		if image := images[name]; image != nil {
 			volume["image"] = []interface{}{map[string]interface{}{

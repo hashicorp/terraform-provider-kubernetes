@@ -311,6 +311,8 @@ func (b builder) podVolumeClaimTemplateObject() schema.NestedBlockObject {
 	annotations.Validators = []validator.Map{common.AnnotationsValidator()}
 	labels := b.mapping(false, updatable)
 	labels.Validators = []validator.Map{common.LabelsValidator()}
+	attributesClass := b.str(false, true, alwaysNew, "")
+	attributesClass.Description = "Name of the VolumeAttributesClass requested by the claim. Requires Kubernetes 1.34 or later, or the VolumeAttributesClass feature gate on Kubernetes 1.29 to 1.33; without the feature the Pod keeps the name and Kubernetes creates the claim without the class."
 	selector := b.podLabelSelectorObject()
 	selector.Attributes["match_labels"] = b.mapping(false, alwaysNew)
 	selector.Blocks["match_expressions"] = b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
@@ -328,6 +330,8 @@ func (b builder) podVolumeClaimTemplateObject() schema.NestedBlockObject {
 				"volume_name":        b.str(false, true, alwaysNew, ""),
 				"storage_class_name": b.str(false, true, alwaysNew, ""),
 				"volume_mode":        b.str(false, true, alwaysNew, "", stringvalidator.OneOf("Block", "Filesystem")),
+
+				"volume_attributes_class_name": attributesClass,
 			},
 			Blocks: map[string]schema.Block{
 				"resources": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{

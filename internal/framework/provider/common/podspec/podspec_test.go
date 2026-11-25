@@ -56,6 +56,8 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 			}
 			want := map[string]bool{}
 			sdkForceNew("spec", legacy, want)
+			// Framework-only, and replaced on change like the claim template fields beside it.
+			want["spec.volume.ephemeral.volume_claim_template.spec.volume_attributes_class_name"] = true
 			if tc.options.Immutable {
 				// SDKv2 omitted ForceNew here, but the API rejects the change.
 				want["spec.dns_config.searches"] = true

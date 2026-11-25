@@ -146,6 +146,9 @@ func TestPodFeatureRetention(t *testing.T) {
 		`container "app" env "FROM_FILE" file_key_ref`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Env: []corev1.EnvVar{{Name: "FROM_FILE",
 			ValueFrom: &corev1.EnvVarSource{FileKeyRef: &corev1.FileKeySelector{VolumeName: "data", Path: "config.env", Key: "KEY"}},
 		}}}}}},
+		`volume "scratch" volume_attributes_class_name`: {gated: true, spec: corev1.PodSpec{Volumes: []corev1.Volume{{Name: "scratch", VolumeSource: corev1.VolumeSource{
+			Ephemeral: &corev1.EphemeralVolumeSource{VolumeClaimTemplate: &corev1.PersistentVolumeClaimTemplate{Spec: corev1.PersistentVolumeClaimSpec{VolumeAttributesClassName: ptr.To("gold")}}},
+		}}}}},
 		"windows_options": {spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{
 			WindowsOptions: &corev1.WindowsSecurityContextOptions{RunAsUserName: ptr.To("ContainerUser")},
 		}}}}},

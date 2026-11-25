@@ -81,10 +81,17 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 		}
 	}
 	return slices.ContainsFunc(spec.Volumes, func(volume corev1.Volume) bool {
-		return volume.Image != nil || volume.Projected != nil && slices.ContainsFunc(volume.Projected.Sources, func(source corev1.VolumeProjection) bool {
+		return volume.Image != nil || ephemeralAttributesClass(volume) != nil || volume.Projected != nil && slices.ContainsFunc(volume.Projected.Sources, func(source corev1.VolumeProjection) bool {
 			return source.ClusterTrustBundle != nil || source.PodCertificate != nil
 		})
 	})
+}
+
+func ephemeralAttributesClass(volume corev1.Volume) *string {
+	if volume.Ephemeral == nil || volume.Ephemeral.VolumeClaimTemplate == nil {
+		return nil
+	}
+	return volume.Ephemeral.VolumeClaimTemplate.Spec.VolumeAttributesClassName
 }
 
 // CheckPodFeaturePreservation verifies requested feature values before planned-value
@@ -153,11 +160,16 @@ func CheckPodFeaturePreservation(expected, actual *corev1.PodSpec) error {
 	// A server without a projection feature leaves an empty source in its
 	// place, so each configured source must be found as it was sent.
 	for _, volume := range expected.Volumes {
+		index := slices.IndexFunc(actual.Volumes, func(candidate corev1.Volume) bool { return candidate.Name == volume.Name })
+		// Only an API server that predates the field drops it from a Pod.
+		if class := ephemeralAttributesClass(volume); class != nil && (index < 0 || !sameConfiguredPointer(class, ephemeralAttributesClass(actual.Volumes[index]))) {
+			return featureNotPreserved(fmt.Sprintf("volume %q volume_attributes_class_name", volume.Name), "VolumeAttributesClass")
+		}
 		if volume.Projected == nil {
 			continue
 		}
 		var got []corev1.VolumeProjection
-		if index := slices.IndexFunc(actual.Volumes, func(candidate corev1.Volume) bool { return candidate.Name == volume.Name }); index >= 0 && actual.Volumes[index].Projected != nil {
+		if index >= 0 && actual.Volumes[index].Projected != nil {
 			got = actual.Volumes[index].Projected.Sources
 		}
 		for _, source := range volume.Projected.Sources {

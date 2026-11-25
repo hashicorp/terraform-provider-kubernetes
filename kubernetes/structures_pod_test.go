@@ -160,7 +160,10 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 			"supplemental_groups_policy": "Strict", "se_linux_change_policy": "Recursive",
 		}),
 		"affinity": block(map[string]interface{}{"pod_affinity": affinity, "pod_anti_affinity": affinity}),
-		"volume": block(map[string]interface{}{"name": "trust", "projected": block(map[string]interface{}{"sources": block(map[string]interface{}{
+		"volume": []interface{}{map[string]interface{}{"name": "scratch", "ephemeral": block(map[string]interface{}{"volume_claim_template": block(map[string]interface{}{
+			"metadata": []interface{}{},
+			"spec":     block(map[string]interface{}{"access_modes": schema.NewSet(schema.HashString, []interface{}{"ReadWriteOnce"}), "resources": block(map[string]interface{}{}), "volume_attributes_class_name": "gold"}),
+		})})}, map[string]interface{}{"name": "trust", "projected": block(map[string]interface{}{"sources": block(map[string]interface{}{
 			"cluster_trust_bundle": map[string]interface{}{"signer_name": "example.com/signer", "path": "ca.crt", "optional": true, "label_selector": map[string]interface{}{
 				"match_expressions": []interface{}{map[string]interface{}{"key": "tier", "operator": "Exists"}},
 			}},
@@ -168,7 +171,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 				"signer_name": "example.com/signer", "key_type": "ED25519", "max_expiration_seconds": 7200, "key_path": "key.pem", "certificate_chain_path": "chain.pem",
 				"user_annotations": map[string]interface{}{"example.com/role": "web"},
 			},
-		})})}),
+		})})}},
 		"container": block(container), "init_container": block(container),
 	})
 	spec, err := ExpandPodSpec(raw)
@@ -208,8 +211,11 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		SignerName: "example.com/signer", KeyType: "ED25519", MaxExpirationSeconds: ptr.To[int32](7200), KeyPath: "key.pem", CertificateChainPath: "chain.pem",
 		UserAnnotations: map[string]string{"example.com/role": "web"},
 	}}}
-	if diff := cmp.Diff(wantSources, spec.Volumes[0].Projected.Sources); diff != "" {
+	if diff := cmp.Diff(wantSources, spec.Volumes[1].Projected.Sources); diff != "" {
 		t.Fatalf("projected sources (-want +got):\n%s", diff)
+	}
+	if class := spec.Volumes[0].Ephemeral.VolumeClaimTemplate.Spec.VolumeAttributesClassName; class == nil || *class != "gold" {
+		t.Fatal("volume_attributes_class_name was not expanded")
 	}
 	if diff := cmp.Diff([]corev1.PodResourceClaim{{Name: "gpu", ResourceClaimTemplateName: ptr.To("single-gpu")}}, spec.ResourceClaims); diff != "" {
 		t.Fatalf("Pod resource claims (-want +got):\n%s", diff)
@@ -239,7 +245,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacyFields := fmt.Sprintf("%#v", legacy)
-	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims", "resize_policy", "restart_policy_rules", "file_key_ref", "cluster_trust_bundle", "pod_certificate"} {
+	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims", "resize_policy", "restart_policy_rules", "file_key_ref", "cluster_trust_bundle", "pod_certificate", "volume_attributes_class_name"} {
 		key := `"` + field + `":`
 		if !strings.Contains(encoded, key) || strings.Contains(legacyFields, key) {
 			t.Fatalf("%s must be present only in Framework flattening", field)

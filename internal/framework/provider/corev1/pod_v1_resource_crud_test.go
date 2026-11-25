@@ -36,7 +36,9 @@ func TestPodFeatureRetention(t *testing.T) {
 			RestartPolicy: ptr.To(corev1.ContainerRestartPolicyOnFailure), RestartPolicyRules: []corev1.ContainerRestartRule{{Action: corev1.ContainerRestartRuleActionRestart}}}},
 		Volumes: []corev1.Volume{{Name: "data", VolumeSource: corev1.VolumeSource{Image: &corev1.ImageVolumeSource{
 			Reference: "example/data:1", PullPolicy: corev1.PullIfNotPresent,
-		}}}},
+		}}}, {Name: "trust", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{
+			{ClusterTrustBundle: &corev1.ClusterTrustBundleProjection{Name: ptr.To("bundle"), Path: "ca.crt"}},
+		}}}}},
 	}
 	for name, test := range map[string]struct {
 		edit func(*corev1.PodSpec)
@@ -64,6 +66,7 @@ func TestPodFeatureRetention(t *testing.T) {
 		"reference rewritten": {edit: func(actual *corev1.PodSpec) { actual.Volumes[0].Image.Reference = "other:1" }, want: "ImageVolume"},
 		"policy rewritten":    {edit: func(actual *corev1.PodSpec) { actual.Volumes[0].Image.PullPolicy = corev1.PullAlways }, want: "ImageVolume"},
 		"mount dropped":       {edit: func(actual *corev1.PodSpec) { actual.Containers[0].VolumeMounts = nil }, want: "ImageVolume"},
+		"trust source empty":  {edit: func(actual *corev1.PodSpec) { actual.Volumes[1].Projected.Sources[0] = corev1.VolumeProjection{} }, want: `volume "trust" cluster_trust_bundle`},
 	} {
 		t.Run(name, func(t *testing.T) {
 			actual := expected.DeepCopy()
@@ -97,7 +100,8 @@ func TestPodFeatureRetention(t *testing.T) {
 		"user namespace":  {HostUsers: expected.HostUsers},
 		"proc mount":      {Containers: expected.Containers},
 		"init proc mount": {InitContainers: expected.InitContainers},
-		"image volume":    {Volumes: expected.Volumes},
+		"image volume":    {Volumes: expected.Volumes[:1]},
+		"projections":     {Volumes: expected.Volumes[1:]},
 	} {
 		t.Run("preflight/"+name, func(t *testing.T) {
 			if !podspec.HasGatedFeatures(&spec) {

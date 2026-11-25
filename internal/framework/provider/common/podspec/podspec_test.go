@@ -68,7 +68,7 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 				want["spec.volume.image"] = true
 				want["spec.volume.image.reference"] = false
 				want["spec.volume.image.pull_policy"] = false
-				for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "resources", "resources.limits", "resources.requests", "resource_claims", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
+				for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "resources", "resources.limits", "resources.requests", "resource_claims", "volume.projected.sources.cluster_trust_bundle", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
 					want["spec."+field] = true
 				}
 				for _, affinity := range []string{"pod_affinity", "pod_anti_affinity"} {

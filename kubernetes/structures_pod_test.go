@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
@@ -158,7 +159,12 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 			"app_armor_profile":          map[string]interface{}{"type": "RuntimeDefault"},
 			"supplemental_groups_policy": "Strict", "se_linux_change_policy": "Recursive",
 		}),
-		"affinity":  block(map[string]interface{}{"pod_affinity": affinity, "pod_anti_affinity": affinity}),
+		"affinity": block(map[string]interface{}{"pod_affinity": affinity, "pod_anti_affinity": affinity}),
+		"volume": block(map[string]interface{}{"name": "trust", "projected": block(map[string]interface{}{"sources": block(map[string]interface{}{
+			"cluster_trust_bundle": map[string]interface{}{"signer_name": "example.com/signer", "path": "ca.crt", "optional": true, "label_selector": map[string]interface{}{
+				"match_expressions": []interface{}{map[string]interface{}{"key": "tier", "operator": "Exists"}},
+			}},
+		})})}),
 		"container": block(container), "init_container": block(container),
 	})
 	spec, err := ExpandPodSpec(raw)
@@ -191,6 +197,13 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 			t.Fatalf("container fields were not expanded: %#v", c)
 		}
 	}
+	wantSources := []corev1.VolumeProjection{{ClusterTrustBundle: &corev1.ClusterTrustBundleProjection{
+		SignerName: ptr.To("example.com/signer"), Path: "ca.crt", Optional: ptr.To(true),
+		LabelSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "tier", Operator: metav1.LabelSelectorOpExists}}},
+	}}}
+	if diff := cmp.Diff(wantSources, spec.Volumes[0].Projected.Sources); diff != "" {
+		t.Fatalf("projected sources (-want +got):\n%s", diff)
+	}
 	if diff := cmp.Diff([]corev1.PodResourceClaim{{Name: "gpu", ResourceClaimTemplateName: ptr.To("single-gpu")}}, spec.ResourceClaims); diff != "" {
 		t.Fatalf("Pod resource claims (-want +got):\n%s", diff)
 	}
@@ -219,7 +232,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacyFields := fmt.Sprintf("%#v", legacy)
-	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims", "resize_policy", "restart_policy_rules", "file_key_ref"} {
+	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims", "resize_policy", "restart_policy_rules", "file_key_ref", "cluster_trust_bundle"} {
 		key := `"` + field + `":`
 		if !strings.Contains(encoded, key) || strings.Contains(legacyFields, key) {
 			t.Fatalf("%s must be present only in Framework flattening", field)

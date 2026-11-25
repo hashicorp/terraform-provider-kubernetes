@@ -5,8 +5,10 @@ package podspec
 
 import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -226,11 +228,45 @@ func (b builder) podDownwardAPIVolumeObject(projected bool) schema.NestedBlockOb
 	return o
 }
 
+// podProjectionAttributes are the projected volume sources added as object
+// arguments; each is one API source, after those of the blocks beside it.
+func (b builder) podProjectionAttributes() map[string]schema.Attribute {
+	trustBundle := schema.SingleNestedAttribute{
+		Optional:    true,
+		Description: "Projects the trust anchors of ClusterTrustBundle objects into a file that the kubelet keeps up to date. Selects one bundle by name, or every bundle of a signer that matches label_selector. Requires Kubernetes 1.37 or later, or the ClusterTrustBundleProjection feature gate on Kubernetes 1.29 to 1.36.",
+		Attributes: map[string]schema.Attribute{
+			"name": schema.StringAttribute{
+				Optional: true, Description: "Name of a single ClusterTrustBundle. Set either this or signer_name.",
+				Validators: []validator.String{stringvalidator.ExactlyOneOf(path.MatchRelative().AtParent().AtName("signer_name"))},
+			},
+			"signer_name": schema.StringAttribute{Optional: true, Description: "Signer whose ClusterTrustBundles are selected with label_selector and combined."},
+			"label_selector": schema.SingleNestedAttribute{
+				Optional: true, Description: "Selects the ClusterTrustBundles of signer_name. Omission matches none and {} matches all. Cannot be set with name.",
+				Validators: []validator.Object{objectvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName("name"))},
+				Attributes: map[string]schema.Attribute{
+					"match_labels": schema.MapAttribute{Optional: true, ElementType: types.StringType, Description: common.LabelSelectorMatchLabelsDescription},
+					"match_expressions": schema.ListNestedAttribute{Optional: true, Description: common.LabelSelectorMatchExpressionsDescription, NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+						"key":      schema.StringAttribute{Required: true, Description: common.LabelSelectorKeyDescription},
+						"operator": schema.StringAttribute{Required: true, Description: common.LabelSelectorOperatorDescription},
+						"values":   schema.SetAttribute{Optional: true, ElementType: types.StringType, Description: common.LabelSelectorValuesDescription},
+					}}},
+				},
+			},
+			"optional": schema.BoolAttribute{Optional: true, Description: "Whether the Pod may start when the named bundle does not exist or the signer has no matching bundle."},
+			"path":     schema.StringAttribute{Required: true, Description: "Path of the bundle file, relative to the volume root.", Validators: []validator.String{podStringRule("path")}},
+		},
+	}
+	if b.replace(immutable) {
+		trustBundle.PlanModifiers = []planmodifier.Object{podOptionalObjectRequiresReplace{}}
+	}
+	return map[string]schema.Attribute{"cluster_trust_bundle": trustBundle}
+}
+
 func (b builder) podProjectedVolumeObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{"default_mode": b.str(false, false, updatable, "0644", podStringRule("mode"))},
 		Blocks: map[string]schema.Block{
-			"sources": b.block(schema.NestedBlockObject{Blocks: map[string]schema.Block{
+			"sources": b.block(schema.NestedBlockObject{Attributes: b.podProjectionAttributes(), Blocks: map[string]schema.Block{
 				"secret":       b.block(b.podKeyVolumeObject("name", false), 0, 0, updatable),
 				"config_map":   b.block(b.podKeyVolumeObject("name", false), 0, 0, updatable),
 				"downward_api": b.block(b.podDownwardAPIVolumeObject(true), 0, 1, updatable),

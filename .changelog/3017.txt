@@ -103,6 +103,10 @@
 ```
 
 ```release-note:enhancement
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add the `cluster_trust_bundle` object argument to `volume.projected.sources` to project ClusterTrustBundle trust anchors into a file, on clusters that support the feature.
+```
+
+```release-note:enhancement
 `resource/kubernetes_stateful_set_v1`: Add the `ordinals` object argument to configure the starting Pod ordinal.
 ```
 

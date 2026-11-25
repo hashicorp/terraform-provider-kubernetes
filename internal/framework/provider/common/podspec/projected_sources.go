@@ -55,7 +55,7 @@ func preserveProjectedSourceGroups(ctx context.Context, spec corev1.PodSpec, bas
 			continue
 		}
 		var diagnostics diag.Diagnostics
-		rawSources := podSpecAPIValue(ctx, sources, path.Empty(), "sources", nil, &diagnostics)
+		rawSources := podSpecAPIValue(ctx, sources, path.Empty(), "spec.volume.projected.sources", nil, &diagnostics)
 		if diagnostics.HasError() {
 			continue
 		}

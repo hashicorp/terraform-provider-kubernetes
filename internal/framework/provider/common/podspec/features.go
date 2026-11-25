@@ -80,7 +80,11 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 			}
 		}
 	}
-	return slices.ContainsFunc(spec.Volumes, func(volume corev1.Volume) bool { return volume.Image != nil })
+	return slices.ContainsFunc(spec.Volumes, func(volume corev1.Volume) bool {
+		return volume.Image != nil || volume.Projected != nil && slices.ContainsFunc(volume.Projected.Sources, func(source corev1.VolumeProjection) bool {
+			return source.ClusterTrustBundle != nil
+		})
+	})
 }
 
 // CheckPodFeaturePreservation verifies requested feature values before planned-value
@@ -144,6 +148,24 @@ func CheckPodFeaturePreservation(expected, actual *corev1.PodSpec) error {
 		got := actual.Volumes[index].Image
 		if volume.Image.Reference != "" && volume.Image.Reference != got.Reference || volume.Image.PullPolicy != "" && volume.Image.PullPolicy != got.PullPolicy {
 			return featureNotPreserved(fmt.Sprintf("volume %q image", volume.Name), "ImageVolume")
+		}
+	}
+	// A server without a projection feature leaves an empty source in its
+	// place, so each configured source must be found as it was sent.
+	for _, volume := range expected.Volumes {
+		if volume.Projected == nil {
+			continue
+		}
+		var got []corev1.VolumeProjection
+		if index := slices.IndexFunc(actual.Volumes, func(candidate corev1.Volume) bool { return candidate.Name == volume.Name }); index >= 0 && actual.Volumes[index].Projected != nil {
+			got = actual.Volumes[index].Projected.Sources
+		}
+		for _, source := range volume.Projected.Sources {
+			if source.ClusterTrustBundle != nil && !slices.ContainsFunc(got, func(candidate corev1.VolumeProjection) bool {
+				return apiequality.Semantic.DeepEqual(source.ClusterTrustBundle, candidate.ClusterTrustBundle)
+			}) {
+				return featureNotPreserved(fmt.Sprintf("volume %q cluster_trust_bundle", volume.Name), "ClusterTrustBundleProjection")
+			}
 		}
 	}
 	if err := checkContainerFeatures(expected.Containers, actual.Containers, imageVolumes, false); err != nil {

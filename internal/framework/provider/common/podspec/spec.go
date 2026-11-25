@@ -779,7 +779,7 @@ func podOptionalFeaturePath(key string) bool {
 	case "spec.set_hostname_as_fqdn", "spec.hostname_override", "spec.resources", "spec.security_context.supplemental_groups_policy", "spec.security_context.se_linux_change_policy":
 		return true
 	}
-	for _, object := range []string{"spec.security_context.app_armor_profile", "spec.container.security_context.app_armor_profile", "spec.init_container.security_context.app_armor_profile", "spec.container.security_context.windows_options", "spec.init_container.security_context.windows_options", "spec.resource_claims", "spec.container.resources.claims", "spec.init_container.resources.claims", "spec.container.resize_policy", "spec.init_container.resize_policy", "spec.container.restart_policy_rules", "spec.init_container.restart_policy_rules", "spec.container.env.value_from.file_key_ref", "spec.init_container.env.value_from.file_key_ref"} {
+	for _, object := range []string{"spec.security_context.app_armor_profile", "spec.container.security_context.app_armor_profile", "spec.init_container.security_context.app_armor_profile", "spec.container.security_context.windows_options", "spec.init_container.security_context.windows_options", "spec.resource_claims", "spec.container.resources.claims", "spec.init_container.resources.claims", "spec.container.resize_policy", "spec.init_container.resize_policy", "spec.container.restart_policy_rules", "spec.init_container.restart_policy_rules", "spec.container.env.value_from.file_key_ref", "spec.init_container.env.value_from.file_key_ref", "spec.volume.projected.sources.cluster_trust_bundle"} {
 		if key == object || strings.HasPrefix(key, object+".") {
 			return true
 		}
@@ -916,6 +916,10 @@ func podZeroRaw(typ attr.Type, key, target string) interface{} {
 		object, _ := t.ValueType(context.Background()).(basetypes.ObjectValuable).ToObjectValue(context.Background())
 		result := map[string]interface{}{}
 		for name, child := range object.AttributeTypes(context.Background()) {
+			// A zero-valued block leaves its optional objects unset.
+			if _, nested := child.(basetypes.ObjectTypable); nested && podOptionalFeaturePath(key+"."+name) {
+				continue
+			}
 			result[name] = podZeroRaw(child, key+"."+name, target)
 		}
 		return result

@@ -1404,9 +1404,79 @@ func expandProjectedSources(sources []interface{}) ([]v1.VolumeProjection, error
 			}
 			srcs = append(srcs, values...)
 		}
+		if v, ok := in["cluster_trust_bundle"].(map[string]interface{}); ok {
+			bundle := &v1.ClusterTrustBundleProjection{}
+			bundle.Path, _ = v["path"].(string)
+			if name, ok := v["name"].(string); ok && name != "" {
+				bundle.Name = ptr.To(name)
+			}
+			if signer, ok := v["signer_name"].(string); ok && signer != "" {
+				bundle.SignerName = ptr.To(signer)
+			}
+			if selector, ok := v["label_selector"].(map[string]interface{}); ok {
+				bundle.LabelSelector = expandFrameworkLabelSelector(selector)
+			}
+			if optional, ok := v["optional"].(bool); ok {
+				bundle.Optional = ptr.To(optional)
+			}
+			srcs = append(srcs, v1.VolumeProjection{ClusterTrustBundle: bundle})
+		}
 	}
 
 	return srcs, nil
+}
+
+// expandFrameworkLabelSelector tolerates the absent keys of an object argument;
+// an empty selector stays set, since it selects everything.
+func expandFrameworkLabelSelector(in map[string]interface{}) *metav1.LabelSelector {
+	obj := &metav1.LabelSelector{}
+	if v, ok := in["match_labels"].(map[string]interface{}); ok && len(v) > 0 {
+		obj.MatchLabels = expandStringMap(v)
+	}
+	expressions, _ := in["match_expressions"].([]interface{})
+	for _, entry := range expressions {
+		expression, _ := entry.(map[string]interface{})
+		key, _ := expression["key"].(string)
+		operator, _ := expression["operator"].(string)
+		requirement := metav1.LabelSelectorRequirement{Key: key, Operator: metav1.LabelSelectorOperator(operator)}
+		if values, ok := expression["values"].(*schema.Set); ok {
+			requirement.Values = sliceOfString(values.List())
+		}
+		obj.MatchExpressions = append(obj.MatchExpressions, requirement)
+	}
+	return obj
+}
+
+// flattenFrameworkProjectedSources adds the Framework-only projections to the
+// sources the SDKv2 flattener returned, one for each API source.
+func flattenFrameworkProjectedSources(in *v1.ProjectedVolumeSource, volume map[string]interface{}) {
+	blocks, _ := volume["projected"].([]interface{})
+	if len(blocks) == 0 {
+		return
+	}
+	sources, _ := blocks[0].(map[string]interface{})["sources"].([]interface{})
+	for i, source := range in.Sources {
+		if i >= len(sources) {
+			return
+		}
+		out := sources[i].(map[string]interface{})
+		if bundle := source.ClusterTrustBundle; bundle != nil {
+			value := map[string]interface{}{"path": bundle.Path}
+			if bundle.Name != nil {
+				value["name"] = *bundle.Name
+			}
+			if bundle.SignerName != nil {
+				value["signer_name"] = *bundle.SignerName
+			}
+			if bundle.LabelSelector != nil {
+				value["label_selector"] = flattenLabelSelector(bundle.LabelSelector)[0]
+			}
+			if bundle.Optional != nil {
+				value["optional"] = *bundle.Optional
+			}
+			out["cluster_trust_bundle"] = value
+		}
+	}
 }
 
 func expandProjectedSecrets(secrets []interface{}) []v1.VolumeProjection {
@@ -1822,15 +1892,22 @@ func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 		}
 	}
 	images := make(map[string]*v1.ImageVolumeSource)
+	projected := make(map[string]*v1.ProjectedVolumeSource)
 	for _, volume := range spec.Volumes {
 		if volume.Image != nil {
 			images[volume.Name] = volume.Image
+		}
+		if volume.Projected != nil {
+			projected[volume.Name] = volume.Projected
 		}
 	}
 	volumes, _ := object["volume"].([]interface{})
 	for _, raw := range volumes {
 		volume := raw.(map[string]interface{})
 		name, _ := volume["name"].(string)
+		if source := projected[name]; source != nil {
+			flattenFrameworkProjectedSources(source, volume)
+		}
 		if image := images[name]; image != nil {
 			volume["image"] = []interface{}{map[string]interface{}{
 				"reference": image.Reference, "pull_policy": string(image.PullPolicy),

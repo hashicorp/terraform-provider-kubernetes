@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -121,6 +122,35 @@ func SkipIfClusterVersionLessThan(t *testing.T, minimum string) {
 	t.Helper()
 	if ClusterVersion(t).LessThan(gversion.Must(gversion.NewVersion(minimum))) {
 		t.Skipf("This test does not run on cluster versions below %s", minimum)
+	}
+}
+
+// FeatureSteps returns the steps for a configuration that uses a Kubernetes
+// feature enabled by default from minimum. An older cluster must refuse the
+// configuration with an error naming the feature; any other cluster applies it.
+func FeatureSteps(minimum, feature, config string, check resource.TestCheckFunc) []resource.TestStep {
+	older := func() (bool, error) {
+		conn, err := Clientset()
+		if err != nil {
+			return false, err
+		}
+		server, err := conn.ServerVersion()
+		if err != nil {
+			return false, err
+		}
+		version, err := gversion.NewVersion(server.String())
+		if err != nil {
+			return false, err
+		}
+		return version.LessThan(gversion.Must(gversion.NewVersion(minimum))), nil
+	}
+	supported := func() (bool, error) {
+		old, err := older()
+		return !old, err
+	}
+	return []resource.TestStep{
+		{Config: config, ExpectError: regexp.MustCompile(feature), SkipFunc: supported},
+		{Config: config, Check: check, SkipFunc: older},
 	}
 }
 

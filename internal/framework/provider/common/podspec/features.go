@@ -63,6 +63,9 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 			if len(container.Resources.Claims)+len(container.ResizePolicy) > 0 || usesContainerRestartRules(container, kind == 1) {
 				return true
 			}
+			if slices.ContainsFunc(container.Env, func(env corev1.EnvVar) bool { return env.ValueFrom != nil && env.ValueFrom.FileKeyRef != nil }) {
+				return true
+			}
 			for _, mount := range container.VolumeMounts {
 				if mount.RecursiveReadOnly != nil {
 					return true
@@ -202,6 +205,21 @@ func checkContainerFeatures(expected, actual []corev1.Container, imageVolumes ma
 			}
 			if len(container.RestartPolicyRules) > 0 && !apiequality.Semantic.DeepEqual(container.RestartPolicyRules, got.RestartPolicyRules) {
 				return featureNotPreserved(fmt.Sprintf("container %q restart_policy_rules", container.Name), "ContainerRestartRules")
+			}
+		}
+		for _, env := range container.Env {
+			if env.ValueFrom == nil || env.ValueFrom.FileKeyRef == nil {
+				continue
+			}
+			want := env.ValueFrom.FileKeyRef
+			if !slices.ContainsFunc(got.Env, func(candidate corev1.EnvVar) bool {
+				if candidate.Name != env.Name || candidate.ValueFrom == nil || candidate.ValueFrom.FileKeyRef == nil {
+					return false
+				}
+				have := candidate.ValueFrom.FileKeyRef
+				return want.VolumeName == have.VolumeName && want.Path == have.Path && want.Key == have.Key && sameConfiguredPointer(want.Optional, have.Optional)
+			}) {
+				return featureNotPreserved(fmt.Sprintf("container %q env %q file_key_ref", container.Name, env.Name), "EnvFiles")
 			}
 		}
 		for _, policy := range container.ResizePolicy {

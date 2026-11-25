@@ -143,6 +143,9 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		}),
 		"resources":     block(map[string]interface{}{"claims": []interface{}{map[string]interface{}{"name": "gpu", "request": "first"}}}),
 		"resize_policy": []interface{}{map[string]interface{}{"resource_name": "memory", "restart_policy": "RestartContainer"}},
+		"env": block(map[string]interface{}{"name": "FROM_FILE", "value_from": block(map[string]interface{}{
+			"file_key_ref": map[string]interface{}{"volume_name": "data", "path": "config.env", "key": "KEY", "optional": true},
+		})}),
 		"restart_policy_rules": []interface{}{map[string]interface{}{"action": "Restart", "exit_codes": map[string]interface{}{
 			"operator": "NotIn", "values": schema.NewSet(schema.HashInt, []interface{}{2, 1}),
 		}}},
@@ -182,6 +185,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 			c.Lifecycle.PreStop.Sleep == nil || c.Lifecycle.PreStop.Sleep.Seconds != 0 ||
 			c.VolumeMounts[0].RecursiveReadOnly == nil || *c.VolumeMounts[0].RecursiveReadOnly != corev1.RecursiveReadOnlyEnabled ||
 			!reflect.DeepEqual(c.Resources.Claims, []corev1.ResourceClaim{{Name: "gpu", Request: "first"}}) ||
+			!reflect.DeepEqual(c.Env[0].ValueFrom, &corev1.EnvVarSource{FileKeyRef: &corev1.FileKeySelector{VolumeName: "data", Path: "config.env", Key: "KEY", Optional: ptr.To(true)}}) ||
 			!reflect.DeepEqual(c.ResizePolicy, []corev1.ContainerResizePolicy{{ResourceName: corev1.ResourceMemory, RestartPolicy: corev1.RestartContainer}}) ||
 			!reflect.DeepEqual(c.RestartPolicyRules, []corev1.ContainerRestartRule{{Action: "Restart", ExitCodes: &corev1.ContainerRestartRuleOnExitCodes{Operator: "NotIn", Values: []int32{1, 2}}}}) {
 			t.Fatalf("container fields were not expanded: %#v", c)
@@ -215,7 +219,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacyFields := fmt.Sprintf("%#v", legacy)
-	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims", "resize_policy", "restart_policy_rules"} {
+	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims", "resize_policy", "restart_policy_rules", "file_key_ref"} {
 		key := `"` + field + `":`
 		if !strings.Contains(encoded, key) || strings.Contains(legacyFields, key) {
 			t.Fatalf("%s must be present only in Framework flattening", field)

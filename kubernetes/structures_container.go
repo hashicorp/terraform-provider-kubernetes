@@ -487,6 +487,16 @@ func flattenFrameworkContainerFields(in v1.Container, out map[string]interface{}
 		}
 		out["resize_policy"] = policies
 	}
+	for i, env := range in.Env {
+		if env.ValueFrom == nil || env.ValueFrom.FileKeyRef == nil {
+			continue
+		}
+		ref := env.ValueFrom.FileKeyRef
+		source := out["env"].([]interface{})[i].(map[string]interface{})["value_from"].([]interface{})[0].(map[string]interface{})
+		source["file_key_ref"] = map[string]interface{}{
+			"volume_name": ref.VolumeName, "path": ref.Path, "key": ref.Key, "optional": ref.Optional != nil && *ref.Optional,
+		}
+	}
 	if len(in.RestartPolicyRules) > 0 {
 		rules := make([]interface{}, len(in.RestartPolicyRules))
 		for i, rule := range in.RestartPolicyRules {
@@ -1193,6 +1203,15 @@ func expandEnvValueFrom(r []interface{}) (*v1.EnvVarSource, error) {
 		obj.ResourceFieldRef, err = expandResourceFieldRef(v)
 		if err != nil {
 			return obj, err
+		}
+	}
+	if v, ok := in["file_key_ref"].(map[string]interface{}); ok {
+		obj.FileKeyRef = &v1.FileKeySelector{}
+		obj.FileKeyRef.VolumeName, _ = v["volume_name"].(string)
+		obj.FileKeyRef.Path, _ = v["path"].(string)
+		obj.FileKeyRef.Key, _ = v["key"].(string)
+		if optional, ok := v["optional"].(bool); ok {
+			obj.FileKeyRef.Optional = ptr.To(optional)
 		}
 	}
 	return obj, nil

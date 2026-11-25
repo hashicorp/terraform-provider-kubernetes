@@ -134,6 +134,9 @@ func TestPodFeatureRetention(t *testing.T) {
 			ResizePolicy: []corev1.ContainerResizePolicy{{ResourceName: corev1.ResourceCPU, RestartPolicy: corev1.RestartContainer}},
 		}}}},
 		`container "app" restart_policy`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways)}}}},
+		`container "app" env "FROM_FILE" file_key_ref`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", Env: []corev1.EnvVar{{Name: "FROM_FILE",
+			ValueFrom: &corev1.EnvVarSource{FileKeyRef: &corev1.FileKeySelector{VolumeName: "data", Path: "config.env", Key: "KEY"}},
+		}}}}}},
 		"windows_options": {spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{
 			WindowsOptions: &corev1.WindowsSecurityContextOptions{RunAsUserName: ptr.To("ContainerUser")},
 		}}}}},

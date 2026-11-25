@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
@@ -156,12 +157,28 @@ func (b builder) podEnvValueFromObject() schema.NestedBlockObject {
 		"name":     b.str(false, false, immutable, ""),
 		"optional": b.boolean(false, immutable, false),
 	}}
-	return schema.NestedBlockObject{Blocks: map[string]schema.Block{
-		"config_map_key_ref": b.block(keyReference, 0, 1, updatable),
-		"secret_key_ref":     b.block(keyReference, 0, 1, updatable),
-		"field_ref":          b.block(b.podFieldReferenceObject(immutable), 0, 1, updatable),
-		"resource_field_ref": b.block(b.podResourceFieldReferenceObject(false, immutable), 0, 1, updatable),
-	}}
+	fileKey := schema.SingleNestedAttribute{
+		Optional:    true,
+		Description: "Selects a key of an env file in an emptyDir volume of the Pod. Requires Kubernetes 1.35 or later, or the EnvFiles feature gate on Kubernetes 1.34; a cluster without the feature rejects the variable as having no source.",
+		Attributes: map[string]schema.Attribute{
+			"volume_name": schema.StringAttribute{Required: true, Description: "Name of the emptyDir volume that holds the env file.", Validators: []validator.String{podStringRule("dns-label")}},
+			"path":        schema.StringAttribute{Required: true, Description: "Path of the env file within the volume. Must be relative and may not contain '..'."},
+			"key":         schema.StringAttribute{Required: true, Description: "Key to select in the env file."},
+			"optional":    schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false), Description: "Whether the file and key may be absent, in which case the variable is not set. Defaults to false."},
+		},
+	}
+	if b.replace(immutable) {
+		fileKey.PlanModifiers = []planmodifier.Object{podOptionalObjectRequiresReplace{}}
+	}
+	return schema.NestedBlockObject{
+		Attributes: map[string]schema.Attribute{"file_key_ref": fileKey},
+		Blocks: map[string]schema.Block{
+			"config_map_key_ref": b.block(keyReference, 0, 1, updatable),
+			"secret_key_ref":     b.block(keyReference, 0, 1, updatable),
+			"field_ref":          b.block(b.podFieldReferenceObject(immutable), 0, 1, updatable),
+			"resource_field_ref": b.block(b.podResourceFieldReferenceObject(false, immutable), 0, 1, updatable),
+		},
+	}
 }
 
 func (b builder) podFieldReferenceObject(f forceNew) schema.NestedBlockObject {

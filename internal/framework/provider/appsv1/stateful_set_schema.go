@@ -115,7 +115,7 @@ func buildStatefulSetSchema(ctx context.Context, _ resource.SchemaRequest, resp 
 						},
 						"persistent_volume_claim_retention_policy": persistentVolumeClaimRetentionPolicyAttribute(),
 						"ordinals": schema.SingleNestedAttribute{
-							Description: "Ordinal numbering for StatefulSet pods. Kubernetes defaults the start ordinal to zero. Requires Kubernetes 1.31 or later.",
+							Description: "Ordinal numbering for StatefulSet pods. Kubernetes defaults the start ordinal to zero. Requires Kubernetes 1.27 or later.",
 							Optional:    true,
 							Attributes: map[string]schema.Attribute{
 								"start": schema.Int64Attribute{Required: true, Description: "The first pod ordinal. Changing it changes the pods managed by this StatefulSet.", Validators: []validator.Int64{int64validator.Between(0, 2147483647)}},

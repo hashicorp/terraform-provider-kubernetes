@@ -17,7 +17,7 @@ import (
 func (b builder) podVolumeObject() schema.NestedBlockObject {
 	image := schema.SingleNestedAttribute{
 		Optional:    true,
-		Description: "Mount an OCI image or artifact as a read-only volume. Requires Kubernetes 1.31 or later, a compatible container runtime and the ImageVolume feature gate, which is disabled by default in Kubernetes 1.33.",
+		Description: "Mount an OCI image or artifact as a read-only volume. Requires Kubernetes 1.31 or later, a compatible container runtime and the ImageVolume feature gate, which is enabled by default from Kubernetes 1.35.",
 		Attributes: map[string]schema.Attribute{
 			"reference":   b.str(!b.o.Template, b.o.Template, updatable, "", stringvalidator.LengthAtLeast(1)),
 			"pull_policy": b.str(false, true, updatable, "", stringvalidator.OneOf("Always", "Never", "IfNotPresent")),

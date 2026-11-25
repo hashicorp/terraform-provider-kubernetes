@@ -378,7 +378,7 @@ The six Framework workload resources share the following optional Kubernetes fea
 
 - `host_users = false` runs a Pod in an isolated Linux user namespace. The cluster and nodes must support [user namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/), including the required kernel and container runtime capabilities. Omitting the argument keeps the existing behavior.
 - Container and init container `security_context.proc_mount` accepts `Default` or `Unmasked`. `Unmasked` requires `host_users = false` and cluster support for the [ProcMountType feature](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#managing-access-to-the-proc-filesystem).
-- `volume.image` mounts an OCI image or artifact as a read-only volume. It requires [image volume support](https://kubernetes.io/docs/concepts/storage/volumes/#image) in Kubernetes and the container runtime. In Kubernetes 1.33, this feature is beta and the `ImageVolume` feature gate must be enabled explicitly.
+- `volume.image` mounts an OCI image or artifact as a read-only volume. It requires [image volume support](https://kubernetes.io/docs/concepts/storage/volumes/#image) in Kubernetes and the container runtime. Before Kubernetes 1.35 the `ImageVolume` feature gate must be enabled explicitly.
 
 For example, on a cluster that supports these features:
 
@@ -452,7 +452,7 @@ Changes to these immutable settings replace standalone Pods and Jobs. Controller
 
 ## Additional controller settings
 
-StatefulSets accept `spec.ordinals = { start = 10 }`, stable in Kubernetes 1.31. Changing `start` updates the StatefulSet in place but changes its Pod ordinal range, so the controller can remove and create Pods. The `revision_history_limit` can also be updated in place and accepts zero.
+StatefulSets accept `spec.ordinals = { start = 10 }`, available by default from Kubernetes 1.27 and stable in 1.31. Changing `start` updates the StatefulSet in place but changes its Pod ordinal range, so the controller can remove and create Pods. The `revision_history_limit` can also be updated in place and accepts zero.
 
 Jobs and CronJob job templates support these optional settings:
 

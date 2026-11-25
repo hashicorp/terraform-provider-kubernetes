@@ -38,6 +38,7 @@ func TestPodFeatureRetention(t *testing.T) {
 			Reference: "example/data:1", PullPolicy: corev1.PullIfNotPresent,
 		}}}, {Name: "trust", VolumeSource: corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{Sources: []corev1.VolumeProjection{
 			{ClusterTrustBundle: &corev1.ClusterTrustBundleProjection{Name: ptr.To("bundle"), Path: "ca.crt"}},
+			{PodCertificate: &corev1.PodCertificateProjection{SignerName: "example.com/signer", KeyType: "ED25519", CredentialBundlePath: "credentials.pem"}},
 		}}}}},
 	}
 	for name, test := range map[string]struct {
@@ -67,6 +68,10 @@ func TestPodFeatureRetention(t *testing.T) {
 		"policy rewritten":    {edit: func(actual *corev1.PodSpec) { actual.Volumes[0].Image.PullPolicy = corev1.PullAlways }, want: "ImageVolume"},
 		"mount dropped":       {edit: func(actual *corev1.PodSpec) { actual.Containers[0].VolumeMounts = nil }, want: "ImageVolume"},
 		"trust source empty":  {edit: func(actual *corev1.PodSpec) { actual.Volumes[1].Projected.Sources[0] = corev1.VolumeProjection{} }, want: `volume "trust" cluster_trust_bundle`},
+		"certificate emptied": {edit: func(actual *corev1.PodSpec) { actual.Volumes[1].Projected.Sources[1] = corev1.VolumeProjection{} }, want: `volume "trust" pod_certificate`},
+		"expiration defaulted": {edit: func(actual *corev1.PodSpec) {
+			actual.Volumes[1].Projected.Sources[1].PodCertificate.MaxExpirationSeconds = ptr.To[int32](86400)
+		}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			actual := expected.DeepCopy()

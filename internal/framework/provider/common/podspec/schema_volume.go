@@ -259,7 +259,33 @@ func (b builder) podProjectionAttributes() map[string]schema.Attribute {
 	if b.replace(immutable) {
 		trustBundle.PlanModifiers = []planmodifier.Object{podOptionalObjectRequiresReplace{}}
 	}
-	return map[string]schema.Attribute{"cluster_trust_bundle": trustBundle}
+	filePath := func(description string, validators ...validator.String) schema.StringAttribute {
+		return schema.StringAttribute{Optional: true, Description: description, Validators: append(validators, stringvalidator.LengthAtLeast(1), podStringRule("path"))}
+	}
+	certificate := schema.SingleNestedAttribute{
+		Optional:    true,
+		Description: "Projects a private key and a certificate chain that the kubelet requests from signer_name and rotates. Set credential_bundle_path, or key_path and certificate_chain_path. Requires Kubernetes 1.37 or later, or the PodCertificateRequest feature gate on Kubernetes 1.34 to 1.36.",
+		Attributes: map[string]schema.Attribute{
+			"signer_name": schema.StringAttribute{Required: true, Description: "Signer the kubelet addresses its certificate requests to."},
+			"key_type": schema.StringAttribute{
+				Required: true, Description: "Type of the generated key pair: RSA3072, RSA4096, ECDSAP256, ECDSAP384, ECDSAP521 or ED25519.",
+				Validators: []validator.String{stringvalidator.OneOf("RSA3072", "RSA4096", "ECDSAP256", "ECDSAP384", "ECDSAP521", "ED25519")},
+			},
+			"max_expiration_seconds": schema.Int64Attribute{
+				Optional: true, Description: "Longest certificate lifetime to request, from 3600 to 7862400 seconds; kubernetes.io signers allow at most 86400. Omission lets Kubernetes request 24 hours.",
+				Validators: []validator.Int64{int64validator.Between(3600, 7862400)},
+			},
+			"credential_bundle_path": filePath("Path, relative to the volume root, of a single file holding the private key followed by the certificate chain.",
+				stringvalidator.AtLeastOneOf(path.MatchRelative().AtParent().AtName("key_path"), path.MatchRelative().AtParent().AtName("certificate_chain_path"))),
+			"key_path":               filePath("Path of the private key file, relative to the volume root."),
+			"certificate_chain_path": filePath("Path of the certificate chain file, relative to the volume root."),
+			"user_annotations":       schema.MapAttribute{Optional: true, ElementType: types.StringType, Description: "Annotations with domain-prefixed keys that are passed to the signer unverified."},
+		},
+	}
+	if b.replace(immutable) {
+		certificate.PlanModifiers = []planmodifier.Object{podOptionalObjectRequiresReplace{}}
+	}
+	return map[string]schema.Attribute{"cluster_trust_bundle": trustBundle, "pod_certificate": certificate}
 }
 
 func (b builder) podProjectedVolumeObject() schema.NestedBlockObject {

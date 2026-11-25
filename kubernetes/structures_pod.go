@@ -1421,6 +1421,21 @@ func expandProjectedSources(sources []interface{}) ([]v1.VolumeProjection, error
 			}
 			srcs = append(srcs, v1.VolumeProjection{ClusterTrustBundle: bundle})
 		}
+		if v, ok := in["pod_certificate"].(map[string]interface{}); ok {
+			certificate := &v1.PodCertificateProjection{}
+			certificate.SignerName, _ = v["signer_name"].(string)
+			certificate.KeyType, _ = v["key_type"].(string)
+			if seconds, ok := v["max_expiration_seconds"].(int); ok {
+				certificate.MaxExpirationSeconds = ptr.To(int32(seconds))
+			}
+			certificate.CredentialBundlePath, _ = v["credential_bundle_path"].(string)
+			certificate.KeyPath, _ = v["key_path"].(string)
+			certificate.CertificateChainPath, _ = v["certificate_chain_path"].(string)
+			if annotations, ok := v["user_annotations"].(map[string]interface{}); ok && len(annotations) > 0 {
+				certificate.UserAnnotations = expandStringMap(annotations)
+			}
+			srcs = append(srcs, v1.VolumeProjection{PodCertificate: certificate})
+		}
 	}
 
 	return srcs, nil
@@ -1475,6 +1490,23 @@ func flattenFrameworkProjectedSources(in *v1.ProjectedVolumeSource, volume map[s
 				value["optional"] = *bundle.Optional
 			}
 			out["cluster_trust_bundle"] = value
+		}
+		if certificate := source.PodCertificate; certificate != nil {
+			value := map[string]interface{}{"signer_name": certificate.SignerName, "key_type": certificate.KeyType}
+			if certificate.MaxExpirationSeconds != nil {
+				value["max_expiration_seconds"] = *certificate.MaxExpirationSeconds
+			}
+			for name, file := range map[string]string{
+				"credential_bundle_path": certificate.CredentialBundlePath, "key_path": certificate.KeyPath, "certificate_chain_path": certificate.CertificateChainPath,
+			} {
+				if file != "" {
+					value[name] = file
+				}
+			}
+			if len(certificate.UserAnnotations) > 0 {
+				value["user_annotations"] = certificate.UserAnnotations
+			}
+			out["pod_certificate"] = value
 		}
 	}
 }

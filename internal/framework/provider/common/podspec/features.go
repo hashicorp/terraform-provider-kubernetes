@@ -82,7 +82,7 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 	}
 	return slices.ContainsFunc(spec.Volumes, func(volume corev1.Volume) bool {
 		return volume.Image != nil || volume.Projected != nil && slices.ContainsFunc(volume.Projected.Sources, func(source corev1.VolumeProjection) bool {
-			return source.ClusterTrustBundle != nil
+			return source.ClusterTrustBundle != nil || source.PodCertificate != nil
 		})
 	})
 }
@@ -165,6 +165,14 @@ func CheckPodFeaturePreservation(expected, actual *corev1.PodSpec) error {
 				return apiequality.Semantic.DeepEqual(source.ClusterTrustBundle, candidate.ClusterTrustBundle)
 			}) {
 				return featureNotPreserved(fmt.Sprintf("volume %q cluster_trust_bundle", volume.Name), "ClusterTrustBundleProjection")
+			}
+			if want := source.PodCertificate; want != nil && !slices.ContainsFunc(got, func(candidate corev1.VolumeProjection) bool {
+				have := candidate.PodCertificate
+				return have != nil && want.SignerName == have.SignerName && want.KeyType == have.KeyType && sameConfiguredPointer(want.MaxExpirationSeconds, have.MaxExpirationSeconds) &&
+					want.CredentialBundlePath == have.CredentialBundlePath && want.KeyPath == have.KeyPath && want.CertificateChainPath == have.CertificateChainPath &&
+					apiequality.Semantic.DeepEqual(want.UserAnnotations, have.UserAnnotations)
+			}) {
+				return featureNotPreserved(fmt.Sprintf("volume %q pod_certificate", volume.Name), "PodCertificateRequest")
 			}
 		}
 	}

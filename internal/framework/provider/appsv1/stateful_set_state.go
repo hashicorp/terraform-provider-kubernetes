@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
 
@@ -53,7 +54,8 @@ type StatefulSetUpdateStrategyModel struct {
 }
 
 type StatefulSetRollingUpdateModel struct {
-	Partition types.Int64 `tfsdk:"partition"`
+	Partition      types.Int64  `tfsdk:"partition"`
+	MaxUnavailable types.String `tfsdk:"max_unavailable"`
 }
 
 type StatefulSetPVCRetentionPolicyModel struct {
@@ -226,7 +228,7 @@ func flattenStatefulSetSpec(ctx context.Context, spec appsv1.StatefulSetSpec, ba
 	}
 
 	if baseline != nil && len(baseline.UpdateStrategy) > 0 {
-		out.UpdateStrategy = []StatefulSetUpdateStrategyModel{flattenStatefulSetUpdateStrategy(spec.UpdateStrategy)}
+		out.UpdateStrategy = []StatefulSetUpdateStrategyModel{flattenStatefulSetUpdateStrategy(spec.UpdateStrategy, baseline.UpdateStrategy[0])}
 		if len(baseline.UpdateStrategy[0].RollingUpdate) == 0 {
 			out.UpdateStrategy[0].RollingUpdate = nil
 		}
@@ -257,19 +259,28 @@ func expandStatefulSetUpdateStrategy(in StatefulSetUpdateStrategyModel) (appsv1.
 			v := int32(in.RollingUpdate[0].Partition.ValueInt64())
 			ru.Partition = &v
 		}
+		if v := in.RollingUpdate[0].MaxUnavailable; !v.IsNull() && !v.IsUnknown() {
+			ru.MaxUnavailable = ptr.To(intstr.Parse(v.ValueString()))
+		}
 		out.RollingUpdate = &ru
 	}
 	return out, diags
 }
 
-func flattenStatefulSetUpdateStrategy(in appsv1.StatefulSetUpdateStrategy) StatefulSetUpdateStrategyModel {
+// flattenStatefulSetUpdateStrategy reads max_unavailable only where prior
+// sets it, because Kubernetes 1.37 and later default it on the server.
+func flattenStatefulSetUpdateStrategy(in appsv1.StatefulSetUpdateStrategy, prior StatefulSetUpdateStrategyModel) StatefulSetUpdateStrategyModel {
 	out := StatefulSetUpdateStrategyModel{Type: types.StringValue(string(in.Type))}
 	if in.RollingUpdate != nil {
 		partition := int64(0)
 		if in.RollingUpdate.Partition != nil {
 			partition = int64(*in.RollingUpdate.Partition)
 		}
-		out.RollingUpdate = []StatefulSetRollingUpdateModel{{Partition: types.Int64Value(partition)}}
+		rolling := StatefulSetRollingUpdateModel{Partition: types.Int64Value(partition), MaxUnavailable: types.StringNull()}
+		if len(prior.RollingUpdate) > 0 && !prior.RollingUpdate[0].MaxUnavailable.IsNull() && in.RollingUpdate.MaxUnavailable != nil {
+			rolling.MaxUnavailable = common.KeepIntOrStringSpelling(prior.RollingUpdate[0].MaxUnavailable, types.StringValue(in.RollingUpdate.MaxUnavailable.String()))
+		}
+		out.RollingUpdate = []StatefulSetRollingUpdateModel{rolling}
 	}
 	return out
 }

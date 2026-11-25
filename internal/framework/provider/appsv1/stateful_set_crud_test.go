@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
 
@@ -67,6 +68,7 @@ func TestStatefulSetPatchSpecsResetsRemovedUpdateStrategy(t *testing.T) {
 	for name, live := range map[string]appsv1.StatefulSetUpdateStrategy{
 		"OnDelete":  {Type: appsv1.OnDeleteStatefulSetStrategyType},
 		"partition": {Type: appsv1.RollingUpdateStatefulSetStrategyType, RollingUpdate: &appsv1.RollingUpdateStatefulSetStrategy{Partition: ptr.To(int32(2))}},
+		"defaulted": rollingUpdateSpec("1").UpdateStrategy,
 	} {
 		t.Run(name, func(t *testing.T) {
 			spec := appsv1.StatefulSetSpec{UpdateStrategy: live}
@@ -78,11 +80,33 @@ func TestStatefulSetPatchSpecsResetsRemovedUpdateStrategy(t *testing.T) {
 	}
 }
 
+func rollingUpdateSpec(maxUnavailable string) appsv1.StatefulSetSpec {
+	rolling := &appsv1.RollingUpdateStatefulSetStrategy{}
+	if maxUnavailable != "" {
+		rolling.MaxUnavailable = ptr.To(intstr.Parse(maxUnavailable))
+	}
+	return appsv1.StatefulSetSpec{UpdateStrategy: appsv1.StatefulSetUpdateStrategy{Type: appsv1.RollingUpdateStatefulSetStrategyType, RollingUpdate: rolling}}
+}
+
+func TestStatefulSetPatchSpecsMaxUnavailable(t *testing.T) {
+	for name, tc := range map[string]struct{ original, desired, live, want string }{
+		"server default kept": {live: "1", want: "1"}, // not configured, so not managed
+		"configured":          {desired: "25%", live: "1", want: "25%"},
+		"removed":             {original: "2", live: "2", want: "<nil>"}, // the server then applies its default
+	} {
+		if _, to := statefulSetPatchSpecs(rollingUpdateSpec(tc.original), rollingUpdateSpec(tc.desired), rollingUpdateSpec(tc.live)); to.UpdateStrategy.RollingUpdate.MaxUnavailable.String() != tc.want {
+			t.Errorf("%s: max unavailable = %s, want %s", name, to.UpdateStrategy.RollingUpdate.MaxUnavailable, tc.want)
+		}
+	}
+}
+
 // A server that drops ordinals leaves the pods numbered from zero.
 func TestStatefulSetFeaturePreservation(t *testing.T) {
-	ordinals := func(start int32) *appsv1.StatefulSetOrdinals { return &appsv1.StatefulSetOrdinals{Start: start} }
+	ordinals := func(start int32) appsv1.StatefulSetSpec {
+		return appsv1.StatefulSetSpec{Ordinals: &appsv1.StatefulSetOrdinals{Start: start}}
+	}
 	for name, tc := range map[string]struct {
-		want, got *appsv1.StatefulSetOrdinals
+		want, got appsv1.StatefulSetSpec
 		preflight bool
 		dropped   bool
 	}{
@@ -91,9 +115,12 @@ func TestStatefulSetFeaturePreservation(t *testing.T) {
 		"dropped":         {want: ordinals(5), preflight: true, dropped: true},
 		"changed":         {want: ordinals(5), got: ordinals(1), preflight: true, dropped: true},
 		"zero is default": {want: ordinals(0)},
+		"max kept":        {want: rollingUpdateSpec("2"), got: rollingUpdateSpec("2"), preflight: true},
+		"max dropped":     {want: rollingUpdateSpec("2"), got: rollingUpdateSpec(""), preflight: true, dropped: true},
+		"max defaulted":   {want: rollingUpdateSpec(""), got: rollingUpdateSpec("1")},
 	} {
 		t.Run(name, func(t *testing.T) {
-			want, got := appsv1.StatefulSetSpec{Ordinals: tc.want}, appsv1.StatefulSetSpec{Ordinals: tc.got}
+			want, got := tc.want, tc.got
 			if hasStatefulSetFeatures(&want) != tc.preflight {
 				t.Errorf("preflight = %t, want %t", !tc.preflight, tc.preflight)
 			}

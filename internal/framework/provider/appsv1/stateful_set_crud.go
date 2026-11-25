@@ -474,7 +474,8 @@ func statefulSetIdentity(namespace, name string) statefulSetIdentityModel {
 // hasStatefulSetFeatures reports whether a dry run must check that Kubernetes
 // keeps what spec requests; see podspec.HasGatedFeatures.
 func hasStatefulSetFeatures(spec *appsv1.StatefulSetSpec) bool {
-	return spec.Ordinals != nil && spec.Ordinals.Start != 0 || podspec.HasGatedFeatures(&spec.Template.Spec)
+	rolling := spec.UpdateStrategy.RollingUpdate
+	return spec.Ordinals != nil && spec.Ordinals.Start != 0 || rolling != nil && rolling.MaxUnavailable != nil || podspec.HasGatedFeatures(&spec.Template.Spec)
 }
 
 func checkStatefulSetFeatures(want, got *appsv1.StatefulSetSpec) error {
@@ -487,6 +488,12 @@ func checkStatefulSetFeatures(want, got *appsv1.StatefulSetSpec) error {
 	}
 	if want.Ordinals != nil && want.Ordinals.Start != start {
 		return fmt.Errorf("Kubernetes did not preserve ordinals; verify StatefulSetStartOrdinal support and admission policies")
+	}
+	if rolling := want.UpdateStrategy.RollingUpdate; rolling != nil && rolling.MaxUnavailable != nil {
+		kept := got.UpdateStrategy.RollingUpdate
+		if kept == nil || kept.MaxUnavailable == nil || *kept.MaxUnavailable != *rolling.MaxUnavailable {
+			return fmt.Errorf("Kubernetes did not preserve max_unavailable; verify MaxUnavailableStatefulSet support, which is on by default from Kubernetes 1.37, and admission policies")
+		}
 	}
 	return nil
 }
@@ -514,6 +521,11 @@ func statefulSetPatchSpecs(original, desired, live appsv1.StatefulSetSpec) (apps
 				to.UpdateStrategy.RollingUpdate = &appsv1.RollingUpdateStatefulSetStrategy{}
 			}
 			to.UpdateStrategy.RollingUpdate.Partition = desired.UpdateStrategy.RollingUpdate.Partition
+			// An unset max_unavailable keeps the live value, which newer servers
+			// default; removing a configured one returns it to that default.
+			if prior := original.UpdateStrategy.RollingUpdate; desired.UpdateStrategy.RollingUpdate.MaxUnavailable != nil || prior != nil && prior.MaxUnavailable != nil {
+				to.UpdateStrategy.RollingUpdate.MaxUnavailable = desired.UpdateStrategy.RollingUpdate.MaxUnavailable
+			}
 		case original.UpdateStrategy.RollingUpdate != nil || desired.UpdateStrategy.Type == appsv1.OnDeleteStatefulSetStrategyType:
 			to.UpdateStrategy.RollingUpdate = nil
 		}

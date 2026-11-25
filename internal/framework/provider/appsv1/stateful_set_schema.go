@@ -202,6 +202,13 @@ func updateStrategyBlock() schema.ListNestedBlock {
 						Computed:    true,
 						Default:     int64default.StaticInt64(0),
 					},
+					"max_unavailable": schema.StringAttribute{
+						Description: "The maximum number of pods that can be unavailable during the update, as an absolute number (ex: 5) or a percentage of desired pods (ex: 10%). It cannot be 0, and Kubernetes uses 1 when it is not set. It may have no effect with the OrderedReady pod management policy. Requires Kubernetes 1.37 or later, or an earlier version with the MaxUnavailableStatefulSet feature gate enabled.",
+						Optional:    true,
+						Validators: []validator.String{
+							stringvalidator.RegexMatches(daemonSetRollingValuePattern, "must be an absolute number or percentage"),
+						},
+					},
 				}},
 			},
 		}},

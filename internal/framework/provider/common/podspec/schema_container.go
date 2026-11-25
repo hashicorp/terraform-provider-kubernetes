@@ -28,7 +28,7 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 		Attributes: map[string]schema.Attribute{
 			"limits":   b.quantityMap(true, immutable),
 			"requests": b.quantityMap(true, immutable),
-			"claims": b.podClaimsAttribute("Pod resource_claims that this container uses. "+podClaimsRequirement, map[string]schema.Attribute{
+			"claims": b.objectList("Pod resource_claims that this container uses. "+podClaimsRequirement, map[string]schema.Attribute{
 				"name":    schema.StringAttribute{Required: true, Description: "Name of an entry in the Pod's resource_claims.", Validators: []validator.String{podStringRule("dns-label")}},
 				"request": schema.StringAttribute{Optional: true, Description: "Name of one request in the claim. Omission makes every request of the claim available.", Validators: []validator.String{podStringRule("dns-label")}},
 			}),
@@ -37,6 +37,10 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 	if b.replace(immutable) {
 		resources.PlanModifiers = append(resources.PlanModifiers, podResourcesRequiresReplace{})
 	}
+	resizePolicy := b.objectList("How Kubernetes applies an in-place resize of the container's cpu or memory. It only matters to clients that resize a running Pod through the resize subresource, which this provider does not use. Requires Kubernetes 1.33 or later, or the InPlacePodVerticalScaling feature gate on Kubernetes 1.27 to 1.32.", map[string]schema.Attribute{
+		"resource_name":  schema.StringAttribute{Required: true, Description: "Resource the policy applies to: cpu or memory.", Validators: []validator.String{stringvalidator.OneOf("cpu", "memory")}},
+		"restart_policy": schema.StringAttribute{Required: true, Description: "NotRequired resizes the container without a restart where possible; RestartContainer restarts it. Must be NotRequired when the Pod restart_policy is Never.", Validators: []validator.String{stringvalidator.OneOf("NotRequired", "RestartContainer")}},
+	})
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
 			"args":                       b.emptyCompatibleList(immutable, types.StringType),
@@ -44,6 +48,7 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 			"image":                      b.str(false, false, immutable, ""),
 			"image_pull_policy":          b.str(false, true, immutable, ""),
 			"name":                       b.str(true, false, immutable, ""),
+			"resize_policy":              resizePolicy,
 			"restart_policy":             b.str(false, true, immutable, "", stringvalidator.OneOf("Always")),
 			"stdin":                      b.boolean(false, immutable, false),
 			"stdin_once":                 b.boolean(false, immutable, false),
@@ -106,8 +111,9 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 
 const podClaimsRequirement = "Requires Kubernetes 1.34 or later, or the DynamicResourceAllocation feature gate on Kubernetes 1.31 to 1.33."
 
-// podClaimsAttribute is a list of Dynamic Resource Allocation references.
-func (b builder) podClaimsAttribute(description string, attributes map[string]schema.Attribute) schema.ListNestedAttribute {
+// objectList is an optional list of objects, set with assignment syntax, that
+// replaces an immutable owner when it changes.
+func (b builder) objectList(description string, attributes map[string]schema.Attribute) schema.ListNestedAttribute {
 	a := schema.ListNestedAttribute{Optional: true, Description: description, NestedObject: schema.NestedAttributeObject{Attributes: attributes}}
 	if b.replace(immutable) {
 		a.PlanModifiers = []planmodifier.List{podListRequiresReplace{listplanmodifier.RequiresReplace()}}
@@ -116,7 +122,7 @@ func (b builder) podClaimsAttribute(description string, attributes map[string]sc
 }
 
 func (b builder) podResourceClaimsAttribute() schema.ListNestedAttribute {
-	return b.podClaimsAttribute("ResourceClaims that must be allocated and reserved before the Pod may start. A container uses one by naming it in resources.claims. "+podClaimsRequirement, map[string]schema.Attribute{
+	return b.objectList("ResourceClaims that must be allocated and reserved before the Pod may start. A container uses one by naming it in resources.claims. "+podClaimsRequirement, map[string]schema.Attribute{
 		"name": schema.StringAttribute{Required: true, Description: "Name of the claim within the Pod.", Validators: []validator.String{podStringRule("dns-label")}},
 		"resource_claim_name": schema.StringAttribute{
 			Optional: true, Description: "Name of a ResourceClaim in the namespace of the Pod. Set either this or resource_claim_template_name.",

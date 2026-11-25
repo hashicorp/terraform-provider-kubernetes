@@ -59,7 +59,7 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 			if sc := container.SecurityContext; sc != nil && (sc.AppArmorProfile != nil || sc.ProcMount != nil && *sc.ProcMount == corev1.UnmaskedProcMount) {
 				return true
 			}
-			if len(container.Resources.Claims) > 0 {
+			if len(container.Resources.Claims)+len(container.ResizePolicy) > 0 {
 				return true
 			}
 			for _, mount := range container.VolumeMounts {
@@ -185,6 +185,11 @@ func checkContainerFeatures(expected, actual []corev1.Container, imageVolumes ma
 		for _, claim := range container.Resources.Claims {
 			if !slices.Contains(got.Resources.Claims, claim) {
 				return featureNotPreserved(fmt.Sprintf("container %q resource claim %q", container.Name, claim.Name), "DynamicResourceAllocation")
+			}
+		}
+		for _, policy := range container.ResizePolicy {
+			if !slices.Contains(got.ResizePolicy, policy) {
+				return featureNotPreserved(fmt.Sprintf("container %q resize_policy", container.Name), "InPlacePodVerticalScaling")
 			}
 		}
 		for i, probe := range []*corev1.Probe{container.LivenessProbe, container.StartupProbe} {

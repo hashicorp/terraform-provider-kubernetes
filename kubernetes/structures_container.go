@@ -478,6 +478,13 @@ func flattenFrameworkContainerFields(in v1.Container, out map[string]interface{}
 		}
 		out["resources"].([]interface{})[0].(map[string]interface{})["claims"] = claims
 	}
+	if len(in.ResizePolicy) > 0 {
+		policies := make([]interface{}, len(in.ResizePolicy))
+		for i, policy := range in.ResizePolicy {
+			policies[i] = map[string]interface{}{"resource_name": string(policy.ResourceName), "restart_policy": string(policy.RestartPolicy)}
+		}
+		out["resize_policy"] = policies
+	}
 	if in.SecurityContext != nil {
 		securityContext := out["security_context"].([]interface{})[0].(map[string]interface{})
 		if in.SecurityContext.ProcMount != nil {
@@ -654,6 +661,15 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		if v, ok := ctr["restart_policy"].(string); ok && v != "" {
 			policy := v1.ContainerRestartPolicy(v)
 			cs[i].RestartPolicy = &policy
+		}
+
+		if v, ok := ctr["resize_policy"].([]interface{}); ok {
+			for _, entry := range v {
+				policy, _ := entry.(map[string]interface{})
+				resourceName, _ := policy["resource_name"].(string)
+				restartPolicy, _ := policy["restart_policy"].(string)
+				cs[i].ResizePolicy = append(cs[i].ResizePolicy, v1.ContainerResizePolicy{ResourceName: v1.ResourceName(resourceName), RestartPolicy: v1.ResourceResizeRestartPolicy(restartPolicy)})
+			}
 		}
 	}
 	return cs, nil

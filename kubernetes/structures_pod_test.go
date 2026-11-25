@@ -141,7 +141,8 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		"volume_mount": block(map[string]interface{}{
 			"name": "data", "mount_path": "/data", "read_only": true, "recursive_read_only": "Enabled",
 		}),
-		"resources": block(map[string]interface{}{"claims": []interface{}{map[string]interface{}{"name": "gpu", "request": "first"}}}),
+		"resources":     block(map[string]interface{}{"claims": []interface{}{map[string]interface{}{"name": "gpu", "request": "first"}}}),
+		"resize_policy": []interface{}{map[string]interface{}{"resource_name": "memory", "restart_policy": "RestartContainer"}},
 	}
 	raw := block(map[string]interface{}{
 		"set_hostname_as_fqdn": false, "hostname_override": "override.example",
@@ -177,7 +178,8 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 			c.Lifecycle.PostStart.Sleep == nil || c.Lifecycle.PostStart.Sleep.Seconds != 2 ||
 			c.Lifecycle.PreStop.Sleep == nil || c.Lifecycle.PreStop.Sleep.Seconds != 0 ||
 			c.VolumeMounts[0].RecursiveReadOnly == nil || *c.VolumeMounts[0].RecursiveReadOnly != corev1.RecursiveReadOnlyEnabled ||
-			!reflect.DeepEqual(c.Resources.Claims, []corev1.ResourceClaim{{Name: "gpu", Request: "first"}}) {
+			!reflect.DeepEqual(c.Resources.Claims, []corev1.ResourceClaim{{Name: "gpu", Request: "first"}}) ||
+			!reflect.DeepEqual(c.ResizePolicy, []corev1.ContainerResizePolicy{{ResourceName: corev1.ResourceMemory, RestartPolicy: corev1.RestartContainer}}) {
 			t.Fatalf("container fields were not expanded: %#v", c)
 		}
 	}
@@ -209,7 +211,7 @@ func TestFrameworkPodSpecAdditionalFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacyFields := fmt.Sprintf("%#v", legacy)
-	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims"} {
+	for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "app_armor_profile", "supplemental_groups_policy", "se_linux_change_policy", "termination_grace_period_seconds", "sleep", "host", "recursive_read_only", "match_label_keys", "mismatch_label_keys", "resource_claims", "claims", "resize_policy"} {
 		key := `"` + field + `":`
 		if !strings.Contains(encoded, key) || strings.Contains(legacyFields, key) {
 			t.Fatalf("%s must be present only in Framework flattening", field)

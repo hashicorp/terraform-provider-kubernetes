@@ -123,6 +123,9 @@ func TestPodFeatureRetention(t *testing.T) {
 		`container "app" resource claim "gpu"`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app",
 			Resources: corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{{Name: "gpu", Request: "first"}}},
 		}}}},
+		`container "app" resize_policy`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app",
+			ResizePolicy: []corev1.ContainerResizePolicy{{ResourceName: corev1.ResourceCPU, RestartPolicy: corev1.RestartContainer}},
+		}}}},
 		"windows_options": {spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{
 			WindowsOptions: &corev1.WindowsSecurityContextOptions{RunAsUserName: ptr.To("ContainerUser")},
 		}}}}},

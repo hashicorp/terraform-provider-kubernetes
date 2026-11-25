@@ -89,6 +89,7 @@ func (r *ServiceV1) ModifyPlan(ctx context.Context, req resource.ModifyPlanReque
 		serviceMarkClearOutputsUnknown(ctx, configured, resp)
 	}
 	servicePreserveUnchangedSpec(ctx, req, resp)
+	servicePreserveTypeOutputs(ctx, req, resp)
 }
 
 func servicePlanningObject(list types.List) (map[string]attr.Value, bool) {
@@ -203,11 +204,11 @@ func serviceMarkAffinityClearOutputsUnknown(ctx context.Context, config types.Ob
 	}
 }
 
-// Metadata-only edits preserve Service allocations. Spec edits, unknown inputs,
-// and replacements must allow Kubernetes to choose new values.
-func servicePreserveUnchangedSpec(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+// serviceUpdatesInPlace reports whether the plan keeps the identity of an
+// existing Service.
+func serviceUpdatesInPlace(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) bool {
 	if req.State.Raw.IsNull() || resp.Diagnostics.HasError() {
-		return
+		return false
 	}
 	for _, name := range []string{"name", "namespace", "generate_name"} {
 		p := path.Root("metadata").AtListIndex(0).AtName(name)
@@ -215,8 +216,17 @@ func servicePreserveUnchangedSpec(ctx context.Context, req resource.ModifyPlanRe
 		resp.Diagnostics.Append(req.State.GetAttribute(ctx, p, &prior)...)
 		resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, p, &planned)...)
 		if resp.Diagnostics.HasError() || planned.IsUnknown() || !planned.Equal(prior) {
-			return
+			return false
 		}
+	}
+	return true
+}
+
+// Metadata-only edits preserve Service allocations. Spec edits, unknown inputs,
+// and replacements must allow Kubernetes to choose new values.
+func servicePreserveUnchangedSpec(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if !serviceUpdatesInPlace(ctx, req, resp) {
+		return
 	}
 	p := path.Root("spec")
 	var config, prior, planned types.List
@@ -255,5 +265,91 @@ func servicePreserveUnchangedSpec(ctx context.Context, req resource.ModifyPlanRe
 	// collection removals, still matches. Leave status and metadata computed.
 	if err == nil && candidate.Equal(priorValue) {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, p, prior)...)
+	}
+}
+
+// Kubernetes keeps what it allocated or defaulted for a Service across an
+// update that keeps the type. Other resources commonly reference the cluster
+// IP, node ports and load balancer status, so the plan keeps the values last
+// read wherever the inputs that decide them are unchanged.
+func servicePreserveTypeOutputs(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if len(resp.RequiresReplace) > 0 || !serviceUpdatesInPlace(ctx, req, resp) {
+		return
+	}
+	var priorSpec, plannedSpec, priorStatus, plannedStatus types.List
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("spec"), &priorSpec)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, path.Root("spec"), &plannedSpec)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("status"), &priorStatus)...)
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, path.Root("status"), &plannedStatus)...)
+	prior, priorKnown := servicePlanningObject(priorSpec)
+	planned, plannedKnown := servicePlanningObject(plannedSpec)
+	if resp.Diagnostics.HasError() || !priorKnown || !plannedKnown || planned["type"].IsUnknown() || !planned["type"].Equal(prior["type"]) {
+		return
+	}
+	spec := path.Root("spec").AtListIndex(0)
+	// same reports whether none of the inputs is planned to change.
+	same := func(inputs ...string) bool {
+		for _, name := range inputs {
+			if !planned[name].IsUnknown() && !planned[name].Equal(prior[name]) {
+				return false
+			}
+		}
+		return true
+	}
+	keep := func(names ...string) {
+		for _, name := range names {
+			if planned[name].IsUnknown() && !prior[name].IsUnknown() {
+				resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, spec.AtName(name), prior[name])...)
+			}
+		}
+	}
+	keep("cluster_ip", "internal_traffic_policy")
+	if same("ip_family_policy", "ip_families", "cluster_ips") {
+		keep("ip_family_policy", "ip_families", "cluster_ips")
+	}
+	if same("external_traffic_policy") {
+		keep("external_traffic_policy", "health_check_node_port")
+	}
+	if same("session_affinity") {
+		keep("session_affinity_config")
+	}
+	if same("allocate_load_balancer_node_ports") {
+		servicePreservePorts(ctx, prior["port"], planned["port"], spec.AtName("port"), resp)
+	}
+	if plannedStatus.IsUnknown() && !priorStatus.IsUnknown() {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("status"), priorStatus)...)
+	}
+}
+
+// Kubernetes matches the ports of an update to the existing ones by name.
+func servicePreservePorts(ctx context.Context, prior, planned attr.Value, at path.Path, resp *resource.ModifyPlanResponse) {
+	priorPorts, ok := prior.(types.List)
+	plannedPorts, plannedOK := planned.(types.List)
+	if !ok || !plannedOK || priorPorts.IsUnknown() || plannedPorts.IsUnknown() {
+		return
+	}
+	previous := map[string]map[string]attr.Value{}
+	for _, element := range priorPorts.Elements() {
+		if port, ok := element.(types.Object); ok && !port.IsNull() && !port.IsUnknown() {
+			previous[port.Attributes()["name"].String()] = port.Attributes()
+		}
+	}
+	for i, element := range plannedPorts.Elements() {
+		port, ok := element.(types.Object)
+		if !ok || port.IsNull() || port.IsUnknown() {
+			continue
+		}
+		next := port.Attributes()
+		old, found := previous[next["name"].String()]
+		if !found || next["name"].IsUnknown() {
+			continue
+		}
+		if next["node_port"].IsUnknown() && !old["node_port"].IsUnknown() {
+			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, at.AtListIndex(i).AtName("node_port"), old["node_port"])...)
+		}
+		// An omitted target port follows the port number.
+		if next["target_port"].IsUnknown() && !old["target_port"].IsUnknown() && next["port"].Equal(old["port"]) {
+			resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, at.AtListIndex(i).AtName("target_port"), old["target_port"])...)
+		}
 	}
 }

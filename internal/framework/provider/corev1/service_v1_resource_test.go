@@ -45,6 +45,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
@@ -121,6 +122,11 @@ func TestAccKubernetesServiceV1_basic(t *testing.T) {
 			{
 				Config: testAccKubernetesConfig_ignoreAnnotations() +
 					testAccKubernetesServiceV1Config_modified(name),
+				// An update that keeps the type keeps the values other resources reference.
+				ConfigPlanChecks: resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{
+					plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("status"), knownvalue.NotNull()),
+					plancheck.ExpectKnownValue(resourceName, tfjsonpath.New("spec").AtSliceIndex(0).AtMapKey("cluster_ip"), knownvalue.NotNull()),
+				}},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "metadata.0.name", name),
@@ -8016,19 +8022,21 @@ func TestServiceMetadataUpdateKeepsAllocations(t *testing.T) {
 	spec := path.Root("spec").AtListIndex(0)
 	metadata := path.Root("metadata").AtListIndex(0)
 	outputs := []path.Path{spec.AtName("cluster_ip"), spec.AtName("cluster_ips"), spec.AtName("ip_families"), spec.AtName("ip_family_policy"), spec.AtName("internal_traffic_policy"), spec.AtName("external_traffic_policy"), spec.AtName("health_check_node_port"), spec.AtName("session_affinity_config"), spec.AtName("port").AtListIndex(0).AtName("node_port")}
+	// stable marks an update that keeps the type, across which Kubernetes
+	// keeps the cluster IP and the load balancer status.
 	for _, tc := range []struct {
-		name  string
-		at    path.Path
-		value any
-		known bool
+		name          string
+		at            path.Path
+		value         any
+		known, stable bool
 	}{
-		{"labels", metadata.AtName("labels"), map[string]string{"app": "changed"}, true},
-		{"remove-labels", metadata.AtName("labels"), types.MapNull(types.StringType), true},
-		{"replace-name", metadata.AtName("name"), "other", false},
-		{"change-type", spec.AtName("type"), "NodePort", false},
-		{"change-port", spec.AtName("port").AtListIndex(0).AtName("port"), int64(81), false},
-		{"remove-selector", spec.AtName("selector"), types.MapNull(types.StringType), false},
-		{"unknown-selector", spec.AtName("selector"), types.MapUnknown(types.StringType), false},
+		{"labels", metadata.AtName("labels"), map[string]string{"app": "changed"}, true, true},
+		{"remove-labels", metadata.AtName("labels"), types.MapNull(types.StringType), true, true},
+		{"replace-name", metadata.AtName("name"), "other", false, false},
+		{"change-type", spec.AtName("type"), "NodePort", false, false},
+		{"change-port", spec.AtName("port").AtListIndex(0).AtName("port"), int64(81), false, true},
+		{"remove-selector", spec.AtName("selector"), types.MapNull(types.StringType), false, true},
+		{"unknown-selector", spec.AtName("selector"), types.MapUnknown(types.StringType), false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			config, proposed := base, base
@@ -8074,14 +8082,16 @@ func TestServiceMetadataUpdateKeepsAllocations(t *testing.T) {
 					t.Errorf("%s = %s, want retained %s", at, after, before)
 				}
 			}
-			var clusterIP types.String
-			if d := planned.GetAttribute(ctx, spec.AtName("cluster_ip"), &clusterIP); d.HasError() {
-				t.Fatal(d)
+			for _, at := range []path.Path{spec.AtName("cluster_ip"), path.Root("status")} {
+				before, after := valueAt(base, at), valueAt(planned, at)
+				if tc.stable && !after.Equal(before) {
+					t.Errorf("%s = %s, want retained %s", at, after, before)
+				}
+				if !tc.stable && after.IsKnown() {
+					t.Errorf("a type change or replacement pinned %s: %s", at, after)
+				}
 			}
-			if !tc.known && !clusterIP.IsUnknown() {
-				t.Errorf("changed inputs pinned cluster_ip: %s", clusterIP)
-			}
-			for _, at := range []path.Path{metadata.AtName("resource_version"), metadata.AtName("generation"), path.Root("status")} {
+			for _, at := range []path.Path{metadata.AtName("resource_version"), metadata.AtName("generation")} {
 				value := valueAt(planned, at)
 				if value.IsKnown() {
 					t.Errorf("write result %s must remain unknown: %s", at, value)

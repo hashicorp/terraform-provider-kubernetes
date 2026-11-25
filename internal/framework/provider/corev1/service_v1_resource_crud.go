@@ -207,9 +207,14 @@ func (r *ServiceV1) Update(ctx context.Context, req resource.UpdateRequest, resp
 			return
 		}
 	}
+	// A planned status is the value last read; the next refresh picks up a change.
+	plannedStatus := plan.Status
 	resp.Diagnostics.Append(flattenService(ctx, out, &plan, filters, true)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+	if !plannedStatus.IsUnknown() {
+		plan.Status = plannedStatus
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	if resp.Identity != nil {

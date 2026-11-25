@@ -79,7 +79,7 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 					}
 				}
 				for _, container := range []string{"container", "init_container"} {
-					for _, field := range []string{"resources.claims", "resize_policy", "security_context.app_armor_profile", "security_context.windows_options", "volume_mount.recursive_read_only", "liveness_probe.termination_grace_period_seconds", "startup_probe.termination_grace_period_seconds", "lifecycle.pre_stop.sleep", "lifecycle.post_start.sleep"} {
+					for _, field := range []string{"resources.claims", "resize_policy", "restart_policy_rules", "security_context.app_armor_profile", "security_context.windows_options", "volume_mount.recursive_read_only", "liveness_probe.termination_grace_period_seconds", "startup_probe.termination_grace_period_seconds", "lifecycle.pre_stop.sleep", "lifecycle.post_start.sleep"} {
 						want["spec."+container+"."+field] = true
 					}
 					for _, handler := range []string{"liveness_probe", "readiness_probe", "startup_probe"} {

@@ -5,9 +5,11 @@ package kubernetes
 
 import (
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -485,6 +487,21 @@ func flattenFrameworkContainerFields(in v1.Container, out map[string]interface{}
 		}
 		out["resize_policy"] = policies
 	}
+	if len(in.RestartPolicyRules) > 0 {
+		rules := make([]interface{}, len(in.RestartPolicyRules))
+		for i, rule := range in.RestartPolicyRules {
+			value := map[string]interface{}{"action": string(rule.Action)}
+			if rule.ExitCodes != nil {
+				codes := map[string]interface{}{"operator": string(rule.ExitCodes.Operator)}
+				if len(rule.ExitCodes.Values) > 0 {
+					codes["values"] = rule.ExitCodes.Values
+				}
+				value["exit_codes"] = codes
+			}
+			rules[i] = value
+		}
+		out["restart_policy_rules"] = rules
+	}
 	if in.SecurityContext != nil {
 		securityContext := out["security_context"].([]interface{})[0].(map[string]interface{})
 		if in.SecurityContext.ProcMount != nil {
@@ -661,6 +678,25 @@ func expandContainers(ctrs []interface{}) ([]v1.Container, error) {
 		if v, ok := ctr["restart_policy"].(string); ok && v != "" {
 			policy := v1.ContainerRestartPolicy(v)
 			cs[i].RestartPolicy = &policy
+		}
+
+		if v, ok := ctr["restart_policy_rules"].([]interface{}); ok {
+			for _, entry := range v {
+				in, _ := entry.(map[string]interface{})
+				action, _ := in["action"].(string)
+				rule := v1.ContainerRestartRule{Action: v1.ContainerRestartRuleAction(action)}
+				if codes, ok := in["exit_codes"].(map[string]interface{}); ok {
+					operator, _ := codes["operator"].(string)
+					rule.ExitCodes = &v1.ContainerRestartRuleOnExitCodes{Operator: v1.ContainerRestartRuleOnExitCodesOperator(operator)}
+					if values, ok := codes["values"].(*schema.Set); ok {
+						for _, value := range values.List() {
+							rule.ExitCodes.Values = append(rule.ExitCodes.Values, int32(value.(int)))
+						}
+						slices.Sort(rule.ExitCodes.Values)
+					}
+				}
+				cs[i].RestartPolicyRules = append(cs[i].RestartPolicyRules, rule)
+			}
 		}
 
 		if v, ok := ctr["resize_policy"].([]interface{}); ok {

@@ -32,7 +32,8 @@ func TestPodFeatureRetention(t *testing.T) {
 		Resources: &corev1.ResourceRequirements{Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1000m")}},
 		Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{ProcMount: ptr.To(corev1.UnmaskedProcMount)},
 			VolumeMounts: []corev1.VolumeMount{{Name: "data", MountPath: "/data"}}}},
-		InitContainers: []corev1.Container{{Name: "init", SecurityContext: &corev1.SecurityContext{ProcMount: ptr.To(corev1.UnmaskedProcMount)}}},
+		InitContainers: []corev1.Container{{Name: "init", SecurityContext: &corev1.SecurityContext{ProcMount: ptr.To(corev1.UnmaskedProcMount)},
+			RestartPolicy: ptr.To(corev1.ContainerRestartPolicyOnFailure), RestartPolicyRules: []corev1.ContainerRestartRule{{Action: corev1.ContainerRestartRuleActionRestart}}}},
 		Volumes: []corev1.Volume{{Name: "data", VolumeSource: corev1.VolumeSource{Image: &corev1.ImageVolumeSource{
 			Reference: "example/data:1", PullPolicy: corev1.PullIfNotPresent,
 		}}}},
@@ -55,6 +56,7 @@ func TestPodFeatureRetention(t *testing.T) {
 			actual.Containers[0].SecurityContext.ProcMount = ptr.To(corev1.DefaultProcMount)
 		}, want: "ProcMountType"},
 		"init proc mount dropped": {edit: func(actual *corev1.PodSpec) { actual.InitContainers[0].SecurityContext = nil }, want: "ProcMountType"},
+		"restart rules dropped":   {edit: func(actual *corev1.PodSpec) { actual.InitContainers[0].RestartPolicyRules = nil }, want: "restart_policy_rules"},
 		"image dropped":           {edit: func(actual *corev1.PodSpec) { actual.Volumes = nil }, want: "ImageVolume"},
 		"image became empty dir": {edit: func(actual *corev1.PodSpec) {
 			actual.Volumes[0].VolumeSource = corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}
@@ -84,6 +86,11 @@ func TestPodFeatureRetention(t *testing.T) {
 		actual.HostUsers = ptr.To(false)
 		if err := podspec.CheckPodFeaturePreservation(&defaults, &actual); err == nil {
 			t.Fatal("admission must not silently change configured host_users=true")
+		}
+		// A sidecar predates the container restart rules feature and is not checked.
+		sidecar := corev1.PodSpec{InitContainers: []corev1.Container{{Name: "proxy", RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways)}}}
+		if podspec.HasGatedFeatures(&sidecar) || podspec.CheckPodFeaturePreservation(&sidecar, &corev1.PodSpec{InitContainers: []corev1.Container{{Name: "proxy"}}}) != nil {
+			t.Fatal("a sidecar restart policy must not be gated")
 		}
 	})
 	for name, spec := range map[string]corev1.PodSpec{
@@ -126,6 +133,7 @@ func TestPodFeatureRetention(t *testing.T) {
 		`container "app" resize_policy`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app",
 			ResizePolicy: []corev1.ContainerResizePolicy{{ResourceName: corev1.ResourceCPU, RestartPolicy: corev1.RestartContainer}},
 		}}}},
+		`container "app" restart_policy`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", RestartPolicy: ptr.To(corev1.ContainerRestartPolicyAlways)}}}},
 		"windows_options": {spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{
 			WindowsOptions: &corev1.WindowsSecurityContextOptions{RunAsUserName: ptr.To("ContainerUser")},
 		}}}}},

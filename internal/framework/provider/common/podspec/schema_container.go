@@ -7,6 +7,8 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -41,6 +43,14 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 		"resource_name":  schema.StringAttribute{Required: true, Description: "Resource the policy applies to: cpu or memory.", Validators: []validator.String{stringvalidator.OneOf("cpu", "memory")}},
 		"restart_policy": schema.StringAttribute{Required: true, Description: "NotRequired resizes the container without a restart where possible; RestartContainer restarts it. Must be NotRequired when the Pod restart_policy is Never.", Validators: []validator.String{stringvalidator.OneOf("NotRequired", "RestartContainer")}},
 	})
+	restartRules := b.objectList("Rules checked in order when the container exits; the first match decides and restart_policy applies when none matches. A container with rules must set restart_policy. Requires Kubernetes 1.35 or later, or the ContainerRestartRules feature gate on Kubernetes 1.34.", map[string]schema.Attribute{
+		"action": schema.StringAttribute{Required: true, Description: "Action taken when the rule matches: Restart, or RestartAllContainers, which requires Kubernetes 1.36 or later or the RestartAllContainersOnContainerExits feature gate.", Validators: []validator.String{stringvalidator.OneOf("Restart", "RestartAllContainers")}},
+		"exit_codes": schema.SingleNestedAttribute{Optional: true, Description: "Exit codes the rule matches. Kubernetes requires it in every rule.", Attributes: map[string]schema.Attribute{
+			"operator": schema.StringAttribute{Required: true, Description: "In matches an exit code in values; NotIn matches one that is not.", Validators: []validator.String{stringvalidator.OneOf("In", "NotIn")}},
+			"values":   schema.SetAttribute{Optional: true, ElementType: types.Int64Type, Description: "Exit codes to compare, at most 255.", Validators: []validator.Set{setvalidator.SizeAtMost(255)}},
+		}},
+	})
+	restartRules.Validators = []validator.List{listvalidator.SizeAtMost(20)}
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
 			"args":                       b.emptyCompatibleList(immutable, types.StringType),
@@ -49,7 +59,8 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 			"image_pull_policy":          b.str(false, true, immutable, ""),
 			"name":                       b.str(true, false, immutable, ""),
 			"resize_policy":              resizePolicy,
-			"restart_policy":             b.str(false, true, immutable, "", stringvalidator.OneOf("Always")),
+			"restart_policy":             b.str(false, true, immutable, "", stringvalidator.OneOf("Always", "OnFailure", "Never")),
+			"restart_policy_rules":       restartRules,
 			"stdin":                      b.boolean(false, immutable, false),
 			"stdin_once":                 b.boolean(false, immutable, false),
 			"termination_message_path":   b.str(false, false, immutable, "/dev/termination-log"),

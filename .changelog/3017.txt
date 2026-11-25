@@ -95,6 +95,10 @@
 ```
 
 ```release-note:enhancement
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Accept `OnFailure` and `Never` for container and init container `restart_policy`, and add `restart_policy_rules` to restart a container on chosen exit codes, on clusters that support the feature.
+```
+
+```release-note:enhancement
 `resource/kubernetes_stateful_set_v1`: Add the `ordinals` object argument to configure the starting Pod ordinal.
 ```
 

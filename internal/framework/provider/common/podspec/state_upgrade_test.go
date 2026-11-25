@@ -101,7 +101,7 @@ func TestPodFeatureStateMigration(t *testing.T) {
 				b := For(option)
 				raw := `{"spec":[{"container":[{"name":"app","security_context":[{}]}],"init_container":[{"name":"init","security_context":[{}]}],"volume":[{"name":"data","empty_dir":[{}]}]}]}`
 				if populated {
-					raw = `{"spec":[{"host_users":false,"hostname_override":"override","resources":{"limits":{"cpu":"1000m"}},"resource_claims":[{"name":"gpu","resource_claim_template_name":"single-gpu"}],"container":[{"name":"app","resize_policy":[{"resource_name":"cpu","restart_policy":"RestartContainer"}],"security_context":[{"proc_mount":"Unmasked"}]}],"init_container":[{"name":"init","security_context":[{"proc_mount":"Unmasked"}]}],"volume":[{"name":"data","image":[{"reference":"registry.example/data:v1","pull_policy":"IfNotPresent"}]}]}]}`
+					raw = `{"spec":[{"host_users":false,"hostname_override":"override","resources":{"limits":{"cpu":"1000m"}},"resource_claims":[{"name":"gpu","resource_claim_template_name":"single-gpu"}],"container":[{"name":"app","resize_policy":[{"resource_name":"cpu","restart_policy":"RestartContainer"}],"restart_policy":"Never","restart_policy_rules":[{"action":"Restart","exit_codes":{"operator":"In","values":[42]}}],"security_context":[{"proc_mount":"Unmasked"}]}],"init_container":[{"name":"init","security_context":[{"proc_mount":"Unmasked"}]}],"volume":[{"name":"data","image":[{"reference":"registry.example/data:v1","pull_policy":"IfNotPresent"}]}]}]}`
 				}
 				var object map[string]any
 				if err := json.Unmarshal([]byte(raw), &object); err != nil {
@@ -146,6 +146,7 @@ func TestPodFeatureStateMigration(t *testing.T) {
 					live.Resources = &corev1.ResourceRequirements{Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1")}}
 					live.ResourceClaims = []corev1.PodResourceClaim{{Name: "admission", ResourceClaimName: ptr.To("admission")}}
 					live.Containers[0].ResizePolicy = []corev1.ContainerResizePolicy{{ResourceName: corev1.ResourceCPU, RestartPolicy: corev1.NotRequired}}
+					live.Containers[0].RestartPolicyRules = []corev1.ContainerRestartRule{{Action: corev1.ContainerRestartRuleActionRestart}}
 				}
 				refreshed, d := b.RefreshSpec(ctx, live, baseline, path.Root("spec"))
 				if d.HasError() {
@@ -158,7 +159,9 @@ func TestPodFeatureStateMigration(t *testing.T) {
 				at := path.Root("spec").AtListIndex(0)
 				paths := []path.Path{at.AtName("host_users"), at.AtName("set_hostname_as_fqdn"), at.AtName("hostname_override"), at.AtName("resources"), at.AtName("resource_claims"), at.AtName("volume").AtListIndex(0).AtName("image")}
 				for _, kind := range []string{"container", "init_container"} {
-					paths = append(paths, at.AtName(kind).AtListIndex(0).AtName("resize_policy"))
+					for _, name := range []string{"resize_policy", "restart_policy", "restart_policy_rules"} {
+						paths = append(paths, at.AtName(kind).AtListIndex(0).AtName(name))
+					}
 					for _, name := range []string{"proc_mount", "app_armor_profile", "windows_options"} {
 						paths = append(paths, at.AtName(kind).AtListIndex(0).AtName("security_context").AtListIndex(0).AtName(name))
 					}

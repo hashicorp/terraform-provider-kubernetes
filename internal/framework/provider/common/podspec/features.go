@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 )
 
 // NormalizeFeatureDefaults makes runtime defaults comparable with absent
@@ -54,12 +55,12 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 			return true
 		}
 	}
-	for _, containers := range [][]corev1.Container{spec.Containers, spec.InitContainers} {
+	for kind, containers := range [][]corev1.Container{spec.Containers, spec.InitContainers} {
 		for _, container := range containers {
 			if sc := container.SecurityContext; sc != nil && (sc.AppArmorProfile != nil || sc.ProcMount != nil && *sc.ProcMount == corev1.UnmaskedProcMount) {
 				return true
 			}
-			if len(container.Resources.Claims)+len(container.ResizePolicy) > 0 {
+			if len(container.Resources.Claims)+len(container.ResizePolicy) > 0 || usesContainerRestartRules(container, kind == 1) {
 				return true
 			}
 			for _, mount := range container.VolumeMounts {
@@ -142,13 +143,21 @@ func CheckPodFeaturePreservation(expected, actual *corev1.PodSpec) error {
 			return featureNotPreserved(fmt.Sprintf("volume %q image", volume.Name), "ImageVolume")
 		}
 	}
-	if err := checkContainerFeatures(expected.Containers, actual.Containers, imageVolumes); err != nil {
+	if err := checkContainerFeatures(expected.Containers, actual.Containers, imageVolumes, false); err != nil {
 		return err
 	}
-	return checkContainerFeatures(expected.InitContainers, actual.InitContainers, imageVolumes)
+	return checkContainerFeatures(expected.InitContainers, actual.InitContainers, imageVolumes, true)
 }
 
-func checkContainerFeatures(expected, actual []corev1.Container, imageVolumes map[string]bool) error {
+// A sidecar, an init container that restarts Always, predates the
+// ContainerRestartRules feature. Any other container restart policy and every
+// restart rule depend on it.
+func usesContainerRestartRules(container corev1.Container, init bool) bool {
+	policy := container.RestartPolicy
+	return len(container.RestartPolicyRules) > 0 || policy != nil && !(init && *policy == corev1.ContainerRestartPolicyAlways)
+}
+
+func checkContainerFeatures(expected, actual []corev1.Container, imageVolumes map[string]bool, init bool) error {
 	for _, container := range expected {
 		index := slices.IndexFunc(actual, func(candidate corev1.Container) bool { return candidate.Name == container.Name })
 		var got corev1.Container
@@ -185,6 +194,14 @@ func checkContainerFeatures(expected, actual []corev1.Container, imageVolumes ma
 		for _, claim := range container.Resources.Claims {
 			if !slices.Contains(got.Resources.Claims, claim) {
 				return featureNotPreserved(fmt.Sprintf("container %q resource claim %q", container.Name, claim.Name), "DynamicResourceAllocation")
+			}
+		}
+		if usesContainerRestartRules(container, init) {
+			if !sameConfiguredPointer(container.RestartPolicy, got.RestartPolicy) {
+				return featureNotPreserved(fmt.Sprintf("container %q restart_policy", container.Name), "ContainerRestartRules")
+			}
+			if len(container.RestartPolicyRules) > 0 && !apiequality.Semantic.DeepEqual(container.RestartPolicyRules, got.RestartPolicyRules) {
+				return featureNotPreserved(fmt.Sprintf("container %q restart_policy_rules", container.Name), "ContainerRestartRules")
 			}
 		}
 		for _, policy := range container.ResizePolicy {

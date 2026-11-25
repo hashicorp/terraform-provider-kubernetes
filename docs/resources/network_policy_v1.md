@@ -364,11 +364,11 @@ The first upgrade can normalize these empty values in Terraform state:
 
 - `metadata.labels = {}` and `metadata.annotations = {}` can change from `null` to `{}`.
 - `match_labels = {}` can change from `null` to `{}` at these selector paths:
-  - `spec.pod_selector`
-  - `spec.ingress[*].from[*].namespace_selector`
-  - `spec.ingress[*].from[*].pod_selector`
-  - `spec.egress[*].to[*].namespace_selector`
-  - `spec.egress[*].to[*].pod_selector`
+    - `spec.pod_selector`
+    - `spec.ingress[*].from[*].namespace_selector`
+    - `spec.ingress[*].from[*].pod_selector`
+    - `spec.egress[*].to[*].namespace_selector`
+    - `spec.egress[*].to[*].pod_selector`
 - At each selector path above, `match_expressions[*].values = []` can change from `null` to `[]` only for the `Exists` and `DoesNotExist` operators.
 
 These changes can appear as a one-time in-place update. Applying them updates Terraform state, preserves the policy and its UID, and leaves the next plan empty.

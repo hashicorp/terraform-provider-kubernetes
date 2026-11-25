@@ -446,7 +446,7 @@ lifecycle {
 
 For a Windows container, use `security_context { windows_options = { run_as_username = "ContainerUser" } }` instead. Existing parent blocks keep their syntax.
 
-For isolated user namespaces, `Unmasked` proc mounts, image volumes, supplemental group and SELinux policies, affinity label keys, lifecycle sleep, and recursive read-only mounts, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. The provider also checks the write response; neither check verifies node or container runtime support.
+For isolated user namespaces, `Unmasked` proc mounts, image volumes, AppArmor profiles, supplemental group and SELinux policies, affinity label keys, lifecycle sleep, recursive read-only mounts, and a nonzero StatefulSet `ordinals.start`, the provider checks API admission with a server-side dry run before writing. Admission webhooks must support dry-run requests. The provider also checks the write response; neither check verifies node or container runtime support.
 
 Changes to these immutable settings replace standalone Pods and Jobs. Controller template changes may roll out Pods; CronJob changes apply to new Jobs. Existing state without these attributes is upgraded automatically, and leaving them unconfigured does not enable the features.
 

@@ -39,13 +39,14 @@ func NormalizeFeatureDefaults(spec *corev1.PodSpec) {
 }
 
 // HasGatedFeatures identifies requests that Kubernetes can silently discard
-// when a feature gate is disabled. A dry-run checks API admission only; node
-// and container-runtime support is still required to run the Pod.
+// when a feature gate is disabled or the API server predates the field. A
+// dry-run checks API admission only; node and container-runtime support is
+// still required to run the Pod.
 func HasGatedFeatures(spec *corev1.PodSpec) bool {
 	if spec.HostUsers != nil && !*spec.HostUsers {
 		return true
 	}
-	if sc := spec.SecurityContext; sc != nil && (sc.SupplementalGroupsPolicy != nil || sc.SELinuxChangePolicy != nil) {
+	if sc := spec.SecurityContext; sc != nil && (sc.SupplementalGroupsPolicy != nil || sc.SELinuxChangePolicy != nil || sc.AppArmorProfile != nil) {
 		return true
 	}
 	for _, term := range podAffinityTerms(spec.Affinity) {
@@ -55,7 +56,7 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 	}
 	for _, containers := range [][]corev1.Container{spec.Containers, spec.InitContainers} {
 		for _, container := range containers {
-			if container.SecurityContext != nil && container.SecurityContext.ProcMount != nil && *container.SecurityContext.ProcMount == corev1.UnmaskedProcMount {
+			if sc := container.SecurityContext; sc != nil && (sc.AppArmorProfile != nil || sc.ProcMount != nil && *sc.ProcMount == corev1.UnmaskedProcMount) {
 				return true
 			}
 			for _, mount := range container.VolumeMounts {

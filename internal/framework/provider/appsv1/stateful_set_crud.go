@@ -81,13 +81,13 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 
 	obj := appsv1.StatefulSet{ObjectMeta: meta, Spec: *spec}
-	if podspec.HasGatedFeatures(&spec.Template.Spec) {
+	if hasStatefulSetFeatures(spec) {
 		preview, err := conn.AppsV1().StatefulSets(meta.Namespace).Create(ctx, &obj, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
 		if err == nil {
-			err = podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &preview.Spec.Template.Spec)
+			err = checkStatefulSetFeatures(spec, &preview.Spec)
 		}
 		if err != nil {
-			resp.Diagnostics.AddError("Kubernetes Pod feature preflight failed", err.Error())
+			resp.Diagnostics.AddError("Kubernetes StatefulSet feature preflight failed", err.Error())
 			return
 		}
 	}
@@ -100,8 +100,8 @@ func (r *StatefulSetV1) Create(ctx context.Context, req resource.CreateRequest, 
 	plan.ID = types.StringValue(kubernetes.BuildId(created.ObjectMeta))
 	resp.Diagnostics.Append(r.statefulSetWriteResult(ctx, &resp.State, req.Plan, plan, created, filters)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, statefulSetIdentity(created.Namespace, created.Name))...)
-	if err := podspec.CheckPodFeaturePreservation(&spec.Template.Spec, &created.Spec.Template.Spec); err != nil {
-		resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+	if err := checkStatefulSetFeatures(spec, &created.Spec); err != nil {
+		resp.Diagnostics.AddError("Kubernetes did not preserve StatefulSet features", err.Error())
 		return
 	}
 	if resp.Diagnostics.HasError() {
@@ -259,12 +259,12 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 		if err != nil {
 			return err
 		}
-		if desired != nil && podspec.HasGatedFeatures(&desired.Template.Spec) {
+		if desired != nil && hasStatefulSetFeatures(desired) {
 			preview, err := conn.AppsV1().StatefulSets(namespace).Patch(ctx, name, k8types.JSONPatchType, payload, metav1.PatchOptions{DryRun: []string{metav1.DryRunAll}})
 			if err != nil {
-				return fmt.Errorf("Pod feature preflight failed: %w", err)
+				return fmt.Errorf("StatefulSet feature preflight failed: %w", err)
 			}
-			if err := podspec.CheckPodFeaturePreservation(&desired.Template.Spec, &preview.Spec.Template.Spec); err != nil {
+			if err := checkStatefulSetFeatures(desired, &preview.Spec); err != nil {
 				return err
 			}
 		}
@@ -277,9 +277,9 @@ func (r *StatefulSetV1) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 
 	if desired != nil {
-		if err := podspec.CheckPodFeaturePreservation(&desired.Template.Spec, &updated.Spec.Template.Spec); err != nil {
+		if err := checkStatefulSetFeatures(desired, &updated.Spec); err != nil {
 			resp.Diagnostics.Append(r.statefulSetWriteResult(ctx, &resp.State, req.Plan, plan, updated, filters)...)
-			resp.Diagnostics.AddError("Kubernetes did not preserve Pod features", err.Error())
+			resp.Diagnostics.AddError("Kubernetes did not preserve StatefulSet features", err.Error())
 			return
 		}
 	}
@@ -469,6 +469,26 @@ func statefulSetIdentity(namespace, name string) statefulSetIdentityModel {
 		},
 		Namespace: types.StringValue(namespace),
 	}
+}
+
+// hasStatefulSetFeatures reports whether a dry run must check that Kubernetes
+// keeps what spec requests; see podspec.HasGatedFeatures.
+func hasStatefulSetFeatures(spec *appsv1.StatefulSetSpec) bool {
+	return spec.Ordinals != nil && spec.Ordinals.Start != 0 || podspec.HasGatedFeatures(&spec.Template.Spec)
+}
+
+func checkStatefulSetFeatures(want, got *appsv1.StatefulSetSpec) error {
+	if err := podspec.CheckPodFeaturePreservation(&want.Template.Spec, &got.Template.Spec); err != nil {
+		return err
+	}
+	start := int32(0)
+	if got.Ordinals != nil {
+		start = got.Ordinals.Start
+	}
+	if want.Ordinals != nil && want.Ordinals.Start != start {
+		return fmt.Errorf("Kubernetes did not preserve ordinals; verify StatefulSetStartOrdinal support and admission policies")
+	}
+	return nil
 }
 
 // statefulSetPatchSpecs returns the specs to strategic-merge from and to.

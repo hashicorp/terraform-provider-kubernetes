@@ -77,3 +77,29 @@ func TestStatefulSetPatchSpecsResetsRemovedUpdateStrategy(t *testing.T) {
 		})
 	}
 }
+
+// A server that drops ordinals leaves the pods numbered from zero.
+func TestStatefulSetFeaturePreservation(t *testing.T) {
+	ordinals := func(start int32) *appsv1.StatefulSetOrdinals { return &appsv1.StatefulSetOrdinals{Start: start} }
+	for name, tc := range map[string]struct {
+		want, got *appsv1.StatefulSetOrdinals
+		preflight bool
+		dropped   bool
+	}{
+		"unset":           {},
+		"kept":            {want: ordinals(5), got: ordinals(5), preflight: true},
+		"dropped":         {want: ordinals(5), preflight: true, dropped: true},
+		"changed":         {want: ordinals(5), got: ordinals(1), preflight: true, dropped: true},
+		"zero is default": {want: ordinals(0)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			want, got := appsv1.StatefulSetSpec{Ordinals: tc.want}, appsv1.StatefulSetSpec{Ordinals: tc.got}
+			if hasStatefulSetFeatures(&want) != tc.preflight {
+				t.Errorf("preflight = %t, want %t", !tc.preflight, tc.preflight)
+			}
+			if err := checkStatefulSetFeatures(&want, &got); (err != nil) != tc.dropped {
+				t.Errorf("error = %v, want error = %t", err, tc.dropped)
+			}
+		})
+	}
+}

@@ -97,9 +97,12 @@ func TestPodFeatureRetention(t *testing.T) {
 		gated bool
 	}{
 		"set_hostname_as_fqdn": {spec: corev1.PodSpec{SetHostnameAsFQDN: ptr.To(true)}},
-		"app_armor_profile": {spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
+		"app_armor_profile": {gated: true, spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
 			AppArmorProfile: &corev1.AppArmorProfile{Type: corev1.AppArmorProfileTypeRuntimeDefault},
 		}}},
+		`container "app" app_armor_profile`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{
+			AppArmorProfile: &corev1.AppArmorProfile{Type: corev1.AppArmorProfileTypeRuntimeDefault},
+		}}}}},
 		"supplemental_groups_policy": {gated: true, spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
 			SupplementalGroupsPolicy: ptr.To(corev1.SupplementalGroupsPolicyStrict),
 		}}},

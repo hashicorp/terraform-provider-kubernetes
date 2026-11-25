@@ -161,6 +161,7 @@ Optional:
 - `host_pid` (Boolean) Use the host's pid namespace.
 - `host_users` (Boolean) Use the host's user namespace. Kubernetes treats omission as true. Setting false requires Linux, a compatible container runtime and the UserNamespacesSupport feature gate.
 - `hostname` (String) Specifies the hostname of the Pod If not specified, the pod's hostname will be set to a system-defined value.
+- `hostname_override` (String) Hostname the Pod sees, taking precedence over hostname and subdomain without changing the Pod's DNS records. Must be a DNS subdomain of at most 64 characters. Cannot be set with host_network = true or set_hostname_as_fqdn = true. Requires Kubernetes 1.35 or later, or the HostnameOverride feature gate on Kubernetes 1.34.
 - `image_pull_secrets` (Attributes List) ImagePullSecrets is an optional list of references to secrets in the same namespace to use for pulling any of the images used by this PodSpec. If specified, these secrets will be passed to individual puller implementations for them to use. For example, in the case of docker, only DockerConfig type secrets are honored. More info: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod List of reference objects. Omit or use null to retain API-populated references. When configured, supply at least one reference; an empty list is not omission. (see [below for nested schema](#nestedatt--spec--job_template--spec--template--spec--image_pull_secrets))
 - `init_container` (Block List) List of init containers belonging to the pod. Init containers always run to completion and each must complete successfully before the next is started. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ (see [below for nested schema](#nestedblock--spec--job_template--spec--template--spec--init_container))
 - `node_name` (String) NodeName is a request to schedule this pod onto a specific node. If it is non-empty, the scheduler simply schedules this pod onto that node, assuming that it fits resource requirements.
@@ -168,6 +169,8 @@ Optional:
 - `os` (Block List, Max: 1) Specifies the OS of the containers in the pod. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--job_template--spec--template--spec--os))
 - `priority_class_name` (String) If specified, indicates the pod's priority. "system-node-critical" and "system-cluster-critical" are two special keywords which indicate the highest priorities with the former being the highest priority. Any other name must be defined by creating a PriorityClass object with that name. If not specified, the pod priority will be default or zero if there is no default.
 - `readiness_gate` (Attributes List) If specified, all readiness gates will be evaluated for pod readiness. A pod is ready when all its containers are ready AND all conditions specified in the readiness gates have status equal to "True" More info: https://git.k8s.io/enhancements/keps/sig-network/0007-pod-ready%2B%2B.md List of reference objects. Omit or use null to retain API-populated references. When configured, supply at least one reference; an empty list is not omission. (see [below for nested schema](#nestedatt--spec--job_template--spec--template--spec--readiness_gate))
+- `resource_claims` (Attributes List) ResourceClaims that must be allocated and reserved before the Pod may start. A container uses one by naming it in resources.claims. Requires Kubernetes 1.34 or later, or the DynamicResourceAllocation feature gate on Kubernetes 1.31 to 1.33. (see [below for nested schema](#nestedatt--spec--job_template--spec--template--spec--resource_claims))
+- `resources` (Attributes) Compute resources for the Pod as a whole, shared by its containers. Kubernetes accepts only cpu, memory and hugepages-<size> here, and does not support Windows Pods. An omitted limits or requests keeps the values Kubernetes holds; use {} to clear them. Requires Kubernetes 1.34 or later, or the PodLevelResources feature gate on Kubernetes 1.32 and 1.33. (see [below for nested schema](#nestedatt--spec--job_template--spec--template--spec--resources))
 - `restart_policy` (String) Restart policy for all containers within the pod. One of Always, OnFailure, Never. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy.
 - `runtime_class_name` (String) RuntimeClassName is a feature for selecting the container runtime configuration. The container runtime configuration is used to run a Pod's containers. More info: https://kubernetes.io/docs/concepts/containers/runtime-class
 - `scheduler_name` (String) If specified, the pod will be dispatched by specified scheduler. If not specified, the pod will be dispatched by default scheduler.
@@ -940,8 +943,21 @@ Optional:
 
 Optional:
 
+- `claims` (Attributes List) Pod resource_claims that this container uses. Requires Kubernetes 1.34 or later, or the DynamicResourceAllocation feature gate on Kubernetes 1.31 to 1.33. (see [below for nested schema](#nestedatt--spec--job_template--spec--template--spec--container--resources--claims))
 - `limits` (Map of String) Describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 - `requests` (Map of String) Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+
+<a id="nestedatt--spec--job_template--spec--template--spec--container--resources--claims"></a>
+### Nested Schema for `spec.job_template.spec.template.spec.container.resources.claims`
+
+Required:
+
+- `name` (String) Name of an entry in the Pod's resource_claims.
+
+Optional:
+
+- `request` (String) Name of one request in the claim. Omission makes every request of the claim available.
+
 
 
 <a id="nestedblock--spec--job_template--spec--template--spec--container--security_context"></a>
@@ -1555,8 +1571,21 @@ Optional:
 
 Optional:
 
+- `claims` (Attributes List) Pod resource_claims that this container uses. Requires Kubernetes 1.34 or later, or the DynamicResourceAllocation feature gate on Kubernetes 1.31 to 1.33. (see [below for nested schema](#nestedatt--spec--job_template--spec--template--spec--init_container--resources--claims))
 - `limits` (Map of String) Describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 - `requests` (Map of String) Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+
+<a id="nestedatt--spec--job_template--spec--template--spec--init_container--resources--claims"></a>
+### Nested Schema for `spec.job_template.spec.template.spec.init_container.resources.claims`
+
+Required:
+
+- `name` (String) Name of an entry in the Pod's resource_claims.
+
+Optional:
+
+- `request` (String) Name of one request in the claim. Omission makes every request of the claim available.
+
 
 
 <a id="nestedblock--spec--job_template--spec--template--spec--init_container--security_context"></a>
@@ -1738,6 +1767,28 @@ Required:
 Required:
 
 - `condition_type` (String) refers to a condition in the pod's condition list with matching type.
+
+
+<a id="nestedatt--spec--job_template--spec--template--spec--resource_claims"></a>
+### Nested Schema for `spec.job_template.spec.template.spec.resource_claims`
+
+Required:
+
+- `name` (String) Name of the claim within the Pod.
+
+Optional:
+
+- `resource_claim_name` (String) Name of a ResourceClaim in the namespace of the Pod. Set either this or resource_claim_template_name.
+- `resource_claim_template_name` (String) Name of a ResourceClaimTemplate in the namespace of the Pod, from which Kubernetes creates a ResourceClaim bound to the Pod.
+
+
+<a id="nestedatt--spec--job_template--spec--template--spec--resources"></a>
+### Nested Schema for `spec.job_template.spec.template.spec.resources`
+
+Optional:
+
+- `limits` (Map of String) Maximum amount of each resource that the containers of the Pod may use together.
+- `requests` (Map of String) Amount of each resource reserved for the Pod. When omitted for a Pod that sets limits, Kubernetes derives the requests from the container requests or from the limits.
 
 
 <a id="nestedblock--spec--job_template--spec--template--spec--security_context"></a>

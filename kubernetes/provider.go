@@ -343,7 +343,6 @@ func Provider() *schema.Provider {
 			"kubernetes_storage_class":    resourceKubernetesStorageClassV1("Deprecated; use kubernetes_storage_class_v1."),
 			"kubernetes_storage_class_v1": resourceKubernetesStorageClassV1(""),
 			"kubernetes_csi_driver":       resourceKubernetesCSIDriverV1Beta1("Deprecated; use kubernetes_csi_driver_v1."),
-			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(""),
 
 			// provider helper resources
 			"kubernetes_labels":      resourceKubernetesLabels(),

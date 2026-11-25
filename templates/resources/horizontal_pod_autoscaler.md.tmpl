@@ -29,7 +29,7 @@ The provider currently supports two version of the HorizontalPodAutoscaler API r
 
 If you wish to use `autoscaling/v1` use the `target_cpu_utilization_percentage` field.
 
-If you wish to use `autoscaling/v2beta2` then set one or more `metric` fields.
+If you wish to use `autoscaling/v2` then set one or more `metric` or `behavior` fields. In that case `target_cpu_utilization_percentage` is ignored, so use a `Resource` metric for CPU instead.
 
 ## Import
 

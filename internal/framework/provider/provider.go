@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
@@ -205,6 +206,9 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		batchv1.NewCronJobV1,
 		corev1.NewNamespaceV1,
 		corev1.NewPodV1,
+		rbacv1.NewClusterRoleBindingV1,
+		rbacv1.NewRoleBindingV1,
+		rbacv1.NewRoleV1,
 	}
 }
 

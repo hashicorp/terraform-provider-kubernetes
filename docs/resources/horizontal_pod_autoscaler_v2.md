@@ -466,6 +466,10 @@ resource "kubernetes_horizontal_pod_autoscaler_v2" "example" {
 }
 ```
 
+## `target_cpu_utilization_percentage`
+
+`target_cpu_utilization_percentage` is accepted by the schema but ignored by this resource. To scale on CPU, set a `metric` of type `Resource` with `name = "cpu"`, or use `kubernetes_horizontal_pod_autoscaler_v1`.
+
 ## Import
 
 Horizontal Pod Autoscaler can be imported using the namespace and name, e.g.

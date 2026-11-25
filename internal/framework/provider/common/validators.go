@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"k8s.io/apimachinery/pkg/api/validate/content"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
-	pathValidation "k8s.io/apimachinery/pkg/api/validation/path"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -198,7 +198,7 @@ func (v labelsValidator) ValidateMap(_ context.Context, req validator.MapRequest
 }
 
 // RBACNameValidator validates a name the way SDKv2's validateRBACNameFunc does
-// (kubernetes/schema_rbac.go), with apimachinery's IsValidPathSegmentName rather than
+// (kubernetes/schema_rbac.go), with apimachinery's content.IsPathSegmentName rather than
 // NameIsDNSSubdomain.
 //
 // RBAC names are path segments, not DNS subdomains: "system:controller:foo" is a legitimate
@@ -223,7 +223,7 @@ func (v rbacNameValidator) ValidateString(_ context.Context, req validator.Strin
 		return
 	}
 
-	for _, msg := range pathValidation.IsValidPathSegmentName(req.ConfigValue.ValueString()) {
+	for _, msg := range content.IsPathSegmentName(req.ConfigValue.ValueString()) {
 		resp.Diagnostics.Append(validatordiag.InvalidAttributeValueDiagnostic(
 			req.Path, msg, req.ConfigValue.ValueString()))
 	}

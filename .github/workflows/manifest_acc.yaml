@@ -12,6 +12,7 @@ on:
     branches:
       - main
       - v3-major-release
+      - 'release/**'
     paths:
       - "manifest/**/*.go"
       - "manifest/**/go.mod"
@@ -30,6 +31,7 @@ jobs:
       matrix:
         kubernetes_version:
           # kind images: https://github.com/kubernetes-sigs/kind/releases (note the images are kind release specific)
+          - v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
           - v1.30.6@sha256:b6d08db72079ba5ae1f4a88a09025c0a904af3b52387643c285442afb05ab994
           - v1.29.10@sha256:3b2d8c31753e6c8069d4fc4517264cd20e86fd36220671fb7d0a5855103aa84b
           - v1.28.15@sha256:a7c05c7ae043a0b8c818f5a06188bc2c4098f6cb59ca7d1856df00375d839251
@@ -41,6 +43,9 @@ jobs:
         isBaseMajorRelease:
           - ${{ contains(github.base_ref, 'v3-major-release') }}
         include:
+          # Node images are built for a specific kind release; v1.37.0 needs kind v0.33.0, the rest use the default below.
+          - kubernetes_version: v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+            kind_version: v0.33.0
           # include if reference is v3-major-release and base reference is not v3-major-release
           - isMajorReleaseBranch: true
             isBaseMajorRelease: false
@@ -72,7 +77,7 @@ jobs:
       - name: Setup kind
         uses: helm/kind-action@0025e74a8c7512023d06dc019c617aa3cf561fde # v1.10.0
         with:
-          version: v0.25.0
+          version: ${{ matrix.kind_version || 'v0.25.0' }}
           node_image: kindest/node:${{ matrix.kubernetes_version }}
           # By default, this action creates a cluster with the name 'chart-testing'
           cluster_name: manifest

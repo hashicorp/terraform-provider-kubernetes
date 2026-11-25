@@ -1,0 +1,7 @@
+```release-note:note
+`resource/kubernetes_csi_driver_v1`: Migrated from SDKv2 to the Plugin Framework, keeping the existing configuration syntax and reading existing state without re-import. `moved` blocks from the deprecated `kubernetes_csi_driver` resource are supported with Terraform 1.8 or later. Some drivers show a one-time in-place update after upgrading, never a replacement: explicitly empty `labels` or `annotations`, and a driver planned with `-refresh=false`, where an omitted `generate_name` is normalized from `""` to null. `volume_lifecycle_modes` is now also computed: omitting it keeps the API default (`["Persistent"]`) instead of planning its removal on every run, and removing it from configuration leaves the live value unchanged. A configuration without a `spec` block now plans an in-place update instead of replacing the driver on every apply.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_csi_driver_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. Provide a string value or remove the key.
+```

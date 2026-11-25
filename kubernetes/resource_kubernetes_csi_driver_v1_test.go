@@ -16,15 +16,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesCSIDriverV1_basic(t *testing.T) {
+func TestAccKubernetesCSIDriver_basic(t *testing.T) {
 	var conf storage.CSIDriver
-	resourceName := "kubernetes_csi_driver_v1.test"
+	resourceName := "kubernetes_csi_driver.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.22.0")
+			// kubernetes_csi_driver is served by the storage.k8s.io/v1beta1 implementation,
+			// which Kubernetes removed in 1.22.
+			skipIfClusterVersionGreaterThanOrEqual(t, "1.22.0")
 		},
 
 		ProviderFactories: testAccProviderFactories,
@@ -98,7 +100,7 @@ func testAccCheckKubernetesCSIDriverV1Exists(n string, obj *storage.CSIDriver) r
 }
 
 func testAccKubernetesCSIDriverV1BasicConfig(name string, attached bool) string {
-	return fmt.Sprintf(`resource "kubernetes_csi_driver_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_csi_driver" "test" {
   metadata {
     name = %[1]q
   }

@@ -22,3 +22,27 @@ kubernetes_csi_driver_v1 can be imported using its name, e.g.
 ```
 $ terraform import kubernetes_csi_driver_v1.example terraform-example
 ```
+
+With Terraform 1.12 or later it can also be imported by resource identity:
+
+```terraform
+import {
+  to = kubernetes_csi_driver_v1.example
+  identity = {
+    api_version = "storage.k8s.io/v1"
+    kind        = "CSIDriver"
+    name        = "terraform-example"
+  }
+}
+```
+
+## Migrating from `kubernetes_csi_driver`
+
+State can be moved from the deprecated `kubernetes_csi_driver` resource with a `moved` block, which requires Terraform 1.8 or later:
+
+```terraform
+moved {
+  from = kubernetes_csi_driver.example
+  to   = kubernetes_csi_driver_v1.example
+}
+```

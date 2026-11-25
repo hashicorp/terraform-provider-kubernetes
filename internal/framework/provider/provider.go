@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/networkingv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
 // Ensure KubernetesProvider satisfies various provider interfaces.
@@ -197,10 +198,13 @@ func (p *KubernetesProvider) Schema(ctx context.Context, req provider.SchemaRequ
 func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
+		rbacv1.NewClusterRoleBindingV1,
 		corev1.NewNamespaceV1,
 		networkingv1.NewIngressV1,
 		networkingv1.NewIngressClassV1,
 		networkingv1.NewNetworkPolicyV1,
+		rbacv1.NewRoleBindingV1,
+		rbacv1.NewRoleV1,
 	}
 }
 

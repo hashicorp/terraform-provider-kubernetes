@@ -130,6 +130,84 @@ func TestAccKubernetesHorizontalPodAutoscaler_generatedName(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesHorizontalPodAutoscaler_metricUsesV2(t *testing.T) {
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandString(10))
+	resourceName := "kubernetes_horizontal_pod_autoscaler.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.23.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesHorizontalPodAutoscalerDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesHorizontalPodAutoscalerConfig_metric(name, 60),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesHorizontalPodAutoscalerV2Metric(resourceName, 60, 120),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.resource.0.target.0.average_utilization", "60"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.behavior.0.scale_down.0.stabilization_window_seconds", "120"),
+				),
+			},
+			{
+				Config: testAccKubernetesHorizontalPodAutoscalerConfig_metric(name, 75),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesHorizontalPodAutoscalerV2Metric(resourceName, 75, 120),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.metric.0.resource.0.target.0.average_utilization", "75"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+// testAccCheckKubernetesHorizontalPodAutoscalerV2Metric reads the object through autoscaling/v2,
+// since the autoscaling/v1 path would have dropped the metric and behavior fields.
+func testAccCheckKubernetesHorizontalPodAutoscalerV2Metric(n string, utilization, stabilizationWindow int32) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("Not found: %s", n)
+		}
+
+		conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
+		if err != nil {
+			return err
+		}
+
+		namespace, name, err := IdParts(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+
+		hpa, err := conn.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if len(hpa.Spec.Metrics) != 1 || hpa.Spec.Metrics[0].Resource == nil ||
+			hpa.Spec.Metrics[0].Resource.Target.AverageUtilization == nil ||
+			*hpa.Spec.Metrics[0].Resource.Target.AverageUtilization != utilization {
+			return fmt.Errorf("expected one resource metric with average utilization %d, got %#v", utilization, hpa.Spec.Metrics)
+		}
+
+		if hpa.Spec.Behavior == nil || hpa.Spec.Behavior.ScaleDown == nil ||
+			hpa.Spec.Behavior.ScaleDown.StabilizationWindowSeconds == nil ||
+			*hpa.Spec.Behavior.ScaleDown.StabilizationWindowSeconds != stabilizationWindow {
+			return fmt.Errorf("expected scale_down stabilization window %d, got %#v", stabilizationWindow, hpa.Spec.Behavior)
+		}
+
+		return nil
+	}
+}
+
 func testAccCheckKubernetesHorizontalPodAutoscalerDestroy(s *terraform.State) error {
 	conn, err := testAccProvider.Meta().(KubeClientsets).MainClientset()
 
@@ -260,6 +338,49 @@ func testAccKubernetesHorizontalPodAutoscalerConfig_specModified(name string) st
   }
 }
 `, name)
+}
+
+func testAccKubernetesHorizontalPodAutoscalerConfig_metric(name string, utilization int) string {
+	return fmt.Sprintf(`resource "kubernetes_horizontal_pod_autoscaler" "test" {
+  metadata {
+    name = %q
+  }
+
+  spec {
+    min_replicas = 1
+    max_replicas = 10
+
+    scale_target_ref {
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "TerraformAccTest"
+    }
+
+    metric {
+      type = "Resource"
+      resource {
+        name = "cpu"
+        target {
+          type                = "Utilization"
+          average_utilization = %d
+        }
+      }
+    }
+
+    behavior {
+      scale_down {
+        stabilization_window_seconds = 120
+        select_policy                = "Min"
+        policy {
+          period_seconds = 60
+          type           = "Pods"
+          value          = 1
+        }
+      }
+    }
+  }
+}
+`, name, utilization)
 }
 
 func testAccKubernetesHorizontalPodAutoscalerConfig_generatedName(prefix string) string {

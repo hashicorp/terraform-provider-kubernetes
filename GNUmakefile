@@ -82,7 +82,7 @@ testfuncs: fmtcheck
 	go test $(PROVIDER_FUNCTIONS_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
 
 frameworkacc:
-	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS)
+	TF_ACC=1 go test $(PROVIDER_FRAMEWORK_DIR) -v -vet=off $(TESTARGS) -parallel $(PARALLEL_RUNS) -timeout 3h
 
 # Released-provider migrations use only localhost fixtures and need Terraform.
 # Keep their download and runtime budget separate from the default unit suite.

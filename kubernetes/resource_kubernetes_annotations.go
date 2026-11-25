@@ -208,7 +208,7 @@ func getManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manager string
 			continue
 		}
 		var mm map[string]interface{}
-		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
+		err := json.Unmarshal(m.FieldsV1.GetRawBytes(), &mm)
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +231,7 @@ func getTemplateManagedAnnotations(managedFields []v1.ManagedFieldsEntry, manage
 			continue
 		}
 		var mm map[string]interface{}
-		err := json.Unmarshal(m.FieldsV1.Raw, &mm)
+		err := json.Unmarshal(m.FieldsV1.GetRawBytes(), &mm)
 		if err != nil {
 			return nil, err
 		}

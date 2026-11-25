@@ -1,3 +1,36 @@
+## 3.5.0 (Nov 5, 2026)
+
+NOTES:
+
+* `resource/kubernetes_cluster_role_binding_v1`: Migrated from SDKv2 to the Plugin Framework, keeping the existing configuration syntax and supporting existing state without re-import. `moved` blocks from the deprecated `kubernetes_cluster_role_binding` resource are supported with Terraform 1.8 or later. Some bindings show a one-time in-place update after upgrading, never a replacement: explicitly empty `labels` or `annotations`, a `User` or `Group` subject with `api_group = ""` (shown as `- api_group = "rbac.authorization.k8s.io" -> null`; only Terraform state changes, not the binding), and a binding named with `name` when planned with `-refresh=false`. [[GH-2976](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2976)]
+* `resource/kubernetes_role_binding_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and supporting existing state without re-import. Some bindings show a one-time in-place update after upgrading, never a replacement: explicitly empty `labels` or `annotations`, a `User` or `Group` subject with `api_group = ""` (shown as `- api_group = "rbac.authorization.k8s.io" -> null`; only Terraform state changes, not the binding), and a binding named with `name` when planned with `-refresh=false`. Moving from the deprecated `kubernetes_role_binding` type is supported with Terraform 1.8 or later. See the Plugin Framework upgrade guide for details. [[GH-2978](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2978)]
+
+BREAKING CHANGES:
+
+* `resource/kubernetes_cluster_role_binding_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. [[GH-2976](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2976)]
+* `resource/kubernetes_role_binding_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. [[GH-2978](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2978)]
+* `resource/kubernetes_role_binding_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected at plan time, including `generate_name = ""`. Previously the Kubernetes API silently ignored `generate_name` when `name` was set. To keep the existing RoleBinding, remove `generate_name` if it is empty; otherwise remove `name` and retain the original `generate_name`. Removing or changing a stored non-empty prefix replaces the RoleBinding. [[GH-2978](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2978)]
+
+DEPRECATIONS:
+
+* `resource/kubernetes_horizontal_pod_autoscaler_v2beta2`: Deprecated and will be removed in version 4.0 of the provider. Use `kubernetes_horizontal_pod_autoscaler_v2` instead. [[GH-3031](https://github.com/hashicorp/terraform-provider-kubernetes/issues/3031)]
+
+## 3.4.0 (Oct 16, 2026)
+
+BREAKING CHANGES:
+
+* `resource/kubernetes_role_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected during plan, including `generate_name = ""`. Earlier versions allowed it, but the Kubernetes API ignores `generate_name` whenever `name` is set. To keep the existing Role, remove `generate_name` if it is empty (`""`); otherwise remove `name` and keep `generate_name`. Making the other change replaces the Role. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+* `resource/kubernetes_role_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+
+BUG FIXES:
+
+* provider: Bump `google.golang.org/grpc` to v1.83.2 and `github.com/moby/spdystream` to v0.5.1 to resolve GO-2026-6348, GO-2026-6443, and CVE-2026-35469. [[GH-2986](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2986)]
+
+NOTES:
+
+* `resource/kubernetes_role_v1`: Import IDs require a non-empty namespace and name. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+* `resource/kubernetes_role_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and resource identity, including upgrades from versions before identity support. `moved` blocks from the deprecated `kubernetes_role` resource are supported with Terraform 1.8 or later. Explicit empty metadata maps may require a one-time in-place update. Roles imported with an earlier provider version may show a one-time in-place update setting empty `labels` and `annotations` to null, and a `terraform plan -refresh=false` immediately after upgrading may show a one-time in-place update adding `resource_names = []`; neither replaces the Role. Identity imports default an omitted namespace to `default`. See the Plugin Framework upgrade guide for details. [[GH-2964](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2964)]
+
 ## 3.3.0 (Oct 1,2026)
 
 BREAKING CHANGES:

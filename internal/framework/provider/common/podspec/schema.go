@@ -35,7 +35,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	kquantity "k8s.io/apimachinery/pkg/api/resource"
-	apiValidation "k8s.io/apimachinery/pkg/api/validation"
 	utilValidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -300,7 +299,7 @@ func (b builder) podDNSConfigObject() schema.NestedBlockObject {
 		Attributes: map[string]schema.Attribute{
 			"nameservers": b.list(false, immutable, types.StringType, listvalidator.ValueStringsAre(podStringRule("ip"))),
 			// SDKv2 omitted ForceNew here, but the API rejects the change on an immutable spec.
-			"searches": b.list(false, immutable, types.StringType, listvalidator.ValueStringsAre(podStringRule("name"))),
+			"searches": b.list(false, immutable, types.StringType, listvalidator.ValueStringsAre(podStringRule("dns-search"))),
 		},
 		Blocks: map[string]schema.Block{
 			"option": b.block(schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
@@ -413,8 +412,12 @@ func (v podStringRule) ValidateString(_ context.Context, req validator.StringReq
 		if net.ParseIP(s) == nil {
 			messages = append(messages, "must be a valid IP address")
 		}
-	case "name":
-		messages = apiValidation.NameIsDNSSubdomain(s, false)
+	case "dns-search":
+		// As Kubernetes validates a search path: a single dot or a subdomain
+		// that may contain underscores and end in a dot.
+		if s != "." {
+			messages = utilValidation.IsDNS1123SubdomainWithUnderscore(strings.TrimSuffix(s, "."))
+		}
 	case "port":
 		if n, err := strconv.Atoi(s); err == nil {
 			messages = utilValidation.IsValidPortNum(n)

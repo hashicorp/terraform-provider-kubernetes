@@ -928,3 +928,17 @@ func TestAppArmorProfileValidation(t *testing.T) {
 		}
 	}
 }
+
+// Kubernetes accepts a single dot, a trailing dot and underscores in DNS search paths.
+func TestDNSSearchRule(t *testing.T) {
+	for search, valid := range map[string]bool{
+		"example.com": true, ".": true, "example.com.": true, "_tcp.example.com": true,
+		"": false, "Example.com": false, "bad..name": false,
+	} {
+		var resp validator.StringResponse
+		podStringRule("dns-search").ValidateString(context.Background(), validator.StringRequest{ConfigValue: types.StringValue(search)}, &resp)
+		if got := !resp.Diagnostics.HasError(); got != valid {
+			t.Errorf("%q valid = %t, want %t", search, got, valid)
+		}
+	}
+}

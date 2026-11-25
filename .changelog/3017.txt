@@ -95,6 +95,10 @@
 ```
 
 ```release-note:bug
+`resource/kubernetes_deployment_v1`, `resource/kubernetes_daemon_set_v1`, `resource/kubernetes_stateful_set_v1`, `resource/kubernetes_pod_v1`, `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Accept a single dot, a trailing dot and underscores in `dns_config.searches`, as Kubernetes does.
+```
+
+```release-note:bug
 `resource/kubernetes_daemon_set_v1`: Accept `"0%"` for rolling-update limits when the other limit permits progress.
 ```
 

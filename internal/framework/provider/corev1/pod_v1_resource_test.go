@@ -3579,11 +3579,7 @@ resource "kubernetes_service_account_v1" "scheduler" {
   }
 }
 
-# kubernetes_cluster_role_binding (non-versioned alias) is used here intentionally.
-# kubernetes_cluster_role_binding_v1 is served by the Framework provider and is not
-# reachable from SDKv2-only test factories due to the import cycle between the
-# kubernetes/ package and internal/mux.
-resource "kubernetes_cluster_role_binding" "kube_scheduler" {
+resource "kubernetes_cluster_role_binding_v1" "kube_scheduler" {
   metadata {
     name = "${var.scheduler_name}-as-kube-scheduler"
   }
@@ -3599,7 +3595,7 @@ resource "kubernetes_cluster_role_binding" "kube_scheduler" {
   }
 }
 
-resource "kubernetes_cluster_role_binding" "volume_scheduler" {
+resource "kubernetes_cluster_role_binding_v1" "volume_scheduler" {
   metadata {
     name = "${var.scheduler_name}-as-volume-scheduler"
   }
@@ -3615,7 +3611,7 @@ resource "kubernetes_cluster_role_binding" "volume_scheduler" {
   }
 }
 
-resource "kubernetes_role_binding" "authentication_reader" {
+resource "kubernetes_role_binding_v1" "authentication_reader" {
   metadata {
     name      = "${var.scheduler_name}-extension-apiserver-authentication-reader"
     namespace = var.namespace

@@ -606,8 +606,8 @@ func expandDaemonSetStrategyModel(ctx context.Context, in types.Object, at path.
 	if !model.Type.IsNull() && !model.Type.IsUnknown() && model.Type.ValueString() != "" {
 		strategy.Type = appsv1.DaemonSetUpdateStrategyType(model.Type.ValueString())
 	}
-	if strategy.Type == appsv1.OnDeleteDaemonSetStrategyType || model.RollingUpdate.IsNull() ||
-		model.RollingUpdate.IsUnknown() {
+	// Kubernetes stores rollingUpdate for either strategy type.
+	if model.RollingUpdate.IsNull() || model.RollingUpdate.IsUnknown() {
 		return strategy, diagnostics
 	}
 	var update DaemonSetRollingUpdateModel

@@ -6,6 +6,7 @@ package appsv1_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
@@ -527,6 +528,31 @@ func TestAccKubernetesDaemonSetV1_MaxSurge(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_surge", "100%"),
+				),
+			},
+		},
+	})
+}
+
+// Kubernetes stores rolling_update alongside OnDelete, so the plan must settle.
+func TestAccKubernetesDaemonSetV1_onDeleteWithRollingUpdate(t *testing.T) {
+	var conf appsv1.DaemonSet
+	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	resourceName := "kubernetes_daemon_set_v1.test"
+	config := strings.Replace(testAccKubernetesDaemonSetV1ConfigWithMaxSurge(name, kubetest.BusyboxImage, "0"),
+		"strategy = {", "strategy = {\n      type = \"OnDelete\"", 1)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesDaemonSetV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesDaemonSetV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.type", "OnDelete"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.strategy.rolling_update.max_unavailable", "1"),
 				),
 			},
 		},

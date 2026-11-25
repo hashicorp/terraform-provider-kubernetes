@@ -299,7 +299,7 @@ strategy = {
 }
 ```
 
-Keep the DaemonSet's own values; its defaults (`max_surge = "0"`, `max_unavailable = "1"`) differ from a Deployment's. Do not configure `rolling_update` with the `OnDelete` strategy; its read value is `null`. Setting `strategy = {}` selects `RollingUpdate`, including when the existing strategy is `OnDelete`; omitting it keeps the prior or API-computed strategy.
+Keep the DaemonSet's own values; its defaults (`max_surge = "0"`, `max_unavailable = "1"`) differ from a Deployment's. `rolling_update` can be set with the `OnDelete` strategy; Kubernetes stores it and uses it once the strategy is `RollingUpdate`. When it is omitted with `OnDelete`, its value is `null`. Setting `strategy = {}` selects `RollingUpdate`, including when the existing strategy is `OnDelete`; omitting it keeps the prior or API-computed strategy.
 
 ### kubernetes_stateful_set_v1
 

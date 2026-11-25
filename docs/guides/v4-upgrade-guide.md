@@ -268,7 +268,7 @@ strategy = {
 }
 ```
 
-Do not configure `rolling_update` with the `Recreate` strategy; its read value is `null`. Omitting `strategy` keeps the prior or API-computed strategy. Setting `strategy = {}` selects the default `RollingUpdate`, so it changes an existing `Recreate` strategy.
+`rolling_update` cannot be set with the `Recreate` strategy: Kubernetes rejects the combination, and the provider reports it during planning. Omitting `strategy` keeps the prior or API-computed strategy. Setting `strategy = {}` selects the default `RollingUpdate`, so it changes an existing `Recreate` strategy.
 
 ### kubernetes_daemon_set_v1
 

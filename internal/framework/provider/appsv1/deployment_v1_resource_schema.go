@@ -124,6 +124,7 @@ func deploymentSpecBlock() schema.ListNestedBlock {
 					Description: "The deployment strategy used to replace existing pods with new ones.",
 					Optional:    true,
 					Computed:    true,
+					Validators:  []validator.Object{deploymentStrategyValidator{}},
 					PlanModifiers: []planmodifier.Object{
 						objectplanmodifier.UseStateForUnknown(),
 					},

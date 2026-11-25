@@ -1002,6 +1002,12 @@ func TestAccKubernetesDeploymentV1_with_deployment_strategy_rollingupdate(t *tes
 				),
 			},
 			{
+				// Kubernetes forbids rolling_update with Recreate.
+				Config: strings.Replace(testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "Recreate", imageName),
+					`type = "Recreate"`, "type = \"Recreate\"\n      rolling_update = {}", 1),
+				ExpectError: regexp.MustCompile(`rolling_update\s+cannot\s+be\s+set`),
+			},
+			{
 				// An explicit empty object resets Recreate to the default RollingUpdate.
 				Config: strings.Replace(testAccKubernetesDeploymentV1ConfigWithDeploymentStrategy(deploymentName, "RollingUpdate", imageName), `type = "RollingUpdate"`, "", 1),
 				Check: resource.ComposeAggregateTestCheckFunc(

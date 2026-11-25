@@ -61,6 +61,8 @@ func TestAccKubernetesPodV1_hostnameOverride(t *testing.T) {
 	})
 }
 
+// Kubernetes 1.34 drops the container restart policy without the feature;
+// earlier versions reject it on a regular container.
 func TestAccKubernetesPodV1_containerRestartRules(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 	resourceName := "kubernetes_pod_v1.test"
@@ -72,7 +74,7 @@ func TestAccKubernetesPodV1_containerRestartRules(t *testing.T) {
 		PreCheck:                 func() { kubetest.PreCheck(t) },
 		ProtoV6ProviderFactories: kubetest.ProviderFactories,
 		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
-		Steps: kubetest.FeatureSteps("1.35.0", "ContainerRestartRules", config, resource.ComposeAggregateTestCheckFunc(
+		Steps: kubetest.FeatureSteps("1.35.0", "ContainerRestartRules|may not be set for non-init containers", config, resource.ComposeAggregateTestCheckFunc(
 			resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.restart_policy", "Never"),
 			resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.restart_policy_rules.0.exit_codes.values.0", "42"),
 		)),

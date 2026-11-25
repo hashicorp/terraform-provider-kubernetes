@@ -8,8 +8,10 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -26,6 +28,10 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 		Attributes: map[string]schema.Attribute{
 			"limits":   b.quantityMap(true, immutable),
 			"requests": b.quantityMap(true, immutable),
+			"claims": b.podClaimsAttribute("Pod resource_claims that this container uses. "+podClaimsRequirement, map[string]schema.Attribute{
+				"name":    schema.StringAttribute{Required: true, Description: "Name of an entry in the Pod's resource_claims.", Validators: []validator.String{podStringRule("dns-label")}},
+				"request": schema.StringAttribute{Optional: true, Description: "Name of one request in the claim. Omission makes every request of the claim available.", Validators: []validator.String{podStringRule("dns-label")}},
+			}),
 		},
 	}
 	if b.replace(immutable) {
@@ -96,6 +102,28 @@ func (b builder) podContainerObject() schema.NestedBlockObject {
 			}}, 0, 0, immutable),
 		},
 	}
+}
+
+const podClaimsRequirement = "Requires Kubernetes 1.34 or later, or the DynamicResourceAllocation feature gate on Kubernetes 1.31 to 1.33."
+
+// podClaimsAttribute is a list of Dynamic Resource Allocation references.
+func (b builder) podClaimsAttribute(description string, attributes map[string]schema.Attribute) schema.ListNestedAttribute {
+	a := schema.ListNestedAttribute{Optional: true, Description: description, NestedObject: schema.NestedAttributeObject{Attributes: attributes}}
+	if b.replace(immutable) {
+		a.PlanModifiers = []planmodifier.List{podListRequiresReplace{listplanmodifier.RequiresReplace()}}
+	}
+	return a
+}
+
+func (b builder) podResourceClaimsAttribute() schema.ListNestedAttribute {
+	return b.podClaimsAttribute("ResourceClaims that must be allocated and reserved before the Pod may start. A container uses one by naming it in resources.claims. "+podClaimsRequirement, map[string]schema.Attribute{
+		"name": schema.StringAttribute{Required: true, Description: "Name of the claim within the Pod.", Validators: []validator.String{podStringRule("dns-label")}},
+		"resource_claim_name": schema.StringAttribute{
+			Optional: true, Description: "Name of a ResourceClaim in the namespace of the Pod. Set either this or resource_claim_template_name.",
+			Validators: []validator.String{stringvalidator.ExactlyOneOf(path.MatchRelative().AtParent().AtName("resource_claim_template_name"))},
+		},
+		"resource_claim_template_name": schema.StringAttribute{Optional: true, Description: "Name of a ResourceClaimTemplate in the namespace of the Pod, from which Kubernetes creates a ResourceClaim bound to the Pod."},
+	})
 }
 
 func (b builder) podEnvSourceObject() schema.NestedBlockObject {

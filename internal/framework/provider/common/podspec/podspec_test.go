@@ -68,7 +68,7 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 				want["spec.volume.image"] = true
 				want["spec.volume.image.reference"] = false
 				want["spec.volume.image.pull_policy"] = false
-				for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "resources", "resources.limits", "resources.requests", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
+				for _, field := range []string{"set_hostname_as_fqdn", "hostname_override", "resources", "resources.limits", "resources.requests", "resource_claims", "security_context.app_armor_profile", "security_context.supplemental_groups_policy", "security_context.se_linux_change_policy"} {
 					want["spec."+field] = true
 				}
 				for _, affinity := range []string{"pod_affinity", "pod_anti_affinity"} {
@@ -79,7 +79,7 @@ func TestReplacementMatchesSDKv2(t *testing.T) {
 					}
 				}
 				for _, container := range []string{"container", "init_container"} {
-					for _, field := range []string{"security_context.app_armor_profile", "security_context.windows_options", "volume_mount.recursive_read_only", "liveness_probe.termination_grace_period_seconds", "startup_probe.termination_grace_period_seconds", "lifecycle.pre_stop.sleep", "lifecycle.post_start.sleep"} {
+					for _, field := range []string{"resources.claims", "security_context.app_armor_profile", "security_context.windows_options", "volume_mount.recursive_read_only", "liveness_probe.termination_grace_period_seconds", "startup_probe.termination_grace_period_seconds", "lifecycle.pre_stop.sleep", "lifecycle.post_start.sleep"} {
 						want["spec."+container+"."+field] = true
 					}
 					for _, handler := range []string{"liveness_probe", "readiness_probe", "startup_probe"} {

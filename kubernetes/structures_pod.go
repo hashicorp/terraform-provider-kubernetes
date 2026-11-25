@@ -855,6 +855,21 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 		obj.Resources = resources
 	}
 
+	if v, ok := in["resource_claims"].([]interface{}); ok {
+		for _, entry := range v {
+			claim, _ := entry.(map[string]interface{})
+			name, _ := claim["name"].(string)
+			podClaim := v1.PodResourceClaim{Name: name}
+			if v, ok := claim["resource_claim_name"].(string); ok && v != "" {
+				podClaim.ResourceClaimName = ptr.To(v)
+			}
+			if v, ok := claim["resource_claim_template_name"].(string); ok && v != "" {
+				podClaim.ResourceClaimTemplateName = ptr.To(v)
+			}
+			obj.ResourceClaims = append(obj.ResourceClaims, podClaim)
+		}
+	}
+
 	if v, ok := in["security_context"].([]interface{}); ok && len(v) > 0 {
 		ctx, err := expandPodSecurityContext(v)
 		if err != nil {
@@ -1765,6 +1780,20 @@ func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
 	}
 	if spec.Resources != nil {
 		object["resources"] = flattenContainerResourceRequirements(*spec.Resources)[0]
+	}
+	if len(spec.ResourceClaims) > 0 {
+		claims := make([]interface{}, len(spec.ResourceClaims))
+		for i, claim := range spec.ResourceClaims {
+			value := map[string]interface{}{"name": claim.Name}
+			if claim.ResourceClaimName != nil {
+				value["resource_claim_name"] = *claim.ResourceClaimName
+			}
+			if claim.ResourceClaimTemplateName != nil {
+				value["resource_claim_template_name"] = *claim.ResourceClaimTemplateName
+			}
+			claims[i] = value
+		}
+		object["resource_claims"] = claims
 	}
 	if spec.SecurityContext != nil && (spec.SecurityContext.AppArmorProfile != nil || spec.SecurityContext.SupplementalGroupsPolicy != nil || spec.SecurityContext.SELinuxChangePolicy != nil) {
 		securityContext := map[string]interface{}{}

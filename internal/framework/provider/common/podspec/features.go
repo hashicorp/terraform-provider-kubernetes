@@ -43,7 +43,7 @@ func NormalizeFeatureDefaults(spec *corev1.PodSpec) {
 // dry-run checks API admission only; node and container-runtime support is
 // still required to run the Pod.
 func HasGatedFeatures(spec *corev1.PodSpec) bool {
-	if spec.HostUsers != nil && !*spec.HostUsers || spec.HostnameOverride != nil || spec.Resources != nil {
+	if spec.HostUsers != nil && !*spec.HostUsers || spec.HostnameOverride != nil || spec.Resources != nil || len(spec.ResourceClaims) > 0 {
 		return true
 	}
 	if sc := spec.SecurityContext; sc != nil && (sc.SupplementalGroupsPolicy != nil || sc.SELinuxChangePolicy != nil || sc.AppArmorProfile != nil) {
@@ -57,6 +57,9 @@ func HasGatedFeatures(spec *corev1.PodSpec) bool {
 	for _, containers := range [][]corev1.Container{spec.Containers, spec.InitContainers} {
 		for _, container := range containers {
 			if sc := container.SecurityContext; sc != nil && (sc.AppArmorProfile != nil || sc.ProcMount != nil && *sc.ProcMount == corev1.UnmaskedProcMount) {
+				return true
+			}
+			if len(container.Resources.Claims) > 0 {
 				return true
 			}
 			for _, mount := range container.VolumeMounts {
@@ -92,6 +95,13 @@ func CheckPodFeaturePreservation(expected, actual *corev1.PodSpec) error {
 	// Kubernetes may add quantities to the pod-level resources of a Pod.
 	if want, got := expected.Resources, actual.Resources; want != nil && (got == nil || !hasQuantities(got.Limits, want.Limits) || !hasQuantities(got.Requests, want.Requests)) {
 		return featureNotPreserved("Pod-level resources", "PodLevelResources")
+	}
+	for _, claim := range expected.ResourceClaims {
+		if !slices.ContainsFunc(actual.ResourceClaims, func(candidate corev1.PodResourceClaim) bool {
+			return candidate.Name == claim.Name && sameConfiguredPointer(claim.ResourceClaimName, candidate.ResourceClaimName) && sameConfiguredPointer(claim.ResourceClaimTemplateName, candidate.ResourceClaimTemplateName)
+		}) {
+			return featureNotPreserved(fmt.Sprintf("resource_claims entry %q", claim.Name), "DynamicResourceAllocation")
+		}
 	}
 	if want := expected.SecurityContext; want != nil {
 		got := actual.SecurityContext
@@ -170,6 +180,11 @@ func checkContainerFeatures(expected, actual []corev1.Container, imageVolumes ma
 				if !sameConfiguredPointer(windows.GMSACredentialSpec, actualWindows.GMSACredentialSpec) || !sameConfiguredPointer(windows.GMSACredentialSpecName, actualWindows.GMSACredentialSpecName) || !sameConfiguredPointer(windows.RunAsUserName, actualWindows.RunAsUserName) || !sameConfiguredPointer(windows.HostProcess, actualWindows.HostProcess) {
 					return featureNotPreserved(fmt.Sprintf("container %q windows_options", container.Name), "Windows security options")
 				}
+			}
+		}
+		for _, claim := range container.Resources.Claims {
+			if !slices.Contains(got.Resources.Claims, claim) {
+				return featureNotPreserved(fmt.Sprintf("container %q resource claim %q", container.Name, claim.Name), "DynamicResourceAllocation")
 			}
 		}
 		for i, probe := range []*corev1.Probe{container.LivenessProbe, container.StartupProbe} {

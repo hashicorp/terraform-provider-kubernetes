@@ -424,9 +424,12 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 				(key == "spec.security_context.supplemental_groups_policy" && value.ValueString() == "Merge" || strings.HasSuffix(key, ".volume_mount.recursive_read_only") && value.ValueString() == "Disabled") {
 				return value
 			}
-			// Kubernetes omits zero-length sets and the default TCP host from
-			// JSON. Keep an explicitly configured empty value equivalent to it.
+			// Kubernetes omits zero-length sets and lists and the default TCP host
+			// from JSON. Keep an explicitly configured empty value equivalent to it.
 			if empty, ok := prior.(types.Set); ok && !empty.IsUnknown() && len(empty.Elements()) == 0 {
+				return empty
+			}
+			if empty, ok := prior.(types.List); ok && !empty.IsUnknown() && len(empty.Elements()) == 0 {
 				return empty
 			}
 			if empty, ok := prior.(types.String); ok && strings.HasSuffix(key, ".tcp_socket.host") && !empty.IsUnknown() && empty.ValueString() == "" {
@@ -776,7 +779,7 @@ func podOptionalFeaturePath(key string) bool {
 	case "spec.set_hostname_as_fqdn", "spec.hostname_override", "spec.resources", "spec.security_context.supplemental_groups_policy", "spec.security_context.se_linux_change_policy":
 		return true
 	}
-	for _, object := range []string{"spec.security_context.app_armor_profile", "spec.container.security_context.app_armor_profile", "spec.init_container.security_context.app_armor_profile", "spec.container.security_context.windows_options", "spec.init_container.security_context.windows_options"} {
+	for _, object := range []string{"spec.security_context.app_armor_profile", "spec.container.security_context.app_armor_profile", "spec.init_container.security_context.app_armor_profile", "spec.container.security_context.windows_options", "spec.init_container.security_context.windows_options", "spec.resource_claims", "spec.container.resources.claims", "spec.init_container.resources.claims"} {
 		if key == object || strings.HasPrefix(key, object+".") {
 			return true
 		}

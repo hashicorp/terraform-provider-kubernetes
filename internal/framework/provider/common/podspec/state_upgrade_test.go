@@ -101,7 +101,7 @@ func TestPodFeatureStateMigration(t *testing.T) {
 				b := For(option)
 				raw := `{"spec":[{"container":[{"name":"app","security_context":[{}]}],"init_container":[{"name":"init","security_context":[{}]}],"volume":[{"name":"data","empty_dir":[{}]}]}]}`
 				if populated {
-					raw = `{"spec":[{"host_users":false,"hostname_override":"override","resources":{"limits":{"cpu":"1000m"}},"container":[{"name":"app","security_context":[{"proc_mount":"Unmasked"}]}],"init_container":[{"name":"init","security_context":[{"proc_mount":"Unmasked"}]}],"volume":[{"name":"data","image":[{"reference":"registry.example/data:v1","pull_policy":"IfNotPresent"}]}]}]}`
+					raw = `{"spec":[{"host_users":false,"hostname_override":"override","resources":{"limits":{"cpu":"1000m"}},"resource_claims":[{"name":"gpu","resource_claim_template_name":"single-gpu"}],"container":[{"name":"app","security_context":[{"proc_mount":"Unmasked"}]}],"init_container":[{"name":"init","security_context":[{"proc_mount":"Unmasked"}]}],"volume":[{"name":"data","image":[{"reference":"registry.example/data:v1","pull_policy":"IfNotPresent"}]}]}]}`
 				}
 				var object map[string]any
 				if err := json.Unmarshal([]byte(raw), &object); err != nil {
@@ -138,12 +138,13 @@ func TestPodFeatureStateMigration(t *testing.T) {
 					}
 					// Kubernetes returns canonical quantities; state keeps the configured spelling.
 					live.Resources.Limits = corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1")}
-				} else if live.HostUsers != nil || live.HostnameOverride != nil || live.Resources != nil || live.Containers[0].SecurityContext.ProcMount != nil || live.InitContainers[0].SecurityContext.ProcMount != nil || live.Volumes[0].Image != nil {
+				} else if live.HostUsers != nil || live.HostnameOverride != nil || live.Resources != nil || live.ResourceClaims != nil || live.Containers[0].SecurityContext.ProcMount != nil || live.InitContainers[0].SecurityContext.ProcMount != nil || live.Volumes[0].Image != nil {
 					t.Fatalf("legacy omission changed API payload: %#v", live)
 				} else {
 					// A value the server or a webhook adds is not adopted.
 					live.HostnameOverride = ptr.To("admission")
 					live.Resources = &corev1.ResourceRequirements{Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1")}}
+					live.ResourceClaims = []corev1.PodResourceClaim{{Name: "admission", ResourceClaimName: ptr.To("admission")}}
 				}
 				refreshed, d := b.RefreshSpec(ctx, live, baseline, path.Root("spec"))
 				if d.HasError() {
@@ -154,7 +155,7 @@ func TestPodFeatureStateMigration(t *testing.T) {
 					t.Fatal(d)
 				}
 				at := path.Root("spec").AtListIndex(0)
-				paths := []path.Path{at.AtName("host_users"), at.AtName("set_hostname_as_fqdn"), at.AtName("hostname_override"), at.AtName("resources"), at.AtName("volume").AtListIndex(0).AtName("image")}
+				paths := []path.Path{at.AtName("host_users"), at.AtName("set_hostname_as_fqdn"), at.AtName("hostname_override"), at.AtName("resources"), at.AtName("resource_claims"), at.AtName("volume").AtListIndex(0).AtName("image")}
 				for _, kind := range []string{"container", "init_container"} {
 					for _, name := range []string{"proc_mount", "app_armor_profile", "windows_options"} {
 						paths = append(paths, at.AtName(kind).AtListIndex(0).AtName("security_context").AtListIndex(0).AtName(name))
@@ -301,6 +302,11 @@ func TestResourcesUpgradeMatchesRefresh(t *testing.T) {
 				if !reflect.DeepEqual(expanded.Containers[0].Resources, live.Containers[0].Resources) || !reflect.DeepEqual(expanded.InitContainers[0].Resources, live.InitContainers[0].Resources) {
 					t.Fatalf("resources lost during expansion: %#v", expanded)
 				}
+				// Upgraded resources hold no claims and do not adopt one the server adds.
+				live.Containers[0].Resources.Claims = []corev1.ResourceClaim{{Name: "admission"}}
+				if adopted, d := b.RefreshSpec(ctx, live, baseline, path.Root("spec")); d.HasError() || !selectResources(adopted, "container").Equal(selectResources(baseline, "container")) {
+					t.Fatalf("%s: claim adopted into upgraded resources: %v", old, d)
+				}
 			}
 			// Resources is an object, not a list probe; block presence rules are unchanged.
 			for _, key := range []string{"spec.container.resources", "spec.init_container.resources"} {
@@ -322,6 +328,7 @@ func TestOptionalPodFeaturesRoundTrip(t *testing.T) {
 		for name, raw := range map[string]string{
 			"linux":   `{"spec":[{"set_hostname_as_fqdn":true,"security_context":[{"supplemental_groups_policy":"Strict","se_linux_change_policy":"Recursive","app_armor_profile":{"type":"RuntimeDefault"}}],"container":[{"name":"app","security_context":[{"app_armor_profile":{"type":"Localhost","localhost_profile":"example"}}],"liveness_probe":[{"tcp_socket":[{"host":"127.0.0.1","port":"8080"}],"termination_grace_period_seconds":5}],"startup_probe":[{"termination_grace_period_seconds":7}],"lifecycle":[{"pre_stop":[{"sleep":{"seconds":0}}]}],"volume_mount":[{"name":"data","mount_path":"/data","read_only":true,"recursive_read_only":"Enabled"}],"port":[{"container_port":5000,"protocol":"SCTP"}]}]}]}`,
 			"empty":   `{"spec":[{"container":[{"name":"app","liveness_probe":[{"tcp_socket":[{"port":"80","host":""}]}]}],"affinity":[{"pod_affinity":[{"required_during_scheduling_ignored_during_execution":[{"topology_key":"zone","match_label_keys":[],"mismatch_label_keys":[],"label_selector":[{"match_labels":{"app":"test"}}]}]}]}]}]}`,
+			"claims":  `{"spec":[{"resource_claims":[{"name":"gpu","resource_claim_template_name":"single-gpu"},{"name":"shared","resource_claim_name":"shared"}],"container":[{"name":"app","resources":{"claims":[{"name":"gpu","request":"first"},{"name":"shared"}]}}],"init_container":[{"name":"init","resources":{"claims":[]}}]}]}`,
 			"windows": `{"spec":[{"container":[{"name":"app","security_context":[{"windows_options":{"run_as_username":"ContainerUser","host_process":false}}]}],"init_container":[{"name":"init","security_context":[{"windows_options":{"gmsa_credential_spec_name":"domain"}}]}]}]}`,
 		} {
 			t.Run(name, func(t *testing.T) {

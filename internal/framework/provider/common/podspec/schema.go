@@ -243,6 +243,7 @@ func (b builder) podSpecObject() schema.NestedBlockObject {
 			"node_selector":                   b.emptyCompatibleMap(immutable),
 			"priority_class_name":             b.str(false, !b.o.Template, immutable, ""), // admission sets a Pod's default class
 			"readiness_gate":                  b.references("condition_type", immutable),
+			"resource_claims":                 b.podResourceClaimsAttribute(),
 			"resources":                       b.podResourcesAttribute(),
 			"restart_policy":                  b.str(false, false, immutable, b.o.RestartPolicy, stringvalidator.OneOf(restartPolicy...)),
 			"runtime_class_name":              b.str(false, false, immutable, ""),
@@ -439,6 +440,8 @@ func (v podStringRule) ValidateString(_ context.Context, req validator.StringReq
 		if s != "." {
 			messages = utilValidation.IsDNS1123SubdomainWithUnderscore(strings.TrimSuffix(s, "."))
 		}
+	case "dns-label":
+		messages = utilValidation.IsDNS1123Label(s)
 	case "hostname-override":
 		// A hostname is limited to 64 characters, less than a DNS subdomain allows.
 		messages = utilValidation.IsDNS1123Subdomain(s)

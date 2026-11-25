@@ -119,6 +119,10 @@ func TestPodFeatureRetention(t *testing.T) {
 		"se_linux_change_policy": {gated: true, spec: corev1.PodSpec{SecurityContext: &corev1.PodSecurityContext{
 			SELinuxChangePolicy: ptr.To(corev1.SELinuxChangePolicyRecursive),
 		}}},
+		`resource_claims entry "gpu"`: {gated: true, spec: corev1.PodSpec{ResourceClaims: []corev1.PodResourceClaim{{Name: "gpu", ResourceClaimName: ptr.To("shared")}}}},
+		`container "app" resource claim "gpu"`: {gated: true, spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app",
+			Resources: corev1.ResourceRequirements{Claims: []corev1.ResourceClaim{{Name: "gpu", Request: "first"}}},
+		}}}},
 		"windows_options": {spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "app", SecurityContext: &corev1.SecurityContext{
 			WindowsOptions: &corev1.WindowsSecurityContextOptions{RunAsUserName: ptr.To("ContainerUser")},
 		}}}}},

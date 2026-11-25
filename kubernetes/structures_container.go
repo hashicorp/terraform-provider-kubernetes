@@ -467,6 +467,17 @@ func flattenContainers(in []v1.Container, serviceAccountRegex string) ([]interfa
 
 // Add Framework-only fields after the SDKv2 flattener has filtered injected mounts.
 func flattenFrameworkContainerFields(in v1.Container, out map[string]interface{}) {
+	if len(in.Resources.Claims) > 0 {
+		claims := make([]interface{}, len(in.Resources.Claims))
+		for i, claim := range in.Resources.Claims {
+			value := map[string]interface{}{"name": claim.Name}
+			if claim.Request != "" {
+				value["request"] = claim.Request
+			}
+			claims[i] = value
+		}
+		out["resources"].([]interface{})[0].(map[string]interface{})["claims"] = claims
+	}
 	if in.SecurityContext != nil {
 		securityContext := out["security_context"].([]interface{})[0].(map[string]interface{})
 		if in.SecurityContext.ProcMount != nil {
@@ -1173,6 +1184,15 @@ func expandContainerResourceRequirements(l []interface{}) (*v1.ResourceRequireme
 			return obj, err
 		}
 		obj.Requests = *r
+	}
+
+	if v, ok := in["claims"].([]interface{}); ok {
+		for _, entry := range v {
+			claim, _ := entry.(map[string]interface{})
+			name, _ := claim["name"].(string)
+			request, _ := claim["request"].(string)
+			obj.Claims = append(obj.Claims, v1.ResourceClaim{Name: name, Request: request})
+		}
 	}
 
 	return obj, nil

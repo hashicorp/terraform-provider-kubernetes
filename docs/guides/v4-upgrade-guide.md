@@ -456,6 +456,13 @@ Changes to these immutable settings replace standalone Pods and Jobs. Controller
 
 StatefulSets accept `spec.ordinals = { start = 10 }`, available by default from Kubernetes 1.27 and stable in 1.31. Changing `start` updates the StatefulSet in place but changes its Pod ordinal range, so the controller can remove and create Pods. The `revision_history_limit` can also be updated in place and accepts zero.
 
+StatefulSets also accept two settings that depend on the cluster version:
+
+- `update_strategy.rolling_update.max_unavailable` is an absolute number or a percentage. The `MaxUnavailableStatefulSet` feature is enabled by default from Kubernetes 1.37. When the argument is omitted the provider leaves the value to the cluster.
+- `volume_claim_template.spec.volume_attributes_class_name` names a [VolumeAttributesClass](https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/), enabled by default from Kubernetes 1.34. Changing it replaces the StatefulSet and does not change existing PersistentVolumeClaims.
+
+When either is set, the provider checks with a server-side dry run that the API server keeps the value before writing.
+
 Jobs and CronJob job templates support these optional settings:
 
 | Setting | Kubernetes requirements and behavior |

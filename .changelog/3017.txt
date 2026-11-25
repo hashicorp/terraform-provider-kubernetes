@@ -91,6 +91,10 @@
 ```
 
 ```release-note:enhancement
+`resource/kubernetes_stateful_set_v1`: Add `update_strategy.rolling_update.max_unavailable` and `volume_claim_template.spec.volume_attributes_class_name`, on clusters that support the features.
+```
+
+```release-note:enhancement
 `resource/kubernetes_job_v1`, `resource/kubernetes_cron_job_v1`: Add Job `suspend`, `success_policy`, `pod_replacement_policy`, and `managed_by`. A suspended standalone Job skips waiting for completion.
 ```
 

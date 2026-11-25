@@ -466,9 +466,9 @@ func podSpecStateValue(ctx context.Context, typ attr.Type, raw interface{}, prio
 		if object, ok := prior.(types.Object); ok && !object.IsNull() && !object.IsUnknown() {
 			old = object.Attributes()
 		}
-		if !b.template && strings.Contains(key, ".affinity.") {
+		if !b.template && (strings.Contains(key, ".affinity.") || key == "spec.topology_spread_constraint") {
 			if object, ok := raw.(map[string]interface{}); ok {
-				podRemoveGeneratedAffinityExpressions(object, old)
+				podRemoveGeneratedSelectorExpressions(object, old)
 			}
 		}
 		for name, childType := range t.AttrTypes {
@@ -787,10 +787,11 @@ func podOptionalFeaturePath(key string) bool {
 		strings.HasSuffix(key, ".post_start.sleep") || strings.HasSuffix(key, ".pre_stop.sleep") || strings.HasSuffix(key, ".sleep.seconds")
 }
 
-// Pod admission merges these keys into the selector once at creation. Keep
-// those derived predicates out of Terraform's configured selector; unrelated
-// expressions, including drift, remain visible.
-func podRemoveGeneratedAffinityExpressions(term map[string]interface{}, prior map[string]attr.Value) {
+// Pod admission merges the label keys of an affinity term, and from Kubernetes
+// 1.34 of a topology spread constraint, into its selector once at creation.
+// Keep those derived predicates out of Terraform's configured selector;
+// unrelated expressions, including drift, remain visible.
+func podRemoveGeneratedSelectorExpressions(term map[string]interface{}, prior map[string]attr.Value) {
 	keys := map[string]string{}
 	for name, operator := range map[string]string{"match_label_keys": "In", "mismatch_label_keys": "NotIn"} {
 		if prior != nil {
@@ -804,6 +805,12 @@ func podRemoveGeneratedAffinityExpressions(term map[string]interface{}, prior ma
 		} else if values, ok := term[name].([]string); ok {
 			for _, value := range values {
 				keys[value] = operator
+			}
+		} else if values, ok := term[name].(*sdkschema.Set); ok {
+			for _, value := range values.List() {
+				if key, ok := value.(string); ok {
+					keys[key] = operator
+				}
 			}
 		}
 	}

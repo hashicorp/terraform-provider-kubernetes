@@ -3487,6 +3487,9 @@ func testAccKubernetesPodV1TopologySpreadConstraintConfig(podName, imageName str
 	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
   metadata {
     name = "%s"
+    labels = {
+      "pod-template-hash" = "tf-acc"
+    }
   }
   spec {
     container {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common/podspec"
 	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -29,6 +31,7 @@ import (
 	k8sclient "k8s.io/client-go/kubernetes"
 	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/kubectl/pkg/polymorphichelpers"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -475,7 +478,9 @@ func statefulSetIdentity(namespace, name string) statefulSetIdentityModel {
 // keeps what spec requests; see podspec.HasGatedFeatures.
 func hasStatefulSetFeatures(spec *appsv1.StatefulSetSpec) bool {
 	rolling := spec.UpdateStrategy.RollingUpdate
-	return spec.Ordinals != nil && spec.Ordinals.Start != 0 || rolling != nil && rolling.MaxUnavailable != nil || podspec.HasGatedFeatures(&spec.Template.Spec)
+	hasClass := func(claim corev1.PersistentVolumeClaim) bool { return claim.Spec.VolumeAttributesClassName != nil }
+	return spec.Ordinals != nil && spec.Ordinals.Start != 0 || rolling != nil && rolling.MaxUnavailable != nil ||
+		slices.ContainsFunc(spec.VolumeClaimTemplates, hasClass) || podspec.HasGatedFeatures(&spec.Template.Spec)
 }
 
 func checkStatefulSetFeatures(want, got *appsv1.StatefulSetSpec) error {
@@ -493,6 +498,12 @@ func checkStatefulSetFeatures(want, got *appsv1.StatefulSetSpec) error {
 		kept := got.UpdateStrategy.RollingUpdate
 		if kept == nil || kept.MaxUnavailable == nil || *kept.MaxUnavailable != *rolling.MaxUnavailable {
 			return fmt.Errorf("Kubernetes did not preserve max_unavailable; verify MaxUnavailableStatefulSet support, which is on by default from Kubernetes 1.37, and admission policies")
+		}
+	}
+	for i, claim := range want.VolumeClaimTemplates {
+		class := claim.Spec.VolumeAttributesClassName
+		if class != nil && (i >= len(got.VolumeClaimTemplates) || ptr.Deref(got.VolumeClaimTemplates[i].Spec.VolumeAttributesClassName, "") != *class) {
+			return fmt.Errorf("Kubernetes did not preserve volume_attributes_class_name; verify VolumeAttributesClass support, which is on by default from Kubernetes 1.34, and admission policies")
 		}
 	}
 	return nil

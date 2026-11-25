@@ -105,6 +105,9 @@ func TestStatefulSetFeaturePreservation(t *testing.T) {
 	ordinals := func(start int32) appsv1.StatefulSetSpec {
 		return appsv1.StatefulSetSpec{Ordinals: &appsv1.StatefulSetOrdinals{Start: start}}
 	}
+	class := func(name *string) appsv1.StatefulSetSpec {
+		return appsv1.StatefulSetSpec{VolumeClaimTemplates: []corev1.PersistentVolumeClaim{{Spec: corev1.PersistentVolumeClaimSpec{VolumeAttributesClassName: name}}}}
+	}
 	for name, tc := range map[string]struct {
 		want, got appsv1.StatefulSetSpec
 		preflight bool
@@ -118,6 +121,9 @@ func TestStatefulSetFeaturePreservation(t *testing.T) {
 		"max kept":        {want: rollingUpdateSpec("2"), got: rollingUpdateSpec("2"), preflight: true},
 		"max dropped":     {want: rollingUpdateSpec("2"), got: rollingUpdateSpec(""), preflight: true, dropped: true},
 		"max defaulted":   {want: rollingUpdateSpec(""), got: rollingUpdateSpec("1")},
+		"class kept":      {want: class(ptr.To("gold")), got: class(ptr.To("gold")), preflight: true},
+		"class dropped":   {want: class(ptr.To("gold")), got: class(nil), preflight: true, dropped: true},
+		"class unset":     {want: class(nil), got: class(ptr.To("gold"))},
 	} {
 		t.Run(name, func(t *testing.T) {
 			want, got := tc.want, tc.got

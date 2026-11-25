@@ -69,12 +69,13 @@ type PersistentVolumeClaimModel struct {
 }
 
 type PersistentVolumeClaimSpecModel struct {
-	AccessModes      types.Set              `tfsdk:"access_modes"`
-	Resources        []VolumeResourcesModel `tfsdk:"resources"`
-	Selector         []LabelSelectorModel   `tfsdk:"selector"`
-	VolumeName       types.String           `tfsdk:"volume_name"`
-	StorageClassName types.String           `tfsdk:"storage_class_name"`
-	VolumeMode       types.String           `tfsdk:"volume_mode"`
+	AccessModes               types.Set              `tfsdk:"access_modes"`
+	Resources                 []VolumeResourcesModel `tfsdk:"resources"`
+	Selector                  []LabelSelectorModel   `tfsdk:"selector"`
+	VolumeName                types.String           `tfsdk:"volume_name"`
+	StorageClassName          types.String           `tfsdk:"storage_class_name"`
+	VolumeMode                types.String           `tfsdk:"volume_mode"`
+	VolumeAttributesClassName types.String           `tfsdk:"volume_attributes_class_name"`
 }
 
 type VolumeResourcesModel struct {
@@ -375,6 +376,9 @@ func expandPersistentVolumeClaimSpec(ctx context.Context, in PersistentVolumeCla
 		mode := corev1.PersistentVolumeMode(in.VolumeMode.ValueString())
 		out.VolumeMode = &mode
 	}
+	if !in.VolumeAttributesClassName.IsNull() && !in.VolumeAttributesClassName.IsUnknown() && in.VolumeAttributesClassName.ValueString() != "" {
+		out.VolumeAttributesClassName = ptr.To(in.VolumeAttributesClassName.ValueString())
+	}
 
 	return out, diags
 }
@@ -471,10 +475,11 @@ func flattenPersistentVolumeClaim(ctx context.Context, in corev1.PersistentVolum
 func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentVolumeClaimSpec, prior *PersistentVolumeClaimSpecModel) (PersistentVolumeClaimSpecModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	out := PersistentVolumeClaimSpecModel{
-		AccessModes:      types.SetNull(types.StringType),
-		VolumeName:       types.StringNull(),
-		StorageClassName: types.StringNull(),
-		VolumeMode:       types.StringNull(),
+		AccessModes:               types.SetNull(types.StringType),
+		VolumeName:                types.StringNull(),
+		StorageClassName:          types.StringNull(),
+		VolumeMode:                types.StringNull(),
+		VolumeAttributesClassName: types.StringNull(),
 	}
 	if prior != nil {
 		if !prior.VolumeName.IsUnknown() {
@@ -485,6 +490,10 @@ func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentV
 		}
 		if !prior.VolumeMode.IsUnknown() {
 			out.VolumeMode = prior.VolumeMode
+		}
+		// An empty class name requests no class, like an unset one, and is not sent.
+		if !prior.VolumeAttributesClassName.IsUnknown() && prior.VolumeAttributesClassName.ValueString() == "" {
+			out.VolumeAttributesClassName = prior.VolumeAttributesClassName
 		}
 		out.Selector = prior.Selector
 	}
@@ -520,6 +529,9 @@ func flattenPersistentVolumeClaimSpec(ctx context.Context, in corev1.PersistentV
 	}
 	if in.VolumeMode != nil {
 		out.VolumeMode = types.StringValue(string(*in.VolumeMode))
+	}
+	if in.VolumeAttributesClassName != nil && *in.VolumeAttributesClassName != "" {
+		out.VolumeAttributesClassName = types.StringValue(*in.VolumeAttributesClassName)
 	}
 
 	return out, diags

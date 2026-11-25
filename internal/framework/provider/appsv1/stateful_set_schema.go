@@ -292,6 +292,15 @@ func persistentVolumeClaimBlock() schema.ListNestedBlock {
 								},
 								Validators: []validator.String{stringvalidator.OneOf(string(corev1.PersistentVolumeBlock), string(corev1.PersistentVolumeFilesystem))},
 							},
+							"volume_attributes_class_name": schema.StringAttribute{
+								Description: "Name of the VolumeAttributesClass requested by the claim. Requires Kubernetes 1.34 or later, or an earlier version with the VolumeAttributesClass feature gate enabled; without the gate, Kubernetes creates the claims without the class.",
+								Optional:    true,
+								Computed:    true,
+								PlanModifiers: []planmodifier.String{
+									stringplanmodifier.UseStateForUnknown(),
+									stringplanmodifier.RequiresReplace(),
+								},
+							},
 						},
 						Blocks: map[string]schema.Block{
 							"resources": schema.ListNestedBlock{

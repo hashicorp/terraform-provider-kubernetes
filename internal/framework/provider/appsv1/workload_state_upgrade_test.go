@@ -34,7 +34,7 @@ func TestWorkloadSingletonStateMigration(t *testing.T) {
 	}{
 		{"deployment", "kubernetes_deployment", "strategy", `[{"type":"RollingUpdate","rolling_update":[{"max_surge":"25%","max_unavailable":"25%"}]}]`, &DeploymentV1{}, podspec.Deployment()},
 		{"daemonset", "kubernetes_daemonset", "strategy", `[{"type":"OnDelete","rolling_update":[]}]`, &DaemonSetV1{}, podspec.DaemonSet()},
-		{"statefulset", "kubernetes_stateful_set", "persistent_volume_claim_retention_policy", `[{"when_deleted":"Delete","when_scaled":"Delete"}],"update_strategy":[{"type":"RollingUpdate","rolling_update":[{"partition":1}]}]`, &StatefulSetV1{}, podspec.StatefulSet()},
+		{"statefulset", "kubernetes_stateful_set", "persistent_volume_claim_retention_policy", `[{"when_deleted":"Delete","when_scaled":"Delete"}],"update_strategy":[{"type":"RollingUpdate","rolling_update":[{"partition":1}]}],"volume_claim_template":[{"metadata":[{"name":"data"}],"spec":[{"access_modes":["ReadWriteOnce"]}]}]`, &StatefulSetV1{}, podspec.StatefulSet()},
 	} {
 		for _, version := range []int64{0, 1} {
 			t.Run(fmt.Sprintf("%s/v%d", tc.name, version), func(t *testing.T) {
@@ -74,6 +74,10 @@ func TestWorkloadSingletonStateMigration(t *testing.T) {
 					var strategy []StatefulSetUpdateStrategyModel
 					if d := upgraded.State.GetAttribute(ctx, path.Root("spec").AtListIndex(0).AtName("update_strategy"), &strategy); d.HasError() || !flattenStatefulSetUpdateStrategy(rollingUpdateSpec("1").UpdateStrategy, strategy[0]).RollingUpdate[0].MaxUnavailable.IsNull() {
 						t.Fatalf("legacy max_unavailable must stay null on a server that defaults it: %+v, %v", strategy, d)
+					}
+					var class types.String
+					if d := upgraded.State.GetAttribute(ctx, path.Root("spec").AtListIndex(0).AtName("volume_claim_template").AtListIndex(0).AtName("spec").AtListIndex(0).AtName("volume_attributes_class_name"), &class); d.HasError() || !class.IsNull() {
+						t.Fatalf("legacy volume_attributes_class_name must be null: %s, %v", class, d)
 					}
 				}
 				podPath := path.Root("spec").AtListIndex(0).AtName("template").AtListIndex(0).AtName("spec")

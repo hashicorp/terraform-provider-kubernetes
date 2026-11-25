@@ -124,6 +124,26 @@ func TestStatefulSetVolumeClaimRequiresReplace(t *testing.T) {
 	}
 }
 
+// The class is read from Kubernetes, where an empty name and none are the same.
+func TestFlattenClaimVolumeAttributesClass(t *testing.T) {
+	gold := "gold"
+	for _, tc := range []struct {
+		prior types.String
+		live  *string
+		want  types.String
+	}{
+		{types.StringNull(), nil, types.StringNull()},
+		{types.StringValue(""), nil, types.StringValue("")},
+		{types.StringValue("gold"), nil, types.StringNull()},
+		{types.StringNull(), &gold, types.StringValue("gold")},
+	} {
+		got, _ := flattenPersistentVolumeClaimSpec(context.Background(), corev1.PersistentVolumeClaimSpec{VolumeAttributesClassName: tc.live}, &PersistentVolumeClaimSpecModel{VolumeAttributesClassName: tc.prior})
+		if !got.VolumeAttributesClassName.Equal(tc.want) {
+			t.Errorf("prior %s, live %v: got %s, want %s", tc.prior, tc.live, got.VolumeAttributesClassName, tc.want)
+		}
+	}
+}
+
 func TestFlattenClaimTemplateMetadataMaps(t *testing.T) {
 	live := corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{
 		Name: "data", Labels: map[string]string{"app": "a", "admission.example.com/injected": "true"},

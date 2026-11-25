@@ -75,6 +75,7 @@ func (r *IngressV1) Create(ctx context.Context, req resource.CreateRequest, resp
 			fmt.Sprintf("Ingress %q was created, but its load balancer did not become ready: %s", plan.ID.ValueString(), err))
 		return
 	}
+	plan.Status = types.ListUnknown(ingressStatusType())
 	resp.Diagnostics.Append(ingressApplyResult(ctx, &plan, out)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -275,6 +276,10 @@ func ingressApplyResult(ctx context.Context, plan *IngressV1Model, out *networki
 			class = *out.Spec.IngressClassName
 		}
 		plan.Spec[0].IngressClassName = types.StringValue(class)
+	}
+	// A planned status is the value last read; the next refresh picks up a change.
+	if !plan.Status.IsUnknown() {
+		return nil
 	}
 	var diags diag.Diagnostics
 	plan.Status, diags = ingressFlattenStatus(ctx, out.Status.LoadBalancer)

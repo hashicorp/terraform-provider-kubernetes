@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -36,9 +37,13 @@ func (r *IngressV1) Schema(ctx context.Context, _ resource.SchemaRequest, resp *
 				Optional:    true,
 				Description: "Terraform will wait for the load balancer to have at least 1 endpoint before considering the resource created.",
 			},
+			// The controller sets status, so an update plans the value last read.
 			"status": schema.ListAttribute{
 				Computed:    true,
 				ElementType: ingressStatusType(),
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -62,6 +67,9 @@ func ingressSpecSchema() schema.ListNestedBlock {
 					Optional:    true,
 					Computed:    true,
 					Description: networking.IngressSpec{}.SwaggerDoc()["ingressClassName"],
+					PlanModifiers: []planmodifier.String{
+						stringplanmodifier.UseStateForUnknown(),
+					},
 				},
 				"default_backend": ingressBackendSchema("A default backend capable of servicing requests that don't match any rule. At least one of 'backend' or 'rules' must be specified. This field is optional to allow the loadbalancer controller or defaulting logic to specify a global default."),
 			},

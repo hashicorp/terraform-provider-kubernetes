@@ -370,7 +370,6 @@ The first upgrade can normalize these empty values in Terraform state:
   - `spec.egress[*].to[*].namespace_selector`
   - `spec.egress[*].to[*].pod_selector`
 - At each selector path above, `match_expressions[*].values = []` can change from `null` to `[]` only for the `Exists` and `DoesNotExist` operators.
-- An omitted `match_expressions` argument can change from the old empty block list `[]` to `null`.
 
 These changes can appear as a one-time in-place update. Applying them updates Terraform state, preserves the policy and its UID, and leaves the next plan empty.
 

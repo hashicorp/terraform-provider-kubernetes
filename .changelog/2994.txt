@@ -3,7 +3,7 @@
 ```
 
 ```release-note:note
-`resource/kubernetes_ingress_v1`, `resource/kubernetes_ingress_class_v1`, `resource/kubernetes_network_policy_v1`: Explicitly empty selector label maps and expression values can require a one-time state-only update from null to an empty collection. Omitted `match_expressions` arguments can normalize from an empty list to null. These updates preserve the Kubernetes policy. After create or update, state retains known planned specification values; admission changes appear as drift on the next refresh.
+`resource/kubernetes_ingress_v1`, `resource/kubernetes_ingress_class_v1`, `resource/kubernetes_network_policy_v1`: Explicitly empty selector label maps and expression values can require a one-time state-only update from null to an empty collection. The update preserves the Kubernetes policy. After create or update, state retains known planned specification values; admission changes appear as drift on the next refresh.
 ```
 
 ```release-note:breaking-change

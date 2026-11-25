@@ -210,10 +210,9 @@ Existing versioned resources upgrade at the same address. IngressClass and
 NetworkPolicy support moves from their same-API deprecated aliases with Terraform
 1.8 or later. The beta `kubernetes_ingress` resource is not a supported move source.
 
-An omitted `match_expressions` can produce a one-time `[]` to `null` update after
-upgrading. Explicit empty label maps or expression values can normalize legacy
-`null` to an empty collection. These updates change state without writing to
-Kubernetes or replacing the resource; the next plan should be empty.
+Explicit empty label maps or expression values can normalize legacy `null` to an
+empty collection in a one-time update after upgrading. That update changes state
+without writing to Kubernetes or replacing the resource; the next plan should be empty.
 
 State schema versions increase from 0 to 1. Provider 3.x cannot read the upgraded
 state. Back up state and recreate saved plans when upgrading.

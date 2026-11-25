@@ -162,15 +162,21 @@ func upgradeNetworkingSingletons(object map[string]any, kind string) error {
 			return networkingStateList(http, "path", at+".http", func(path map[string]any, at string) error { return upgradeIngressBackend(path, "backend", at) })
 		})
 	case "network_policy":
-		if _, err := networkingSingleton(spec, "pod_selector", "spec[0]", true); err != nil {
+		selector, err := networkingSingleton(spec, "pod_selector", "spec[0]", true)
+		if err != nil {
 			return err
 		}
+		networkingOmitEmptyExpressions(selector)
 		for _, direction := range []struct{ rules, peers string }{{"ingress", "from"}, {"egress", "to"}} {
 			err := networkingStateList(spec, direction.rules, "spec[0]", func(rule map[string]any, at string) error {
 				return networkingStateList(rule, direction.peers, at, func(peer map[string]any, at string) error {
 					for _, field := range []string{"ip_block", "namespace_selector", "pod_selector"} {
-						if _, err := networkingSingleton(peer, field, at, false); err != nil {
+						object, err := networkingSingleton(peer, field, at, false)
+						if err != nil {
 							return err
+						}
+						if field != "ip_block" {
+							networkingOmitEmptyExpressions(object)
 						}
 					}
 					return nil
@@ -234,6 +240,13 @@ func networkingSingleton(parent map[string]any, field, at string, required bool)
 	}
 	parent[field] = object
 	return object, nil
+}
+
+// A block list is never null in SDKv2 state; an omitted argument is.
+func networkingOmitEmptyExpressions(selector map[string]any) {
+	if expressions, ok := selector["match_expressions"].([]any); ok && len(expressions) == 0 {
+		selector["match_expressions"] = nil
+	}
 }
 
 func networkingStateList(parent map[string]any, field, at string, visit func(map[string]any, string) error) error {

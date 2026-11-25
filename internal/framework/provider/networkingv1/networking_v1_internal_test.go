@@ -4000,8 +4000,12 @@ func TestNetworkingSingletonConversionContract(t *testing.T) {
 				if peer["pod_selector"] != nil {
 					t.Fatal("omitted selector must be null")
 				}
-				if _, ok := peer["namespace_selector"].(map[string]any); !ok {
+				namespaces, ok := peer["namespace_selector"].(map[string]any)
+				if !ok {
 					t.Fatal("present empty namespace selector must remain an object")
+				}
+				if namespaces["match_expressions"] != nil {
+					t.Fatal("an empty legacy expression list must be null")
 				}
 			}
 		})

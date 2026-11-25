@@ -155,6 +155,10 @@ func upgradeJobSpecState(spec map[string]any, location string, legacyQuantities 
 		if !ok || object == nil {
 			return fmt.Errorf("%s.selector[0]: expected an object", location)
 		}
+		// A block list is never null in SDKv2 state; an omitted argument is.
+		if expressions, ok := object["match_expressions"].([]any); ok && len(expressions) == 0 {
+			object["match_expressions"] = nil
+		}
 		spec["selector"] = object
 	default:
 		return fmt.Errorf("%s.selector: expected a singleton list or object", location)

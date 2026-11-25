@@ -217,6 +217,7 @@ func TestBatchSelectorStateValidation(t *testing.T) {
 		{"empty list", []any{}, false},
 		{"empty selector", []any{map[string]any{}}, false},
 		{"object", map[string]any{"match_labels": map[string]any{"app": "job"}}, false},
+		{"empty match expressions", []any{map[string]any{"match_expressions": []any{}, "match_labels": map[string]any{"app": "job"}}}, false},
 		{"multiple selectors", []any{map[string]any{}, map[string]any{}}, true},
 		{"null element", []any{nil}, true},
 		{"scalar element", []any{"selector"}, true},
@@ -238,6 +239,9 @@ func TestBatchSelectorStateValidation(t *testing.T) {
 				}
 				if tc.name == "empty list" && spec["selector"] != nil {
 					t.Fatalf("empty selector list = %#v, want nil", spec["selector"])
+				}
+				if tc.name == "empty match expressions" && spec["selector"].(map[string]any)["match_expressions"] != nil {
+					t.Fatalf("empty match_expressions = %#v, want nil", spec["selector"])
 				}
 			}
 		})

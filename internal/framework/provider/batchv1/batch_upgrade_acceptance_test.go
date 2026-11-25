@@ -61,6 +61,29 @@ func TestAccKubernetesJobV1_upgradeExplicitEmpty(t *testing.T) {
 	})
 }
 
+// 3.x stores an explicit selector with an empty match_expressions list. A
+// configuration that omits the list plans no change after the upgrade.
+func TestAccKubernetesJobV1_upgradeExplicitSelector(t *testing.T) {
+	name := "tf-acc-job-selector-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { kubetest.PreCheck(t) },
+		CheckDestroy: testAccCheckKubernetesJobV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: kubetest.ReleasedProvider("3.5.0"),
+				Config:            testAccBatchSelectorJob(name),
+			},
+			{
+				ProtoV6ProviderFactories: kubetest.ProviderFactories,
+				Config:                   strings.Replace(testAccBatchSelectorJob(name), "selector {", "selector = {", 1),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
 // 3.3.0 sent an explicit pod-level runAsNonRoot false. The template is
 // immutable, so removing the block replaces the Job.
 func TestAccKubernetesJobV1_upgradeRemoveZeroSecurityContext(t *testing.T) {
@@ -400,6 +423,39 @@ func testAccBatchExplicitEmptyJob(name, resources string) string {
   wait_for_completion = false
 }
 `, name, name, kubetest.BusyboxImage, resources)
+}
+
+func testAccBatchSelectorJob(name string) string {
+	return fmt.Sprintf(`resource "kubernetes_job_v1" "test" {
+  metadata {
+    name = %q
+  }
+  spec {
+    manual_selector = true
+    selector {
+      match_labels = {
+        app = "explicit-selector"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          app = "explicit-selector"
+        }
+      }
+      spec {
+        container {
+          name    = "hello"
+          image   = %q
+          command = ["sleep", "300"]
+        }
+        restart_policy = "Never"
+      }
+    }
+  }
+  wait_for_completion = false
+}
+`, name, kubetest.BusyboxImage)
 }
 
 func testAccBatchExplicitEmptyCronJob(name, resources, image string) string {

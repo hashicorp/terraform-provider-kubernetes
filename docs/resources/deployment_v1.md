@@ -501,8 +501,10 @@ Optional:
 - `liveness_probe` (Block List, Max: 1) Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--liveness_probe))
 - `port` (Block List) List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--container--port))
 - `readiness_probe` (Block List, Max: 1) Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--readiness_probe))
+- `resize_policy` (Attributes List) How Kubernetes applies an in-place resize of the container's cpu or memory. It only matters to clients that resize a running Pod through the resize subresource, which this provider does not use. Requires Kubernetes 1.33 or later, or the InPlacePodVerticalScaling feature gate on Kubernetes 1.27 to 1.32. (see [below for nested schema](#nestedatt--spec--template--spec--container--resize_policy))
 - `resources` (Attributes) Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources Omit or use null to retain API-populated values. Use {} to leave limits and requests unset. (see [below for nested schema](#nestedatt--spec--template--spec--container--resources))
-- `restart_policy` (String) Restart policy for designating init container as a sidecar. Can only be `Always`. More info: https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/#pod-sidecar-containers.
+- `restart_policy` (String) Restart policy of the container, overriding the Pod's: `Always`, `OnFailure` or `Never`. `Always` on an init container makes it a sidecar. Any other use requires Kubernetes 1.35 or later, or the ContainerRestartRules feature gate on Kubernetes 1.34. More info: https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/#pod-sidecar-containers.
+- `restart_policy_rules` (Attributes List) Rules checked in order when the container exits; the first match decides and restart_policy applies when none matches. A container with rules must set restart_policy. Requires Kubernetes 1.35 or later, or the ContainerRestartRules feature gate on Kubernetes 1.34. (see [below for nested schema](#nestedatt--spec--template--spec--container--restart_policy_rules))
 - `security_context` (Block List, Max: 1) Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--security_context))
 - `startup_probe` (Block List, Max: 1) StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--startup_probe))
 - `stdin` (Boolean) Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF.
@@ -533,6 +535,7 @@ Optional:
 
 - `config_map_key_ref` (Block List, Max: 1) Selects a key of a ConfigMap. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--config_map_key_ref))
 - `field_ref` (Block List, Max: 1) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--field_ref))
+- `file_key_ref` (Attributes) Selects a key of an env file in an emptyDir volume of the Pod. Requires Kubernetes 1.35 or later, or the EnvFiles feature gate on Kubernetes 1.34; a cluster without the feature rejects the variable as having no source. (see [below for nested schema](#nestedatt--spec--template--spec--container--env--value_from--file_key_ref))
 - `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--resource_field_ref))
 - `secret_key_ref` (Block List, Max: 1) Selects a key of a secret in the pod's namespace. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--container--env--value_from--secret_key_ref))
 
@@ -553,6 +556,20 @@ Optional:
 
 - `api_version` (String) Version of the schema the FieldPath is written in terms of, defaults to "v1".
 - `field_path` (String) Path of the field to select in the specified API version
+
+
+<a id="nestedatt--spec--template--spec--container--env--value_from--file_key_ref"></a>
+### Nested Schema for `spec.template.spec.container.env.value_from.file_key_ref`
+
+Required:
+
+- `key` (String) Key to select in the env file.
+- `path` (String) Path of the env file within the volume. Must be relative and may not contain '..'.
+- `volume_name` (String) Name of the emptyDir volume that holds the env file.
+
+Optional:
+
+- `optional` (Boolean) Whether the file and key may be absent, in which case the variable is not set. Defaults to false.
 
 
 <a id="nestedblock--spec--template--spec--container--env--value_from--resource_field_ref"></a>
@@ -884,6 +901,15 @@ Optional:
 
 - `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
+<a id="nestedatt--spec--template--spec--container--resize_policy"></a>
+### Nested Schema for `spec.template.spec.container.resize_policy`
+
+Required:
+
+- `resource_name` (String) Resource the policy applies to: cpu or memory.
+- `restart_policy` (String) NotRequired resizes the container without a restart where possible; RestartContainer restarts it. Must be NotRequired when the Pod restart_policy is Never.
+
+
 <a id="nestedatt--spec--template--spec--container--resources"></a>
 ### Nested Schema for `spec.template.spec.container.resources`
 
@@ -903,6 +929,30 @@ Required:
 Optional:
 
 - `request` (String) Name of one request in the claim. Omission makes every request of the claim available.
+
+
+
+<a id="nestedatt--spec--template--spec--container--restart_policy_rules"></a>
+### Nested Schema for `spec.template.spec.container.restart_policy_rules`
+
+Required:
+
+- `action` (String) Action taken when the rule matches: Restart, or RestartAllContainers, which requires Kubernetes 1.36 or later or the RestartAllContainersOnContainerExits feature gate.
+
+Optional:
+
+- `exit_codes` (Attributes) Exit codes the rule matches. Kubernetes requires it in every rule. (see [below for nested schema](#nestedatt--spec--template--spec--container--restart_policy_rules--exit_codes))
+
+<a id="nestedatt--spec--template--spec--container--restart_policy_rules--exit_codes"></a>
+### Nested Schema for `spec.template.spec.container.restart_policy_rules.exit_codes`
+
+Required:
+
+- `operator` (String) In matches an exit code in values; NotIn matches one that is not.
+
+Optional:
+
+- `values` (Set of Number) Exit codes to compare, at most 255.
 
 
 
@@ -1129,8 +1179,10 @@ Optional:
 - `liveness_probe` (Block List, Max: 1) Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--liveness_probe))
 - `port` (Block List) List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--port))
 - `readiness_probe` (Block List, Max: 1) Periodic probe of container service readiness. Container will be removed from service endpoints if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--readiness_probe))
+- `resize_policy` (Attributes List) How Kubernetes applies an in-place resize of the container's cpu or memory. It only matters to clients that resize a running Pod through the resize subresource, which this provider does not use. Requires Kubernetes 1.33 or later, or the InPlacePodVerticalScaling feature gate on Kubernetes 1.27 to 1.32. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--resize_policy))
 - `resources` (Attributes) Compute Resources required by this container. Cannot be updated. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources Omit or use null to retain API-populated values. Use {} to leave limits and requests unset. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--resources))
-- `restart_policy` (String) Restart policy for designating init container as a sidecar. Can only be `Always`. More info: https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/#pod-sidecar-containers.
+- `restart_policy` (String) Restart policy of the container, overriding the Pod's: `Always`, `OnFailure` or `Never`. `Always` on an init container makes it a sidecar. Any other use requires Kubernetes 1.35 or later, or the ContainerRestartRules feature gate on Kubernetes 1.34. More info: https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/#pod-sidecar-containers.
+- `restart_policy_rules` (Attributes List) Rules checked in order when the container exits; the first match decides and restart_policy applies when none matches. A container with rules must set restart_policy. Requires Kubernetes 1.35 or later, or the ContainerRestartRules feature gate on Kubernetes 1.34. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--restart_policy_rules))
 - `security_context` (Block List, Max: 1) Security options the pod should run with. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--security_context))
 - `startup_probe` (Block List, Max: 1) StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--startup_probe))
 - `stdin` (Boolean) Whether this container should allocate a buffer for stdin in the container runtime. If this is not set, reads from stdin in the container will always result in EOF.
@@ -1161,6 +1213,7 @@ Optional:
 
 - `config_map_key_ref` (Block List, Max: 1) Selects a key of a ConfigMap. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--config_map_key_ref))
 - `field_ref` (Block List, Max: 1) Selects a field of the pod: supports metadata.name, metadata.namespace, metadata.labels, metadata.annotations, spec.nodeName, spec.serviceAccountName, status.podIP. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--field_ref))
+- `file_key_ref` (Attributes) Selects a key of an env file in an emptyDir volume of the Pod. Requires Kubernetes 1.35 or later, or the EnvFiles feature gate on Kubernetes 1.34; a cluster without the feature rejects the variable as having no source. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--env--value_from--file_key_ref))
 - `resource_field_ref` (Block List, Max: 1) Selects a resource of the container: only resources limits and requests (limits.cpu, limits.memory, limits.ephemeral-storage, requests.cpu, requests.memory and requests.ephemeral-storage) are currently supported. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--resource_field_ref))
 - `secret_key_ref` (Block List, Max: 1) Selects a key of a secret in the pod's namespace. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env--value_from--secret_key_ref))
 
@@ -1181,6 +1234,20 @@ Optional:
 
 - `api_version` (String) Version of the schema the FieldPath is written in terms of, defaults to "v1".
 - `field_path` (String) Path of the field to select in the specified API version
+
+
+<a id="nestedatt--spec--template--spec--init_container--env--value_from--file_key_ref"></a>
+### Nested Schema for `spec.template.spec.init_container.env.value_from.file_key_ref`
+
+Required:
+
+- `key` (String) Key to select in the env file.
+- `path` (String) Path of the env file within the volume. Must be relative and may not contain '..'.
+- `volume_name` (String) Name of the emptyDir volume that holds the env file.
+
+Optional:
+
+- `optional` (Boolean) Whether the file and key may be absent, in which case the variable is not set. Defaults to false.
 
 
 <a id="nestedblock--spec--template--spec--init_container--env--value_from--resource_field_ref"></a>
@@ -1512,6 +1579,15 @@ Optional:
 
 - `host` (String) Hostname or IP address to connect to. Omission uses the Pod IP.
 
+<a id="nestedatt--spec--template--spec--init_container--resize_policy"></a>
+### Nested Schema for `spec.template.spec.init_container.resize_policy`
+
+Required:
+
+- `resource_name` (String) Resource the policy applies to: cpu or memory.
+- `restart_policy` (String) NotRequired resizes the container without a restart where possible; RestartContainer restarts it. Must be NotRequired when the Pod restart_policy is Never.
+
+
 <a id="nestedatt--spec--template--spec--init_container--resources"></a>
 ### Nested Schema for `spec.template.spec.init_container.resources`
 
@@ -1531,6 +1607,30 @@ Required:
 Optional:
 
 - `request` (String) Name of one request in the claim. Omission makes every request of the claim available.
+
+
+
+<a id="nestedatt--spec--template--spec--init_container--restart_policy_rules"></a>
+### Nested Schema for `spec.template.spec.init_container.restart_policy_rules`
+
+Required:
+
+- `action` (String) Action taken when the rule matches: Restart, or RestartAllContainers, which requires Kubernetes 1.36 or later or the RestartAllContainersOnContainerExits feature gate.
+
+Optional:
+
+- `exit_codes` (Attributes) Exit codes the rule matches. Kubernetes requires it in every rule. (see [below for nested schema](#nestedatt--spec--template--spec--init_container--restart_policy_rules--exit_codes))
+
+<a id="nestedatt--spec--template--spec--init_container--restart_policy_rules--exit_codes"></a>
+### Nested Schema for `spec.template.spec.init_container.restart_policy_rules.exit_codes`
+
+Required:
+
+- `operator` (String) In matches an exit code in values; NotIn matches one that is not.
+
+Optional:
+
+- `values` (Set of Number) Exit codes to compare, at most 255.
 
 
 
@@ -2099,6 +2199,7 @@ Optional:
 
 - `selector` (Block List, Max: 1) A label query over volumes to consider for binding. At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--ephemeral--volume_claim_template--spec--selector))
 - `storage_class_name` (String) Name of the storage class requested by the claim
+- `volume_attributes_class_name` (String) Name of the VolumeAttributesClass requested by the claim. Requires Kubernetes 1.34 or later, or the VolumeAttributesClass feature gate on Kubernetes 1.29 to 1.33; without the feature the Pod keeps the name and Kubernetes creates the claim without the class.
 - `volume_mode` (String) Defines what type of volume is required by the claim.
 - `volume_name` (String) The binding reference to the PersistentVolume backing this claim.
 
@@ -2318,10 +2419,49 @@ Optional:
 
 Optional:
 
+- `cluster_trust_bundle` (Attributes) Projects the trust anchors of ClusterTrustBundle objects into a file that the kubelet keeps up to date. Selects one bundle by name, or every bundle of a signer that matches label_selector. Requires Kubernetes 1.37 or later, or the ClusterTrustBundleProjection feature gate on Kubernetes 1.29 to 1.36. (see [below for nested schema](#nestedatt--spec--template--spec--volume--projected--sources--cluster_trust_bundle))
 - `config_map` (Block List) ConfigMap represents a configMap that should populate this volume (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--config_map))
 - `downward_api` (Block List, Max: 1) DownwardAPI represents downward API about the pod that should populate this volume At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--downward_api))
+- `pod_certificate` (Attributes) Projects a private key and a certificate chain that the kubelet requests from signer_name and rotates. Set credential_bundle_path, or key_path and certificate_chain_path. Requires Kubernetes 1.37 or later, or the PodCertificateRequest feature gate on Kubernetes 1.34 to 1.36. (see [below for nested schema](#nestedatt--spec--template--spec--volume--projected--sources--pod_certificate))
 - `secret` (Block List) Secret represents a secret that should populate this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secrets (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--secret))
 - `service_account_token` (Block List, Max: 1) A projected service account token volume At most 1 item(s) are allowed. (see [below for nested schema](#nestedblock--spec--template--spec--volume--projected--sources--service_account_token))
+
+<a id="nestedatt--spec--template--spec--volume--projected--sources--cluster_trust_bundle"></a>
+### Nested Schema for `spec.template.spec.volume.projected.sources.cluster_trust_bundle`
+
+Required:
+
+- `path` (String) Path of the bundle file, relative to the volume root.
+
+Optional:
+
+- `label_selector` (Attributes) Selects the ClusterTrustBundles of signer_name. Omission matches none and {} matches all. Cannot be set with name. (see [below for nested schema](#nestedatt--spec--template--spec--volume--projected--sources--cluster_trust_bundle--label_selector))
+- `name` (String) Name of a single ClusterTrustBundle. Set either this or signer_name.
+- `optional` (Boolean) Whether the Pod may start when the named bundle does not exist or the signer has no matching bundle.
+- `signer_name` (String) Signer whose ClusterTrustBundles are selected with label_selector and combined.
+
+<a id="nestedatt--spec--template--spec--volume--projected--sources--cluster_trust_bundle--label_selector"></a>
+### Nested Schema for `spec.template.spec.volume.projected.sources.cluster_trust_bundle.label_selector`
+
+Optional:
+
+- `match_expressions` (Attributes List) A list of label selector requirements. The requirements are ANDed. (see [below for nested schema](#nestedatt--spec--template--spec--volume--projected--sources--cluster_trust_bundle--label_selector--match_expressions))
+- `match_labels` (Map of String) A map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of `match_expressions`, whose key field is "key", the operator is "In", and the values array contains only "value". The requirements are ANDed.
+
+<a id="nestedatt--spec--template--spec--volume--projected--sources--cluster_trust_bundle--label_selector--match_expressions"></a>
+### Nested Schema for `spec.template.spec.volume.projected.sources.cluster_trust_bundle.label_selector.match_labels`
+
+Required:
+
+- `key` (String) The label key that the selector applies to.
+- `operator` (String) A key's relationship to a set of values. Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`.
+
+Optional:
+
+- `values` (Set of String) An array of string values. If the operator is `In` or `NotIn`, the values array must be non-empty. If the operator is `Exists` or `DoesNotExist`, the values array must be empty. This array is replaced during a strategic merge patch.
+
+
+
 
 <a id="nestedblock--spec--template--spec--volume--projected--sources--config_map"></a>
 ### Nested Schema for `spec.template.spec.volume.projected.sources.config_map`
@@ -2385,6 +2525,23 @@ Optional:
 - `divisor` (String)
 
 
+
+
+<a id="nestedatt--spec--template--spec--volume--projected--sources--pod_certificate"></a>
+### Nested Schema for `spec.template.spec.volume.projected.sources.pod_certificate`
+
+Required:
+
+- `key_type` (String) Type of the generated key pair: RSA3072, RSA4096, ECDSAP256, ECDSAP384, ECDSAP521 or ED25519.
+- `signer_name` (String) Signer the kubelet addresses its certificate requests to.
+
+Optional:
+
+- `certificate_chain_path` (String) Path of the certificate chain file, relative to the volume root.
+- `credential_bundle_path` (String) Path, relative to the volume root, of a single file holding the private key followed by the certificate chain.
+- `key_path` (String) Path of the private key file, relative to the volume root.
+- `max_expiration_seconds` (Number) Longest certificate lifetime to request, from 3600 to 7862400 seconds; kubernetes.io signers allow at most 86400. Omission lets Kubernetes request 24 hours.
+- `user_annotations` (Map of String) Annotations with domain-prefixed keys that are passed to the signer unverified.
 
 
 <a id="nestedblock--spec--template--spec--volume--projected--sources--secret"></a>

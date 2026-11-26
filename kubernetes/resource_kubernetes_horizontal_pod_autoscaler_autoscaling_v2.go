@@ -17,30 +17,10 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 )
 
-func resourceKubernetesHorizontalPodAutoscalerV2() *schema.Resource {
-	return &schema.Resource{
-		Description:   "Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.",
-		CreateContext: resourceKubernetesHorizontalPodAutoscalerV2Create,
-		ReadContext:   resourceKubernetesHorizontalPodAutoscalerV2Read,
-		UpdateContext: resourceKubernetesHorizontalPodAutoscalerV2Update,
-		DeleteContext: resourceKubernetesHorizontalPodAutoscalerV2Delete,
-		Schema:        horizontalPodAutoscalerSchemaV2(),
-		Importer: &schema.ResourceImporter{
-			StateContext: resourceIdentityImportNamespaced,
-		},
-		Identity: resourceIdentitySchemaNamespaced(),
-	}
-}
+// The deprecated kubernetes_horizontal_pod_autoscaler uses these autoscaling/v2 operations when
+// its configuration sets metric or behavior. kubernetes_horizontal_pod_autoscaler_v2 is served
+// by the Plugin Framework provider and does not use them. They do not touch resource identity.
 
-func resourceKubernetesHorizontalPodAutoscalerV2Create(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if diags := createHorizontalPodAutoscalerV2(ctx, d, meta); diags.HasError() {
-		return diags
-	}
-	return resourceKubernetesHorizontalPodAutoscalerV2Read(ctx, d, meta)
-}
-
-// createHorizontalPodAutoscalerV2, readHorizontalPodAutoscalerV2 and updateHorizontalPodAutoscalerV2
-// do not touch resource identity, so kubernetes_horizontal_pod_autoscaler can share them.
 func createHorizontalPodAutoscalerV2(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	conn, err := meta.(KubeClientsets).MainClientset()
 	if err != nil {
@@ -66,22 +46,6 @@ func createHorizontalPodAutoscalerV2(ctx context.Context, d *schema.ResourceData
 	log.Printf("[INFO] Submitted new horizontal pod autoscaler: %#v", out)
 	d.SetId(BuildId(out.ObjectMeta))
 
-	return nil
-}
-
-func resourceKubernetesHorizontalPodAutoscalerV2Read(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if diags := readHorizontalPodAutoscalerV2(ctx, d, meta); diags.HasError() || d.Id() == "" {
-		return diags
-	}
-
-	namespace, name, err := IdParts(d.Id())
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	err = setResourceIdentityNamespaced(d, "autoscaling/v2", "HorizontalPodAutoscaler", namespace, name)
-	if err != nil {
-		return diag.FromErr(err)
-	}
 	return nil
 }
 
@@ -122,13 +86,6 @@ func readHorizontalPodAutoscalerV2(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 	return nil
-}
-
-func resourceKubernetesHorizontalPodAutoscalerV2Update(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if diags := updateHorizontalPodAutoscalerV2(ctx, d, meta); diags.HasError() {
-		return diags
-	}
-	return resourceKubernetesHorizontalPodAutoscalerV2Read(ctx, d, meta)
 }
 
 func updateHorizontalPodAutoscalerV2(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package kubernetes
+package corev1_test
 
 import (
 	"fmt"
@@ -9,20 +9,21 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func TestAccKubernetesPodV1_with_node_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	keyName := "spec.0.affinity.0.node_affinity.0.required_during_scheduling_ignored_during_execution"
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithRequiredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName),
@@ -64,14 +65,14 @@ func TestAccKubernetesPodV1_with_node_affinity_with_required_during_scheduling_i
 func TestAccKubernetesPodV1_with_node_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	keyName := "spec.0.affinity.0.node_affinity.0.preferred_during_scheduling_ignored_during_execution"
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithNodeAffinityWithPreferredDuringSchedulingIgnoredDuringExecution_MatchExpressions(podName, imageName),
@@ -118,14 +119,14 @@ func TestAccKubernetesPodV1_with_node_affinity_with_preferred_during_scheduling_
 func TestAccKubernetesPodV1_with_pod_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	keyName := "spec.0.affinity.0.pod_affinity.0.required_during_scheduling_ignored_during_execution"
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -159,14 +160,14 @@ func TestAccKubernetesPodV1_with_pod_affinity_with_required_during_scheduling_ig
 func TestAccKubernetesPodV1_with_pod_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	keyName := "spec.0.affinity.0.pod_affinity.0.preferred_during_scheduling_ignored_during_execution"
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -203,14 +204,14 @@ func TestAccKubernetesPodV1_with_pod_affinity_with_preferred_during_scheduling_i
 func TestAccKubernetesPodV1_with_pod_anti_affinity_with_required_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	keyName := "spec.0.affinity.0.pod_anti_affinity.0.required_during_scheduling_ignored_during_execution"
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t); skipIfRunningInKind(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t); kubetest.SkipIfRunningInMinikube(t); kubetest.SkipIfRunningInKind(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAntiAffinityWithRequiredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -244,14 +245,14 @@ func TestAccKubernetesPodV1_with_pod_anti_affinity_with_required_during_scheduli
 func TestAccKubernetesPodV1_with_pod_anti_affinity_with_preferred_during_scheduling_ignored_during_execution(t *testing.T) {
 	var conf corev1.Pod
 	podName := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	imageName := busyboxImage
+	imageName := kubetest.BusyboxImage
 	keyName := "spec.0.affinity.0.pod_anti_affinity.0.preferred_during_scheduling_ignored_during_execution"
 	resourceName := "kubernetes_pod_v1.test"
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t); skipIfRunningInMinikube(t) },
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		PreCheck:                 func() { kubetest.PreCheck(t); kubetest.SkipIfRunningInMinikube(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesPodV1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesPodV1ConfigWithPodAntiAffinityWithPreferredDuringSchedulingIgnoredDuringExecution(podName, imageName),
@@ -322,7 +323,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "64M"
@@ -368,7 +369,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "64M"
@@ -420,7 +421,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "50M"
@@ -467,7 +468,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "50m"
           memory = "50M"
@@ -524,7 +525,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"
@@ -585,7 +586,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"
@@ -642,7 +643,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"
@@ -702,7 +703,7 @@ resource "kubernetes_pod_v1" "test" {
       image = %[2]q
       name  = "containername"
       args  = ["sleep", "300"]
-      resources {
+      resources = {
         limits = {
           cpu    = "200m"
           memory = "64M"

@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/ptr"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -264,7 +265,6 @@ func Provider() *schema.Provider {
 			"kubernetes_secret_v1":                  resourceKubernetesSecretV1(""),
 			"kubernetes_secret_v1_data":             resourceKubernetesSecretV1Data(),
 			"kubernetes_pod":                        resourceKubernetesPodV1("Deprecated; use kubernetes_pod_v1."),
-			"kubernetes_pod_v1":                     resourceKubernetesPodV1(""),
 			"kubernetes_endpoints":                  resourceKubernetesEndpointsV1("Deprecated; use kubernetes_endpoints_v1."),
 			"kubernetes_endpoints_v1":               resourceKubernetesEndpointsV1(""),
 			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSliceV1(),
@@ -286,18 +286,13 @@ func Provider() *schema.Provider {
 			"kubernetes_api_service_v1": resourceKubernetesAPIServiceV1(""),
 
 			// apps
-			"kubernetes_deployment":      resourceKubernetesDeploymentV1("Deprecated; use kubernetes_deployment_v1."),
-			"kubernetes_deployment_v1":   resourceKubernetesDeploymentV1(""),
-			"kubernetes_daemonset":       resourceKubernetesDaemonSetV1("Deprecated; use kubernetes_daemon_set_v1."),
-			"kubernetes_daemon_set_v1":   resourceKubernetesDaemonSetV1(""),
-			"kubernetes_stateful_set":    resourceKubernetesStatefulSetV1("Deprecated; use kubernetes_stateful_set_v1."),
-			"kubernetes_stateful_set_v1": resourceKubernetesStatefulSetV1(""),
+			"kubernetes_deployment":   resourceKubernetesDeploymentV1("Deprecated; use kubernetes_deployment_v1."),
+			"kubernetes_daemonset":    resourceKubernetesDaemonSetV1("Deprecated; use kubernetes_daemon_set_v1."),
+			"kubernetes_stateful_set": resourceKubernetesStatefulSetV1("Deprecated; use kubernetes_stateful_set_v1."),
 
 			// batch
-			"kubernetes_job":         resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
-			"kubernetes_job_v1":      resourceKubernetesJobV1(""),
-			"kubernetes_cron_job":    resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
-			"kubernetes_cron_job_v1": resourceKubernetesCronJobV1(""),
+			"kubernetes_job":      resourceKubernetesJobV1("Deprecated; use kubernetes_job_v1."),
+			"kubernetes_cron_job": resourceKubernetesCronJobV1Beta1("Deprecated; use kubernetes_cron_job_v1."),
 
 			// autoscaling
 			"kubernetes_horizontal_pod_autoscaler":    resourceKubernetesHorizontalPodAutoscaler(),
@@ -374,6 +369,13 @@ type KubeClientsets interface {
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
 }
 
+// GatewayClientsets keeps the optional Gateway client separate from existing clients.
+// The Gateway API is installed as CRDs rather than built into Kubernetes, so only
+// the Gateway API resources assert this interface.
+type GatewayClientsets interface {
+	GatewayClientset() (gatewayclient.Interface, error)
+}
+
 // MetadataFilters exposes the provider-level ignore lists that control which
 // Kubernetes metadata keys are reconciled into Terraform state. Kept separate from
 // KubeClientsets, which is about API clients rather than provider configuration.
@@ -393,6 +395,17 @@ type providerMetadata struct {
 
 	IgnoreAnnotations []string
 	IgnoreLabels      []string
+}
+
+// GatewayClientset builds a Gateway API clientset from the provider's REST config, so
+// Gateway API resources authenticate like every other client. Building it does not
+// contact the cluster. Unlike the other getters, a missing config is an error rather
+// than a nil client.
+func (k providerMetadata) GatewayClientset() (gatewayclient.Interface, error) {
+	if k.config == nil {
+		return nil, fmt.Errorf("Kubernetes provider configuration is unavailable")
+	}
+	return gatewayclient.NewForConfig(k.config)
 }
 
 func (k providerMetadata) GetIgnoreAnnotations() []string {

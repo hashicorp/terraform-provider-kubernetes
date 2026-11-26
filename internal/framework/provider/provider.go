@@ -14,11 +14,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/admissionregistrationv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/appsv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/authenticationv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/autoscalingv2"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/batchv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/gatewaynetworkingv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
@@ -199,10 +202,17 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 	return []func() resource.Resource{
 		admissionregistrationv1.NewValidatingAdmissionPolicy,
 		autoscalingv2.NewHorizontalPodAutoscalerV2,
-		rbacv1.NewClusterRoleBindingV1,
+		appsv1.NewDeploymentV1,
+		appsv1.NewDaemonSetV1,
+		appsv1.NewStatefulSetV1,
+		batchv1.NewJobV1,
+		batchv1.NewCronJobV1,
 		corev1.NewNamespaceV1,
+		corev1.NewPodV1,
+		rbacv1.NewClusterRoleBindingV1,
 		rbacv1.NewRoleBindingV1,
 		rbacv1.NewRoleV1,
+		gatewaynetworkingv1.NewGatewayClass,
 	}
 }
 
@@ -210,6 +220,7 @@ func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasourc
 	return []func() datasource.DataSource{
 		corev1.NewAllNamespacesDataSource,
 		corev1.NewNamespaceV1DataSource,
+		gatewaynetworkingv1.NewGatewayClassDataSource,
 	}
 }
 

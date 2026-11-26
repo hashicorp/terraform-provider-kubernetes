@@ -30,6 +30,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/mod v0.38.0
+	gopkg.in/evanphx/json-patch.v4 v4.13.0
 	k8s.io/api v0.37.2
 	k8s.io/apiextensions-apiserver v0.37.2
 	k8s.io/apimachinery v0.37.2
@@ -37,6 +38,7 @@ require (
 	k8s.io/kube-aggregator v0.37.2
 	k8s.io/kubectl v0.37.2
 	k8s.io/kubernetes v1.37.2
+	sigs.k8s.io/gateway-api v1.6.3
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -86,7 +88,6 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	k8s.io/component-helpers v0.37.2 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2 // indirect

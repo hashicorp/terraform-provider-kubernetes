@@ -260,7 +260,7 @@ func resourceKubernetesDeploymentV1Create(ctx context.Context, d *schema.Resourc
 	if d.Get("wait_for_rollout").(bool) {
 		log.Printf("[INFO] Waiting for deployment %s/%s to rollout", out.ObjectMeta.Namespace, out.ObjectMeta.Name)
 		err := retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
-			waitForDeploymentReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
+			WaitForDeploymentReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -320,7 +320,7 @@ func resourceKubernetesDeploymentV1Update(ctx context.Context, d *schema.Resourc
 	if d.Get("wait_for_rollout").(bool) {
 		log.Printf("[INFO] Waiting for deployment %s/%s to rollout", out.ObjectMeta.Namespace, out.ObjectMeta.Name)
 		err := retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
-			waitForDeploymentReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
+			WaitForDeploymentReplicasFunc(ctx, conn, out.GetNamespace(), out.GetName()))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -456,7 +456,7 @@ func GetDeploymentCondition(status appsv1.DeploymentStatus, condType appsv1.Depl
 	return nil
 }
 
-func waitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
+func WaitForDeploymentReplicasFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
 	return func() *retry.RetryError {
 		// Query the deployment to get a status update.
 		dply, err := conn.AppsV1().Deployments(ns).Get(ctx, name, metav1.GetOptions{})

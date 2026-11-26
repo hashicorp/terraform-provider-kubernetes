@@ -1,0 +1,35 @@
+---
+subcategory: "gateway.networking.k8s.io/v1"
+page_title: "Kubernetes: kubernetes_gateway_class_v1"
+description: |-
+  Reads an existing cluster-scoped Gateway API v1 GatewayClass.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/data-sources/gateway_class_v1/example_1.tf"}}
+
+The output is `true` only when the `Accepted` condition is `True` for the current
+`metadata[0].generation`. A condition for an older generation does not describe
+the latest spec.
+
+## Behavior notes
+
+- **Prerequisites:** The Gateway API CRDs must be installed. Credentials need
+  permission to read cluster-scoped GatewayClasses and API discovery, which the
+  provider uses to tell a missing GatewayClass from missing CRDs. The schema
+  targets the Gateway API v1.6.3 Standard channel.
+- **Missing objects:** Reading a GatewayClass that does not exist is an error;
+  the data source never creates it.
+- **Lookup by name:** GatewayClass has no namespace. Only `metadata[0].name` is
+  configurable; `labels` and `annotations` report every key on the object,
+  including controller-managed ones.
+- **No waiting:** The lookup does not wait for the controller. Conditions may be
+  pending or describe an older generation, and an accepted class does not prove
+  that any Gateway or traffic path is operational.

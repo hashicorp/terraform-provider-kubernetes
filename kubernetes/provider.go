@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/utils/ptr"
+	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -369,6 +370,13 @@ type KubeClientsets interface {
 	DiscoveryClient() (discovery.DiscoveryInterface, error)
 }
 
+// GatewayClientsets keeps the optional Gateway client separate from existing clients.
+// The Gateway API is installed as CRDs rather than built into Kubernetes, so only
+// the Gateway API resources assert this interface.
+type GatewayClientsets interface {
+	GatewayClientset() (gatewayclient.Interface, error)
+}
+
 // MetadataFilters exposes the provider-level ignore lists that control which
 // Kubernetes metadata keys are reconciled into Terraform state. Kept separate from
 // KubeClientsets, which is about API clients rather than provider configuration.
@@ -388,6 +396,17 @@ type providerMetadata struct {
 
 	IgnoreAnnotations []string
 	IgnoreLabels      []string
+}
+
+// GatewayClientset builds a Gateway API clientset from the provider's REST config, so
+// Gateway API resources authenticate like every other client. Building it does not
+// contact the cluster. Unlike the other getters, a missing config is an error rather
+// than a nil client.
+func (k providerMetadata) GatewayClientset() (gatewayclient.Interface, error) {
+	if k.config == nil {
+		return nil, fmt.Errorf("Kubernetes provider configuration is unavailable")
+	}
+	return gatewayclient.NewForConfig(k.config)
 }
 
 func (k providerMetadata) GetIgnoreAnnotations() []string {

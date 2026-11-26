@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/certificatesv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/gatewaynetworkingv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
@@ -209,6 +210,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		rbacv1.NewClusterRoleBindingV1,
 		rbacv1.NewRoleBindingV1,
 		rbacv1.NewRoleV1,
+		gatewaynetworkingv1.NewGatewayClass,
 	}
 }
 
@@ -216,6 +218,7 @@ func (p *KubernetesProvider) DataSources(ctx context.Context) []func() datasourc
 	return []func() datasource.DataSource{
 		corev1.NewAllNamespacesDataSource,
 		corev1.NewNamespaceV1DataSource,
+		gatewaynetworkingv1.NewGatewayClassDataSource,
 	}
 }
 

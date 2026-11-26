@@ -355,6 +355,75 @@ func TestAccKubernetesServiceV1_loadBalancer_internal_traffic_policy(t *testing.
 	})
 }
 
+func TestAccKubernetesServiceV1_traffic_distribution(t *testing.T) {
+	var conf coreapi.Service
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_service_v1.test"
+	checkAPI := func(want *string) resource.TestCheckFunc {
+		return func(*terraform.State) error {
+			if got := conf.Spec.TrafficDistribution; !reflect.DeepEqual(got, want) {
+				return fmt.Errorf("spec.trafficDistribution is %q, want %q", ptr.Deref(got, "<nil>"), ptr.Deref(want, "<nil>"))
+			}
+			return nil
+		}
+	}
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			// trafficDistribution is enabled by default in Kubernetes 1.31+.
+			skipIfClusterVersionLessThan(t, "1.31.0")
+		},
+		ProtoV6ProviderFactories: serviceAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesServiceV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesServiceV1Config_traffic_distribution(name, `traffic_distribution = "PreferClose"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.traffic_distribution", "PreferClose"),
+					checkAPI(ptr.To("PreferClose")),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version", "wait_for_load_balancer"},
+			},
+			{
+				// An omitted argument leaves the value stored in the cluster.
+				Config: testAccKubernetesServiceV1Config_traffic_distribution(name, ""),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.traffic_distribution", "PreferClose"),
+					checkAPI(ptr.To("PreferClose")),
+				),
+			},
+			{
+				// An empty string clears it.
+				Config: testAccKubernetesServiceV1Config_traffic_distribution(name, `traffic_distribution = ""`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.traffic_distribution", ""),
+					checkAPI(nil),
+				),
+			},
+			{
+				Config: testAccKubernetesServiceV1Config_traffic_distribution(name, `traffic_distribution = "PreferClose"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesServiceV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.traffic_distribution", "PreferClose"),
+					checkAPI(ptr.To("PreferClose")),
+				),
+			},
+		},
+	})
+}
+
 func TestAccKubernetesServiceV1_loadBalancer_class(t *testing.T) {
 	var conf coreapi.Service
 	name := acctest.RandomWithPrefix("tf-acc-test")
@@ -1385,6 +1454,28 @@ func testAccKubernetesServiceV1Config_loadBalancer_internal_traffic_policy(name 
   }
 }
 `, name)
+}
+
+func testAccKubernetesServiceV1Config_traffic_distribution(name, trafficDistribution string) string {
+	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
+  metadata {
+    name = "%[1]s"
+  }
+
+  spec {
+    %[2]s
+
+    selector = {
+      App = "MyApp"
+    }
+
+    port {
+      port        = 8080
+      target_port = 80
+    }
+  }
+}
+`, name, trafficDistribution)
 }
 
 func testAccKubernetesServiceV1Config_loadBalancer_internal_traffic_policy_modified(name string) string {
@@ -2539,6 +2630,10 @@ func (snapshot *serviceMigrationSnapshot) stateCheck(address string, capture, pr
 				resp.Error = fmt.Errorf("local Service schema version = %d, want Framework version 2", actual.SchemaVersion)
 				return
 			}
+			if err := serviceExpectedTrafficDistribution(snapshot.values, actual.AttributeValues); err != nil {
+				resp.Error = err
+				return
+			}
 			if !reflect.DeepEqual(snapshot.values, actual.AttributeValues) {
 				resp.Error = fmt.Errorf("complete Terraform Service state changed (-released +local):\n%s",
 					cmp.Diff(snapshot.values, actual.AttributeValues))
@@ -2631,6 +2726,30 @@ func serviceExpectedAffinityObjects(values map[string]interface{}) error {
 	return nil
 }
 
+// serviceExpectedTrafficDistribution adds the one attribute that released
+// providers do not model. The local provider reads its value from the API, so
+// the released snapshot takes whichever string the migrated state holds.
+func serviceExpectedTrafficDistribution(snapshot, actual map[string]interface{}) error {
+	released, _ := snapshot["spec"].([]interface{})
+	local, _ := actual["spec"].([]interface{})
+	if len(released) != len(local) {
+		return nil
+	}
+	for i := range released {
+		releasedSpec, releasedOK := released[i].(map[string]interface{})
+		localSpec, localOK := local[i].(map[string]interface{})
+		if !releasedOK || !localOK {
+			return fmt.Errorf("invalid snapshot spec")
+		}
+		value, isString := localSpec["traffic_distribution"].(string)
+		if !isString {
+			return fmt.Errorf("local Service state has no known traffic_distribution: %#v", localSpec["traffic_distribution"])
+		}
+		releasedSpec["traffic_distribution"] = value
+	}
+	return nil
+}
+
 func TestServiceMigrationCompleteStateSnapshot(t *testing.T) {
 	const address = "kubernetes_service_v1.test"
 	makeState := func() *tfjson.State {
@@ -2663,6 +2782,9 @@ func TestServiceMigrationCompleteStateSnapshot(t *testing.T) {
 		{"identity changed", func(state *tfjson.StateResource) { state.IdentityValues["name"] = "other" }, true},
 		{"provider changed", func(state *tfjson.StateResource) { state.ProviderName = "example.com/hashicorp/kubernetes" }, true},
 		{"still routed to SDK", func(state *tfjson.StateResource) { state.SchemaVersion = 0 }, true},
+		{"traffic distribution not stored", func(state *tfjson.StateResource) {
+			delete(state.AttributeValues["spec"].([]interface{})[0].(map[string]interface{}), "traffic_distribution")
+		}, true},
 		{"null changed to empty", func(state *tfjson.StateResource) {
 			state.AttributeValues["spec"].([]interface{})[0].(map[string]interface{})["selector"] = map[string]interface{}{}
 		}, true},
@@ -2679,6 +2801,8 @@ func TestServiceMigrationCompleteStateSnapshot(t *testing.T) {
 			// The snapshot must own its maps rather than referring to mutable input.
 			captured.Values.RootModule.Resources[0].AttributeValues["id"] = "mutated"
 			actual := makeState()
+			// Released providers do not store this attribute; the local one does.
+			actual.Values.RootModule.Resources[0].AttributeValues["spec"].([]interface{})[0].(map[string]interface{})["traffic_distribution"] = ""
 			testCase.change(actual.Values.RootModule.Resources[0])
 			response = statecheck.CheckStateResponse{}
 			snapshot.stateCheck(address, false, false).CheckState(context.Background(),
@@ -5839,6 +5963,10 @@ func TestServiceCLI_RepeatedSDKApplyPreservesOmittedCollections(t *testing.T) {
 				r.SchemaVersion = 2
 				if err := serviceExpectedAffinityObjects(r.AttributeValues); err != nil {
 					return err
+				}
+				// Only schema 2 reads the value that the loopback API stores.
+				for _, spec := range r.AttributeValues["spec"].([]interface{}) {
+					spec.(map[string]interface{})["traffic_distribution"] = "PreferClose"
 				}
 				// The absent object has no sensitivity descendants in schema 2.
 				var sensitivity map[string]interface{}

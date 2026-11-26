@@ -49,6 +49,9 @@ func expandServiceSpec(ctx context.Context, in ServiceV1SpecModel) (corev1.Servi
 	if in.InternalTrafficPolicy.ValueString() != "" {
 		out.InternalTrafficPolicy = ptr.To(corev1.ServiceInternalTrafficPolicy(in.InternalTrafficPolicy.ValueString()))
 	}
+	if in.TrafficDistribution.ValueString() != "" {
+		out.TrafficDistribution = in.TrafficDistribution.ValueStringPointer()
+	}
 	if out.Type == corev1.ServiceTypeLoadBalancer {
 		if !in.AllocateLoadBalancerNodePorts.IsNull() && !in.AllocateLoadBalancerNodePorts.IsUnknown() {
 			out.AllocateLoadBalancerNodePorts = in.AllocateLoadBalancerNodePorts.ValueBoolPointer()
@@ -147,6 +150,7 @@ func flattenServiceSpec(ctx context.Context, in corev1.ServiceSpec, prior Servic
 		LoadBalancerIP:                serviceStringValue(in.LoadBalancerIP, prior.LoadBalancerIP, applying, true),
 		Type:                          serviceStringValue(string(in.Type), prior.Type, applying, true),
 		SessionAffinity:               serviceStringValue(string(in.SessionAffinity), prior.SessionAffinity, applying, true),
+		TrafficDistribution:           serviceStringValue(ptr.Deref(in.TrafficDistribution, ""), prior.TrafficDistribution, applying, true),
 		AllocateLoadBalancerNodePorts: types.BoolValue(ptr.Deref(in.AllocateLoadBalancerNodePorts, true)),
 		PublishNotReadyAddresses:      types.BoolValue(in.PublishNotReadyAddresses),
 		HealthCheckNodePort:           types.Int64Value(int64(in.HealthCheckNodePort)),

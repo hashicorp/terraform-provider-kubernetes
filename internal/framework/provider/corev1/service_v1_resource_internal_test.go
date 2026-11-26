@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	jsonpatch "gopkg.in/evanphx/json-patch.v4"
 	k8sv1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 )
 
 // Configuration validation and expansion unit tests.
@@ -336,6 +337,86 @@ func TestServiceClusterIPExternalTrafficPolicyTransition(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestServiceTrafficDistributionPatch(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		state, plan types.String
+		live        *string
+		want        []servicePatchOperation
+	}{
+		{name: "omitted keeps cluster value", state: types.StringValue("PreferClose"), plan: types.StringNull(), live: ptr.To("PreferClose")},
+		{name: "unknown keeps cluster value", state: types.StringValue("PreferClose"), plan: types.StringUnknown(), live: ptr.To("PreferClose")},
+		{name: "unchanged", state: types.StringValue("PreferSameZone"), plan: types.StringValue("PreferSameZone"), live: ptr.To("PreferSameZone")},
+		{name: "set", state: types.StringValue(""), plan: types.StringValue("PreferSameZone"), want: []servicePatchOperation{{Op: "add", Path: "/spec/trafficDistribution", Value: "PreferSameZone"}}},
+		{name: "set after upgrade", state: types.StringNull(), plan: types.StringValue("PreferSameZone"), want: []servicePatchOperation{{Op: "add", Path: "/spec/trafficDistribution", Value: "PreferSameZone"}}},
+		{name: "change", state: types.StringValue("PreferClose"), plan: types.StringValue("PreferSameNode"), live: ptr.To("PreferClose"), want: []servicePatchOperation{{Op: "add", Path: "/spec/trafficDistribution", Value: "PreferSameNode"}}},
+		{name: "clear", state: types.StringValue("PreferClose"), plan: types.StringValue(""), live: ptr.To("PreferClose"), want: []servicePatchOperation{{Op: "remove", Path: "/spec/trafficDistribution"}}},
+		{name: "clear already absent", state: types.StringValue("PreferClose"), plan: types.StringValue("")},
+		{name: "empty stays empty", state: types.StringValue(""), plan: types.StringValue("")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			state := ServiceV1SpecModel{
+				Type: types.StringValue("ClusterIP"), SessionAffinity: types.StringValue("None"),
+				TrafficDistribution: tc.state,
+			}
+			plan := state
+			plan.TrafficDistribution = tc.plan
+			ops, diags := serviceSpecPatchOps(context.Background(), state, plan, k8sv1.ServiceSpec{
+				Type: k8sv1.ServiceTypeClusterIP, TrafficDistribution: tc.live,
+			})
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if fmt.Sprintf("%#v", ops) != fmt.Sprintf("%#v", tc.want) {
+				t.Errorf("ops %#v, want %#v", ops, tc.want)
+			}
+		})
+	}
+}
+
+func TestServiceTrafficDistributionExpandFlatten(t *testing.T) {
+	ctx := context.Background()
+	for _, value := range []types.String{types.StringNull(), types.StringUnknown(), types.StringValue("")} {
+		spec, diags := expandServiceSpec(ctx, ServiceV1SpecModel{TrafficDistribution: value})
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if spec.TrafficDistribution != nil {
+			t.Errorf("%s expanded to %q, want an omitted field", value, *spec.TrafficDistribution)
+		}
+	}
+	spec, diags := expandServiceSpec(ctx, ServiceV1SpecModel{TrafficDistribution: types.StringValue("PreferSameZone")})
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+	if spec.TrafficDistribution == nil || *spec.TrafficDistribution != "PreferSameZone" {
+		t.Errorf("expanded %v, want PreferSameZone", spec.TrafficDistribution)
+	}
+	for _, tc := range []struct {
+		name     string
+		live     *string
+		prior    types.String
+		applying bool
+		want     types.String
+	}{
+		{name: "read cluster value", live: ptr.To("PreferClose"), prior: types.StringNull(), want: types.StringValue("PreferClose")},
+		{name: "read absent value", prior: types.StringValue("PreferClose"), want: types.StringValue("")},
+		{name: "apply keeps planned value", live: ptr.To("PreferSameZone"), prior: types.StringValue("PreferSameZone"), applying: true, want: types.StringValue("PreferSameZone")},
+		{name: "apply keeps planned clear", prior: types.StringValue(""), applying: true, want: types.StringValue("")},
+		{name: "apply resolves unknown", live: ptr.To("PreferClose"), prior: types.StringUnknown(), applying: true, want: types.StringValue("PreferClose")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			model, diags := flattenServiceSpec(ctx, k8sv1.ServiceSpec{TrafficDistribution: tc.live}, ServiceV1SpecModel{TrafficDistribution: tc.prior}, tc.applying)
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			if !model.TrafficDistribution.Equal(tc.want) {
+				t.Errorf("flattened %s, want %s", model.TrafficDistribution, tc.want)
+			}
+		})
 	}
 }
 

@@ -9,3 +9,7 @@ New function: `manifest_decode_map`. Decodes multi-document YAML into a map keye
 ```release-note:bug
 provider: Interrupting Terraform (Ctrl-C) stops an operation that is waiting, such as `wait` in `kubernetes_manifest` or the rollout wait of `kubernetes_deployment_v1`. Before, the wait continued until its timeout.
 ```
+
+```release-note:feature
+New ephemeral resource: `kubernetes_secret_v1`. Reads a Secret without storing its values in the Terraform plan or state.
+```

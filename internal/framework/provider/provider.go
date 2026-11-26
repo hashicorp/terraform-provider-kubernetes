@@ -23,6 +23,7 @@ import (
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/gatewaynetworkingv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/networkingv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/policyv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
@@ -214,6 +215,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		networkingv1.NewIngressV1,
 		networkingv1.NewIngressClassV1,
 		networkingv1.NewNetworkPolicyV1,
+		policyv1.NewPodDisruptionBudgetV1,
 		rbacv1.NewClusterRoleBindingV1,
 		rbacv1.NewRoleBindingV1,
 		rbacv1.NewRoleV1,

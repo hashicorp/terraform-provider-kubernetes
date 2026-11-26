@@ -4,7 +4,7 @@ resource "kubernetes_pod_disruption_budget_v1" "demo" {
   }
   spec {
     max_unavailable = "20%"
-    selector {
+    selector = {
       match_labels = {
         test = "MyExampleApp"
       }

@@ -7,6 +7,8 @@ description: |-
 
 # {{ .Name }}
 
+~> **Beta:** This resource is new in the 4.0 beta releases. Its arguments and behavior may still change before version 4.0.0 is released.
+
 Manages one Kubernetes object of any kind, built-in or custom, from its manifest. The manifest is sent to the cluster with [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/), as `kubectl apply --server-side` does.
 
 `kubernetes_manifest_v2` is the successor of [`kubernetes_manifest`](manifest.md). It takes the same arguments, and a `moved` block moves existing resources to it. Unlike `kubernetes_manifest`, it does not read the kind's schema from the cluster:

@@ -5,6 +5,7 @@ package functions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"regexp"
@@ -91,6 +92,14 @@ func decodeScalar(ctx context.Context, m any) (value attr.Value, diags diag.Diag
 		value = types.DynamicNull()
 	case float64:
 		value = types.NumberValue(big.NewFloat(float64(v)))
+	case json.Number:
+		// Exact, where float64 would round an integer above 2^53.
+		number, _, err := big.ParseFloat(v.String(), 10, 512, big.ToNearestEven)
+		if err != nil {
+			diags.Append(diag.NewErrorDiagnostic("failed to decode", fmt.Sprintf("invalid number %q", v)))
+			return
+		}
+		value = types.NumberValue(number)
 	case bool:
 		value = types.BoolValue(v)
 	case string:

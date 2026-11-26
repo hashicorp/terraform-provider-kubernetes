@@ -1,0 +1,7 @@
+```release-note:feature
+New resource: `kubernetes_manifest_v2`, the successor of `kubernetes_manifest`. It takes the same arguments, and the manifest as inline YAML in `yaml_body`, and applies the manifest with server-side apply, but does not read the kind's schema from the cluster. Planning a new object makes no request to the cluster, so a CustomResourceDefinition and its custom resources, or a cluster and the objects in it, can be created in one apply, and the apply does not fail with "Provider produced inconsistent result after apply". A `moved` block moves a resource from `kubernetes_manifest`.
+```
+
+```release-note:feature
+New function: `manifest_decode_map`. Decodes multi-document YAML into a map keyed by `Kind[.group]/[namespace/]name`, a stable `for_each` key for one resource instance per object.
+```

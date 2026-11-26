@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/gatewaynetworkingv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/networkingv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
 )
 
@@ -209,6 +210,9 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		batchv1.NewCronJobV1,
 		corev1.NewNamespaceV1,
 		corev1.NewPodV1,
+		networkingv1.NewIngressV1,
+		networkingv1.NewIngressClassV1,
+		networkingv1.NewNetworkPolicyV1,
 		rbacv1.NewClusterRoleBindingV1,
 		rbacv1.NewRoleBindingV1,
 		rbacv1.NewRoleV1,

@@ -5,13 +5,6 @@ resource "kubernetes_network_policy_v1" "example" {
   }
 
   spec {
-    pod_selector {
-      match_expressions {
-        key      = "name"
-        operator = "In"
-        values   = ["webfront", "api"]
-      }
-    }
 
     ingress {
       ports {
@@ -24,7 +17,7 @@ resource "kubernetes_network_policy_v1" "example" {
       }
 
       from {
-        namespace_selector {
+        namespace_selector = {
           match_labels = {
             name = "default"
           }
@@ -32,7 +25,7 @@ resource "kubernetes_network_policy_v1" "example" {
       }
 
       from {
-        ip_block {
+        ip_block = {
           cidr = "10.0.0.0/8"
           except = [
             "10.0.0.0/24",
@@ -45,5 +38,12 @@ resource "kubernetes_network_policy_v1" "example" {
     egress {} # single empty rule to allow all egress traffic
 
     policy_types = ["Ingress", "Egress"]
+    pod_selector = {
+      match_expressions = [{
+        key      = "name"
+        operator = "In"
+        values   = ["webfront", "api"]
+      }]
+    }
   }
 }

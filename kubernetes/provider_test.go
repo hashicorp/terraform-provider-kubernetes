@@ -25,6 +25,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// NetworkingV1MuxFactory is initialized by the external test package to avoid
+// importing the mux (which imports kubernetes) from the internal test package.
+var NetworkingV1MuxFactory func(context.Context, string, *schema.Provider) (tfprotov6.ProviderServer, error)
+
+var testAccNetworkingV1ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+	"kubernetes": func() (tfprotov6.ProviderServer, error) {
+		if NetworkingV1MuxFactory == nil {
+			return nil, fmt.Errorf("networking v1 mux test factory was not registered")
+		}
+		return NetworkingV1MuxFactory(context.Background(), "test", Provider())
+	},
+}
+
+// NetworkingV1SDKProviderForTest preserves the exact pre-migration schemas without
+// adding test-only constructors to the production provider API.
+func NetworkingV1SDKProviderForTest() *schema.Provider {
+	p := Provider()
+	p.ResourcesMap["kubernetes_ingress_v1"] = resourceKubernetesIngressV1("")
+	p.ResourcesMap["kubernetes_ingress_class_v1"] = resourceKubernetesIngressClassV1("")
+	p.ResourcesMap["kubernetes_network_policy_v1"] = resourceKubernetesNetworkPolicyV1("")
+	return p
+}
+
 // Global constants for testing images (reduces the number of docker pulls).
 const (
 	busyboxImage = "busybox:1.36"

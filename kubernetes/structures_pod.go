@@ -623,6 +623,9 @@ func flattenSecretProjection(in *v1.SecretProjection) []interface{} {
 func flattenConfigMapProjection(in *v1.ConfigMapProjection) []interface{} {
 	att := make(map[string]interface{})
 	att["name"] = in.Name
+	if in.Optional != nil {
+		att["optional"] = *in.Optional
+	}
 	if len(in.Items) > 0 {
 		items := make([]interface{}, len(in.Items))
 		for i, v := range in.Items {
@@ -795,9 +798,18 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 	if v, ok := in["host_pid"]; ok {
 		obj.HostPID = v.(bool)
 	}
+	if v, ok := in["host_users"].(bool); ok {
+		obj.HostUsers = ptr.To(v)
+	}
 
 	if v, ok := in["hostname"]; ok {
 		obj.Hostname = v.(string)
+	}
+	if v, ok := in["set_hostname_as_fqdn"].(bool); ok {
+		obj.SetHostnameAsFQDN = ptr.To(v)
+	}
+	if v, ok := in["hostname_override"].(string); ok && v != "" {
+		obj.HostnameOverride = ptr.To(v)
 	}
 
 	if v, ok := in["image_pull_secrets"].([]interface{}); ok {
@@ -833,6 +845,29 @@ func expandPodSpec(p []interface{}) (*v1.PodSpec, error) {
 
 	if v, ok := in["restart_policy"].(string); ok {
 		obj.RestartPolicy = v1.RestartPolicy(v)
+	}
+
+	if v, ok := in["resources"].(map[string]interface{}); ok {
+		resources, err := expandContainerResourceRequirements([]interface{}{v})
+		if err != nil {
+			return obj, err
+		}
+		obj.Resources = resources
+	}
+
+	if v, ok := in["resource_claims"].([]interface{}); ok {
+		for _, entry := range v {
+			claim, _ := entry.(map[string]interface{})
+			name, _ := claim["name"].(string)
+			podClaim := v1.PodResourceClaim{Name: name}
+			if v, ok := claim["resource_claim_name"].(string); ok && v != "" {
+				podClaim.ResourceClaimName = ptr.To(v)
+			}
+			if v, ok := claim["resource_claim_template_name"].(string); ok && v != "" {
+				podClaim.ResourceClaimTemplateName = ptr.To(v)
+			}
+			obj.ResourceClaims = append(obj.ResourceClaims, podClaim)
+		}
 	}
 
 	if v, ok := in["security_context"].([]interface{}); ok && len(v) > 0 {
@@ -1026,6 +1061,15 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 	if v, ok := in["supplemental_groups"].(*schema.Set); ok {
 		obj.SupplementalGroups = schemaSetToInt64Array(v)
 	}
+	if v, ok := in["supplemental_groups_policy"].(string); ok && v != "" {
+		obj.SupplementalGroupsPolicy = ptr.To(v1.SupplementalGroupsPolicy(v))
+	}
+	if v, ok := in["se_linux_change_policy"].(string); ok && v != "" {
+		obj.SELinuxChangePolicy = ptr.To(v1.PodSELinuxChangePolicy(v))
+	}
+	if v, ok := in["app_armor_profile"].(map[string]interface{}); ok {
+		obj.AppArmorProfile = expandAppArmorProfile(v)
+	}
 	if v, ok := in["sysctl"].([]interface{}); ok && len(v) > 0 {
 		obj.Sysctls = expandSysctls(v)
 	}
@@ -1037,6 +1081,25 @@ func expandPodSecurityContext(l []interface{}) (*v1.PodSecurityContext, error) {
 		obj.WindowsOptions = expandWindowsOptions(v)
 	}
 	return obj, nil
+}
+
+func expandAppArmorProfile(in map[string]interface{}) *v1.AppArmorProfile {
+	obj := &v1.AppArmorProfile{}
+	if v, ok := in["type"].(string); ok {
+		obj.Type = v1.AppArmorProfileType(v)
+	}
+	if v, ok := in["localhost_profile"].(string); ok {
+		obj.LocalhostProfile = ptr.To(v)
+	}
+	return obj
+}
+
+func flattenFrameworkAppArmorProfile(in *v1.AppArmorProfile) map[string]interface{} {
+	att := map[string]interface{}{"type": string(in.Type)}
+	if in.LocalhostProfile != nil {
+		att["localhost_profile"] = *in.LocalhostProfile
+	}
+	return att
 }
 
 func expandSysctls(l []interface{}) []v1.Sysctl {
@@ -1341,9 +1404,111 @@ func expandProjectedSources(sources []interface{}) ([]v1.VolumeProjection, error
 			}
 			srcs = append(srcs, values...)
 		}
+		if v, ok := in["cluster_trust_bundle"].(map[string]interface{}); ok {
+			bundle := &v1.ClusterTrustBundleProjection{}
+			bundle.Path, _ = v["path"].(string)
+			if name, ok := v["name"].(string); ok && name != "" {
+				bundle.Name = ptr.To(name)
+			}
+			if signer, ok := v["signer_name"].(string); ok && signer != "" {
+				bundle.SignerName = ptr.To(signer)
+			}
+			if selector, ok := v["label_selector"].(map[string]interface{}); ok {
+				bundle.LabelSelector = expandFrameworkLabelSelector(selector)
+			}
+			if optional, ok := v["optional"].(bool); ok {
+				bundle.Optional = ptr.To(optional)
+			}
+			srcs = append(srcs, v1.VolumeProjection{ClusterTrustBundle: bundle})
+		}
+		if v, ok := in["pod_certificate"].(map[string]interface{}); ok {
+			certificate := &v1.PodCertificateProjection{}
+			certificate.SignerName, _ = v["signer_name"].(string)
+			certificate.KeyType, _ = v["key_type"].(string)
+			if seconds, ok := v["max_expiration_seconds"].(int); ok {
+				certificate.MaxExpirationSeconds = ptr.To(int32(seconds))
+			}
+			certificate.CredentialBundlePath, _ = v["credential_bundle_path"].(string)
+			certificate.KeyPath, _ = v["key_path"].(string)
+			certificate.CertificateChainPath, _ = v["certificate_chain_path"].(string)
+			if annotations, ok := v["user_annotations"].(map[string]interface{}); ok && len(annotations) > 0 {
+				certificate.UserAnnotations = expandStringMap(annotations)
+			}
+			srcs = append(srcs, v1.VolumeProjection{PodCertificate: certificate})
+		}
 	}
 
 	return srcs, nil
+}
+
+// expandFrameworkLabelSelector tolerates the absent keys of an object argument;
+// an empty selector stays set, since it selects everything.
+func expandFrameworkLabelSelector(in map[string]interface{}) *metav1.LabelSelector {
+	obj := &metav1.LabelSelector{}
+	if v, ok := in["match_labels"].(map[string]interface{}); ok && len(v) > 0 {
+		obj.MatchLabels = expandStringMap(v)
+	}
+	expressions, _ := in["match_expressions"].([]interface{})
+	for _, entry := range expressions {
+		expression, _ := entry.(map[string]interface{})
+		key, _ := expression["key"].(string)
+		operator, _ := expression["operator"].(string)
+		requirement := metav1.LabelSelectorRequirement{Key: key, Operator: metav1.LabelSelectorOperator(operator)}
+		if values, ok := expression["values"].(*schema.Set); ok {
+			requirement.Values = sliceOfString(values.List())
+		}
+		obj.MatchExpressions = append(obj.MatchExpressions, requirement)
+	}
+	return obj
+}
+
+// flattenFrameworkProjectedSources adds the Framework-only projections to the
+// sources the SDKv2 flattener returned, one for each API source.
+func flattenFrameworkProjectedSources(in *v1.ProjectedVolumeSource, volume map[string]interface{}) {
+	blocks, _ := volume["projected"].([]interface{})
+	if len(blocks) == 0 {
+		return
+	}
+	sources, _ := blocks[0].(map[string]interface{})["sources"].([]interface{})
+	for i, source := range in.Sources {
+		if i >= len(sources) {
+			return
+		}
+		out := sources[i].(map[string]interface{})
+		if bundle := source.ClusterTrustBundle; bundle != nil {
+			value := map[string]interface{}{"path": bundle.Path}
+			if bundle.Name != nil {
+				value["name"] = *bundle.Name
+			}
+			if bundle.SignerName != nil {
+				value["signer_name"] = *bundle.SignerName
+			}
+			if bundle.LabelSelector != nil {
+				value["label_selector"] = flattenLabelSelector(bundle.LabelSelector)[0]
+			}
+			if bundle.Optional != nil {
+				value["optional"] = *bundle.Optional
+			}
+			out["cluster_trust_bundle"] = value
+		}
+		if certificate := source.PodCertificate; certificate != nil {
+			value := map[string]interface{}{"signer_name": certificate.SignerName, "key_type": certificate.KeyType}
+			if certificate.MaxExpirationSeconds != nil {
+				value["max_expiration_seconds"] = *certificate.MaxExpirationSeconds
+			}
+			for name, file := range map[string]string{
+				"credential_bundle_path": certificate.CredentialBundlePath, "key_path": certificate.KeyPath, "certificate_chain_path": certificate.CertificateChainPath,
+			} {
+				if file != "" {
+					value[name] = file
+				}
+			}
+			if len(certificate.UserAnnotations) > 0 {
+				value["user_annotations"] = certificate.UserAnnotations
+			}
+			out["pod_certificate"] = value
+		}
+	}
 }
 
 func expandProjectedSecrets(secrets []interface{}) []v1.VolumeProjection {
@@ -1629,6 +1794,12 @@ func expandVolumes(volumes []interface{}) ([]v1.Volume, error) {
 		if v, ok := m["photon_persistent_disk"].([]interface{}); ok && len(v) > 0 {
 			vl[i].PhotonPersistentDisk = expandPhotonPersistentDiskVolumeSource(v)
 		}
+		if v, ok := m["image"].([]interface{}); ok && len(v) > 0 && v[0] != nil {
+			image := v[0].(map[string]interface{})
+			reference, _ := image["reference"].(string)
+			pullPolicy, _ := image["pull_policy"].(string)
+			vl[i].Image = &v1.ImageVolumeSource{Reference: reference, PullPolicy: v1.PullPolicy(pullPolicy)}
+		}
 		if v, ok := m["ephemeral"].([]interface{}); ok && len(v) > 0 {
 			ephemeral, err := expandEphemeralVolumeSource(v)
 			if err != nil {
@@ -1681,4 +1852,114 @@ func patchPodSpec(pathPrefix, prefix string, d *schema.ResourceData) (PatchOpera
 
 	}
 	return ops, nil
+}
+
+// ExpandPodSpec exposes the pod spec expander to the Framework workload resources.
+func ExpandPodSpec(spec []interface{}) (*v1.PodSpec, error) {
+	return expandPodSpec(spec)
+}
+
+// FlattenPodSpec exposes the pod spec flattener to the Framework workload resources.
+// It keeps every toleration, as for a pod template, and drops the injected
+// service-account token volume.
+func FlattenPodSpec(spec v1.PodSpec) ([]interface{}, error) {
+	// The flattener removes the token volume from its slice in place.
+	flat, err := flattenPodSpec(*spec.DeepCopy(), true)
+	if err != nil {
+		return nil, err
+	}
+	// These fields belong to the Framework schemas. Keep them out of SDKv2
+	// state until its resources have their own schema and migration support.
+	object := flat[0].(map[string]interface{})
+	if spec.HostUsers != nil {
+		object["host_users"] = *spec.HostUsers
+	}
+	if spec.SetHostnameAsFQDN != nil {
+		object["set_hostname_as_fqdn"] = *spec.SetHostnameAsFQDN
+	}
+	if spec.HostnameOverride != nil {
+		object["hostname_override"] = *spec.HostnameOverride
+	}
+	if spec.Resources != nil {
+		object["resources"] = flattenContainerResourceRequirements(*spec.Resources)[0]
+	}
+	if len(spec.ResourceClaims) > 0 {
+		claims := make([]interface{}, len(spec.ResourceClaims))
+		for i, claim := range spec.ResourceClaims {
+			value := map[string]interface{}{"name": claim.Name}
+			if claim.ResourceClaimName != nil {
+				value["resource_claim_name"] = *claim.ResourceClaimName
+			}
+			if claim.ResourceClaimTemplateName != nil {
+				value["resource_claim_template_name"] = *claim.ResourceClaimTemplateName
+			}
+			claims[i] = value
+		}
+		object["resource_claims"] = claims
+	}
+	if spec.SecurityContext != nil && (spec.SecurityContext.AppArmorProfile != nil || spec.SecurityContext.SupplementalGroupsPolicy != nil || spec.SecurityContext.SELinuxChangePolicy != nil) {
+		securityContext := map[string]interface{}{}
+		if blocks, ok := object["security_context"].([]interface{}); ok && len(blocks) > 0 {
+			securityContext = blocks[0].(map[string]interface{})
+		} else {
+			object["security_context"] = []interface{}{securityContext}
+		}
+		if spec.SecurityContext.AppArmorProfile != nil {
+			securityContext["app_armor_profile"] = flattenFrameworkAppArmorProfile(spec.SecurityContext.AppArmorProfile)
+		}
+		if spec.SecurityContext.SupplementalGroupsPolicy != nil {
+			securityContext["supplemental_groups_policy"] = string(*spec.SecurityContext.SupplementalGroupsPolicy)
+		}
+		if spec.SecurityContext.SELinuxChangePolicy != nil {
+			securityContext["se_linux_change_policy"] = string(*spec.SecurityContext.SELinuxChangePolicy)
+		}
+	}
+	if spec.Affinity != nil {
+		flattenFrameworkAffinityFields(spec.Affinity, object["affinity"].([]interface{}))
+	}
+	for name, containers := range map[string][]v1.Container{"container": spec.Containers, "init_container": spec.InitContainers} {
+		flattened := object[name].([]interface{})
+		for i, container := range containers {
+			flattenFrameworkContainerFields(container, flattened[i].(map[string]interface{}))
+		}
+	}
+	images := make(map[string]*v1.ImageVolumeSource)
+	projected := make(map[string]*v1.ProjectedVolumeSource)
+	attributesClasses := make(map[string]string)
+	for _, volume := range spec.Volumes {
+		if volume.Image != nil {
+			images[volume.Name] = volume.Image
+		}
+		if volume.Projected != nil {
+			projected[volume.Name] = volume.Projected
+		}
+		if volume.Ephemeral != nil && volume.Ephemeral.VolumeClaimTemplate != nil && volume.Ephemeral.VolumeClaimTemplate.Spec.VolumeAttributesClassName != nil {
+			attributesClasses[volume.Name] = *volume.Ephemeral.VolumeClaimTemplate.Spec.VolumeAttributesClassName
+		}
+	}
+	volumes, _ := object["volume"].([]interface{})
+	for _, raw := range volumes {
+		volume := raw.(map[string]interface{})
+		name, _ := volume["name"].(string)
+		if source := projected[name]; source != nil {
+			flattenFrameworkProjectedSources(source, volume)
+		}
+		if class, ok := attributesClasses[name]; ok {
+			template := volume["ephemeral"].([]interface{})[0].(map[string]interface{})["volume_claim_template"].([]interface{})[0].(map[string]interface{})
+			template["spec"].([]interface{})[0].(map[string]interface{})["volume_attributes_class_name"] = class
+		}
+		if image := images[name]; image != nil {
+			volume["image"] = []interface{}{map[string]interface{}{
+				"reference": image.Reference, "pull_policy": string(image.PullPolicy),
+			}}
+		}
+	}
+	return flat, nil
+}
+
+// IsBuiltInToleration reports whether key is a taint whose toleration
+// Kubernetes can add to a Pod on its own.
+func IsBuiltInToleration(key string) bool {
+	_, ok := builtInTolerations[key]
+	return ok
 }

@@ -8,26 +8,27 @@ resource "kubernetes_horizontal_pod_autoscaler_v2" "example" {
     max_replicas = 100
 
     scale_target_ref {
-      kind = "Deployment"
-      name = "MyApp"
+      api_version = "apps/v1"
+      kind        = "Deployment"
+      name        = "MyApp"
     }
 
-    metric {
+    metric = [{
       type = "External"
-      external {
-        metric {
+      external = {
+        metric = {
           name = "latency"
-          selector {
+          selector = {
             match_labels = {
               lb_name = "test"
             }
           }
         }
-        target {
+        target = {
           type  = "Value"
           value = "100"
         }
       }
-    }
+    }]
   }
 }

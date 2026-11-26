@@ -57,7 +57,10 @@ const (
 var (
 	testAccProvider          *schema.Provider
 	testAccExternalProviders map[string]resource.ExternalProvider
-	testAccProviderFactories = map[string]func() (*schema.Provider, error){
+	// TestAccMuxProviderFactories is initialized by the external test package, which
+	// can import the production mux without introducing a kubernetes import cycle.
+	TestAccMuxProviderFactories map[string]func() (tfprotov6.ProviderServer, error)
+	testAccProviderFactories    = map[string]func() (*schema.Provider, error){
 		"kubernetes": func() (*schema.Provider, error) {
 			return Provider(), nil
 		},
@@ -437,8 +440,17 @@ func isRunningInGke() (bool, error) {
 }
 
 func isRunningInEks() (bool, error) {
-	// EKS nodes don't have any unique labels, so check for the AWS
-	// specific config map created by our test-infra.
+	// Clusters that use EKS access entries, such as EKS Auto Mode, have no aws-auth
+	// ConfigMap, but their nodes carry eks.amazonaws.com labels.
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+	for key := range node.GetLabels() {
+		if strings.HasPrefix(key, "eks.amazonaws.com/") {
+			return true, nil
+		}
+	}
 	meta := testAccProvider.Meta()
 	if meta == nil {
 		return false, errors.New("Provider not initialized, unable to fetch provider metadata")

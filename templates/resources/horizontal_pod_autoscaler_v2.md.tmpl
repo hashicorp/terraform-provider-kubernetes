@@ -2,12 +2,14 @@
 subcategory: "autoscaling/v2"
 page_title: "Kubernetes: kubernetes_horizontal_pod_autoscaler_v2"
 description: |-
-  Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization.
+  Horizontal Pod Autoscaler automatically scales the number of pods in a replication controller, deployment or replica set based on observed CPU utilization or custom metrics.
 ---
 
 # {{ .Name }}
 
 {{ .Description }}
+
+~> Version 4.0 of the provider changed `spec.metric` and `spec.behavior` from blocks to arguments, for example `metric = [{ ... }]` and `behavior = { ... }`. See [Upgrading from version 3.x](#upgrading-from-version-3x) before upgrading.
 
 {{ .SchemaMarkdown }}
 
@@ -19,14 +21,103 @@ description: |-
 
 {{tffile "examples/resources/horizontal_pod_autoscaler_v2/example_2.tf"}}
 
-## `target_cpu_utilization_percentage`
+## Defaults set by Kubernetes
 
-`target_cpu_utilization_percentage` is accepted by the schema but ignored by this resource. To scale on CPU, set a `metric` of type `Resource` with `name = "cpu"`, or use `kubernetes_horizontal_pod_autoscaler_v1`.
+`spec.metric`, `spec.behavior` and, inside `behavior`, `scale_up`, `scale_down`, `select_policy` and `stabilization_window_seconds` are optional and computed:
+
+- If `metric` is omitted, Kubernetes adds an 80% average CPU utilization metric.
+- If `behavior` is omitted, the provider does not send it and Kubernetes uses its default scaling behavior. If `behavior` sets only one of `scale_up` and `scale_down`, Kubernetes fills in the other.
+- If `select_policy` is omitted, Kubernetes uses `Max`. If `stabilization_window_seconds` is omitted, Kubernetes uses 0 seconds for scale up and 300 seconds for scale down.
+- Removing any of these arguments from the configuration keeps the current value instead of planning a change. To change a value, set it explicitly.
+
+Kubernetes stores quantities such as `value` and `average_value` in canonical form, for example `1000m` as `1`. The provider keeps the configured spelling when the quantities are equal.
+
+## Upgrading from version 3.x
+
+Version 4.0 migrates this resource to the Terraform Plugin Framework. The resource type name, the `namespace/name` import ID and the import identity do not change, and existing state is upgraded automatically.
+
+Update the configuration as follows:
+
+- `metric` blocks become a `metric` list of objects. Inside each metric, `resource`, `pods`, `object`, `external`, `container_resource`, `target`, `described_object` and the metric identifier `metric` become objects.
+- The metric identifier `selector` becomes a single object, and `match_expressions` inside it becomes a list of objects.
+- The `behavior` block becomes an object, `scale_up` and `scale_down` become objects, and `policy` blocks become a `policy` list of objects.
+- `metadata`, `spec` and `scale_target_ref` remain blocks.
+
+```terraform
+# Version 3.x
+metric {
+  type = "External"
+  external {
+    metric {
+      name = "queue_depth"
+      selector {
+        match_labels = { queue = "orders" }
+      }
+    }
+    target {
+      type  = "Value"
+      value = "100"
+    }
+  }
+}
+
+behavior {
+  scale_down {
+    select_policy = "Min"
+    policy {
+      type           = "Pods"
+      value          = 1
+      period_seconds = 60
+    }
+  }
+}
+
+# Version 4.0
+metric = [{
+  type = "External"
+  external = {
+    metric = {
+      name     = "queue_depth"
+      selector = { match_labels = { queue = "orders" } }
+    }
+    target = { type = "Value", value = "100" }
+  }
+}]
+
+behavior = {
+  scale_down = {
+    select_policy = "Min"
+    policy        = [{ type = "Pods", value = 1, period_seconds = 60 }]
+  }
+}
+```
+
+References and `lifecycle.ignore_changes` paths drop the `[0]` index of the converted blocks, for example `spec[0].behavior[0].scale_down[0].select_policy` becomes `spec[0].behavior.scale_down.select_policy`. A `dynamic "metric"` block becomes a `for` expression, such as `metric = [for m in var.metrics : { ... }]`.
+
+Other changes:
+
+- The state schema version increases. Once version 4.0 has written the state, provider 3.x cannot read it, so back up the state before upgrading.
+- Version 3.x always sent `behavior`, so Kubernetes filled in its default scaling rules, and it sent a 0 second `stabilization_window_seconds` when that argument was omitted. Version 4.0 sends only the configured values. Existing autoscalers keep their current values. New autoscalers without `stabilization_window_seconds` use the Kubernetes default of 300 seconds for scale down. A `stabilization_window_seconds` that version 3.x stored as `0` for an autoscaler where Kubernetes has no value is read as unset on the first refresh; this changes only Terraform state.
+- `select_policy` can be omitted. In version 3.x, a `scale_up` or `scale_down` block without `select_policy` failed with `Unsupported value: ""`.
+- `target_cpu_utilization_percentage` is still accepted, but `autoscaling/v2` has no such field and the provider never sends it. To scale on CPU, set a `metric` of type `Resource` with `name = "cpu"`, or use `kubernetes_horizontal_pod_autoscaler_v1`.
+
+### Moving from other resource types
+
+With Terraform 1.8 or later, a `moved` block can move an autoscaler from `kubernetes_horizontal_pod_autoscaler_v2beta2`, which version 4.0 removes, or from `kubernetes_horizontal_pod_autoscaler` without recreating it:
+
+```terraform
+moved {
+  from = kubernetes_horizontal_pod_autoscaler.example
+  to   = kubernetes_horizontal_pod_autoscaler_v2.example
+}
+```
+
+The configuration must use the version 4.0 syntax shown above. A `kubernetes_horizontal_pod_autoscaler` whose state has neither `metric` nor `behavior` can only be moved to `kubernetes_horizontal_pod_autoscaler_v1`.
 
 ## Import
 
-Horizontal Pod Autoscaler can be imported using the namespace and name, e.g.
+Horizontal Pod Autoscalers can be imported using the namespace and name, separated by `/`:
 
-```
-$ terraform import kubernetes_horizontal_pod_autoscaler_v2.example default/terraform-example
+```shell
+terraform import kubernetes_horizontal_pod_autoscaler_v2.example default/terraform-example
 ```

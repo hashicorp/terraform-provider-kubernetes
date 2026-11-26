@@ -1,0 +1,77 @@
+---
+subcategory: "gateway.networking.k8s.io/v1"
+page_title: "Kubernetes: kubernetes_gateway_class_v1"
+description: |-
+  Manages a cluster-scoped Gateway API v1 GatewayClass.
+---
+
+# {{ .Name }}
+
+{{ .Description }}
+
+{{ .SchemaMarkdown }}
+
+## Example Usage
+
+{{tffile "examples/resources/gateway_class_v1/example_1.tf"}}
+
+Set `controller_name` to the identifier documented by your Gateway controller.
+Kubernetes stores a class with any well-formed identifier, but only a matching
+controller accepts it.
+
+### Controller parameters
+
+{{tffile "examples/resources/gateway_class_v1/example_2.tf"}}
+
+`parameters_ref` points to a controller-specific configuration object. Use the
+`group` and `kind` documented by your controller, `group = ""` for the core API
+group, and `namespace` only for a namespaced referent. Manage the referenced
+object separately; the provider neither creates it nor validates its contents.
+
+## Prerequisites
+
+Install the Gateway API CRDs before using this resource. The provider does not
+install CRDs or a Gateway controller. The schema targets the Gateway API v1.6.3
+Standard channel. Credentials need permission to manage cluster-scoped
+GatewayClasses and to read API discovery, which the provider uses to tell a
+missing GatewayClass from missing CRDs.
+
+## Behavior notes
+
+- **Controller acceptance:** Creation succeeds once Kubernetes stores the object.
+  It does not wait for the controller to accept the class, and it does not
+  provision a Gateway or load balancer. Inspect `status` for the controller's
+  response. A condition whose `observed_generation` is older than
+  `metadata[0].generation` does not describe the latest spec.
+- **Replacement:** Changing `metadata[0].name`, `metadata[0].generate_name`, or
+  `spec[0].controller_name` replaces the GatewayClass. Refer to your controller's
+  documentation for how other class changes affect existing Gateways.
+- **Cluster scope:** GatewayClass has no namespace. Set either `metadata[0].name`
+  or `metadata[0].generate_name`.
+
+## Timeouts
+
+`kubernetes_gateway_class_v1` provides the following [Timeouts](/docs/configuration/resources.html#timeouts) configuration options:
+
+- `create` - Default `10 minutes`
+- `read` - Default `10 minutes`
+- `update` - Default `10 minutes`
+- `delete` - Default `10 minutes`
+
+Deletion waits until the GatewayClass is gone. While Gateways use the class, the
+controller may keep the `gateway-exists-finalizer.gateway.networking.k8s.io`
+finalizer, so delete dependent Gateways before their class. The provider never
+removes finalizers. A replacement that keeps the same name cannot use
+`create_before_destroy`.
+
+## Import
+
+GatewayClass can be imported using its name, without a namespace, e.g.
+
+```
+$ terraform import kubernetes_gateway_class_v1.example example
+```
+
+Identity imports use `api_version = "gateway.networking.k8s.io/v1"`,
+`kind = "GatewayClass"`, and `name`. An identity with a different `kind` or
+`api_version` is rejected.

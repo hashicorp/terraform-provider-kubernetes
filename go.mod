@@ -38,6 +38,7 @@ require (
 	k8s.io/kube-aggregator v0.37.2
 	k8s.io/kubectl v0.37.2
 	k8s.io/kubernetes v1.37.2
+	sigs.k8s.io/gateway-api v1.6.3
 	sigs.k8s.io/yaml v1.6.0
 )
 

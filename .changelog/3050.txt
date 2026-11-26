@@ -1,0 +1,23 @@
+```release-note:breaking-change
+`resource/kubernetes_horizontal_pod_autoscaler_v2`: Migrate to the Terraform Plugin Framework. `spec.metric` and `spec.behavior` change from blocks to arguments, for example `metric = [{ ... }]` and `behavior = { ... }`. Inside them, the metric sources, `target`, `described_object`, the metric identifier, `scale_up` and `scale_down` become objects, `policy` becomes a list of objects, and the metric `selector` becomes a single object. References and `ignore_changes` paths drop their `[0]`.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_horizontal_pod_autoscaler_v2`: The state schema version increases. Once this version has written the state, provider 3.x cannot read it, so back up state before upgrading.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_horizontal_pod_autoscaler_v2`: An omitted `behavior` is no longer sent as an empty object, and an omitted `stabilization_window_seconds` is no longer sent as `0`, so Kubernetes applies its own defaults. New autoscalers without `stabilization_window_seconds` use a 300 second scale-down window instead of 0. Existing autoscalers keep their current values.
+```
+
+```release-note:note
+`resource/kubernetes_horizontal_pod_autoscaler_v2`: The resource type name, `namespace/name` import ID, import identity and existing state are kept. With Terraform 1.8 or later, `moved` blocks can move resources from `kubernetes_horizontal_pod_autoscaler_v2beta2`, which this release removes, and from `kubernetes_horizontal_pod_autoscaler` when its state has `metric` or `behavior`. `target_cpu_utilization_percentage` is still accepted but is not part of `autoscaling/v2` and is never sent.
+```
+
+```release-note:bug
+`resource/kubernetes_horizontal_pod_autoscaler_v2`: `select_policy` can be omitted from `scale_up` and `scale_down`. Previously the provider sent an empty value and Kubernetes rejected it with `Unsupported value: ""`.
+```
+
+```release-note:bug
+`resource/kubernetes_horizontal_pod_autoscaler_v2`: A metric `value` or `average_value` that Kubernetes stores in a different but equal form, such as `1000m` stored as `1`, no longer plans a change.
+```

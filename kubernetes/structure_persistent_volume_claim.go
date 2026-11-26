@@ -91,6 +91,9 @@ func expandPersistentVolumeClaimSpec(l []interface{}) (*corev1.PersistentVolumeC
 	if v, ok := in["volume_mode"].(string); ok && v != "" {
 		obj.VolumeMode = ptr.To(corev1.PersistentVolumeMode(v))
 	}
+	if v, ok := in["volume_attributes_class_name"].(string); ok && v != "" {
+		obj.VolumeAttributesClassName = ptr.To(v)
+	}
 	return obj, nil
 }
 

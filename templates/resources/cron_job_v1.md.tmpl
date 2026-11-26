@@ -9,8 +9,22 @@ description: |-
 
 {{ .Description }}
 
+~> Version 4.0 of the provider changed the syntax of some nested arguments, such as `resources = { ... }`. See the [v4 upgrade guide](../guides/v4-upgrade-guide.md) before upgrading.
+
+~> `spec.job_template.spec.backoff_limit_per_index` and `spec.job_template.spec.max_failed_indexes` default to `0` when omitted; this is a provider default, not a Kubernetes one. Changing `backoff_limit_per_index` requires replacement of the CronJob.
+
 {{ .SchemaMarkdown }}
 
 ## Example Usage
 
 {{tffile "examples/resources/cron_job_v1/example_1.tf"}}
+
+## Import
+
+CronJobs can be imported using the namespace and name, separated by `/`:
+
+```shell
+terraform import kubernetes_cron_job_v1.demo default/demo
+```
+
+To move from the deprecated `kubernetes_cron_job` resource type, see the [v4 upgrade guide](../guides/v4-upgrade-guide.md#moving-from-the-deprecated-resource-types).

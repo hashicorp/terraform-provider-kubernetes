@@ -206,8 +206,8 @@ func TestAccKubernetesIngressV1Beta1_WaitForLoadBalancerGoogleCloud(t *testing.T
 			skipIfNotRunningInGke(t)
 		},
 
-		ProviderFactories: testAccProviderFactories,
-		CheckDestroy:      testAccCheckKubernetesIngressV1Beta1Destroy,
+		ProtoV6ProviderFactories: TestAccMuxProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesIngressV1Beta1Destroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesIngressV1Beta1Config_waitForLoadBalancer(name),
@@ -423,7 +423,7 @@ func testAccKubernetesIngressV1Beta1Config_internalKey_removed(name string) stri
 }
 
 func testAccKubernetesIngressV1Beta1Config_waitForLoadBalancer(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = %q
   }
@@ -472,7 +472,7 @@ resource "kubernetes_deployment_v1" "test" {
 
 resource "kubernetes_ingress" "test" {
   depends_on = [
-    kubernetes_service_v1.test,
+    kubernetes_service.test,
     kubernetes_deployment_v1.test
   ]
   metadata {

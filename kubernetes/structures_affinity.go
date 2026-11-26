@@ -97,6 +97,49 @@ func flattenPodAffinityTerms(in []v1.PodAffinityTerm) []interface{} {
 	return att
 }
 
+func flattenFrameworkAffinityFields(in *v1.Affinity, flattened []interface{}) {
+	if len(flattened) == 0 {
+		return
+	}
+	out := flattened[0].(map[string]interface{})
+	if in.PodAffinity != nil {
+		flattenFrameworkPodAffinityFields(out["pod_affinity"], in.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution, in.PodAffinity.PreferredDuringSchedulingIgnoredDuringExecution)
+	}
+	if in.PodAntiAffinity != nil {
+		flattenFrameworkPodAffinityFields(out["pod_anti_affinity"], in.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution, in.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution)
+	}
+}
+
+func flattenFrameworkPodAffinityFields(flattened interface{}, required []v1.PodAffinityTerm, preferred []v1.WeightedPodAffinityTerm) {
+	blocks, ok := flattened.([]interface{})
+	if !ok || len(blocks) == 0 {
+		return
+	}
+	out := blocks[0].(map[string]interface{})
+	if len(required) > 0 {
+		terms := out["required_during_scheduling_ignored_during_execution"].([]interface{})
+		for i, term := range required {
+			flattenFrameworkAffinityTermFields(term, terms[i].(map[string]interface{}))
+		}
+	}
+	if len(preferred) > 0 {
+		terms := out["preferred_during_scheduling_ignored_during_execution"].([]interface{})
+		for i, term := range preferred {
+			value := terms[i].(map[string]interface{})["pod_affinity_term"].([]interface{})[0].(map[string]interface{})
+			flattenFrameworkAffinityTermFields(term.PodAffinityTerm, value)
+		}
+	}
+}
+
+func flattenFrameworkAffinityTermFields(in v1.PodAffinityTerm, out map[string]interface{}) {
+	if in.MatchLabelKeys != nil {
+		out["match_label_keys"] = in.MatchLabelKeys
+	}
+	if in.MismatchLabelKeys != nil {
+		out["mismatch_label_keys"] = in.MismatchLabelKeys
+	}
+}
+
 func flattenNodeSelector(in *v1.NodeSelector) []interface{} {
 	att := make(map[string]interface{})
 	if len(in.NodeSelectorTerms) > 0 {
@@ -228,6 +271,12 @@ func expandPodAffinityTerms(t []interface{}) []v1.PodAffinityTerm {
 		}
 		if v, ok := in["namespaces"].(*schema.Set); ok {
 			obj[i].Namespaces = sliceOfString(v.List())
+		}
+		if v, ok := in["match_label_keys"].(*schema.Set); ok {
+			obj[i].MatchLabelKeys = sliceOfString(v.List())
+		}
+		if v, ok := in["mismatch_label_keys"].(*schema.Set); ok {
+			obj[i].MismatchLabelKeys = sliceOfString(v.List())
 		}
 		if v, ok := in["topology_key"].(string); ok {
 			obj[i].TopologyKey = v

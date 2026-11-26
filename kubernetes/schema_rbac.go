@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	pathValidation "k8s.io/apimachinery/pkg/api/validation/path"
+	"k8s.io/apimachinery/pkg/api/validate/content"
 )
 
 func metadataSchemaRBAC(objectName string, generatableName bool, namespaced bool) *schema.Schema {
@@ -31,7 +31,7 @@ func metadataSchemaRBAC(objectName string, generatableName bool, namespaced bool
 }
 
 func validateRBACNameFunc(value interface{}, key string) (ws []string, es []error) {
-	errors := pathValidation.IsValidPathSegmentName(value.(string))
+	errors := content.IsPathSegmentName(value.(string))
 
 	if len(errors) > 0 {
 		for _, err := range errors {

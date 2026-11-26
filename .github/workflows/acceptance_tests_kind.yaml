@@ -5,7 +5,7 @@ on:
     inputs:
       kindVersion:
         description: The kind version
-        default: 0.20.0
+        default: 0.33.0
       runTests:
         description: The regex passed to the -run option of `go test`
         default: "^TestAcc"
@@ -19,6 +19,7 @@ on:
     branches:
       - main
       - v3-major-release
+      - 'release/**'
     paths:
       - 'kubernetes/*.go'
       - 'internal/framework/**/*.go'
@@ -32,7 +33,7 @@ on:
 
 env:
   KUBECONFIG: ${{ github.workspace }}/.kube/config
-  KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.30.0' }}
+  KIND_VERSION: ${{ github.event.inputs.kindVersion || '0.33.0' }}
   PARALLEL_RUNS: ${{ github.event.inputs.parallelRuns || '8' }}
   TERRAFORM_VERSION: ${{ github.event.inputs.terraformVersion || '1.12.0' }} 
   
@@ -47,10 +48,10 @@ jobs:
       matrix:
         kubernetes_version:
           # kind images: https://github.com/kubernetes-sigs/kind/releases (note the images are kind release specific)
-          - v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a 
-          - v1.33.4@sha256:25a6018e48dfcaee478f4a59af81157a437f15e6e140bf103f85a2e7cd0cbbf2
-          - v1.32.8@sha256:abd489f042d2b644e2d033f5c2d900bc707798d075e8186cb65e3f1367a9d5a1 
-          - v1.31.12@sha256:0f5cc49c5e73c0c2bb6e2df56e7df189240d83cf94edfa30946482eb08ec57d2 
+          - v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+          - v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
+          - v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0
+          - v1.34.11@sha256:44e222ee2132dab25ff87301682f89eb82c7880ea3a1bf543bfe9708fd08d67d
         isMajorReleaseBranch:
           - ${{ contains(github.ref, 'v3-major-release') }}
         isBaseMajorRelease:
@@ -83,6 +84,17 @@ jobs:
           version: v${{ env.KIND_VERSION }}
           node_image: kindest/node:${{ matrix.kubernetes_version }}
           config: .github/config/acceptance_tests_kind_config.yaml
+      # Required by the gatewaynetworkingv1 acceptance tests; keep in sync with sigs.k8s.io/gateway-api in go.mod.
+      - name: Install Gateway API CRDs
+        env:
+          GATEWAY_API_VERSION: v1.6.3
+          GATEWAY_API_SHA256: 356c2b8e286a964dc20995435659ad1095386329974793af10bbfe3eff977fe5
+        run: |
+          curl -fsSL -o "${RUNNER_TEMP}/gateway-api-standard-install.yaml" \
+            "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
+          echo "${GATEWAY_API_SHA256}  ${RUNNER_TEMP}/gateway-api-standard-install.yaml" | sha256sum --check --strict
+          kubectl apply --server-side -f "${RUNNER_TEMP}/gateway-api-standard-install.yaml"
+          kubectl wait --for=condition=Established --timeout=90s crd/gatewayclasses.gateway.networking.k8s.io
       - name: Run Acceptance Test Suite
         env:
           KUBE_CONFIG_PATH: ${{ env.KUBECONFIG }}

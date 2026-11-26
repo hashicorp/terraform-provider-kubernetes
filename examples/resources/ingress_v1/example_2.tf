@@ -20,18 +20,18 @@ resource "kubernetes_ingress_v1" "example" {
   spec {
     ingress_class_name = "nginx"
     rule {
-      http {
-        path {
+      http = {
+        path = [{
           path = "/*"
-          backend {
-            service {
+          backend = {
+            service = {
               name = kubernetes_service_v1.example.metadata.0.name
-              port {
+              port = {
                 number = 80
               }
             }
           }
-        }
+        }]
       }
     }
   }

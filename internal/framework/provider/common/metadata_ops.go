@@ -5,6 +5,7 @@ package common
 
 import (
 	"context"
+	"maps"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -21,6 +22,40 @@ import (
 // see FIX_namespace_v1_metadata_patch_ops.md for this provider-wide limitation.
 func MetadataPatchOps(pathPrefix string, state, plan MetadataModel) kubernetes.PatchOperations {
 	return BaseMetadataPatchOps(pathPrefix, state.MetadataBase, plan.MetadataBase)
+}
+
+// MetadataPatchOpsAgainstLive preserves unmanaged keys, including when adding the
+// first managed key to a map already populated by admission or another controller.
+func MetadataPatchOpsAgainstLive(pathPrefix string, state, plan MetadataModel, live metav1.ObjectMeta) kubernetes.PatchOperations {
+	ops := metadataMapPatchOpsAgainstLive(pathPrefix+"annotations", state.Annotations, plan.Annotations, live.Annotations)
+	return append(ops, metadataMapPatchOpsAgainstLive(pathPrefix+"labels", state.Labels, plan.Labels, live.Labels)...)
+}
+
+func metadataMapPatchOpsAgainstLive(path string, state, plan types.Map, live map[string]string) kubernetes.PatchOperations {
+	if state.Equal(plan) {
+		return nil
+	}
+	oldManaged, newManaged := ExpandMapForPatch(state), ExpandMapForPatch(plan)
+	before := make(map[string]interface{}, len(live))
+	for key, value := range live {
+		before[key] = value
+	}
+	after := maps.Clone(before)
+	for key := range oldManaged {
+		if _, exists := newManaged[key]; !exists {
+			delete(after, key)
+		}
+	}
+	for key, value := range newManaged {
+		if previous, existed := oldManaged[key]; existed && previous == value {
+			continue
+		}
+		after[key] = value
+	}
+	if maps.Equal(before, after) {
+		return nil
+	}
+	return kubernetes.DiffStringMap(path, before, after)
 }
 
 // BaseMetadataPatchOps diffs the mutable maps shared by all metadata variants.
@@ -156,6 +191,25 @@ func filterMetadataMap(ctx context.Context, fromAPI map[string]string, prior typ
 	}
 
 	return types.MapValueFrom(ctx, types.StringType, filtered)
+}
+
+// PopulateNamespacedMetadataFromResponse resolves server-assigned fields without
+// replacing planned labels, annotations, or generate_name with API-normalized values.
+func PopulateNamespacedMetadataFromResponse(metadata *NamespacedMetadataModel, out metav1.ObjectMeta) {
+	metadata.Name = types.StringValue(out.Name)
+	metadata.Namespace = types.StringValue(out.Namespace)
+	metadata.UID = types.StringValue(string(out.UID))
+	metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
+	metadata.Generation = types.Int64Value(out.Generation)
+}
+
+// PopulateMetadataFromResponse is PopulateNamespacedMetadataFromResponse for
+// non-namespaced resources.
+func PopulateMetadataFromResponse(metadata *MetadataModel, out metav1.ObjectMeta) {
+	metadata.Name = types.StringValue(out.Name)
+	metadata.UID = types.StringValue(string(out.UID))
+	metadata.ResourceVersion = types.StringValue(out.ResourceVersion)
+	metadata.Generation = types.Int64Value(out.Generation)
 }
 
 // ExpandNamespacedMetadata adds namespace to ExpandMetadata's result.

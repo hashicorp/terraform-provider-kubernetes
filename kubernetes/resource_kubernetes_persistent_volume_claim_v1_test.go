@@ -408,9 +408,9 @@ func TestAccKubernetesPersistentVolumeClaimV1_expansionGoogleCloud(t *testing.T)
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() { testAccPreCheck(t); skipIfNotRunningInGke(t) },
 
-		ProviderFactories: testAccProviderFactories,
-		ExternalProviders: testAccExternalProviders,
-		CheckDestroy:      testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
+		ProtoV6ProviderFactories: TestAccMuxProviderFactories,
+		ExternalProviders:        testAccExternalProviders,
+		CheckDestroy:             testAccCheckKubernetesPersistentVolumeClaimV1Destroy,
 		Steps: []resource.TestStep{
 			{ // GKE specific check -- initial create.
 				Config: testAccKubernetesPersistentVolumeClaimV1Config_updateStorageGKE(name, "1Gi", imageName),

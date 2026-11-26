@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	jsonpatch "gopkg.in/evanphx/json-patch.v4"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,6 +29,149 @@ func tfMap(kv map[string]string) types.Map {
 		elems[k] = types.StringValue(v)
 	}
 	return types.MapValueMust(types.StringType, elems)
+}
+
+func TestMetadataPatchOpsAgainstLive(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		state, plan  map[string]string
+		live, wanted map[string]string
+		wantOps      int
+	}{
+		{
+			name:    "first managed key preserves external key",
+			plan:    map[string]string{"managed": "new"},
+			live:    map[string]string{"external": "keep"},
+			wanted:  map[string]string{"external": "keep", "managed": "new"},
+			wantOps: 1,
+		},
+		{
+			name:    "create absent map",
+			plan:    map[string]string{"managed": "new"},
+			wanted:  map[string]string{"managed": "new"},
+			wantOps: 1,
+		},
+		{
+			name:    "multiple additions changes and removals",
+			state:   map[string]string{"remove": "old", "change": "old", "unchanged": "same"},
+			plan:    map[string]string{"change": "new", "unchanged": "same", "a/b~c": "added", "second": "added"},
+			live:    map[string]string{"external": "keep", "remove": "old", "change": "old", "unchanged": "concurrent"},
+			wanted:  map[string]string{"external": "keep", "change": "new", "unchanged": "concurrent", "a/b~c": "added", "second": "added"},
+			wantOps: 4,
+		},
+		{
+			name:    "remove managed keys only",
+			state:   map[string]string{"managed": "old"},
+			live:    map[string]string{"managed": "old", "external": "keep"},
+			wanted:  map[string]string{"external": "keep"},
+			wantOps: 1,
+		},
+		{
+			name:   "already removed key needs no operation",
+			state:  map[string]string{"managed": "old"},
+			live:   map[string]string{"external": "keep"},
+			wanted: map[string]string{"external": "keep"},
+		},
+		{
+			name:   "unchanged metadata leaves concurrent changes alone",
+			state:  map[string]string{"managed": "old"},
+			plan:   map[string]string{"managed": "old"},
+			live:   map[string]string{"managed": "concurrent", "external": "keep"},
+			wanted: map[string]string{"managed": "concurrent", "external": "keep"},
+		},
+		{
+			name: "null to empty is state only",
+			plan: map[string]string{},
+		},
+	} {
+		for _, field := range []string{"annotations", "labels"} {
+			t.Run(test.name+"/"+field, func(t *testing.T) {
+				state := MetadataModel{MetadataBase: MetadataBase{Annotations: tfMap(nil), Labels: tfMap(nil)}}
+				plan := state
+				live := metav1.ObjectMeta{}
+				wanted := metav1.ObjectMeta{}
+				if field == "annotations" {
+					state.Annotations, plan.Annotations = tfMap(test.state), tfMap(test.plan)
+					live.Annotations, wanted.Annotations = test.live, test.wanted
+				} else {
+					state.Labels, plan.Labels = tfMap(test.state), tfMap(test.plan)
+					live.Labels, wanted.Labels = test.live, test.wanted
+				}
+				before, err := json.Marshal(map[string]metav1.ObjectMeta{"metadata": live})
+				if err != nil {
+					t.Fatal(err)
+				}
+				ops := MetadataPatchOpsAgainstLive("/metadata/", state, plan, live)
+				if len(ops) != test.wantOps {
+					t.Fatalf("got %d operations, want %d: %v", len(ops), test.wantOps, ops)
+				}
+				after := before
+				if len(ops) != 0 {
+					encoded, err := ops.MarshalJSON()
+					if err != nil {
+						t.Fatal(err)
+					}
+					patch, err := jsonpatch.DecodePatch(encoded)
+					if err != nil {
+						t.Fatal(err)
+					}
+					after, err = patch.Apply(before)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+				var actual map[string]metav1.ObjectMeta
+				if err := json.Unmarshal(after, &actual); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(actual["metadata"], wanted) {
+					t.Fatalf("metadata = %#v, want %#v", actual["metadata"], wanted)
+				}
+				unchanged, err := json.Marshal(map[string]metav1.ObjectMeta{"metadata": live})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(unchanged) != string(before) {
+					t.Fatal("metadata patch mutated the live object")
+				}
+			})
+		}
+	}
+}
+
+func TestPopulateNamespacedMetadataFromResponse(t *testing.T) {
+	for _, plannedMap := range []types.Map{
+		types.MapNull(types.StringType),
+		tfMap(map[string]string{}),
+		tfMap(map[string]string{"managed": "value"}),
+	} {
+		for _, generateName := range []types.String{types.StringNull(), types.StringValue("prefix-")} {
+			metadata := NamespacedMetadataModel{
+				MetadataModel: MetadataModel{
+					MetadataBase: MetadataBase{
+						Name: types.StringUnknown(), UID: types.StringUnknown(),
+						Generation: types.Int64Unknown(), ResourceVersion: types.StringUnknown(),
+						Labels: plannedMap, Annotations: plannedMap,
+					},
+					GenerateName: generateName,
+				},
+				Namespace: types.StringUnknown(),
+			}
+			PopulateNamespacedMetadataFromResponse(&metadata, metav1.ObjectMeta{
+				Name: "reader", Namespace: "team", UID: "uid-1", Generation: 2, ResourceVersion: "20",
+				Labels: map[string]string{"external": "value"}, Annotations: map[string]string{"external": "value"},
+				GenerateName: "server-",
+			})
+			if metadata.Name.ValueString() != "reader" || metadata.Namespace.ValueString() != "team" ||
+				metadata.UID.ValueString() != "uid-1" || metadata.Generation.ValueInt64() != 2 ||
+				metadata.ResourceVersion.ValueString() != "20" {
+				t.Fatalf("server-assigned metadata not populated: %#v", metadata)
+			}
+			if !metadata.Labels.Equal(plannedMap) || !metadata.Annotations.Equal(plannedMap) || !metadata.GenerateName.Equal(generateName) {
+				t.Fatalf("planned metadata was overwritten: %#v", metadata)
+			}
+		}
+	}
 }
 
 func TestBaseMetadataConversion(t *testing.T) {

@@ -1,0 +1,3 @@
+```release-note:feature
+New ephemeral resource: `kubernetes_secret_v1`. Reads a Secret without storing its values in the Terraform plan or state.
+```

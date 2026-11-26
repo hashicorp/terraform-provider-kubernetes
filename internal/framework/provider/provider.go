@@ -235,6 +235,7 @@ func (p *KubernetesProvider) EphemeralResources(ctx context.Context) []func() ep
 	return []func() ephemeral.EphemeralResource{
 		authenticationv1.NewTokenRequestEphemeralResource,
 		certificatesv1.NewCertificateSigningRequestEphemeralResource,
+		corev1.NewSecretV1EphemeralResource,
 	}
 }
 

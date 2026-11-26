@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	gversion "github.com/hashicorp/go-version"
@@ -24,6 +25,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// NetworkingV1MuxFactory is initialized by the external test package to avoid
+// importing the mux (which imports kubernetes) from the internal test package.
+var NetworkingV1MuxFactory func(context.Context, string, *schema.Provider) (tfprotov6.ProviderServer, error)
+
+var testAccNetworkingV1ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+	"kubernetes": func() (tfprotov6.ProviderServer, error) {
+		if NetworkingV1MuxFactory == nil {
+			return nil, fmt.Errorf("networking v1 mux test factory was not registered")
+		}
+		return NetworkingV1MuxFactory(context.Background(), "test", Provider())
+	},
+}
+
+// NetworkingV1SDKProviderForTest preserves the exact pre-migration schemas without
+// adding test-only constructors to the production provider API.
+func NetworkingV1SDKProviderForTest() *schema.Provider {
+	p := Provider()
+	p.ResourcesMap["kubernetes_ingress_v1"] = resourceKubernetesIngressV1("")
+	p.ResourcesMap["kubernetes_ingress_class_v1"] = resourceKubernetesIngressClassV1("")
+	p.ResourcesMap["kubernetes_network_policy_v1"] = resourceKubernetesNetworkPolicyV1("")
+	return p
+}
+
 // Global constants for testing images (reduces the number of docker pulls).
 const (
 	busyboxImage = "busybox:1.36"
@@ -33,7 +57,10 @@ const (
 var (
 	testAccProvider          *schema.Provider
 	testAccExternalProviders map[string]resource.ExternalProvider
-	testAccProviderFactories = map[string]func() (*schema.Provider, error){
+	// TestAccMuxProviderFactories is initialized by the external test package, which
+	// can import the production mux without introducing a kubernetes import cycle.
+	TestAccMuxProviderFactories map[string]func() (tfprotov6.ProviderServer, error)
+	testAccProviderFactories    = map[string]func() (*schema.Provider, error){
 		"kubernetes": func() (*schema.Provider, error) {
 			return Provider(), nil
 		},
@@ -413,8 +440,17 @@ func isRunningInGke() (bool, error) {
 }
 
 func isRunningInEks() (bool, error) {
-	// EKS nodes don't have any unique labels, so check for the AWS
-	// specific config map created by our test-infra.
+	// Clusters that use EKS access entries, such as EKS Auto Mode, have no aws-auth
+	// ConfigMap, but their nodes carry eks.amazonaws.com labels.
+	node, err := getFirstNode()
+	if err != nil {
+		return false, err
+	}
+	for key := range node.GetLabels() {
+		if strings.HasPrefix(key, "eks.amazonaws.com/") {
+			return true, nil
+		}
+	}
 	meta := testAccProvider.Meta()
 	if meta == nil {
 		return false, errors.New("Provider not initialized, unable to fetch provider metadata")

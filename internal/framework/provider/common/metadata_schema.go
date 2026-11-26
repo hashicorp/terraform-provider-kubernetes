@@ -18,7 +18,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-const generateNameRequiresReplaceDescription = "Replaces the object when generate_name changes, except when SDKv2-written state holds an empty string for an unset value."
+const generateNameRequiresReplaceDescription = "Replaces the object when generate_name changes. An empty string and null both mean unset."
+
+// GenerateNameRequiresReplace treats "" and null as the same unset value, as
+// SDKv2 did, so normalising one to the other never replaces the object.
+func GenerateNameRequiresReplace() planmodifier.String {
+	return stringplanmodifier.RequiresReplaceIf(
+		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+			resp.RequiresReplace = req.PlanValue.IsUnknown() || req.StateValue.ValueString() != req.PlanValue.ValueString()
+		},
+		generateNameRequiresReplaceDescription,
+		generateNameRequiresReplaceDescription,
+	)
+}
 
 // MetadataSchema mirrors SDKv2 metadataSchema for cluster-scoped objects.
 // generatableName adds generate_name and its conflict with name; match the SDKv2 flag.
@@ -116,16 +128,7 @@ func metadataAttributes(objectName string, generatableName, namespaced bool) map
 			Description: "Prefix, used by the server, to generate a unique name ONLY IF the `name` field has not been provided. This value will also be combined with a unique suffix. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#idempotency",
 			Optional:    true,
 			PlanModifiers: []planmodifier.String{
-				// SDKv2 stores unset as ""; Framework uses null. Exempt that transition
-				// so plan -refresh=false does not recreate upgraded resources.
-				stringplanmodifier.RequiresReplaceIf(
-					func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-						sdkv2UnsetBecomingNull := req.StateValue.Equal(types.StringValue("")) && req.PlanValue.IsNull()
-						resp.RequiresReplace = !sdkv2UnsetBecomingNull
-					},
-					generateNameRequiresReplaceDescription,
-					generateNameRequiresReplaceDescription,
-				),
+				GenerateNameRequiresReplace(),
 			},
 			Validators: generateNameValidators,
 		}

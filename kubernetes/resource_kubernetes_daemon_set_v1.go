@@ -173,7 +173,7 @@ func resourceKubernetesDaemonSetV1Create(ctx context.Context, d *schema.Resource
 
 	if d.Get("wait_for_rollout").(bool) {
 		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutCreate),
-			waitForDaemonSetPodsFunc(ctx, conn, metadata.Namespace, metadata.Name))
+			WaitForDaemonSetPodsFunc(ctx, conn, metadata.Namespace, metadata.Name))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -224,7 +224,7 @@ func resourceKubernetesDaemonSetV1Update(ctx context.Context, d *schema.Resource
 
 	if d.Get("wait_for_rollout").(bool) {
 		err = retry.RetryContext(ctx, d.Timeout(schema.TimeoutUpdate),
-			waitForDaemonSetPodsFunc(ctx, conn, namespace, name))
+			WaitForDaemonSetPodsFunc(ctx, conn, namespace, name))
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -334,7 +334,7 @@ func resourceKubernetesDaemonSetV1Exists(ctx context.Context, d *schema.Resource
 	return true, err
 }
 
-func waitForDaemonSetPodsFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
+func WaitForDaemonSetPodsFunc(ctx context.Context, conn *kubernetes.Clientset, ns, name string) retry.RetryFunc {
 	return func() *retry.RetryError {
 		daemonSet, err := conn.AppsV1().DaemonSets(ns).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {

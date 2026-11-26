@@ -11,12 +11,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
+
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
 )
 
 func TestAccEpehemeralCertificateSigningRequest_basic(t *testing.T) {
 	name := "test"
 
 	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			kubetest.PreCheck(t)
+			// Managed clusters such as EKS do not sign kube-apiserver-client certificates.
+			kubetest.SkipIfNotRunningInKind(t)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
 			tfversion.SkipBelow(tfversion.Version1_10_0),

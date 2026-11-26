@@ -21,7 +21,7 @@ func TestAccKubernetesDataSourceIngressV1_basic(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
 		Steps: []resource.TestStep{
 			{ // Create the ingress resource in the first apply. Then check it in the second apply.
 				Config: testAccKubernetesDataSourceIngressV1_basic(name),
@@ -31,17 +31,17 @@ func TestAccKubernetesDataSourceIngressV1_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.resource_version"),
 					resource.TestCheckResourceAttrSet(resourceName, "metadata.0.uid"),
 					resource.TestCheckResourceAttr(resourceName, "spec.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.default_backend.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.default_backend.0.service.0.name", "app1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.default_backend.0.service.0.port.0.number", "443"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.default_backend.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.default_backend.service.name", "app1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.default_backend.service.port.number", "443"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.host", "server.domain.com"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path", "/.*"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.path_type", "Prefix"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service.0.name", "app2"),
-					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.0.path.0.backend.0.service.0.port.0.number", "80"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.rule.0.http.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.path.0.path", "/.*"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.path.0.path_type", "Prefix"),
+					resource.TestCheckResourceAttrSet(resourceName, "spec.0.rule.0.http.path.0.backend.%"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.path.0.backend.service.name", "app2"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.rule.0.http.path.0.backend.service.port.number", "80"),
 				),
 			},
 			{
@@ -79,7 +79,7 @@ func TestAccKubernetesDataSourceIngressV1_not_found(t *testing.T) {
 			testAccPreCheck(t)
 			skipIfClusterVersionLessThan(t, "1.22.0")
 		},
-		ProviderFactories: testAccProviderFactories,
+		ProtoV6ProviderFactories: testAccNetworkingV1ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccKubernetesDataSourceIngressV1_nonexistent(name),
@@ -98,29 +98,31 @@ func testAccKubernetesDataSourceIngressV1_basic(name string) string {
     name = "%s"
   }
   spec {
-    default_backend {
-      service {
+    default_backend = {
+      service = {
         name = "app1"
-        port {
+        port = {
           number = 443
         }
       }
     }
     rule {
       host = "server.domain.com"
-      http {
-        path {
-          backend {
-            service {
-              name = "app2"
-              port {
-                number = 80
+      http = {
+        path = [
+          {
+            backend = {
+              service = {
+                name = "app2"
+                port = {
+                  number = 80
+                }
               }
             }
-          }
-          path      = "/.*"
-          path_type = "Prefix"
-        }
+            path      = "/.*"
+            path_type = "Prefix"
+          },
+        ]
       }
     }
   }

@@ -11,6 +11,8 @@ Starting with Kubernetes provider v3.3.0, existing resources and data sources ar
 
 Goal is to avoid breaking changes and preserve existing configurations, state, and Kubernetes objects. However, fixing incorrect behavior and handling empty values more precisely can change validation or plans for some configurations. The Kubernetes API versions used by these resources do not change.
 
+The workload resources `kubernetes_deployment_v1`, `kubernetes_daemon_set_v1`, `kubernetes_stateful_set_v1`, `kubernetes_pod_v1`, `kubernetes_job_v1` and `kubernetes_cron_job_v1` were migrated in v4.0.0 and change the syntax of some arguments. Their upgrade steps and behavior changes are described in the [v4 upgrade guide](v4-upgrade-guide.md).
+
 Existing resource state is supported without re-importing objects or manually editing state.
 
 ## Upgrade checklist
@@ -41,6 +43,12 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_cluster_role_binding_v1` | v3.5.0 | [ClusterRoleBinding resource](#resource-kubernetes_cluster_role_binding_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
+| Resource | `kubernetes_deployment_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_daemon_set_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_stateful_set_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_pod_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_job_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
+| Resource | `kubernetes_cron_job_v1` | v4.0.0 | [v4 upgrade guide](v4-upgrade-guide.md) |
 
 ## Resource: kubernetes_namespace_v1
 
@@ -195,3 +203,37 @@ Existing versioned resources upgrade at the same address. Moving from
 `kubernetes_service` requires Terraform 1.8 or later and the documented `moved` block.
 State schema version increases to 2; provider 3.x cannot read the upgraded state.
 Back up state and recreate saved plans when upgrading.
+
+## Version 4: Networking
+
+These resources intentionally adopt object arguments for singular nested objects.
+This is a version 4 configuration change; Plugin Framework does not require every
+singleton block to become an object. Apply the syntax changes only to the paths
+listed in the resource guides. Workload selectors, such as Deployment selectors,
+retain their existing block syntax.
+
+| Resource | Blocks that become objects | Repeated blocks that become object lists |
+| --- | --- | --- |
+| [Ingress](../resources/ingress_v1.md) | `spec.default_backend`, `spec.rule[*].http`, path `backend`, and each backend's `resource`, `service`, and `service.port` | `spec.rule[*].http.path` |
+| [IngressClass](../resources/ingress_class_v1.md) | `spec.parameters` | None |
+| [NetworkPolicy](../resources/network_policy_v1.md) | `spec.pod_selector`, each ingress/egress peer's `pod_selector`, `namespace_selector`, and `ip_block` | Each selector's `match_expressions` |
+
+Use `field = { ... }` for objects and `field = [{ ... }]` for repeated objects.
+Replace affected `dynamic` blocks with object expressions or list comprehensions.
+Remove `[0]` only for converted objects in references and `ignore_changes` paths;
+keep indexes for `metadata`, `spec`, rules, paths, and other retained lists.
+Update module variables from `list(object(...))` to `object(...)` for the singular
+values. The linked resource guides include conditional and Terraform JSON examples.
+Preserve the difference between an omitted selector and an empty selector: an empty
+selector can select every pod or namespace.
+
+Existing versioned resources upgrade at the same address. IngressClass and
+NetworkPolicy support moves from their same-API deprecated aliases with Terraform
+1.8 or later. The beta `kubernetes_ingress` resource is not a supported move source.
+
+Explicit empty label maps or expression values can normalize legacy `null` to an
+empty collection in a one-time update after upgrading. That update changes state
+without writing to Kubernetes or replacing the resource; the next plan should be empty.
+
+State schema versions increase from 0 to 1. Provider 3.x cannot read the upgraded
+state. Back up state and recreate saved plans when upgrading.

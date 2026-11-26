@@ -12,7 +12,7 @@ import (
 )
 
 func TestAccKubernetesDataSourceServiceV1_basic(t *testing.T) {
-	resourceName := "kubernetes_service_v1.test"
+	resourceName := "kubernetes_service.test"
 	dataSourceName := "data.kubernetes_service_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -127,7 +127,7 @@ func TestAccKubernetesDataSourceServiceV1_loadBalancer_ipMode(t *testing.T) {
 
 func testAccKubernetesDataSourceServiceV1Config_loadBalancer_ipMode(name string) string {
 	return fmt.Sprintf(`
-resource "kubernetes_service_v1" "test" {
+resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
   }
@@ -147,14 +147,14 @@ resource "kubernetes_service_v1" "test" {
 
 data "kubernetes_service_v1" "test" {
   metadata {
-    name = "${kubernetes_service_v1.test.metadata.0.name}"
+    name = "${kubernetes_service.test.metadata.0.name}"
   }
 }
 `, name)
 }
 
 func testAccKubernetesDataSourceServiceV1_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service" "test" {
   metadata {
     name = "%s"
     annotations = {
@@ -183,7 +183,7 @@ func testAccKubernetesDataSourceServiceV1_basic(name string) string {
 func testAccKubernetesDataSourceServiceV1_read() string {
 	return `data "kubernetes_service_v1" "test" {
   metadata {
-    name = "${kubernetes_service_v1.test.metadata.0.name}"
+    name = "${kubernetes_service.test.metadata.0.name}"
   }
 }
 `

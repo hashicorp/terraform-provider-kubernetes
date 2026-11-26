@@ -7,6 +7,9 @@ resource "kubernetes_service_v1" "example" {
       app = kubernetes_pod.example.metadata.0.labels.app
     }
     session_affinity = "ClientIP"
+    session_affinity_config = {
+      client_ip = { timeout_seconds = 300 }
+    }
     port {
       port        = 8080
       target_port = 80

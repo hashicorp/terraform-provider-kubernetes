@@ -210,6 +210,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		batchv1.NewCronJobV1,
 		corev1.NewNamespaceV1,
 		corev1.NewPodV1,
+		corev1.NewServiceV1,
 		networkingv1.NewIngressV1,
 		networkingv1.NewIngressClassV1,
 		networkingv1.NewNetworkPolicyV1,

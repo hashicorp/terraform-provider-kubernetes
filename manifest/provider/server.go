@@ -9,8 +9,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-provider-kubernetes/manifest/openapi"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -94,7 +92,9 @@ func (s *RawProviderServer) ValidateDataSourceConfig(ctx context.Context, req *t
 func (s *RawProviderServer) StopProvider(ctx context.Context, req *tfprotov5.StopProviderRequest) (*tfprotov5.StopProviderResponse, error) {
 	s.logger.Trace("[StopProvider][Request]\n%s\n", dump(*req))
 
-	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
+	// The plugin server cancels the requests in progress once every server has
+	// answered. An error here would keep it from doing so, for all of them.
+	return &tfprotov5.StopProviderResponse{}, nil
 }
 
 // CallFunction function

@@ -178,7 +178,7 @@ func (s *RawProviderServer) validateResourceOnline(manifest *tftypes.Value) (dia
 		diags = append(diags, &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
 			Summary:  "Failed to determine GroupVersionResource for manifest",
-			Detail:   err.Error(),
+			Detail:   kindLookupDetail(err),
 		})
 		return
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/corev1"
 	pfunctions "github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/functions"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/gatewaynetworkingv1"
+	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/manifestv2"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/networkingv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/policyv1"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/rbacv1"
@@ -212,6 +213,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		corev1.NewNamespaceV1,
 		corev1.NewPodV1,
 		corev1.NewServiceV1,
+		manifestv2.NewManifestV2,
 		networkingv1.NewIngressV1,
 		networkingv1.NewIngressClassV1,
 		networkingv1.NewNetworkPolicyV1,
@@ -235,12 +237,14 @@ func (p *KubernetesProvider) EphemeralResources(ctx context.Context) []func() ep
 	return []func() ephemeral.EphemeralResource{
 		authenticationv1.NewTokenRequestEphemeralResource,
 		certificatesv1.NewCertificateSigningRequestEphemeralResource,
+		corev1.NewSecretV1EphemeralResource,
 	}
 }
 
 func (p *KubernetesProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
 		pfunctions.NewManifestDecodeFunction,
+		pfunctions.NewManifestDecodeMapFunction,
 		pfunctions.NewManifestDecodeMultiFunction,
 		pfunctions.NewManifestEncodeFunction,
 	}

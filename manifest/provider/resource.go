@@ -33,6 +33,15 @@ func GVRFromUnstructured(o *unstructured.Unstructured, m meta.RESTMapper) (schem
 	return mapping.Resource, err
 }
 
+// kindLookupDetail is the detail of a failed lookup of the manifest's kind.
+// A kind the cluster does not know yet is a case for kubernetes_manifest_v2.
+func kindLookupDetail(err error) string {
+	if meta.IsNoMatchError(err) {
+		return err.Error() + "\n\nThe kubernetes_manifest_v2 resource does not look the kind up while planning. Use it when the CustomResourceDefinition of this kind is created in the same apply."
+	}
+	return err.Error()
+}
+
 // GVKFromTftypesObject extracts a canonical schema.GroupVersionKind out of the resource's
 // metadata by checking it against the discovery API via a RESTMapper
 func GVKFromTftypesObject(in *tftypes.Value, m meta.RESTMapper) (schema.GroupVersionKind, error) {

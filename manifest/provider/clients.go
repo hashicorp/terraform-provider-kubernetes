@@ -125,7 +125,7 @@ func (ps *RawProviderServer) checkValidCredentials(ctx context.Context) []*tfpro
 			diags = append(diags, &tfprotov5.Diagnostic{
 				Severity: tfprotov5.DiagnosticSeverityError,
 				Summary:  "Failed to construct REST client",
-				Detail:   err.Error(),
+				Detail:   err.Error() + "\n\nThe kubernetes_manifest_v2 resource plans a new object without contacting the cluster. Use it when the cluster is created in the same apply.",
 			})
 			return
 		}

@@ -299,7 +299,7 @@ func (s *RawProviderServer) PlanResourceChange(ctx context.Context, req *tfproto
 		rd := &tfprotov5.Diagnostic{
 			Severity: tfprotov5.DiagnosticSeverityError,
 			Summary:  "API did not recognize GroupVersionKind from manifest (CRD may not be installed)",
-			Detail:   err.Error(),
+			Detail:   kindLookupDetail(err),
 		}
 		resp.Diagnostics = append(resp.Diagnostics, rd)
 		if canDeferr && meta.IsNoMatchError(err) {

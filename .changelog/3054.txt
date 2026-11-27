@@ -1,0 +1,15 @@
+```release-note:feature
+New resource: `kubernetes_manifest_v2`, the successor of `kubernetes_manifest`. It applies a manifest written in HCL or YAML with server-side apply, without reading the kind's schema from the cluster, so a CustomResourceDefinition and its custom resources can be created in one apply. A `moved` block moves a resource from `kubernetes_manifest`, or from `kubectl_manifest` of another provider.
+```
+
+```release-note:feature
+New function: `manifest_decode_map`. Decodes multi-document YAML into a map keyed by `Kind[.group]/[namespace/]name`, a stable `for_each` key for one resource instance per object.
+```
+
+```release-note:bug
+provider: Interrupting Terraform (Ctrl-C) stops an operation that is waiting, such as `wait` in `kubernetes_manifest` or the rollout wait of `kubernetes_deployment_v1`. Before, the wait continued until its timeout.
+```
+
+```release-note:feature
+New ephemeral resource: `kubernetes_secret_v1`. Reads a Secret without storing its values in the Terraform plan or state.
+```

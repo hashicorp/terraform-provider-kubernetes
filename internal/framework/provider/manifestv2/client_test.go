@@ -4,10 +4,13 @@
 package manifestv2
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +34,27 @@ func TestAwaitsDependency(t *testing.T) {
 	} {
 		if _, got := awaitsDependency(tc.err); got != tc.want {
 			t.Errorf("%s: got %t, want %t", name, got, tc.want)
+		}
+	}
+}
+
+// An apply that starts after its namespace or kind has been missing for a
+// minute fails at once, says what is missing and keeps the API error.
+func TestRetryWhileMissing(t *testing.T) {
+	id := identity{APIVersion: "example.com/v1", Kind: "Widget", Namespace: "prod", Name: "w"}
+	for dependency, tc := range map[string]struct {
+		err   error
+		check string
+	}{
+		"namespace prod":             {apierrors.NewNotFound(schema.GroupResource{Resource: "namespaces"}, "prod"), "check the namespace name."},
+		"kind example.com/v1 Widget": {unknownKindError{"example.com/v1", "Widget"}, "check apiVersion and kind."},
+	} {
+		missingSince.Store(dependency, time.Now().Add(-2*time.Minute))
+		err := retryWhile(context.Background(), id, func() error { return tc.err })
+		missingSince.Delete(dependency)
+		if !errors.Is(err, tc.err) || !strings.Contains(err.Error(), "The "+dependency+" has been missing for more than a minute.") ||
+			!strings.HasSuffix(err.Error(), tc.check) {
+			t.Errorf("%s: %v", dependency, err)
 		}
 	}
 }

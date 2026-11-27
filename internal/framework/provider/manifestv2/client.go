@@ -329,7 +329,7 @@ func retryWhile(ctx context.Context, id identity, op func() error) error {
 		waited = dependency
 		first, _ := missingSince.LoadOrStore(dependency, start)
 		if time.Since(start) > time.Minute || start.Sub(first.(time.Time)) > time.Minute {
-			return err
+			return missingError{dependency, err}
 		}
 		select {
 		case <-ctx.Done():
@@ -339,6 +339,25 @@ func retryWhile(ctx context.Context, id identity, op func() error) error {
 		delay = min(2*delay, 4*time.Second)
 	}
 }
+
+// missingError is the error of an apply whose namespace or kind stayed missing
+// for longer than the retry waits, with how to order the apply after it.
+type missingError struct {
+	dependency string
+	err        error
+}
+
+func (e missingError) Error() string {
+	check := "apiVersion and kind"
+	if strings.HasPrefix(e.dependency, "namespace ") {
+		check = "the namespace name"
+	}
+	return fmt.Sprintf("%s\n\nThe %s has been missing for more than a minute. If this configuration creates it, make this resource "+
+		"depend on the one that creates it, through a reference or depends_on; a Namespace or CustomResourceDefinition in the "+
+		"same for_each as this object needs a resource of its own. Otherwise, check %s.", e.err, e.dependency, check)
+}
+
+func (e missingError) Unwrap() error { return e.err }
 
 // awaitsDependency reports errors of an apply that ran before its namespace
 // or its CustomResourceDefinition was ready, and names what is missing.

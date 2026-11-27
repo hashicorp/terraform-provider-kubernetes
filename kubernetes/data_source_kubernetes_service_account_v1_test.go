@@ -13,7 +13,7 @@ import (
 )
 
 func TestAccKubernetesDataSourceServiceAccountV1_basic(t *testing.T) {
-	resourceName := "kubernetes_service_account_v1.test"
+	resourceName := "kubernetes_service_account.test"
 	dataSourceName := "data.kubernetes_service_account_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -49,7 +49,7 @@ func TestAccKubernetesDataSourceServiceAccountV1_basic(t *testing.T) {
 }
 
 func TestAccKubernetesDataSourceServiceAccountV1_default_secret(t *testing.T) {
-	resourceName := "kubernetes_service_account_v1.test"
+	resourceName := "kubernetes_service_account.test"
 	dataSourceName := "data.kubernetes_service_account_v1.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
@@ -101,7 +101,7 @@ func TestAccKubernetesDataSourceServiceAccountV1_not_found(t *testing.T) {
 }
 
 func testAccKubernetesDataSourceServiceAccountV1_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_service_account_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_service_account" "test" {
   metadata {
     annotations = {
       TestAnnotation = "annotation"
@@ -136,7 +136,7 @@ resource "kubernetes_secret_v1" "image_pull_secret" {
 func testAccKubernetesDataSourceServiceAccountV1_read() string {
 	return `data "kubernetes_service_account_v1" "test" {
   metadata {
-    name = "${kubernetes_service_account_v1.test.metadata.0.name}"
+    name = "${kubernetes_service_account.test.metadata.0.name}"
   }
 }
 `
@@ -147,7 +147,7 @@ func testAccKubernetesDataSourceServiceAccountV1_default_secret(name string) str
   default = "%s-token-test0"
 }
 
-resource "kubernetes_service_account_v1" "test" {
+resource "kubernetes_service_account" "test" {
   metadata {
     name = "%s"
   }
@@ -165,7 +165,7 @@ resource "kubernetes_secret_v1" "test" {
   }
   type = "kubernetes.io/service-account-token"
   depends_on = [
-    kubernetes_service_account_v1.test
+    kubernetes_service_account.test
   ]
 }
 `, name, name, name)

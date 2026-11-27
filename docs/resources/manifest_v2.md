@@ -349,7 +349,7 @@ When the cluster stops serving the API version an object was applied in, the obj
 
 ## Objects that already exist
 
-Creating an object that already exists in the cluster is an error, as with `kubernetes_manifest`. Import it instead, so that taking over an object, and later deleting it with `terraform destroy`, is always explicit. An object that was deleted and created again outside Terraform under the same name gets another UID. The refresh warns about it, and the resource manages the new object from then on. Between a plan and its apply, the UID keeps an update or a delete from acting on an object that replaced the planned one.
+Creating an object that already exists in the cluster is an error, as with `kubernetes_manifest`. Import it instead, so that taking over an object, and later deleting it with `terraform destroy`, is always explicit. To set some fields of an object that something else keeps managing, use [`kubernetes_manifest_patch`](manifest_patch.md), which never deletes the object. An object that was deleted and created again outside Terraform under the same name gets another UID. The refresh warns about it, and the resource manages the new object from then on. Between a plan and its apply, the UID keeps an update or a delete from acting on an object that replaced the planned one.
 
 Creating needs the `create` and `patch` permissions for the kind, reading needs `get`, updating `get` and `patch`, and deleting `delete` and `get`. `wait` also uses `watch` when the credentials allow it.
 

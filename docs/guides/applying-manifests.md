@@ -20,6 +20,7 @@ Provider functions and moving resources between resource types require Terraform
 | A resource for the kind, such as `kubernetes_deployment_v1` | The provider has one and you write the object in HCL. Arguments are documented and checked while planning. |
 | `kubernetes_manifest_v2` | You have YAML, the kind is a custom resource, or the provider has no resource for the kind. |
 | `kubernetes_manifest` | You need the manifest checked against the cluster's schema while planning. |
+| [`kubernetes_manifest_patch`](../resources/manifest_patch.md) | The object exists and something else manages it, and you set some of its fields. Terraform never creates or deletes the object. |
 
 ## From YAML to resources
 

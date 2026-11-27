@@ -270,7 +270,7 @@ func Provider() *schema.Provider {
 			"kubernetes_endpoint_slice_v1":          resourceKubernetesEndpointSliceV1(),
 			"kubernetes_env":                        resourceKubernetesEnv(),
 			"kubernetes_limit_range":                resourceKubernetesLimitRangeV1("Deprecated; use kubernetes_limit_range_v1."),
-			"kubernetes_limit_range_v1":             resourceKubernetesLimitRangeV1(""),
+			// kubernetes_limit_range_v1 is served by the Framework provider; removed from SDKv2.
 			"kubernetes_node_taint":                 resourceKubernetesNodeTaint(),
 			"kubernetes_persistent_volume":          resourceKubernetesPersistentVolumeV1("Deprecated; use kubernetes_persistent_volume_v1."),
 			"kubernetes_persistent_volume_v1":       resourceKubernetesPersistentVolumeV1(""),

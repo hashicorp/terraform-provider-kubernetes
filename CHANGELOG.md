@@ -1,3 +1,15 @@
+## 3.6.0 (Nov 27, 2026)
+
+BREAKING CHANGES:
+
+* `resource/kubernetes_priority_class_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. Remove the entry or provide a string value; omitting the whole map or setting it to `null` remains supported. [[GH-2974](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2974)]
+
+* `resource/kubernetes_priority_class_v1`: Plans now reject `value` outside the signed 32-bit range instead of silently wrapping it. The maximum for user-defined classes is `1000000000`. If you manage an imported built-in class above that limit and previously omitted its name, set `metadata.name` to the existing class name (for example, `system-node-critical`). No re-import is required. [[GH-2974](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2974)]
+
+NOTES:
+
+* `resource/kubernetes_priority_class_v1`: Migrated from SDKv2 to the Plugin Framework, keeping the existing configuration syntax and supporting existing state without re-import. Explicitly empty `labels = {}` or `annotations = {}` may show a one-time in-place update after upgrading, because SDKv2 stored them as null; immediately after upgrading, `terraform plan -refresh=false` may also show a one-time in-place update for a priority class configured with `name`, normalizing the unset `generate_name` from `""` to null. Neither replaces the priority class. `moved` blocks from the deprecated `kubernetes_priority_class` resource are supported with Terraform 1.8 or later. Import by resource identity is new and requires Terraform 1.12 or later. See the Plugin Framework upgrade guide for details. [[GH-2974](https://github.com/hashicorp/terraform-provider-kubernetes/issues/2974)]
+
 ## 3.5.0 (Nov 5, 2026)
 
 NOTES:

@@ -60,20 +60,23 @@ resource "kubernetes_priority_class_v1" "example" {
 
 ## Value limits
 
-`value` must fit in a 32-bit signed integer. A priority class whose name, or
-`generate_name` prefix, does not start with `system-` is limited to `1000000000`, the
-highest value the Kubernetes API accepts for user-defined classes. Both limits are
-checked during planning. When the name is not known until apply, the API server
-checks it instead.
+`value` must fit in a signed 32-bit integer. The maximum for a user-defined
+PriorityClass is `1000000000`. Higher values are reserved for built-in system classes.
+
+If you manage an imported built-in class above that limit, set `metadata.name` to
+its existing name (for example, `system-node-critical`). An empty `metadata {}`
+block fails validation even if the name is already in state. Adding the existing
+name does not require re-import or replacement.
 
 ## Metadata and upgrades
 
 Set either `name` or `generate_name` in `metadata`, not both. Label and annotation
 values must be non-null strings; omit an entry to remove it.
 
-Upgrading SDKv2 state preserves the priority class. If configuration explicitly sets
-`labels = {}` or `annotations = {}`, the first plan may show a one-time in-place update
-because SDKv2 stored empty maps as null. The priority class is not replaced.
+After upgrading from SDKv2, the first plan may show a one-time in-place update for
+`labels` or `annotations`: `null` to `{}` if you explicitly configure an empty map,
+or `{}` to `null` if you omit a map that SDKv2 stored as empty after a refresh.
+Neither change replaces the priority class.
 
 With Terraform 1.8 or later, migrate the deprecated resource name without recreating
 the priority class:

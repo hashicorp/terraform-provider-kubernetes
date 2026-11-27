@@ -50,8 +50,9 @@ func resourceKubernetesPersistentVolumeClaimV1(deprecationMessage string) *schem
 
 		Schema: fields,
 
-		// All fields of Spec are immutable after creation, except for resources.requests.storage.
+		// All fields of Spec are immutable after creation, except for resources.requests.storage and volume_attributes_class_name.
 		// Storage can only be increased in place. A new object will be created when the storage is decreased.
+		// VolumeAttributesClassName is not allowed to revert to empty. A new object will be created if it is unset.
 		CustomizeDiff: func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
 			// Skip custom logic for resource creation.
 			if diff.Id() == "" {
@@ -83,6 +84,20 @@ func resourceKubernetesPersistentVolumeClaimV1(deprecationMessage string) *schem
 					err := diff.ForceNew(key)
 					if err != nil {
 						return err
+					}
+				}
+			}
+			key = "spec.0.volume_attributes_class_name"
+			if diff.HasChange(key) {
+				old, new := diff.GetChange(key)
+				if v, ok := new.(string); !ok || v == "" {
+					if v, ok = old.(string); ok && v != "" {
+						log.Printf("[DEBUG] CustomizeDiff spec.volume_attributes_class_name: field can not be reset back to empty")
+						log.Printf("[DEBUG] CustomizeDiff creating new PVC")
+						err := diff.ForceNew(key)
+						if err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -208,7 +223,6 @@ func resourceKubernetesPersistentVolumeClaimV1Update(ctx context.Context, d *sch
 	}
 
 	ops := patchMetadata("metadata.0.", "/metadata/", d)
-	// spec.resources.requests is the only editable field in Spec.
 	if d.HasChange("spec.0.resources.0.requests") {
 		r := d.Get("spec.0.resources.0.requests").(map[string]interface{})
 		requests, err := expandMapToResourceList(r)
@@ -219,6 +233,20 @@ func resourceKubernetesPersistentVolumeClaimV1Update(ctx context.Context, d *sch
 			Path:  "/spec/resources/requests",
 			Value: requests,
 		})
+	}
+	if d.HasChange("spec.0.volume_attributes_class_name") {
+		o, n := d.GetChange("spec.0.volume_attributes_class_name")
+		if v, ok := o.(string); ok && len(v) > 0 {
+			ops = append(ops, &ReplaceOperation{
+				Path:  "/spec/volumeAttributesClassName",
+				Value: n.(string),
+			})
+		} else {
+			ops = append(ops, &AddOperation{
+				Path:  "/spec/volumeAttributesClassName",
+				Value: n.(string),
+			})
+		}
 	}
 	data, err := ops.MarshalJSON()
 	if err != nil {

@@ -371,6 +371,9 @@ func flattenPersistentVolumeSpec(in v1.PersistentVolumeSpec) []interface{} {
 	if in.StorageClassName != "" {
 		att["storage_class_name"] = in.StorageClassName
 	}
+	if in.VolumeAttributesClassName != nil {
+		att["volume_attributes_class_name"] = *in.VolumeAttributesClassName
+	}
 	if in.NodeAffinity != nil {
 		att["node_affinity"] = flattenVolumeNodeAffinity(in.NodeAffinity)
 	}
@@ -995,6 +998,9 @@ func expandPersistentVolumeSpec(l []interface{}) (*v1.PersistentVolumeSpec, erro
 	if v, ok := in["storage_class_name"].(string); ok {
 		obj.StorageClassName = v
 	}
+	if v, ok := in["volume_attributes_class_name"].(string); ok && v != "" {
+		obj.VolumeAttributesClassName = ptr.To(v)
+	}
 	if v, ok := in["node_affinity"].([]interface{}); ok && len(v) > 0 {
 		obj.NodeAffinity = expandVolumeNodeAffinity(v)
 	}
@@ -1267,6 +1273,20 @@ func patchPersistentVolumeSpec(pathPrefix, prefix string, d *schema.ResourceData
 		} else {
 			ops = append(ops, &AddOperation{
 				Path:  pathPrefix + "/storageClassName",
+				Value: n.(string),
+			})
+		}
+	}
+	if d.HasChange(prefix + "volume_attributes_class_name") {
+		o, n := d.GetChange(prefix + "volume_attributes_class_name")
+		if v, ok := o.(string); ok && len(v) > 0 {
+			ops = append(ops, &ReplaceOperation{
+				Path:  pathPrefix + "/volumeAttributesClassName",
+				Value: n.(string),
+			})
+		} else {
+			ops = append(ops, &AddOperation{
+				Path:  pathPrefix + "/volumeAttributesClassName",
 				Value: n.(string),
 			})
 		}

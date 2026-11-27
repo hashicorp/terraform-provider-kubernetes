@@ -1,9 +1,9 @@
 ```release-note:note
-`resource/kubernetes_priority_class_v1`: Migrated from SDKv2 to the Plugin Framework, keeping the existing configuration syntax and supporting existing state without re-import. Explicitly empty `labels = {}` or `annotations = {}` may show a one-time in-place update after upgrading, because SDKv2 stored them as null; immediately after upgrading, `terraform plan -refresh=false` may also show a one-time in-place update for a priority class configured with `name`, normalizing the unset `generate_name` from `""` to null. Neither replaces the priority class. `moved` blocks from the deprecated `kubernetes_priority_class` resource are supported with Terraform 1.8 or later. Import by resource identity is new and requires Terraform 1.12 or later. See the Plugin Framework upgrade guide for details.
+`resource/kubernetes_priority_class_v1`: Migrated from SDKv2 to the Plugin Framework, keeping the existing configuration syntax and supporting existing state without re-import. After upgrading, omitted or explicitly empty `labels` and `annotations` may show a one-time in-place update between `{}` and `null`. A first plan with `-refresh=false` may also normalize an unset `generate_name` from `""` to `null` for a priority class configured with `name`. Neither change replaces the priority class. `moved` blocks from the deprecated `kubernetes_priority_class` resource are supported with Terraform 1.8 or later. Import by resource identity is new and requires Terraform 1.12 or later. See the Plugin Framework upgrade guide for details.
 ```
 
-```release-note:enhancement
-`resource/kubernetes_priority_class_v1`: Validate `value` during planning. Values outside the 32-bit integer range are rejected, as are values above 1000000000 for a priority class whose name or `generate_name` does not start with `system-`. Previously, a value outside that range silently wrapped to a different value and planned a replacement on every run, and values above 1000000000 failed only when the Kubernetes API rejected them during apply.
+```release-note:breaking-change
+`resource/kubernetes_priority_class_v1`: Plans now reject `value` outside the signed 32-bit range instead of silently wrapping it. The maximum for user-defined classes is `1000000000`. If you manage an imported built-in class above that limit and previously omitted its name, set `metadata.name` to the existing class name (for example, `system-node-critical`). No re-import is required.
 ```
 
 ```release-note:breaking-change

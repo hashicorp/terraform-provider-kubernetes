@@ -50,16 +50,18 @@ resource "kubernetes_endpoints_v1" "example" {
 
 resource "kubernetes_service_v1" "example" {
   metadata {
-    name = "${kubernetes_endpoints_v1.example.metadata.0.name}"
+    name = kubernetes_endpoints_v1.example.metadata.0.name
   }
 
   spec {
     port {
+      name        = "http"
       port        = 8080
       target_port = 80
     }
 
     port {
+      name        = "https"
       port        = 8443
       target_port = 443
     }

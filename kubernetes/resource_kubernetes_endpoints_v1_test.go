@@ -1,8 +1,9 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-// NOTE this API has been deprecated and the resource should be removed
-// in the next major provider version.
+// This file retains its historical _v1 name, but kubernetes_endpoints_v1 has migrated
+// to the Plugin Framework. It contains acceptance tests for the deprecated,
+// unversioned SDKv2 resource kubernetes_endpoints.
 //
 //nolint:all
 package kubernetes
@@ -17,12 +18,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
+func TestAccKubernetesEndpoints_basic(t *testing.T) {
 	var conf api.Endpoints
-	resourceName := "kubernetes_endpoints_v1.test"
+	resourceName := "kubernetes_endpoints.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -111,10 +113,10 @@ func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesEndpointsV1_generatedName(t *testing.T) {
+func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 	var conf api.Endpoints
 	prefix := "tf-acc-test-gen-"
-	resourceName := "kubernetes_endpoints_v1.test"
+	resourceName := "kubernetes_endpoints.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -152,7 +154,7 @@ func testAccCheckKubernetesEndpointV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_endpoints_v1" {
+		if rs.Type != "kubernetes_endpoints" {
 			continue
 		}
 
@@ -162,11 +164,13 @@ func testAccCheckKubernetesEndpointV1Destroy(s *terraform.State) error {
 		}
 
 		resp, err := conn.CoreV1().Endpoints(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err == nil {
-			if resp.Name == rs.Primary.ID {
-				return fmt.Errorf("Endpoint still exists: %s", rs.Primary.ID)
-			}
+		if errors.IsNotFound(err) {
+			continue
 		}
+		if err != nil {
+			return fmt.Errorf("checking destruction of Endpoints %q: %w", rs.Primary.ID, err)
+		}
+		return fmt.Errorf("Endpoints %q still exists (uid %s)", rs.Primary.ID, resp.UID)
 	}
 
 	return nil
@@ -201,7 +205,7 @@ func testAccCheckKubernetesEndpointV1Exists(n string, obj *api.Endpoints) resour
 }
 
 func testAccKubernetesEndpointsV1_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -229,7 +233,7 @@ func testAccKubernetesEndpointsV1_basic(name string) string {
 }
 
 func testAccKubernetesEndpointsV1_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -287,7 +291,7 @@ func testAccKubernetesEndpointsV1_modified(name string) string {
 }
 
 func testAccKubernetesEndpointsV1_generatedName(prefix string) string {
-	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_endpoints" "test" {
   metadata {
     generate_name = "%s"
   }

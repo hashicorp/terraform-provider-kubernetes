@@ -1,0 +1,11 @@
+```release-note:note
+`resource/kubernetes_endpoints_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax. Existing state is supported without re-import, and the resource now supports resource identity (identity-based import requires Terraform 1.12 or later). Earlier provider versions cannot read state written after upgrading, so back up state if you may need to roll back. `moved` blocks from the deprecated `kubernetes_endpoints` resource are supported with Terraform 1.8 or later. Explicitly empty strings, metadata maps or `subset {}` blocks may produce a one-time in-place update after upgrading, never a replacement. See the Plugin Framework upgrade guide for details.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_endpoints_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. Remove those entries or provide string values.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_endpoints_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected at plan time, including `generate_name = ""`. To keep the existing Endpoints, remove `generate_name` if it is empty; otherwise remove `name` and keep `generate_name`.
+```

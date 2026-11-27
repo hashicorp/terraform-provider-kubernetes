@@ -17,7 +17,7 @@ import (
 )
 
 func TestAccKubernetesDataSourceEndpointsV1_basic(t *testing.T) {
-	resourceName := "kubernetes_endpoints_v1.test"
+	resourceName := "kubernetes_endpoints.test"
 	dataSourceName := "data.kubernetes_endpoints_v1.test"
 	var conf corev1.Endpoints
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -86,7 +86,7 @@ func TestAccKubernetesDataSourceEndpointsV1_not_found(t *testing.T) {
 func testAccKubernetesDataSourceEndpointsV1_read() string {
 	return `data "kubernetes_endpoints_v1" "test" {
   metadata {
-    name = "${kubernetes_endpoints_v1.test.metadata.0.name}"
+    name = "${kubernetes_endpoints.test.metadata.0.name}"
   }
 }
 `

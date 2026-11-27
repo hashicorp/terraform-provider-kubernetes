@@ -3,6 +3,10 @@
 
 package kubernetes
 
+// This file retains its historical _v1 name, but kubernetes_cluster_role_v1 has
+// migrated to the Plugin Framework. It contains acceptance tests for the deprecated,
+// unversioned SDKv2 resource kubernetes_cluster_role.
+
 import (
 	"context"
 	"fmt"
@@ -20,9 +24,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
-func TestAccKubernetesClusterRoleV1_basic(t *testing.T) {
+func TestAccKubernetesClusterRole_basic(t *testing.T) {
 	var conf rbacv1.ClusterRole
-	resourceName := "kubernetes_cluster_role_v1.test"
+	resourceName := "kubernetes_cluster_role.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -72,8 +76,8 @@ func TestAccKubernetesClusterRoleV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleV1_identity(t *testing.T) {
-	resourceName := "kubernetes_cluster_role_v1.test"
+func TestAccKubernetesClusterRole_identity(t *testing.T) {
+	resourceName := "kubernetes_cluster_role.test"
 	name := acctest.RandomWithPrefix("tf-acc-test")
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -105,10 +109,10 @@ func TestAccKubernetesClusterRoleV1_identity(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleV1_generatedName(t *testing.T) {
+func TestAccKubernetesClusterRole_generatedName(t *testing.T) {
 	var conf rbacv1.ClusterRole
 	prefix := "tf-acc-test-gen:"
-	resourceName := "kubernetes_cluster_role_v1.test"
+	resourceName := "kubernetes_cluster_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -131,10 +135,10 @@ func TestAccKubernetesClusterRoleV1_generatedName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleV1_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
+func TestAccKubernetesClusterRole_UpdatePatchOperationsOrderWithRemovals(t *testing.T) {
 	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_cluster_role_v1.test"
+	resourceName := "kubernetes_cluster_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -205,10 +209,10 @@ func TestAccKubernetesClusterRoleV1_UpdatePatchOperationsOrderWithRemovals(t *te
 	})
 }
 
-func TestAccKubernetesClusterRoleV1_aggregationRuleBasic(t *testing.T) {
+func TestAccKubernetesClusterRole_aggregationRuleBasic(t *testing.T) {
 	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_cluster_role_v1.test"
+	resourceName := "kubernetes_cluster_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -249,10 +253,10 @@ func TestAccKubernetesClusterRoleV1_aggregationRuleBasic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleV1_aggregationRuleMultiple(t *testing.T) {
+func TestAccKubernetesClusterRole_aggregationRuleMultiple(t *testing.T) {
 	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_cluster_role_v1.test"
+	resourceName := "kubernetes_cluster_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -289,10 +293,10 @@ func TestAccKubernetesClusterRoleV1_aggregationRuleMultiple(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesClusterRoleV1_aggregationRuleRuleAggregation(t *testing.T) {
+func TestAccKubernetesClusterRole_aggregationRuleRuleAggregation(t *testing.T) {
 	var conf rbacv1.ClusterRole
 	name := acctest.RandomWithPrefix("tf-acc-test")
-	resourceName := "kubernetes_cluster_role_v1.test"
+	resourceName := "kubernetes_cluster_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -330,7 +334,7 @@ func testAccCheckKubernetesClusterRoleV1Destroy(s *terraform.State) error {
 	ctx := context.TODO()
 
 	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "kubernetes_cluster_role_v1" {
+		if rs.Type != "kubernetes_cluster_role" {
 			continue
 		}
 		resp, err := conn.RbacV1().ClusterRoles().Get(ctx, rs.Primary.ID, metav1.GetOptions{})
@@ -365,7 +369,7 @@ func testAccCheckKubernetesClusterRoleV1Exists(n string, obj *rbacv1.ClusterRole
 }
 
 func testAccKubernetesClusterRoleConfigV1_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -386,7 +390,7 @@ func testAccKubernetesClusterRoleConfigV1_basic(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1_generateName(prefixName string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     generate_name = "%s"
   }
@@ -401,7 +405,7 @@ func testAccKubernetesClusterRoleConfigV1_generateName(prefixName string) string
 }
 
 func testAccKubernetesClusterRoleConfigV1_modified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -432,7 +436,7 @@ func testAccKubernetesClusterRoleConfigV1_modified(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1Bug_step_0(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -458,7 +462,7 @@ func testAccKubernetesClusterRoleConfigV1Bug_step_0(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1Bug_step_1(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -479,7 +483,7 @@ func testAccKubernetesClusterRoleConfigV1Bug_step_1(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1Bug_step_2(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -511,7 +515,7 @@ func testAccKubernetesClusterRoleConfigV1Bug_step_2(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1_aggRule(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -540,7 +544,7 @@ func testAccKubernetesClusterRoleConfigV1_aggRule(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1_aggRuleModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     labels = {
       TestLabelOne   = "one"
@@ -569,7 +573,7 @@ func testAccKubernetesClusterRoleConfigV1_aggRuleModified(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1_aggRuleMultiple(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -591,7 +595,7 @@ func testAccKubernetesClusterRoleConfigV1_aggRuleMultiple(name string) string {
 }
 
 func testAccKubernetesClusterRoleConfigV1_aggRuleMultipleModified(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%s"
   }
@@ -613,7 +617,7 @@ func testAccKubernetesClusterRoleConfigV1_aggRuleMultipleModified(name string) s
 }
 
 func testAccKubernetesClusterRoleConfigV1_aggRule2(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_cluster_role_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_cluster_role" "test" {
   metadata {
     name = "%[1]s"
   }
@@ -627,7 +631,7 @@ func testAccKubernetesClusterRoleConfigV1_aggRule2(name string) string {
   }
 }
 
-resource "kubernetes_cluster_role_v1" "test2" {
+resource "kubernetes_cluster_role" "test2" {
   metadata {
     labels = {
       "rbac.example.com/aggregate-to-monitoring" = "true"

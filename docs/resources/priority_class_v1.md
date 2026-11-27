@@ -14,18 +14,18 @@ A PriorityClass is a non-namespaced object that defines a mapping from a priorit
 
 ### Required
 
-- `metadata` (Block List, Min: 1, Max: 1) Standard priority class's metadata. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
 - `value` (Number) The value of this priority class. This is the actual priority that pods receive when they have the name of this class in their pod spec.
 
 ### Optional
 
 - `description` (String) An arbitrary string that usually provides guidelines on when this priority class should be used.
 - `global_default` (Boolean) Specifies whether this PriorityClass should be considered as the default priority for pods that do not have any priority class. Only one PriorityClass can be marked as `globalDefault`. However, if more than one PriorityClasses exists with their `globalDefault` field set to true, the smallest value of such global default PriorityClasses will be used as the default priority.
-- `preemption_policy` (String) PreemptionPolicy is the Policy for preempting pods with lower priority. One of Never, PreemptLowerPriority. Defaults to PreemptLowerPriority if unset.
+- `metadata` (Block List) Standard priority class's metadata. Exactly one metadata block is required. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
+- `preemption_policy` (String) PreemptionPolicy is the Policy for preempting pods with lower priority. One of `Never`, `PreemptLowerPriority`. Defaults to `PreemptLowerPriority` if unset.
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The unique ID for this terraform resource
 
 <a id="nestedblock--metadata"></a>
 ### Nested Schema for `metadata`
@@ -58,10 +58,53 @@ resource "kubernetes_priority_class_v1" "example" {
 }
 ```
 
+## Value limits
+
+`value` must fit in a 32-bit signed integer. A priority class whose name, or
+`generate_name` prefix, does not start with `system-` is limited to `1000000000`, the
+highest value the Kubernetes API accepts for user-defined classes. Both limits are
+checked during planning. When the name is not known until apply, the API server
+checks it instead.
+
+## Metadata and upgrades
+
+Set either `name` or `generate_name` in `metadata`, not both. Label and annotation
+values must be non-null strings; omit an entry to remove it.
+
+Upgrading SDKv2 state preserves the priority class. If configuration explicitly sets
+`labels = {}` or `annotations = {}`, the first plan may show a one-time in-place update
+because SDKv2 stored empty maps as null. The priority class is not replaced.
+
+With Terraform 1.8 or later, migrate the deprecated resource name without recreating
+the priority class:
+
+```terraform
+moved {
+  from = kubernetes_priority_class.example
+  to   = kubernetes_priority_class_v1.example
+}
+```
+
+Change the corresponding resource declaration to `kubernetes_priority_class_v1` and
+retain its configuration.
+
 ## Import
 
 Priority Class can be imported using its name, e.g.
 
 ```
 $ terraform import kubernetes_priority_class_v1.example terraform-example
+```
+
+With Terraform 1.12 or later, it can also be imported by resource identity:
+
+```terraform
+import {
+  to = kubernetes_priority_class_v1.example
+  identity = {
+    api_version = "scheduling.k8s.io/v1"
+    kind        = "PriorityClass"
+    name        = "terraform-example"
+  }
+}
 ```

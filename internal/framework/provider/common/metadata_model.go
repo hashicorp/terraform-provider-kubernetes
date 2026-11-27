@@ -52,3 +52,15 @@ type SDKv2NamespacedMetadataV0 struct {
 	ResourceVersion string            `json:"resource_version"`
 	UID             string            `json:"uid"`
 }
+
+// SDKv2MetadataV0 is SDKv2NamespacedMetadataV0 for a cluster-scoped resource: the stored
+// JSON of one SDKv2 metadata element at schema version 0, without namespace.
+type SDKv2MetadataV0 struct {
+	Annotations     map[string]string `json:"annotations"`
+	GenerateName    string            `json:"generate_name"`
+	Generation      int64             `json:"generation"`
+	Labels          map[string]string `json:"labels"`
+	Name            string            `json:"name"`
+	ResourceVersion string            `json:"resource_version"`
+	UID             string            `json:"uid"`
+}

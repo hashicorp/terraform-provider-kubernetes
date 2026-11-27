@@ -29,7 +29,6 @@ func resourceKubernetesPriorityClassV1(deprecationMessage string) *schema.Resour
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
-		Identity: resourceIdentitySchemaNonNamespaced(),
 
 		Schema: map[string]*schema.Schema{
 			"metadata": metadataSchema("priority class", true),
@@ -142,11 +141,6 @@ func resourceKubernetesPriorityClassV1Read(ctx context.Context, d *schema.Resour
 	}
 
 	err = d.Set("preemption_policy", priorityClass.PreemptionPolicy)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	err = setResourceIdentityNonNamespaced(d, "scheduling.k8s.io/v1", "PriorityClass", name)
 	if err != nil {
 		return diag.FromErr(err)
 	}

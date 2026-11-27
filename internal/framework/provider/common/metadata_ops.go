@@ -168,8 +168,8 @@ func PopulateNamespacedMetadataFromResponse(metadata *NamespacedMetadataModel, o
 	metadata.Generation = types.Int64Value(out.Generation)
 }
 
-// PopulateMetadataFromResponse is PopulateNamespacedMetadataFromResponse for
-// non-namespaced resources.
+// PopulateMetadataFromResponse resolves server-assigned fields without
+// replacing planned labels, annotations, or generate_name with API-normalized values.
 func PopulateMetadataFromResponse(metadata *MetadataModel, out metav1.ObjectMeta) {
 	metadata.Name = types.StringValue(out.Name)
 	metadata.UID = types.StringValue(string(out.UID))

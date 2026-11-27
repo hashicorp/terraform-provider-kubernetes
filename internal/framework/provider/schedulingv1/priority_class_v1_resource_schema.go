@@ -16,16 +16,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 func (r *PriorityClassV1) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = PriorityClassV1Schema()
-}
-
-// PriorityClassV1Schema returns the Plugin Framework schema for PriorityClassV1.
-// Exported so that unit tests can construct tfsdk.State values for the state upgrader.
-func PriorityClassV1Schema() schema.Schema {
-	return schema.Schema{
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "A PriorityClass is a non-namespaced object that defines a mapping from a priority class name to the integer value of the priority.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -49,7 +45,7 @@ func PriorityClassV1Schema() schema.Schema {
 				Default:             stringdefault.StaticString(""),
 			},
 			"global_default": schema.BoolAttribute{
-				MarkdownDescription: "Specifies whether this PriorityClass should be considered as the default priority for pods that do not have any priority class. Only one PriorityClass can be marked as `globalDefault`.",
+				MarkdownDescription: "Specifies whether this PriorityClass should be considered as the default priority for pods that do not have any priority class. Only one PriorityClass can be marked as `globalDefault`. However, if more than one PriorityClasses exists with their `globalDefault` field set to true, the smallest value of such global default PriorityClasses will be used as the default priority.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
@@ -58,12 +54,15 @@ func PriorityClassV1Schema() schema.Schema {
 				MarkdownDescription: "PreemptionPolicy is the Policy for preempting pods with lower priority. One of `Never`, `PreemptLowerPriority`. Defaults to `PreemptLowerPriority` if unset.",
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString("PreemptLowerPriority"),
+				Default:             stringdefault.StaticString(string(v1.PreemptLowerPriority)),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.OneOf("Never", "PreemptLowerPriority"),
+					stringvalidator.OneOf(
+						string(v1.PreemptNever),
+						string(v1.PreemptLowerPriority),
+					),
 				},
 			},
 		},

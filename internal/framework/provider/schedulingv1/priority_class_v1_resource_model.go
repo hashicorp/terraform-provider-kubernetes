@@ -16,3 +16,14 @@ type PriorityClassModel struct {
 	GlobalDefault    types.Bool             `tfsdk:"global_default"`
 	PreemptionPolicy types.String           `tfsdk:"preemption_policy"`
 }
+
+// sdkv2PriorityClassStateV0 is kubernetes_priority_class state as SDKv2 stores it at schema
+// version 0. It is frozen: it describes stored JSON, not this resource's schema.
+type sdkv2PriorityClassStateV0 struct {
+	ID               string                   `json:"id"`
+	Metadata         []common.SDKv2MetadataV0 `json:"metadata"`
+	Value            int64                    `json:"value"`
+	Description      string                   `json:"description"`
+	GlobalDefault    bool                     `json:"global_default"`
+	PreemptionPolicy string                   `json:"preemption_policy"`
+}

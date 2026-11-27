@@ -5,6 +5,7 @@ package manifestv2
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -31,6 +32,29 @@ func TestStale(t *testing.T) {
 	} {
 		if got := stale(tc.err); got != tc.want {
 			t.Errorf("%s: got %t, want %t", name, got, tc.want)
+		}
+	}
+}
+
+// A write refused because the object is gone is told by the status of the
+// error, not by its text, which holds the name of the object.
+func TestGone(t *testing.T) {
+	configMaps := schema.GroupResource{Resource: "configmaps"}
+	other := apierrors.NewInvalid(schema.GroupKind{Kind: "ConfigMap"}, "a", nil)
+	other.ErrStatus.Details.Causes = []metav1.StatusCause{{Type: metav1.CauseTypeFieldValueInvalid, Field: "metadata.uid"}}
+	for name, tc := range map[string]struct {
+		err               error
+		deleted, replaced bool
+	}{
+		"apply to a missing object": {apierrors.NewConflict(configMaps, "a", errors.New("uid mismatch: no existing object was found")), true, false},
+		"not found":                 {apierrors.NewNotFound(configMaps, "a"), true, false},
+		"another UID":               {other, false, true},
+		"read again as another":     {fmt.Errorf("%w: its UID is b, not a", errReplaced), false, true},
+		"forbidden, name like UID":  {apierrors.NewForbidden(configMaps, "metadata.uid-mismatch", errors.New("cannot patch")), false, false},
+		"changed since it was read": {apierrors.NewConflict(configMaps, "a", errors.New("the object has been modified")), false, false},
+	} {
+		if deleted, replaced := gone(tc.err); deleted != tc.deleted || replaced != tc.replaced {
+			t.Errorf("%s: got deleted %t, replaced %t", name, deleted, replaced)
 		}
 	}
 }

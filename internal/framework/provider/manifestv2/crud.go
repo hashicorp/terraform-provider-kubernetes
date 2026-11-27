@@ -6,6 +6,7 @@ package manifestv2
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -177,10 +178,26 @@ func waitForReadiness(ctx context.Context, client dynamic.ResourceInterface, id 
 	return diags
 }
 
+// uidInvalid reports an apply the API server refused because the object has
+// another UID than the one it named.
+func uidInvalid(err error) bool {
+	var status apierrors.APIStatus
+	if !apierrors.IsInvalid(err) || !errors.As(err, &status) || status.Status().Details == nil {
+		return false
+	}
+	for _, cause := range status.Status().Details.Causes {
+		if cause.Field == "metadata.uid" {
+			return true
+		}
+	}
+	return false
+}
+
 func applyError(id identity, err error) diag.Diagnostic {
 	detail := err.Error()
 	switch {
-	case strings.Contains(detail, "uid mismatch") || strings.Contains(detail, "metadata.uid"):
+	// No object name holds a space, so only the API server writes "uid mismatch".
+	case strings.Contains(detail, "uid mismatch") || uidInvalid(err):
 		return diag.NewErrorDiagnostic("Object deleted or replaced outside Terraform", fmt.Sprintf("%s is no longer the object this resource "+
 			"manages: %s\n\nRun terraform plan again. Terraform will plan to create the object, or to update the one that replaced it.", id, detail))
 	case apierrors.IsConflict(err):

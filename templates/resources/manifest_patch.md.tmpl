@@ -7,8 +7,6 @@ description: |-
 
 # {{ .Name }}
 
-~> **Beta:** This resource is new in the 4.0 beta releases. Its arguments and behavior may still change before version 4.0.0 is released.
-
 Applies fields of an existing Kubernetes object of any kind, built-in or custom, and keeps them set, while the rest of the object stays with whatever created it: a cluster add-on, an operator, another tool or the cluster itself. For example, an environment variable of a DaemonSet that an add-on manages, the tolerations of the cluster's DNS Deployment, a key of a ConfigMap that another tool created, a label of the `default` namespace, or a field of a custom resource.
 
 The manifest names the object and holds only the fields to set. It is sent with [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) under the resource's own field manager, as `kubectl apply --server-side --field-manager=<name>` sends a partial manifest, so the cluster records which fields this resource owns. The resource takes the arguments of [`kubernetes_manifest_v2`](manifest_v2.md) and plans the same way, without a request to the cluster. The differences:
@@ -58,7 +56,7 @@ A controller that reconciles the object may set a patched field back, for exampl
 
 ## Field manager names
 
-Each resource that applies fields to one object needs a field manager name of its own: two patches of the object, or a patch and a `kubernetes_manifest_v2`, `kubernetes_labels`, `kubernetes_annotations`, `kubernetes_env` or similar resource of the same object. Server-side apply under one name replaces all the fields applied under that name before, so the resources would remove each other's fields. An apply that would remove fields that this resource's manifest never set fails with "Field manager in use" and names them, and a destroy then leaves all the fields of that name in place, with a warning.
+Each resource that applies fields to one object needs a field manager name of its own: two patches of the object, or a patch and a `kubernetes_manifest_v2`, `kubernetes_labels`, `kubernetes_annotations`, `kubernetes_env` or similar resource of the same object. Server-side apply under one name replaces all the fields applied under that name before, so the resources would overwrite and remove each other's fields. A new patch is therefore refused with "Field manager in use" when its field manager already applies fields to the object: give it another name, or import it if it is a patch that is no longer in the state. An apply of an existing patch fails the same way when the name holds fields its manifest never set, and a destroy then leaves all the fields of that name in place, with a warning.
 
 Changing `field_manager.name` moves the fields this resource applied to the new name.
 
@@ -97,7 +95,7 @@ A change of `destroy_behavior` takes effect once it is applied. A destroy of an 
 
 The object must exist when the resource is created: make the resource depend on the one that creates the object, through a reference or `depends_on`. A new patch waits up to a minute for an object that a controller creates a moment later, such as the `default` ServiceAccount of a new namespace, and then fails with "Object not found". Every apply sends the UID of the object, so a patch never creates the object again, also if it is deleted during the apply.
 
-When the object is deleted, the refresh removes the resource from the state, and the plan shows it created again: that apply fails until the object exists. When the object is deleted and created again under the same name, the refresh warns about it and the next apply applies the fields to the new object.
+When the object is deleted, the refresh removes the resource from the state, and the plan shows it created again: that apply fails until the object exists. When the object is deleted and created again under the same name, the fields this resource applied went with the old object: the refresh warns about it and removes the resource from the state, and the plan shows it created again, for the new object.
 
 Applying and destroying need the `get` and `patch` permissions for the kind. `wait` also uses `watch` when the credentials allow it.
 
@@ -105,6 +103,7 @@ Applying and destroying need the `get` and `patch` permissions for the kind. `wa
 
 - A patch cannot remove a field that another field manager set, and cannot change `status` or another subresource.
 - `metadata.generateName` is not supported.
+- With `create_before_destroy`, replacing a patch of the same object fails with "Field manager in use", because the instance that is still to be destroyed applies the fields. Without it, Terraform destroys that instance first.
 - The API group, `kind`, `metadata.name` and `metadata.namespace` name the object. Changing one of them replaces the resource: the fields are given up on the old object, or removed with `destroy_behavior = "remove_fields"`, and applied to the new one.
 - The values of the manifest appear in plans and in the state, as for `kubernetes_manifest_v2`.
 

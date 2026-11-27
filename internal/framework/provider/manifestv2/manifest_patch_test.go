@@ -150,9 +150,9 @@ func TestAccKubernetesManifestPatch_removeFields(t *testing.T) {
 func TestAccKubernetesManifestPatch_errors(t *testing.T) {
 	name := randomName()
 	// A second patch of the object, under the default field manager name or
-	// its own. Nothing orders the two: they are applied in parallel.
-	other := func(manager string) string {
-		return testAccPatchConfigMap(name, "", `a = "1"`, "") + fmt.Sprintf(`
+	// its own. Without order, the two are applied in parallel.
+	other := func(manager, order string) string {
+		return testAccPatchConfigMap(name, "", `a = "1"`, order) + fmt.Sprintf(`
 resource "kubernetes_manifest_patch" "other" {
   manifest = {
     apiVersion = "v1"
@@ -164,6 +164,8 @@ resource "kubernetes_manifest_patch" "other" {
 `, name, manager)
 	}
 	own := "  field_manager {\n    name = \"second\"\n  }\n"
+	// Either patch may have won the name: the second gives it up first.
+	after := "  depends_on = [kubernetes_manifest_patch.other]\n"
 	both := map[string]string{"owner": "1", "a": "1", "b": "1"}
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { kubetest.PreCheck(t); othersConfigMap(t, name) },
@@ -176,20 +178,20 @@ resource "kubernetes_manifest_patch" "other" {
 			// Two patches of one object under one field manager name would
 			// remove each other's fields: whichever applies second is refused.
 			{
-				Config:      other(""),
+				Config:      other("", ""),
 				ExpectError: regexp.MustCompile(`Field manager in use(.|\n)*\.data\.[ab]`),
 			},
 			{
-				Config: other(own),
+				Config: other(own, after),
 				Check:  expectConfigMap(name, both, nil, "owner", "second", "terraform-patch"),
 			},
 			// Renaming onto a name in use is refused before any field moves.
 			{
-				Config:      other(""),
+				Config:      other("", after),
 				ExpectError: regexp.MustCompile(`Field manager in use(.|\n)*\.data\.a`),
 			},
 			{
-				Config: other(own),
+				Config: other(own, after),
 				Check:  expectConfigMap(name, both, nil, "owner", "second", "terraform-patch"),
 			},
 		},

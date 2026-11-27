@@ -5,14 +5,12 @@ package manifestv2
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -32,24 +30,35 @@ import (
 // arrival is how long a new patch waits for its object.
 const arrival = time.Minute
 
-// holderKey stores, in private state, the token of the resource instance.
-const holderKey = "holder"
+// errReplaced is the error of a write to an object that is not the one it
+// was meant for: another object has taken the name.
+var errReplaced = errors.New("the object was deleted and created again")
 
-// holders records which resource instance last applied to an object under a
-// field manager name, by UID and name, for the life of the provider process.
-// A replacement that is created before its predecessor is destroyed applies
-// to the same object under the same name, and the predecessor then has
-// nothing of its own left to release.
-var holders sync.Map
-
-func holder(uid k8stypes.UID, manager string) string {
-	return string(uid) + "/" + manager
+// gone reports a write the API server refused because the object with the UID
+// it named is not there: deleted, or replaced by another under the same name.
+// An apply to a missing object is answered with a conflict, one to another
+// object with an invalid metadata.uid. The error is read by its status: its
+// text holds the name of the object, which may spell anything.
+func gone(err error) (deleted, replaced bool) {
+	var status apierrors.APIStatus
+	switch {
+	case errors.Is(err, errReplaced):
+		return false, true
+	case !errors.As(err, &status):
+		return false, false
+	case apierrors.IsNotFound(err):
+		return true, false
+	case apierrors.IsConflict(err):
+		// No object name holds a space.
+		return strings.Contains(status.Status().Message, "no existing object was found"), false
+	}
+	return false, uidInvalid(err)
 }
 
-func notFound(id identity, waited bool) diag.Diagnostic {
+func notFound(id identity, waited time.Duration) diag.Diagnostic {
 	missing := "does not exist"
-	if waited {
-		missing = fmt.Sprintf("still does not exist after %s", arrival)
+	if waited > 0 {
+		missing = fmt.Sprintf("still does not exist after %s", waited.Round(time.Second))
 	}
 	return diag.NewErrorDiagnostic("Object not found", fmt.Sprintf("%s %s. kubernetes_manifest_patch applies fields to an object "+
 		"that exists and never creates one. Make this resource depend on the resource that creates the object, or check its name and namespace.", id, missing))
@@ -65,16 +74,27 @@ func replaced(id identity, detail string) diag.Diagnostic {
 // be on its way: a controller creates the default ServiceAccount of a new
 // namespace, and an operator the objects of a custom resource, a moment after
 // the resource this one depends on is complete.
-func existing(ctx context.Context, client dynamic.ResourceInterface, name string) (*unstructured.Unstructured, error) {
+// It returns how long it waited for an object that did not come.
+func existing(ctx context.Context, client dynamic.ResourceInterface, name string) (*unstructured.Unstructured, time.Duration, error) {
 	start, delay := time.Now(), time.Second
+	var missing error
 	for {
 		live, err := client.Get(ctx, name, metav1.GetOptions{})
-		if !apierrors.IsNotFound(err) || time.Since(start) > arrival {
-			return live, err
+		switch {
+		case apierrors.IsNotFound(err):
+			missing = err
+		case missing != nil && ctx.Err() != nil:
+			// The create timeout ended the wait.
+			return nil, time.Since(start), missing
+		default:
+			return live, 0, err
+		}
+		if time.Since(start) > arrival {
+			return nil, time.Since(start), missing
 		}
 		select {
 		case <-ctx.Done():
-			return nil, err
+			return nil, time.Since(start), missing
 		case <-time.After(delay):
 		}
 		delay = min(2*delay, 4*time.Second)
@@ -107,12 +127,13 @@ func (r *ManifestPatch) Create(ctx context.Context, req resource.CreateRequest, 
 		return err
 	})
 	var live *unstructured.Unstructured
+	var waited time.Duration
 	if err == nil {
-		live, err = existing(ctx, client, id.Name)
+		live, waited, err = existing(ctx, client, id.Name)
 	}
 	switch {
 	case apierrors.IsNotFound(err):
-		resp.Diagnostics.Append(notFound(id, true))
+		resp.Diagnostics.Append(notFound(id, max(waited, time.Second)))
 		return
 	case err != nil:
 		resp.Diagnostics.Append(applyError(id, err))
@@ -124,16 +145,15 @@ func (r *ManifestPatch) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 	manager, force := plan.manager()
 	skipped := r.engine.skippedFields(plan.manifest(), manifest)
-	applied, problem := r.applyFields(ctx, client, live, id, manifest, nil, skipped, manager, force)
+	applied, problem := r.applyFields(ctx, client, live, id, manifest, skipped, manager, force, func(live *unstructured.Unstructured) diag.Diagnostic {
+		return taken(live, id, manager)
+	})
 	if problem != nil {
 		resp.Diagnostics.Append(problem)
 		return
 	}
 	state := plan.manifest()
 	resp.Diagnostics.Append(recordAppliedState(ctx, &state, id, manifest, manager, skipped, applied, resp.Private)...)
-	token := rand.Text()
-	holders.Store(holder(applied.GetUID(), manager), token)
-	resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, holderKey, token)...)
 	plan.update(state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, plan.resourceIdentity())...)
@@ -175,9 +195,14 @@ func (r *ManifestPatch) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError("Cannot read object", fmt.Sprintf("%s: %s", id, err))
 		return
 	}
+	// The patch was of the object that is gone, and went with it. It is
+	// planned again, for the object that has the name now.
 	if uid := state.UID.ValueString(); uid != "" && string(live.GetUID()) != uid {
 		resp.Diagnostics.AddWarning("Object replaced outside Terraform", fmt.Sprintf("%s was deleted and created again outside Terraform: "+
-			"its UID is %s, the state has %s. The next apply applies the fields of this resource to the new object.", id, live.GetUID(), uid))
+			"its UID is %s, the state has %s. The fields this resource applied went with the old object, so the resource is planned again "+
+			"for the new one.", id, live.GetUID(), uid))
+		resp.State.RemoveResource(ctx)
+		return
 	}
 	m := state.manifest()
 	m.setIdentity(id)
@@ -229,7 +254,7 @@ func (r *ManifestPatch) Update(ctx context.Context, req resource.UpdateRequest, 
 	uid := state.UID.ValueString()
 	switch {
 	case apierrors.IsNotFound(err):
-		resp.Diagnostics.Append(notFound(id, false))
+		resp.Diagnostics.Append(notFound(id, 0))
 		return
 	case err == nil && uid != "" && string(live.GetUID()) != uid:
 		resp.Diagnostics.Append(replaced(id, fmt.Sprintf("the object in the cluster has UID %s, the state has %s", live.GetUID(), uid)))
@@ -271,7 +296,6 @@ func (r *ManifestPatch) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.Append(resp.State.Set(ctx, &moved)...)
 		resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, managerKey, manager)...)
 		resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, moved.resourceIdentity())...)
-		holders.Delete(holder(live.GetUID(), previous))
 	}
 	skipped := r.engine.skippedFields(plan.manifest(), manifest)
 	if keepsNote(ctx, plan.manifest(), req.Private) {
@@ -279,19 +303,15 @@ func (r *ManifestPatch) Update(ctx context.Context, req resource.UpdateRequest, 
 		// other clients changed stays theirs, as with computed_fields.
 		skipped = append(skipped[:len(skipped):len(skipped)], []string{})
 	}
-	applied, problem := r.applyFields(ctx, client, live, id, manifest, prior, skipped, manager, force)
+	applied, problem := r.applyFields(ctx, client, live, id, manifest, skipped, manager, force, func(live *unstructured.Unstructured) diag.Diagnostic {
+		return inUse(live, id, manager, prior, manifest)
+	})
 	if problem != nil {
 		resp.Diagnostics.Append(problem)
 		return
 	}
 	next := plan.manifest()
 	resp.Diagnostics.Append(recordAppliedState(ctx, &next, id, manifest, manager, skipped, applied, resp.Private)...)
-	token := privateString(ctx, req.Private, holderKey)
-	if token == "" {
-		token = rand.Text()
-	}
-	holders.Store(holder(applied.GetUID(), manager), token)
-	resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, holderKey, token)...)
 	plan.update(next)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, plan.resourceIdentity())...)
@@ -336,11 +356,6 @@ func (r *ManifestPatch) Delete(ctx context.Context, req resource.DeleteRequest, 
 		resp.Diagnostics.AddError("Cannot read object", fmt.Sprintf("%s: %s", id, err))
 		return
 	}
-	// A replacement created before this instance is destroyed holds the fields now.
-	key, token := holder(live.GetUID(), manager), privateString(ctx, req.Private, holderKey)
-	if held, found := holders.Load(key); found && held != token {
-		return
-	}
 	prior, _, _, _ := state.manifest().declared()
 	var foreign []string
 	_, err = guarded(ctx, client, live, func(live *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -369,26 +384,25 @@ func (r *ManifestPatch) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 	// An object deleted or replaced in the meantime has nothing to release.
-	if err != nil && !apierrors.IsNotFound(err) && !strings.Contains(err.Error(), "uid mismatch") && !strings.Contains(err.Error(), "metadata.uid") {
+	if deleted, other := gone(err); err != nil && !deleted && !other {
 		detail := fmt.Sprintf("%s: %s", id, err)
 		if apierrors.IsInvalid(err) && state.DestroyBehavior.ValueString() == removeFields {
 			detail += "\n\nThe object is not valid without a field this resource applied. To leave the fields in place, " +
 				"apply destroy_behavior = \"" + relinquishFields + "\" and destroy again."
 		}
 		resp.Diagnostics.AddError("Cannot release the fields", detail)
-		return
 	}
-	holders.CompareAndDelete(key, token)
 }
 
 // applyFields applies the manifest to the live object. The apply names the
 // object's UID, so that it updates the object and never creates it again
-// after a deletion. prior is the manifest of the last apply.
+// after a deletion. check refuses an apply by what the field manager holds
+// on the object, and is asked again for every revision the apply is tried on.
 func (r *ManifestPatch) applyFields(ctx context.Context, client dynamic.ResourceInterface, live *unstructured.Unstructured, id identity,
-	manifest, prior map[string]any, skipped [][]string, manager string, force bool) (*unstructured.Unstructured, diag.Diagnostic) {
+	manifest map[string]any, skipped [][]string, manager string, force bool, check func(*unstructured.Unstructured) diag.Diagnostic) (*unstructured.Unstructured, diag.Diagnostic) {
 	var problem diag.Diagnostic
 	applied, err := guarded(ctx, client, live, func(live *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		if problem = inUse(live, id, manager, prior, manifest); problem != nil {
+		if problem = check(live); problem != nil {
 			return nil, nil
 		}
 		// The apply holds for the object as it was checked: its UID, and its
@@ -399,20 +413,41 @@ func (r *ManifestPatch) applyFields(ctx context.Context, client dynamic.Resource
 		desired.SetResourceVersion(live.GetResourceVersion())
 		return r.engine.apply(ctx, client, desired, manager, force)
 	})
+	deleted, other := gone(err)
 	switch {
 	case problem != nil:
 		return nil, problem
 	case err == nil:
 		return applied, nil
-	case apierrors.IsNotFound(err) || strings.Contains(err.Error(), "no existing object was found"):
-		return nil, notFound(id, false)
-	case strings.Contains(err.Error(), "metadata.uid") || strings.Contains(err.Error(), "uid mismatch"):
+	case deleted:
+		return nil, notFound(id, 0)
+	case other:
 		return nil, replaced(id, err.Error())
 	case stale(err):
 		return nil, diag.NewErrorDiagnostic("Cannot apply manifest", fmt.Sprintf("%s: other clients changed the object on every attempt to apply to it, "+
 			"for a minute: %s", id, err))
 	}
 	return nil, applyError(id, err)
+}
+
+// taken refuses a new patch under a field manager name that already applies
+// fields to the object. Another resource or client uses the name, or this
+// resource did and is no longer in the state. An apply would overwrite what
+// is there without a conflict, and each resource would release the fields of
+// the other. Refusing also keeps a replacement from being created before its
+// predecessor is destroyed, whose destroy would then release its fields.
+func taken(live *unstructured.Unstructured, id identity, manager string) diag.Diagnostic {
+	names := fieldList(managedFields(live, appliedBy(manager)), "")
+	if len(names) == 0 {
+		return nil
+	}
+	if len(names) > 5 {
+		names = append(names[:5], fmt.Sprintf("%d more", len(names)-5))
+	}
+	return diag.NewErrorDiagnostic("Field manager in use", fmt.Sprintf("%s: the field manager %q already applies fields to this object: %s. "+
+		"For another patch of the object, give this resource a field_manager.name that nothing else uses. "+
+		"If this resource applied the fields and is no longer in the state, import it with the ID %q.",
+		id, manager, strings.Join(names, ", "), importID(id)+",fieldManager="+manager))
 }
 
 // inUse refuses an apply under a field manager name that another resource or
@@ -492,7 +527,7 @@ func guarded(ctx context.Context, client dynamic.ResourceInterface, live *unstru
 			return nil, err
 		}
 		if live.GetUID() != uid {
-			return nil, fmt.Errorf("uid mismatch: the object in the cluster has UID %s, the state has %s", live.GetUID(), uid)
+			return nil, fmt.Errorf("%w: its UID is %s, not %s", errReplaced, live.GetUID(), uid)
 		}
 		result, err = write(live)
 	}
@@ -503,7 +538,7 @@ func guarded(ctx context.Context, client dynamic.ResourceInterface, live *unstru
 // since it was read. A field ownership conflict has the same status.
 func stale(err error) bool {
 	var status apierrors.APIStatus
-	if !apierrors.IsConflict(err) || !errors.As(err, &status) || strings.Contains(err.Error(), "uid mismatch") {
+	if deleted, _ := gone(err); deleted || !apierrors.IsConflict(err) || !errors.As(err, &status) {
 		return false
 	}
 	if details := status.Status().Details; details != nil {

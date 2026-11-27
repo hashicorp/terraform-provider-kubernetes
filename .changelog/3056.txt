@@ -1,0 +1,15 @@
+```release-note:note
+`resource/kubernetes_cluster_role_v1`: Migrated from SDKv2 to the Plugin Framework, keeping the existing configuration syntax and supporting existing state, including state written before resource identity was introduced, without re-import. `moved` blocks from the deprecated `kubernetes_cluster_role` resource are supported with Terraform 1.8 or later. Explicitly empty `labels` or `annotations` show a one-time in-place update after upgrading, never a replacement. See the Plugin Framework upgrade guide for details.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_cluster_role_v1`: The `api_groups`, `non_resource_urls`, `resource_names`, `resources` and `verbs` attributes of `rule` are now sets instead of lists. Order is no longer significant, duplicate elements collapse, and index references such as `rule[0].verbs[0]` no longer work. `null` elements are rejected, and `api_groups` must contain at least one element when set.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_cluster_role_v1`: For a ClusterRole with an `aggregation_rule`, `rule` is no longer read from the API into state, because the Kubernetes controller manager owns the rules of an aggregated role. A `rule` block configured next to an `aggregation_rule` is sent to the API but never read back, so it plans an in-place update on every run. Earlier versions planned that update only when the selectors matched a ClusterRole. Remove such `rule` blocks and grant the permissions through a ClusterRole that the `aggregation_rule` selects.
+```
+
+```release-note:breaking-change
+`resource/kubernetes_cluster_role_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry.
+```

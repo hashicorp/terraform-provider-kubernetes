@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 	"github.com/hashicorp/terraform-provider-kubernetes/util"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sjson "k8s.io/apimachinery/pkg/util/json"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
@@ -54,19 +55,21 @@ func NewManifestV2() resource.Resource {
 }
 
 type model struct {
-	Manifest       types.Dynamic  `tfsdk:"manifest"`
-	YAMLBody       types.String   `tfsdk:"yaml_body"`
-	Drift          types.List     `tfsdk:"drift"`
-	Object         types.Dynamic  `tfsdk:"object"`
-	ComputedFields types.List     `tfsdk:"computed_fields"`
-	FieldManager   types.Object   `tfsdk:"field_manager"`
-	Wait           types.Object   `tfsdk:"wait"`
-	APIVersion     types.String   `tfsdk:"api_version"`
-	Kind           types.String   `tfsdk:"kind"`
-	Namespace      types.String   `tfsdk:"namespace"`
-	Name           types.String   `tfsdk:"name"`
-	UID            types.String   `tfsdk:"uid"`
-	Timeouts       timeouts.Value `tfsdk:"timeouts"`
+	Manifest            types.Dynamic  `tfsdk:"manifest"`
+	YAMLBody            types.String   `tfsdk:"yaml_body"`
+	ShowDriftValues     types.Bool     `tfsdk:"show_drift_values"`
+	DeletionPropagation types.String   `tfsdk:"deletion_propagation"`
+	Drift               types.List     `tfsdk:"drift"`
+	Object              types.Dynamic  `tfsdk:"object"`
+	ComputedFields      types.List     `tfsdk:"computed_fields"`
+	FieldManager        types.Object   `tfsdk:"field_manager"`
+	Wait                types.Object   `tfsdk:"wait"`
+	APIVersion          types.String   `tfsdk:"api_version"`
+	Kind                types.String   `tfsdk:"kind"`
+	Namespace           types.String   `tfsdk:"namespace"`
+	Name                types.String   `tfsdk:"name"`
+	UID                 types.String   `tfsdk:"uid"`
+	Timeouts            timeouts.Value `tfsdk:"timeouts"`
 }
 
 type fieldManagerModel struct {
@@ -162,6 +165,18 @@ func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp 
 				MarkdownDescription: "The object to apply, as YAML or JSON text holding one object. Set either `yaml_body` or `manifest`. " +
 					"With `yaml_body`, a plan lists the fields another client changed in `drift` and does not show their values.",
 			},
+			"show_drift_values": schema.BoolAttribute{
+				Optional: true,
+				MarkdownDescription: "With `yaml_body`: also show the values another client set, in the comment that names the changed fields. " +
+					"The values appear in plan output, so leave this off for objects that hold secrets.",
+			},
+			"deletion_propagation": schema.StringAttribute{
+				Optional: true,
+				MarkdownDescription: "How deleting the object treats the objects it owns, such as the pods of a Job: " +
+					"`Background` (default) deletes them after the object, `Foreground` before it, and the destroy waits for them, " +
+					"`Orphan` leaves them. See [cascading deletion](https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/).",
+				Validators: []validator.String{stringvalidator.OneOf(string(metav1.DeletePropagationBackground), string(metav1.DeletePropagationForeground), string(metav1.DeletePropagationOrphan))},
+			},
 			"drift": schema.ListAttribute{
 				Computed:    true,
 				ElementType: types.StringType,
@@ -218,6 +233,11 @@ func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp 
 					"rollout": schema.BoolAttribute{
 						Optional:            true,
 						MarkdownDescription: "Wait until the rollout of a Deployment, StatefulSet or DaemonSet completes, as `kubectl rollout status` does.",
+					},
+					"ready": schema.BoolAttribute{
+						Optional: true,
+						MarkdownDescription: "Wait until the object is ready by the rules of its kind: a rollout that completed, a Job that completed, a bound claim, " +
+							"or, for any other kind, a `Ready` condition and an observed generation that are current. A failed object fails the apply.",
 					},
 					"fields": schema.MapAttribute{
 						Optional:    true,
@@ -369,6 +389,13 @@ func manifestIdentity(manifest types.Dynamic) (id identity, known bool, err erro
 	}
 	known = true
 	read := func(target *string, required bool, names ...string) {
+		// A part of the path that is not known yet, such as all of metadata.
+		for i := 1; i < len(names); i++ {
+			if parent := member(manifest, names[:i]...); parent != nil && parent.IsUnknown() {
+				known = false
+				return
+			}
+		}
 		value := member(manifest, names...)
 		text, isString := value.(types.String)
 		switch {

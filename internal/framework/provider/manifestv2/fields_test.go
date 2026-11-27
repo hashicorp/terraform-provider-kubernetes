@@ -121,9 +121,9 @@ func TestLiveChanges(t *testing.T) {
 			manifest := decodeJSON(t, testManifest)
 			var accepted map[string]string
 			if tc.accepted {
-				_, accepted = liveChanges(manifest, tc.live, "Terraform", nil, nil)
+				_, accepted, _ = liveChanges(manifest, tc.live, "Terraform", nil, nil)
 			}
-			result, found := liveChanges(manifest, tc.live, "Terraform", skippedNames(t, tc.computed...), accepted)
+			result, found, _ := liveChanges(manifest, tc.live, "Terraform", skippedNames(t, tc.computed...), accepted)
 			var paths []string
 			for path := range found {
 				paths = append(paths, path)
@@ -176,6 +176,14 @@ func TestLeavingComputed(t *testing.T) {
 	}
 	if !reflect.DeepEqual(leavingComputed(manifest, live, "Terraform", nil), manifest) {
 		t.Error("without computed fields the manifest is sent as it is")
+	}
+	// The API server stores stringData as data: once another client has
+	// changed the data, a computed stringData key is not sent again.
+	secret := &unstructured.Unstructured{Object: decodeJSON(t, `{"apiVersion":"v1","kind":"Secret","metadata":{"name":"s"},"data":{"token":"bmV3"}}`)}
+	secret.SetManagedFields([]metav1.ManagedFieldsEntry{entry("Terraform", "Apply", `{"f:stringData":{"f:token":{}}}`), entry("rotator", "Update", `{"f:data":{"f:token":{}}}`)})
+	sent = leavingComputed(decodeJSON(t, `{"apiVersion":"v1","kind":"Secret","metadata":{"name":"s"},"stringData":{"token":"old","other":"x"}}`), secret, "Terraform", skippedNames(t, "stringData.token"))
+	if got := sent["stringData"]; !reflect.DeepEqual(got, map[string]any{"other": "x"}) {
+		t.Errorf("stringData after another client changed the data: %v", got)
 	}
 }
 
@@ -245,7 +253,7 @@ func TestLiveChangesOwnership(t *testing.T) {
 			want:     []string{`metadata.labels["app.kubernetes.io/name"]`, "spec.config.a"},
 		},
 	} {
-		_, found := liveChanges(manifest, tc.live, "Terraform", skippedNames(t, tc.computed...), nil)
+		_, found, _ := liveChanges(manifest, tc.live, "Terraform", skippedNames(t, tc.computed...), nil)
 		var paths []string
 		for path := range found {
 			paths = append(paths, path)

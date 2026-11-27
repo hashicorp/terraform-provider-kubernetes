@@ -36,6 +36,25 @@ func TestMoveState(t *testing.T) {
 				`"wait_for":null,"timeouts":[{"create":"5m","update":null,"delete":null}]}`,
 			want: identity{"v1", "ConfigMap", "default", "cm"}, manager: "custom", force: true, waits: 2,
 		},
+		// yaml_body is taken over as it is. Client-side apply leaves no field
+		// manager to keep.
+		"kubectl_manifest": {
+			sourceType: "kubectl_manifest", provider: "registry.example.com/acme/kubectl",
+			raw: `{"yaml_body":"apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\n  namespace: prod\n","namespace":"prod","uid":"u-2",` +
+				`"server_side_apply":false,"field_manager":"kubectl","force_conflicts":null}`,
+			want: identity{"apps/v1", "Deployment", "prod", "web"}, manager: "Terraform", uid: "u-2",
+		},
+		// The object is in the namespace the source applied it to.
+		"kubectl_manifest in another namespace than its YAML": {
+			sourceType: "kubectl_manifest", provider: "registry.example.com/acme/kubectl",
+			raw:  `{"yaml_body":"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: c\n","namespace":"prod","uid":"u-4","server_side_apply":false,"field_manager":"kubectl"}`,
+			want: identity{"v1", "ConfigMap", "prod", "c"}, manager: "Terraform", uid: "u-4",
+		},
+		"kubectl_manifest with server-side apply": {
+			sourceType: "kubectl_manifest", provider: "registry.example.com/acme/kubectl",
+			raw:  `{"yaml_body":"apiVersion: v1\nkind: Namespace\nmetadata:\n  name: prod\n","namespace":"","uid":"u-3","server_side_apply":true,"field_manager":"kubectl"}`,
+			want: identity{"v1", "Namespace", "", "prod"}, manager: "kubectl", uid: "u-3",
+		},
 		"another resource type":               {sourceType: "kubernetes_config_map", provider: "registry.terraform.io/hashicorp/kubernetes", raw: `{}`, skipped: true},
 		"kubernetes_manifest of a look-alike": {sourceType: "kubernetes_manifest", provider: "registry.terraform.io/example/kubernetes", raw: `{}`, skipped: true},
 	} {
@@ -58,7 +77,7 @@ func TestMoveState(t *testing.T) {
 			if diags := resp.TargetState.Get(ctx, &got); diags.HasError() {
 				t.Fatal(diags)
 			}
-			declared, known, err := manifestIdentity(got.Manifest)
+			_, declared, known, err := got.declared()
 			if err != nil || !known || declared.Name != tc.want.Name || declared.Kind != tc.want.Kind {
 				t.Fatalf("manifest identifies %v (known %t, error %v)", declared, known, err)
 			}

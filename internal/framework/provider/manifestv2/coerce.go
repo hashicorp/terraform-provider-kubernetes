@@ -26,6 +26,7 @@ type openAPISchema struct {
 	Items                *openAPISchema            `json:"items"`
 	AdditionalProperties json.RawMessage           `json:"additionalProperties"`
 	IntOrString          bool                      `json:"x-kubernetes-int-or-string"`
+	Format               string                    `json:"format"`
 	GroupVersionKinds    []schema.GroupVersionKind `json:"x-kubernetes-group-version-kind"`
 }
 
@@ -119,6 +120,9 @@ func resolve(node *openAPISchema, schemas map[string]*openAPISchema) *openAPISch
 		switch {
 		case node == nil:
 			return nil
+		case strings.HasSuffix(node.Ref, ".IntOrString") || strings.HasSuffix(node.Ref, ".Quantity"):
+			// Older clusters describe these as strings, but they take numbers.
+			return nil
 		case node.Ref != "":
 			node = schemas[strings.TrimPrefix(node.Ref, "#/components/schemas/")]
 		case len(node.AllOf) == 1 && node.Type == "" && node.Properties == nil:
@@ -152,7 +156,7 @@ func coerce(value any, node *openAPISchema, schemas map[string]*openAPISchema, d
 			value[i] = coerce(value[i], node.Items, schemas, depth+1, changed)
 		}
 	case int64, float64, bool:
-		if node.Type != "string" || node.IntOrString {
+		if node.Type != "string" || node.IntOrString || node.Format == "int-or-string" {
 			return value
 		}
 		*changed = true

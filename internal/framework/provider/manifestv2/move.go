@@ -18,10 +18,11 @@ import (
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
 )
 
-// MoveState lets a moved block bring an object here from kubernetes_manifest.
-// The move does not contact the cluster or change the object.
+// MoveState lets a moved block bring an object here from kubernetes_manifest,
+// or from a kubectl_manifest resource of another provider. A move does not
+// contact the cluster or change the object.
 func (r *ManifestV2) MoveState(context.Context) []resource.StateMover {
-	return []resource.StateMover{{StateMover: moveFromManifest}}
+	return []resource.StateMover{{StateMover: moveFromManifest}, {StateMover: moveFromKubectl}}
 }
 
 type timeoutsModel struct {
@@ -33,11 +34,14 @@ type timeoutsModel struct {
 // moved is the target state of a move. Nil blocks stay null.
 type moved struct {
 	manifest, object attr.Value
+	yamlBody         string
 	computedFields   []string
 	fieldManager     *fieldManagerModel
-	wait             *waitModel
-	timeouts         *timeoutsModel
-	namespace        string
+	// manager wrote the object before, when it is not fieldManager's name.
+	manager        string
+	wait           *waitModel
+	timeouts       *timeoutsModel
+	namespace, uid string
 }
 
 // moveFromManifest keeps every argument, so a configuration that only
@@ -116,6 +120,7 @@ func moveFromManifest(ctx context.Context, req resource.MoveStateRequest, resp *
 	case len(source.Wait) == 1:
 		target.wait = &waitModel{
 			Rollout:    types.BoolPointerValue(source.Wait[0].Rollout),
+			Ready:      types.BoolNull(),
 			Fields:     fields(source.Wait[0].Fields),
 			Conditions: []conditionModel{},
 		}
@@ -126,7 +131,7 @@ func moveFromManifest(ctx context.Context, req resource.MoveStateRequest, resp *
 		}
 	case source.WaitFor != nil:
 		// The deprecated wait_for is written as wait { fields } here.
-		target.wait = &waitModel{Rollout: types.BoolNull(), Fields: fields(source.WaitFor.Fields), Conditions: []conditionModel{}}
+		target.wait = &waitModel{Rollout: types.BoolNull(), Ready: types.BoolNull(), Fields: fields(source.WaitFor.Fields), Conditions: []conditionModel{}}
 	}
 	if len(source.Timeouts) == 1 {
 		target.timeouts = &timeoutsModel{
@@ -141,14 +146,49 @@ func moveFromManifest(ctx context.Context, req resource.MoveStateRequest, resp *
 	finishMove(ctx, resp, summary, target)
 }
 
+// moveFromKubectl takes yaml_body over as it is, so a configuration that only
+// changes the resource type, and drops the arguments this resource does not
+// have, plans no change to the manifest.
+func moveFromKubectl(ctx context.Context, req resource.MoveStateRequest, resp *resource.MoveStateResponse) {
+	if req.SourceTypeName != "kubectl_manifest" {
+		return
+	}
+	const summary = "Unable to move kubectl_manifest state"
+	var source struct {
+		YAMLBody        string `json:"yaml_body"`
+		Namespace       string `json:"namespace"`
+		UID             string `json:"uid"`
+		ServerSideApply bool   `json:"server_side_apply"`
+		FieldManager    string `json:"field_manager"`
+	}
+	if req.SourceRawState == nil || json.Unmarshal(req.SourceRawState.JSON, &source) != nil {
+		resp.Diagnostics.AddError(summary, "The source state could not be decoded.")
+		return
+	}
+	target := moved{manifest: types.DynamicNull(), object: types.DynamicNull(), yamlBody: source.YAMLBody,
+		namespace: source.Namespace, uid: source.UID, manager: source.FieldManager}
+	// Fields applied server-side under another name are read as that
+	// manager's until the next apply moves them to this resource's.
+	if source.ServerSideApply && source.FieldManager != "" && source.FieldManager != defaultFieldManager {
+		target.fieldManager = &fieldManagerModel{Name: types.StringValue(source.FieldManager), ForceConflicts: types.BoolNull()}
+	}
+	finishMove(ctx, resp, summary, target)
+}
+
 func finishMove(ctx context.Context, resp *resource.MoveStateResponse, summary string, target moved) {
 	manifest, _ := target.manifest.(types.Dynamic)
-	id, known, err := manifestIdentity(manifest)
+	declaration := model{Manifest: manifest, YAMLBody: types.StringNull()}
+	if target.yamlBody != "" {
+		declaration.YAMLBody = types.StringValue(target.yamlBody)
+	}
+	_, id, known, err := declaration.declared()
 	if err != nil || !known {
 		resp.Diagnostics.AddError(summary, "The manifest in the source state does not identify an object.")
 		return
 	}
-	if id.Namespace == "" {
+	// The namespace the object is in: the source may have put it in another
+	// one than its manifest names, which the plan then shows as a replacement.
+	if target.namespace != "" {
 		id.Namespace = target.namespace
 	}
 	state := model{}
@@ -161,20 +201,27 @@ func finishMove(ctx context.Context, resp *resource.MoveStateResponse, summary s
 	if target.computedFields != nil {
 		computedFields, _ = types.ListValueFrom(ctx, types.StringType, target.computedFields)
 	}
+	uid := types.StringNull()
+	if target.uid != "" {
+		uid = types.StringValue(target.uid)
+	}
 	for attribute, value := range map[string]any{
-		"manifest": manifest, "object": target.object, "computed_fields": computedFields,
+		"manifest": manifest, "yaml_body": declaration.YAMLBody, "object": target.object, "computed_fields": computedFields,
 		"field_manager": target.fieldManager, "wait": target.wait, "timeouts": target.timeouts,
 		"api_version": state.APIVersion, "kind": state.Kind, "namespace": state.Namespace, "name": state.Name,
-		"uid": types.StringNull(), "drift": types.ListValueMust(types.StringType, nil),
+		"uid": uid, "drift": types.ListValueMust(types.StringType, nil),
 	} {
 		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root(attribute), value)...)
 	}
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.TargetIdentity, state.resourceIdentity())...)
-	// kubernetes_manifest applied the object with server-side apply too, so its
-	// fields move with a later change of the manager name.
+	// The fields the source applied move with the next change of the manager
+	// name, as if this resource had applied them.
 	manager := defaultFieldManager
 	if target.fieldManager != nil && target.fieldManager.Name.ValueString() != "" {
 		manager = target.fieldManager.Name.ValueString()
+	}
+	if target.manager != "" {
+		manager = target.manager
 	}
 	if resp.TargetPrivate != nil {
 		encoded, _ := json.Marshal(manager)

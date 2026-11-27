@@ -25,7 +25,8 @@ func sameObject(prior, declared identity) bool {
 		(prior.Namespace == "" || prior.Namespace == namespace)
 }
 
-// sameArguments reports whether a plan leaves every argument as it is.
+// sameArguments reports whether a plan leaves every argument that an apply
+// uses as it is.
 func sameArguments(plan, state model) bool {
 	return plan.Manifest.Equal(state.Manifest) && plan.YAMLBody.Equal(state.YAMLBody) &&
 		plan.ComputedFields.Equal(state.ComputedFields) && plan.FieldManager.Equal(state.FieldManager) &&

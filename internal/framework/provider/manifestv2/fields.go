@@ -204,8 +204,10 @@ type comparison struct {
 	// accepted holds differences seen right after an apply, by path. Applying
 	// again cannot remove them, so they are not reported as drift.
 	accepted map[string]string
-	// found maps the path of each difference to a fingerprint of the live value.
+	// found maps the path of each difference to a fingerprint of the live
+	// value, and live to the value itself, absent ones left out.
 	found map[string]string
+	live  map[string]any
 }
 
 func (c *comparison) run(manifest map[string]any, live *unstructured.Unstructured, manager string) map[string]any {
@@ -217,14 +219,19 @@ func (c *comparison) run(manifest map[string]any, live *unstructured.Unstructure
 
 // liveChanges returns the manifest as it would read if it described the live
 // object: values another client changed are replaced by the live ones and
-// removed values are left out. The second result is empty when nothing drifted.
-func liveChanges(manifest map[string]any, live *unstructured.Unstructured, manager string, skipped [][]string, accepted map[string]string) (map[string]any, map[string]string) {
-	c := &comparison{skipped: skipped, accepted: accepted, found: map[string]string{}}
+// removed values are left out. The second result is empty when nothing
+// drifted; the third holds the live values that differ, by path.
+func liveChanges(manifest map[string]any, live *unstructured.Unstructured, manager string, skipped [][]string, accepted map[string]string) (map[string]any, map[string]string, map[string]any) {
+	c := &comparison{skipped: skipped, accepted: accepted, found: map[string]string{}, live: map[string]any{}}
 	described := c.run(manifest, live, manager)
-	if live.GetAPIVersion() == "v1" && live.GetKind() == "Secret" {
+	if isSecret(live) {
 		c.secretStrings(manifest, described, live)
 	}
-	return described, c.found
+	return described, c.found, c.live
+}
+
+func isSecret(obj *unstructured.Unstructured) bool {
+	return obj.GetAPIVersion() == "v1" && obj.GetKind() == "Secret"
 }
 
 // leavingComputed returns the manifest to apply to an existing object, without
@@ -236,7 +243,19 @@ func leavingComputed(manifest map[string]any, live *unstructured.Unstructured, m
 		return manifest
 	}
 	c := &comparison{skipped: skipped, handOver: true, found: map[string]string{}}
-	return c.run(manifest, live, manager)
+	result := c.run(manifest, live, manager)
+	// The API server stores stringData as data, so this manager keeps owning
+	// the stringData it applied after another client changed the data.
+	if written, _ := result["stringData"].(map[string]any); isSecret(live) && len(written) > 0 {
+		others := managedFields(live, func(entry metav1.ManagedFieldsEntry) bool { return !appliedBy(manager)(entry) })
+		data, _ := others["f:data"].(map[string]any)
+		for key := range written {
+			if _, taken := data["f:"+key]; taken && c.skip(location{}.field("stringData").field(key)) {
+				delete(written, key)
+			}
+		}
+	}
+	return result
 }
 
 func (c *comparison) skip(at location) bool {
@@ -446,6 +465,9 @@ func (c *comparison) differs(at location, want, have any, exists bool) (any, boo
 		return want, true
 	}
 	c.found[at.path] = print
+	if exists && c.live != nil {
+		c.live[at.path] = have
+	}
 	return have, exists
 }
 

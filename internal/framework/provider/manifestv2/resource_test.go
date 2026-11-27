@@ -6,6 +6,9 @@ package manifestv2
 import (
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // yaml_body holds one object. Null values mean "not set".
@@ -25,5 +28,17 @@ func TestDecodeYAML(t *testing.T) {
 		if _, err := decodeYAML(text); err == nil {
 			t.Errorf("%s must be an error", name)
 		}
+	}
+}
+
+// A part of the identity that is not known yet, such as all of metadata, is
+// not an error while planning.
+func TestManifestIdentityUnknownMetadata(t *testing.T) {
+	metadata := map[string]attr.Type{"name": types.StringType}
+	manifest := types.DynamicValue(types.ObjectValueMust(
+		map[string]attr.Type{"apiVersion": types.StringType, "kind": types.StringType, "metadata": types.ObjectType{AttrTypes: metadata}},
+		map[string]attr.Value{"apiVersion": types.StringValue("v1"), "kind": types.StringValue("ConfigMap"), "metadata": types.ObjectUnknown(metadata)}))
+	if _, known, err := manifestIdentity(manifest); known || err != nil {
+		t.Fatalf("known %t, error %v", known, err)
 	}
 }

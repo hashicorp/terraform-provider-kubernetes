@@ -52,26 +52,27 @@ Every object of a file with several documents, or of a directory:
 
 ```terraform
 locals {
-  operator = provider::kubernetes::manifest_decode_map(file("${path.module}/operator.yaml"))
-  all = provider::kubernetes::manifest_decode_map([
+  objects = provider::kubernetes::manifest_decode_map([
     for name in fileset("${path.module}/manifests", "**/*.yaml") : file("${path.module}/manifests/${name}")
   ]...)
+  first = { for key, object in local.objects : key => object if contains(["Namespace", "CustomResourceDefinition"], object.kind) }
 }
 
-resource "kubernetes_manifest_v2" "operator" {
-  for_each = local.operator
+resource "kubernetes_manifest_v2" "first" {
+  for_each = local.first
   manifest = each.value
 }
 
-resource "kubernetes_manifest_v2" "all" {
-  for_each = local.all
-  manifest = each.value
+resource "kubernetes_manifest_v2" "rest" {
+  for_each   = { for key, object in local.objects : key => object if !contains(keys(local.first), key) }
+  manifest   = each.value
+  depends_on = [kubernetes_manifest_v2.first]
 }
 ```
 
 Decode in a local value as shown. When the call is in `for_each`, Terraform runs it again for every resource instance, which makes plans of large bundles several times slower.
 
-Terraform applies these instances in parallel, in no particular order. An object that is created before its namespace or its CustomResourceDefinition retries for up to a minute, which is usually enough. When a file holds many objects that depend on a few, create those few in their own resource and make the rest depend on it, as shown under [Objects that depend on each other](../resources/manifest_v2.md#objects-that-depend-on-each-other).
+Terraform applies the instances of one resource in parallel, in no particular order, so Namespaces and CustomResourceDefinitions get their own resource and the rest depends on it. In one `for_each`, the objects of a namespace can take all of Terraform's parallel operations while they wait for a Namespace that has not started: the first apply then fails after about a minute, and a second one completes it. See [Objects that depend on each other](../resources/manifest_v2.md#objects-that-depend-on-each-other).
 
 Each object becomes one resource instance, with its own line in the plan. The instance key is `Kind[.group]/[namespace/]name`, for example `Deployment.apps/default/web`, so it stays the same when documents are reordered or moved between the files of one call. Removing a document plans the destruction of that object only.
 
@@ -89,6 +90,10 @@ resource "kubernetes_manifest_v2" "all" {
   manifest = local.objects[each.key]
 }
 ```
+
+## Migrating from `kubectl_manifest`
+
+With Terraform 1.8 or later, a `moved` block moves a `kubectl_manifest` resource of another provider to `kubernetes_manifest_v2` without touching the object. Keep `yaml_body`, change the resource type, and remove the arguments `kubernetes_manifest_v2` does not have. `kubectl_manifest` waits for rollouts by default; add `wait { ready = true }` to keep waiting. See [Moving from `kubectl_manifest`](../resources/manifest_v2.md#moving-from-kubectl_manifest).
 
 ## Migrating from `kubernetes_manifest`
 

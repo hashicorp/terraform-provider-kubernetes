@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -39,7 +40,26 @@ const (
 	// pendingKey marks an update whose wait failed. The next plan applies the
 	// manifest again and waits again.
 	pendingKey = "pending"
+	// noteKey holds the drift comment Read added to the end of yaml_body, so
+	// that only that text is ever taken off again.
+	noteKey = "note"
 )
+
+func privateString(ctx context.Context, private privateState, key string) string {
+	var text string
+	if encoded, _ := private.GetKey(ctx, key); encoded != nil {
+		_ = json.Unmarshal(encoded, &text)
+	}
+	return text
+}
+
+func setPrivateString(ctx context.Context, private privateState, key, text string) diag.Diagnostics {
+	if text == "" {
+		return private.SetKey(ctx, key, nil)
+	}
+	encoded, _ := json.Marshal(text)
+	return private.SetKey(ctx, key, encoded)
+}
 
 type privateState interface {
 	GetKey(context.Context, string) ([]byte, diag.Diagnostics)
@@ -105,12 +125,16 @@ func recordAppliedState(ctx context.Context, plan *model, id identity, manifest 
 	plan.UID = types.StringValue(string(applied.GetUID()))
 	plan.Drift = types.ListValueMust(types.StringType, nil)
 	manager, _ := plan.manager()
-	_, accepted := liveChanges(manifest, applied, manager, skipped, nil)
+	_, accepted, _ := liveChanges(manifest, applied, manager, skipped, nil)
 	encoded, _ := json.Marshal(accepted)
 	diags := private.SetKey(ctx, acceptedKey, encoded)
-	encoded, _ = json.Marshal(manager)
-	diags.Append(private.SetKey(ctx, managerKey, encoded)...)
+	diags.Append(setPrivateString(ctx, private, managerKey, manager)...)
 	diags.Append(private.SetKey(ctx, pendingKey, nil)...)
+	// yaml_body kept as it was refreshed, by lifecycle.ignore_changes, still
+	// ends with the drift comment.
+	if !keepsNote(ctx, *plan, private) {
+		diags.Append(private.SetKey(ctx, noteKey, nil)...)
+	}
 	if plan.Object.IsUnknown() {
 		diags.Append(observe(ctx, plan, applied)...)
 	}
@@ -171,15 +195,19 @@ func applyError(id identity, err error) diag.Diagnostic {
 }
 
 // readBack reads an object that an apply may have created although its
-// response was lost. It is the one the apply created when it was created
-// after the apply started: an error such as a failing webhook can come before
-// the API server finds that the object exists.
-func readBack(ctx context.Context, client dynamic.ResourceInterface, name string, started time.Time) *unstructured.Unstructured {
+// response was lost. It counts as the one the apply created when it was
+// created after the apply was sent and the manager applied fields of it: an
+// error such as a failing webhook comes before the API server finds that an
+// object exists, and another client may create one in the meantime.
+// clockSkew is how far this machine's clock may be ahead of the API server's.
+const clockSkew = 5 * time.Second
+
+func readBack(ctx context.Context, client dynamic.ResourceInterface, name, manager string, sent time.Time) *unstructured.Unstructured {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancel()
 	live, err := client.Get(ctx, name, metav1.GetOptions{})
-	// creationTimestamp has whole seconds.
-	if err != nil || live.GetCreationTimestamp().Time.Before(started.Truncate(time.Second)) {
+	// creationTimestamp has whole seconds, from the API server's clock.
+	if err != nil || live.GetCreationTimestamp().Time.Before(sent.Add(-clockSkew).Truncate(time.Second)) || len(managedFields(live, appliedBy(manager))) == 0 {
 		return nil
 	}
 	return live
@@ -223,13 +251,14 @@ func (r *ManifestV2) Create(ctx context.Context, req resource.CreateRequest, res
 	desired := applicable(manifest, id)
 	desired.SetResourceVersion(createOnly)
 	var applied *unstructured.Unstructured
-	started := time.Now()
+	var sent time.Time
 	err = retryWhile(ctx, id, func() (err error) {
+		sent = time.Now()
 		applied, err = r.apply(ctx, client, desired, manager, force)
 		return err
 	})
 	if uncertain(err) {
-		if found := readBack(ctx, client, id.Name, started); found != nil {
+		if found := readBack(ctx, client, id.Name, manager, sent); found != nil {
 			resp.Diagnostics.AddWarning("Apply response lost", fmt.Sprintf("%s: %s\n\n"+
 				"The object was created by this apply, so the apply took effect.", id, err))
 			applied, err = found, nil
@@ -252,28 +281,56 @@ func (r *ManifestV2) Create(ctx context.Context, req resource.CreateRequest, res
 	resp.Diagnostics.Append(waitForReadiness(ctx, client, id, expected, &plan, open, &resp.State)...)
 }
 
-// driftNote starts the comment that Read adds to yaml_body for fields another
-// client changed. The plan shows it removed, which restores the fields, and
+// driftNote returns the comment that Read adds to the end of yaml_body for the
+// fields another client changed, with their live values when values is set.
+// The plan shows it removed, which restores the fields, and
 // lifecycle.ignore_changes on yaml_body leaves both alone.
-const driftNote = "\n# Changed outside Terraform: "
-
-// withDriftNote replaces the comment at the end of body. The comment is a line
-// of its own and keeps whether body ends with a newline.
-func withDriftNote(body string, paths []string) string {
-	if at := strings.LastIndex(body, driftNote); at >= 0 {
-		newline := strings.HasSuffix(body, "\n")
-		body = body[:at]
-		if newline {
-			body += "\n"
+func driftNote(body string, paths []string, values map[string]any) string {
+	if len(paths) == 0 {
+		return ""
+	}
+	note := "# Changed outside Terraform: " + strings.Join(paths, ", ")
+	if values != nil {
+		note = "# Changed outside Terraform:"
+		for _, path := range paths {
+			encoded := "(removed)"
+			if value, found := values[path]; found {
+				encoded = asciiJSON(value)
+			}
+			note += "\n#   " + path + ": " + encoded
 		}
 	}
-	if len(paths) == 0 {
-		return body
+	if strings.HasSuffix(body, "\n") {
+		return note + "\n"
 	}
-	if after, newline := strings.CutSuffix(body, "\n"); newline {
-		return after + driftNote + strings.Join(paths, ", ") + "\n"
+	return "\n" + note
+}
+
+// asciiJSON encodes a value as JSON with every character outside ASCII
+// escaped: YAML reads some of them, such as U+0085, as line breaks, which
+// would end the comment.
+func asciiJSON(value any) string {
+	encoded, _ := json.Marshal(value)
+	var out strings.Builder
+	for _, r := range string(encoded) {
+		switch {
+		case r < 0x80:
+			out.WriteRune(r)
+		case r > 0xFFFF:
+			high, low := utf16.EncodeRune(r)
+			fmt.Fprintf(&out, "\\u%04x\\u%04x", high, low)
+		default:
+			fmt.Fprintf(&out, "\\u%04x", r)
+		}
 	}
-	return body + driftNote + strings.Join(paths, ", ")
+	return out.String()
+}
+
+// keepsNote reports whether yaml_body still ends with the drift comment that
+// the last refresh added: lifecycle.ignore_changes kept it from changing.
+func keepsNote(ctx context.Context, m model, private privateState) bool {
+	note := privateString(ctx, private, noteKey)
+	return note != "" && strings.HasSuffix(m.YAMLBody.ValueString(), note)
 }
 
 func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -323,7 +380,12 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 	if state.Manifest.IsNull() && state.YAMLBody.IsNull() {
 		described = exported(live, manager)
 	} else {
-		manifest, _, _, err := state.declared()
+		// The drift comment is this resource's own text, not part of the manifest.
+		declaration := state
+		if !state.YAMLBody.IsNull() {
+			declaration.YAMLBody = types.StringValue(strings.TrimSuffix(state.YAMLBody.ValueString(), privateString(ctx, req.Private, noteKey)))
+		}
+		manifest, _, _, err := declaration.declared()
 		if err != nil || manifest == nil {
 			resp.Diagnostics.AddError("Invalid manifest in state", fmt.Sprint(err))
 			return
@@ -332,7 +394,7 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 		if encoded, _ := req.Private.GetKey(ctx, acceptedKey); encoded != nil {
 			_ = json.Unmarshal(encoded, &accepted)
 		}
-		changed, drifted := liveChanges(manifest, live, manager, r.skippedFields(state, manifest), accepted)
+		changed, drifted, values := liveChanges(manifest, live, manager, r.skippedFields(state, manifest), accepted)
 		var conflicts []string
 		for path, found := range drifted {
 			paths = append(paths, path)
@@ -356,7 +418,13 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 				described = changed
 			}
 		} else {
-			state.YAMLBody = types.StringValue(withDriftNote(state.YAMLBody.ValueString(), paths))
+			if !state.ShowDriftValues.ValueBool() {
+				values = nil
+			}
+			body := declaration.YAMLBody.ValueString()
+			note := driftNote(body, paths, values)
+			state.YAMLBody = types.StringValue(body + note)
+			resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, noteKey, note)...)
 		}
 	}
 	drift, diags := types.ListValueFrom(ctx, types.StringType, append([]string{}, paths...))
@@ -379,6 +447,11 @@ func (r *ManifestV2) Update(ctx context.Context, req resource.UpdateRequest, res
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	// show_drift_values and deletion_propagation change nothing in the cluster.
+	if sameArguments(plan, state) && !plan.Object.IsUnknown() {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 		return
 	}
 	timeout, diags := plan.Timeouts.Update(ctx, defaultTimeout)
@@ -425,14 +498,22 @@ func (r *ManifestV2) Update(ctx context.Context, req resource.UpdateRequest, res
 	}
 	if previous := appliedManager(ctx, req.Private); previous != "" && previous != manager {
 		if prior, _, _, err := state.declared(); err == nil && prior != nil {
-			sources = append(sources, handover{appliedBy(previous), prior})
+			// Client-side writes under that name too, from a moved kubectl_manifest.
+			wrote := func(entry metav1.ManagedFieldsEntry) bool {
+				return entry.Manager == previous && entry.Subresource == ""
+			}
+			sources = append(sources, handover{wrote, prior})
 		}
 	}
 	// The move names the resource version: a status update in between makes
-	// it read the object again.
+	// it read the object again, which must still be the one in state.
 	moved, err := takeOver(ctx, client, live, manager, sources...)
 	for attempt := 0; apierrors.IsConflict(err) && attempt < 5; attempt++ {
 		if live, err = client.Get(ctx, id.Name, metav1.GetOptions{}); err == nil {
+			if uid != "" && string(live.GetUID()) != uid {
+				resp.Diagnostics.Append(applyError(id, fmt.Errorf("uid mismatch: the object in the cluster has UID %s, the state has %s", live.GetUID(), uid)))
+				return
+			}
 			moved, err = takeOver(ctx, client, live, manager, sources...)
 		}
 	}
@@ -442,8 +523,14 @@ func (r *ManifestV2) Update(ctx context.Context, req resource.UpdateRequest, res
 	}
 	live = moved
 	skipped := r.skippedFields(plan, manifest)
+	handOver := skipped
+	if keepsNote(ctx, plan, req.Private) {
+		// lifecycle.ignore_changes kept yaml_body as it was refreshed: what
+		// other clients changed stays theirs, as with computed_fields.
+		handOver = append(skipped[:len(skipped):len(skipped)], []string{})
+	}
 	// The apply names the UID too, for a replacement between here and there.
-	desired := applicable(leavingComputed(manifest, live, manager, skipped), id)
+	desired := applicable(leavingComputed(manifest, live, manager, handOver), id)
 	if uid != "" {
 		desired.SetUID(k8stypes.UID(uid))
 	}
@@ -453,7 +540,9 @@ func (r *ManifestV2) Update(ctx context.Context, req resource.UpdateRequest, res
 		return
 	}
 	open := plan.Object.IsUnknown()
-	resp.Diagnostics.Append(recordAppliedState(ctx, &plan, id, manifest, skipped, applied, resp.Private)...)
+	// Fields handed over are not compared, so their differences are reported
+	// again rather than taken as the result of this apply.
+	resp.Diagnostics.Append(recordAppliedState(ctx, &plan, id, manifest, handOver, applied, resp.Private)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, plan.resourceIdentity())...)
 	if diags := waitForReadiness(ctx, client, id, expected, &plan, open, &resp.State); diags.HasError() {
@@ -479,11 +568,14 @@ func (r *ManifestV2) Delete(ctx context.Context, req resource.DeleteRequest, res
 	uid := k8stypes.UID(state.UID.ValueString())
 	client, id, err := r.client(state.identity(), true)
 	if err == nil {
-		// Dependents such as the pods of a Job are deleted too, as kubectl
-		// deletes them. Naming the UID keeps the delete from removing another
-		// object that took the name since the plan.
-		background := metav1.DeletePropagationBackground
-		options := metav1.DeleteOptions{PropagationPolicy: &background}
+		// Dependents such as the pods of a Job are deleted too by default, as
+		// kubectl deletes them. Naming the UID keeps the delete from removing
+		// another object that took the name since the plan.
+		propagation := metav1.DeletePropagationBackground
+		if policy := state.DeletionPropagation.ValueString(); policy != "" {
+			propagation = metav1.DeletionPropagation(policy)
+		}
+		options := metav1.DeleteOptions{PropagationPolicy: &propagation}
 		if uid != "" {
 			options.Preconditions = &metav1.Preconditions{UID: &uid}
 		}

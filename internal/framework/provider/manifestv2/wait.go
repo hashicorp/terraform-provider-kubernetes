@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fluxcd/cli-utils/pkg/kstatus/status"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
@@ -28,6 +29,7 @@ import (
 
 type waitModel struct {
 	Rollout    types.Bool       `tfsdk:"rollout"`
+	Ready      types.Bool       `tfsdk:"ready"`
 	Fields     types.Map        `tfsdk:"fields"`
 	Conditions []conditionModel `tfsdk:"condition"`
 }
@@ -68,6 +70,28 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 				return podsReady(obj), nil
 			}
 			return done, err
+		}})
+	}
+	if w.Ready.ValueBool() {
+		// The readiness rules of Helm and of tools built on kstatus: per kind
+		// for built-in kinds, from the status conditions for any other.
+		var first time.Time
+		expected = append(expected, expectation{"the object to be ready", func(obj *unstructured.Unstructured) (bool, error) {
+			if first.IsZero() {
+				first = time.Now()
+			}
+			result, err := status.Compute(obj)
+			switch {
+			case err != nil:
+				return false, nil
+			case result.Status == status.FailedStatus:
+				return false, fmt.Errorf("the object failed: %s", result.Message)
+			case result.Status != status.CurrentStatus:
+				return false, nil
+			case status.GetLegacyConditionsFn(obj) != nil:
+				return true, nil
+			}
+			return currentStatus(obj, time.Since(first)), nil
 		}})
 	}
 	for _, condition := range w.Conditions {
@@ -122,6 +146,32 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 }
 
 var mapKeys = regexp.MustCompile(`\["([^"]*)"\]`)
+
+// settle is how long a status that does not tell which generation it describes
+// is given to change, so that the controller can act on the apply first.
+const settle = 10 * time.Second
+
+// currentStatus adds to kstatus for kinds without rules of their own, which it
+// reads as ready without a status: a Ready condition must be True, no
+// condition may describe an older generation, and a status that names no
+// generation counts only after the controller had time to act.
+func currentStatus(obj *unstructured.Unstructured, waited time.Duration) bool {
+	_, generational, _ := unstructured.NestedInt64(obj.Object, "status", "observedGeneration")
+	conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	for _, item := range conditions {
+		condition, _ := item.(map[string]any)
+		if observed, found, _ := unstructured.NestedInt64(condition, "observedGeneration"); found {
+			if observed < obj.GetGeneration() {
+				return false
+			}
+			generational = true
+		}
+		if condition["type"] == "Ready" && condition["status"] != string(metav1.ConditionTrue) {
+			return false
+		}
+	}
+	return generational || waited >= settle
+}
 
 // podsReady reports whether a StatefulSet or DaemonSet has seen its current
 // spec and all its pods are ready.
@@ -193,19 +243,19 @@ func await(ctx context.Context, client dynamic.ResourceInterface, name string, e
 	// continues from there, so no change falls between two of them; after an
 	// error the object is read again.
 	resourceVersion := ""
+	var latest *unstructured.Unstructured
 	for {
 		var done bool
 		var err error
 		if resourceVersion == "" || !watching {
-			var obj *unstructured.Unstructured
-			if obj, err = client.Get(ctx, name, metav1.GetOptions{}); err == nil {
-				resourceVersion = obj.GetResourceVersion()
-				done, err = met(obj)
+			if latest, err = client.Get(ctx, name, metav1.GetOptions{}); err == nil {
+				resourceVersion = latest.GetResourceVersion()
+				done, err = met(latest)
 			}
 		}
 		began := time.Now()
 		if err == nil && !done && watching {
-			done, resourceVersion, err = watchUntil(ctx, client, name, resourceVersion, met)
+			done, resourceVersion, latest, err = watchUntil(ctx, client, name, resourceVersion, latest, met)
 			if apierrors.IsForbidden(err) || apierrors.IsMethodNotSupported(err) {
 				watching, err = false, nil
 			}
@@ -237,9 +287,11 @@ func await(ctx context.Context, client dynamic.ResourceInterface, name string, e
 
 // watchUntil follows the object's changes after resourceVersion until it meets
 // the expectations, is deleted, or the watch ends, and returns the resource
-// version it got to. A watch lasts half a minute, so that a proxy that holds
-// back the events until a response ends delays the wait by no more than that.
-func watchUntil(ctx context.Context, client dynamic.ResourceInterface, name, resourceVersion string, met func(*unstructured.Unstructured) (bool, error)) (bool, string, error) {
+// version it got to and the object as last seen. The object is also looked at
+// again every few seconds, for expectations that depend on time. A watch lasts
+// half a minute, so that a proxy that holds back the events until a response
+// ends delays the wait by no more than that.
+func watchUntil(ctx context.Context, client dynamic.ResourceInterface, name, resourceVersion string, latest *unstructured.Unstructured, met func(*unstructured.Unstructured) (bool, error)) (bool, string, *unstructured.Unstructured, error) {
 	ctx, cancel := context.WithTimeout(ctx, watchSeconds*time.Second+15*time.Second)
 	defer cancel()
 	seconds := int64(watchSeconds)
@@ -250,12 +302,29 @@ func watchUntil(ctx context.Context, client dynamic.ResourceInterface, name, res
 		AllowWatchBookmarks: true,
 	})
 	if err != nil {
-		return false, resourceVersion, err
+		return false, resourceVersion, latest, err
 	}
 	defer w.Stop()
-	for event := range w.ResultChan() {
+	tick := time.NewTicker(2 * time.Second)
+	defer tick.Stop()
+	for {
+		var event watch.Event
+		select {
+		case <-tick.C:
+			if latest != nil {
+				if done, err := met(latest); done || err != nil {
+					return done, resourceVersion, latest, err
+				}
+			}
+			continue
+		case received, open := <-w.ResultChan():
+			if !open {
+				return false, resourceVersion, latest, nil
+			}
+			event = received
+		}
 		if event.Type == watch.Error {
-			return false, resourceVersion, apierrors.FromObject(event.Object)
+			return false, resourceVersion, latest, apierrors.FromObject(event.Object)
 		}
 		obj, ok := event.Object.(*unstructured.Unstructured)
 		if !ok {
@@ -265,14 +334,14 @@ func watchUntil(ctx context.Context, client dynamic.ResourceInterface, name, res
 		if event.Type == watch.Bookmark {
 			continue
 		}
+		latest = obj
 		if done, err := met(obj); done || err != nil {
-			return done, resourceVersion, err
+			return done, resourceVersion, latest, err
 		}
 		if event.Type == watch.Deleted {
-			return false, resourceVersion, errDeleted
+			return false, resourceVersion, latest, errDeleted
 		}
 	}
-	return false, resourceVersion, nil
 }
 
 // stopped explains why a wait ended before its condition held.

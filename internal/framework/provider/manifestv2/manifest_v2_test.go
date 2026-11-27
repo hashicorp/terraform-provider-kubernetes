@@ -303,6 +303,35 @@ func TestAccKubernetesManifestV2_failedUpdateWait(t *testing.T) {
 	})
 }
 
+// ready waits by the rules of the kind; Orphan leaves the ReplicaSet when the
+// Deployment is destroyed.
+func TestAccKubernetesManifestV2_readyAndOrphan(t *testing.T) {
+	name := randomName()
+	ctx := context.Background()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
+		CheckDestroy: func(*terraform.State) error {
+			conn, _ := kubetest.Clientset()
+			if _, err := conn.AppsV1().Deployments("default").Get(ctx, name, metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+				return fmt.Errorf("Deployment %s still exists (error: %v)", name, err)
+			}
+			sets, err := conn.AppsV1().ReplicaSets("default").List(ctx, metav1.ListOptions{LabelSelector: "app=" + name})
+			if err != nil || len(sets.Items) != 1 {
+				return fmt.Errorf("want the orphaned ReplicaSet, got %v (error: %v)", sets, err)
+			}
+			return conn.AppsV1().ReplicaSets("default").Delete(ctx, sets.Items[0].Name, metav1.DeleteOptions{})
+		},
+		Steps: []resource.TestStep{{
+			Config: testAccDeployment(name, "  deletion_propagation = \"Orphan\"\n  wait {\n    ready = true\n  }"),
+			ConfigStateChecks: []statecheck.StateCheck{
+				statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("object").AtMapKey("status").AtMapKey("readyReplicas"), knownvalue.Int64Exact(1)),
+			},
+		}},
+	})
+}
+
 func testAccDeployment(name, extra string) string {
 	return fmt.Sprintf(`resource "kubernetes_manifest_v2" "test" {
   manifest = provider::kubernetes::manifest_decode(<<-YAML

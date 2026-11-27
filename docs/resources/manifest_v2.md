@@ -75,7 +75,7 @@ resource "kubernetes_manifest_v2" "service" {
 }
 ```
 
-`yaml_body` takes the text of one object, as YAML or JSON. A key that appears twice in one mapping is an error, and so is a key that overrides one merged with `<<`. A plan shows a change to the text line by line. When another client changes a field, the refresh lists the field in `drift` and adds a comment that names it at the end of `yaml_body`. The plan shows the comment removed, which restores the field, and does not show the value the other client set. Like every change of `yaml_body`, it shows the configured text, unless that is marked with `sensitive()`. `lifecycle { ignore_changes = [yaml_body] }` leaves such changes in place. Set `manifest` instead to see the changed values in the plan, to mark single values as sensitive, or to use values that are not known until apply without making the whole manifest unknown.
+`yaml_body` takes the text of one object, as YAML or JSON. A key that appears twice in one mapping is an error, and so is a key that overrides one merged with `<<`. A plan shows a change to the text line by line. When another client changes a field, the refresh lists the field in `drift` and adds a comment that names it at the end of `yaml_body`. The plan shows the comment removed, which restores the field, and does not show the value the other client set unless `show_drift_values = true`. Like every change of `yaml_body`, it shows the configured text, unless that is marked with `sensitive()`. `lifecycle { ignore_changes = [yaml_body] }` leaves such changes in place: an update for another reason then leaves the fields other clients changed to them. Set `manifest` instead to see the changed values in the plan, to mark single values as sensitive, or to use values that are not known until apply without making the whole manifest unknown.
 
 ### YAML files
 
@@ -96,17 +96,24 @@ resource "kubernetes_manifest_v2" "issuer" {
 }
 
 # Every object of a multi-document YAML file, one resource instance each.
-# The file can hold a Namespace, CustomResourceDefinitions and custom
-# resources together. Split them when the order matters: see "Objects that
-# depend on each other". A local value decodes the file once; in for_each,
-# Terraform calls the function again for every object.
+# Namespaces and CustomResourceDefinitions come first, in their own resource:
+# the other objects need them, and Terraform applies the instances of one
+# resource in no particular order. A local value decodes the file once; in
+# for_each, Terraform calls the function again for every object.
 locals {
   operator = provider::kubernetes::manifest_decode_map(file("${path.module}/operator.yaml"))
+  first    = { for key, object in local.operator : key => object if contains(["Namespace", "CustomResourceDefinition"], object.kind) }
+}
+
+resource "kubernetes_manifest_v2" "operator_first" {
+  for_each = local.first
+  manifest = each.value
 }
 
 resource "kubernetes_manifest_v2" "operator" {
-  for_each = local.operator
-  manifest = each.value
+  for_each   = { for key, object in local.operator : key => object if !contains(keys(local.first), key) }
+  manifest   = each.value
+  depends_on = [kubernetes_manifest_v2.operator_first]
 }
 
 # A templated manifest.
@@ -117,7 +124,7 @@ resource "kubernetes_manifest_v2" "web" {
 }
 ```
 
-[`manifest_decode_map`](../functions/manifest_decode_map.md) keys each object by `Kind[.group]/[namespace/]name`, for example `Deployment.apps/default/web`. Reordering the documents, or moving one to another file that is passed to the same call, does not change its resource address.
+[`manifest_decode_map`](../functions/manifest_decode_map.md) keys each object by `Kind[.group]/[namespace/]name`, for example `Deployment.apps/default/web`. Reordering the documents, or moving one to another file that is passed to the same call, does not change its resource address. The example applies Namespaces and CustomResourceDefinitions first: see [Objects that depend on each other](#objects-that-depend-on-each-other).
 
 ### Waiting, computed fields and reading what the cluster set
 
@@ -155,8 +162,10 @@ output "ready_replicas" {
 ### Optional
 
 - `computed_fields` (List of String) Fields of `manifest` that another controller may change after Terraform sets them, for example `spec.replicas` under an autoscaler. Such a change is not reported, and Terraform stops sending a field once another controller owns it. Values the API server defaults or rewrites need no entry here.
+- `deletion_propagation` (String) How deleting the object treats the objects it owns, such as the pods of a Job: `Background` (default) deletes them after the object, `Foreground` before it, and the destroy waits for them, `Orphan` leaves them. See [cascading deletion](https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/).
 - `field_manager` (Block, Optional) How Kubernetes records the fields this resource owns. (see [below for nested schema](#nestedblock--field_manager))
 - `manifest` (Dynamic) The object to apply: an object value with `apiVersion`, `kind` and `metadata.name`. Set either `manifest` or `yaml_body`. Write it in HCL or decode YAML with `provider::kubernetes::manifest_decode`. Terraform manages the fields set here and leaves all other fields of the object to the cluster. `status` and the metadata fields the API server sets are ignored. Changing the API group, `kind`, `metadata.name` or `metadata.namespace` replaces the object.
+- `show_drift_values` (Boolean) With `yaml_body`: also show the values another client set, in the comment that names the changed fields. The values appear in plan output, so leave this off for objects that hold secrets.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `wait` (Block, Optional) Conditions to wait for after the object is applied. All of them must hold before the apply succeeds. (see [below for nested schema](#nestedblock--wait))
 - `yaml_body` (String) The object to apply, as YAML or JSON text holding one object. Set either `yaml_body` or `manifest`. With `yaml_body`, a plan lists the fields another client changed in `drift` and does not show their values.
@@ -197,6 +206,7 @@ Optional:
 
 - `condition` (Block List) An entry of `status.conditions` to wait for. (see [below for nested schema](#nestedblock--wait--condition))
 - `fields` (Map of String) Fields to wait for, as a map of field path to a regular expression the value must match, for example `{ "status.phase" = "Running" }`. Use `*` to wait for any value.
+- `ready` (Boolean) Wait until the object is ready by the rules of its kind: a rollout that completed, a Job that completed, a bound claim, or, for any other kind, a `Ready` condition and an observed generation that are current. A failed object fails the apply.
 - `rollout` (Boolean) Wait until the rollout of a Deployment, StatefulSet or DaemonSet completes, as `kubectl rollout status` does.
 
 <a id="nestedblock--wait--condition"></a>
@@ -217,6 +227,8 @@ Optional:
 Each operation has 10 minutes by default. Field paths in `wait.fields` and `computed_fields` are written as in `kubernetes_manifest`, for example `status.containerStatuses[0].ready` or `metadata.annotations["example.com/owner"]`. A map key that is not a plain name, such as `app.kubernetes.io/name`, needs the quoted form. `computed_fields` does not tell the elements of a list apart: an entry for one element applies to all of them.
 
 ## Waiting
+
+Without a `wait` block, the apply ends when the API server has accepted the object. `ready = true` waits until the object is ready by the rules of its kind, as `helm install --wait` and tools built on kstatus decide it: the rollout of a Deployment, StatefulSet or DaemonSet completed, a Job completed, a PersistentVolumeClaim bound, a Pod ready. Other kinds, such as custom resources, are ready when no `Reconciling` or `Stalled` condition is set, a `Ready` condition, if there is one, is `True`, and the status describes the current generation. A status that does not record the generation, or no status at all, counts after 10 seconds, so that a controller can act on the apply first; a ConfigMap is ready at once. An object that reports a failure, such as a Deployment past its progress deadline, fails the apply. `rollout`, `condition` and `fields` wait for something specific instead.
 
 Terraform watches the object until every condition of `wait` holds, and polls it where the credentials do not allow a watch. Errors that waiting may resolve, such as a restarting API server, do not end the wait. An object that deletes itself, such as a Job with `ttlSecondsAfterFinished`, is checked in the state it had when it was deleted. `rollout` on a StatefulSet or DaemonSet with the `OnDelete` update strategy waits for its pods to be ready, since such a rollout only continues as pods are deleted.
 
@@ -274,7 +286,7 @@ resource "kubernetes_manifest_v2" "rest" {
 }
 ```
 
-On destroy, an object whose namespace or CustomResourceDefinition is already gone counts as deleted. Deleting an object also deletes its dependents, such as the pods of a Job, as `kubectl delete` does.
+On destroy, an object whose namespace or CustomResourceDefinition is already gone counts as deleted. Deleting an object also deletes its dependents, such as the pods of a Job, after the object, as `kubectl delete` does. `deletion_propagation = "Foreground"` deletes them first, and the destroy waits until they are gone; `"Orphan"` leaves them. Changing `deletion_propagation` or `show_drift_values` only updates the state.
 
 ## API versions that are no longer served
 
@@ -349,3 +361,21 @@ resource "kubernetes_manifest_v2" "config" {
 ```
 
 Review references to `object` and to the blocks, and replace `wait_for` with a `wait` block. See the table above for what behaves differently, and the [guide](../guides/applying-manifests.md) for the details.
+
+## Moving from `kubectl_manifest`
+
+With Terraform 1.8 or later, a `moved` block also moves a `kubectl_manifest` resource of another provider. `yaml_body` is taken over as it is: change the resource type and remove the arguments this resource does not have, and the plan shows no change to the manifest. A `kubectl_manifest` waits for the rollout of a Deployment, StatefulSet or DaemonSet by default; add `wait { ready = true }` to keep that. An object that was applied with server-side apply under another field manager name plans one update that moves its fields to this resource's field manager; fields written with client-side apply move at the first apply. If the `kubectl_manifest` put the object in another namespace than `yaml_body` names, for example with `override_namespace`, set that namespace in `yaml_body`: otherwise the plan replaces the object.
+
+```terraform
+moved {
+  from = kubectl_manifest.web
+  to   = kubernetes_manifest_v2.web
+}
+
+resource "kubernetes_manifest_v2" "web" {
+  yaml_body = file("${path.module}/web.yaml")
+  wait {
+    ready = true
+  }
+}
+```

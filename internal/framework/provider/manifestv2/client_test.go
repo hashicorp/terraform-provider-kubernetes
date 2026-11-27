@@ -41,26 +41,37 @@ func TestCoerce(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"components":{"schemas":{
 		"cm": {"type":"object","properties":{"data":{"type":"object","additionalProperties":{"type":"string"}},
 			"metadata":{"allOf":[{"$ref":"#/components/schemas/meta"}]},"port":{"x-kubernetes-int-or-string":true,"anyOf":[{"type":"integer"},{"type":"string"}]},
-			"cpu":{"oneOf":[{"type":"string"},{"type":"number"}]}}},
+			"cpu":{"oneOf":[{"type":"string"},{"type":"number"}]},"old":{"allOf":[{"$ref":"#/components/schemas/io.k8s.apimachinery.pkg.util.intstr.IntOrString"}]}}},
+		"io.k8s.apimachinery.pkg.util.intstr.IntOrString": {"type":"string","format":"int-or-string"},
 		"meta": {"type":"object","properties":{"labels":{"type":"object","additionalProperties":{"type":"string"}}}}}}}`), &document); err != nil {
 		t.Fatal(err)
 	}
 	value := map[string]any{"data": map[string]any{"PORT": int64(8080), "DEBUG": true, "RATIO": 0.5}, "metadata": map[string]any{"labels": map[string]any{"version": int64(2)}},
-		"port": int64(80), "cpu": int64(1)}
+		"port": int64(80), "cpu": int64(1), "old": int64(8080)}
 	changed := false
 	coerce(value, document.Components.Schemas["cm"], document.Components.Schemas, 0, &changed)
 	want := map[string]any{"data": map[string]any{"PORT": "8080", "DEBUG": "true", "RATIO": "0.5"}, "metadata": map[string]any{"labels": map[string]any{"version": "2"}},
-		"port": int64(80), "cpu": int64(1)}
+		"port": int64(80), "cpu": int64(1), "old": int64(8080)}
 	if !changed || !reflect.DeepEqual(value, want) {
 		t.Fatalf("got %v", value)
 	}
 }
 
-func TestWithDriftNote(t *testing.T) {
-	for _, body := range []string{"kind: A", "kind: A\n"} {
-		noted := withDriftNote(body, []string{"data.a", "spec.b"})
-		if !strings.Contains(noted, "A\n# Changed outside Terraform: data.a, spec.b") || withDriftNote(noted, nil) != body || withDriftNote(withDriftNote(noted, []string{"x"}), nil) != body {
+// The drift comment is a line of its own, and only that text is taken off.
+func TestDriftNote(t *testing.T) {
+	for _, body := range []string{"kind: A", "kind: A\n", "kind: A\n# Changed outside Terraform: mine\ndata:\n  k: v\n"} {
+		note := driftNote(body, []string{"data.a", "spec.b"}, nil)
+		if noted := body + note; !strings.Contains(noted, "\n# Changed outside Terraform: data.a, spec.b") || strings.TrimSuffix(noted, note) != body {
 			t.Errorf("%q: %q", body, noted)
 		}
+	}
+	if note := driftNote("kind: A\n", []string{"data.a", "data.b"}, map[string]any{"data.a": "2"}); note != "# Changed outside Terraform:\n#   data.a: \"2\"\n#   data.b: (removed)\n" {
+		t.Errorf("with values: %q", note)
+	}
+	// A value with a character YAML reads as a line break stays in the comment.
+	body := "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: a\n"
+	note := driftNote(body, []string{"data.a"}, map[string]any{"data.a": "x\u0085immutable: true"})
+	if manifest, err := decodeYAML(body + note); err != nil || manifest["immutable"] != nil || !strings.Contains(note, `\u0085`) {
+		t.Errorf("note %q decoded to %v (error %v)", note, manifest, err)
 	}
 }

@@ -237,7 +237,8 @@ func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp 
 					"ready": schema.BoolAttribute{
 						Optional: true,
 						MarkdownDescription: "Wait until the object is ready by the rules of its kind: a rollout that completed, a Job that completed, a bound claim, " +
-							"or, for any other kind, a `Ready` condition and an observed generation that are current. A failed object fails the apply.",
+							"or, for any other kind, a status for the current generation in which a `Ready` condition, if there is one, is `True`. " +
+							"A status that does not record the generation, or no status at all, counts after 10 seconds. A failed object fails the apply.",
 					},
 					"fields": schema.MapAttribute{
 						Optional:    true,

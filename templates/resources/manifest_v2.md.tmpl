@@ -2,7 +2,7 @@
 subcategory: "manifest"
 page_title: "Kubernetes: kubernetes_manifest_v2"
 description: |-
-  Manages one Kubernetes object of any kind from its manifest with server-side apply, the way kubectl apply does, without needing the kind's schema. The successor of kubernetes_manifest.
+  Manages one Kubernetes object of any kind from its manifest with server-side apply, the way kubectl apply --server-side does, without needing the kind's schema. The successor of kubernetes_manifest.
 ---
 
 # {{ .Name }}
@@ -27,7 +27,7 @@ Manages one Kubernetes object of any kind, built-in or custom, from its manifest
 | Changes made outside Terraform | Reported for the fields set in `manifest`, decided by the field ownership the cluster records. | Reported by comparing values, except for `computed_fields`. |
 | `computed_fields` | Fields that another controller changes: the change is not reported and an apply leaves it in place. Not needed for server defaults. Empty by default. | Fields the API server may alter. Defaults to `metadata.annotations` and `metadata.labels`. |
 | What an apply sends | The fields of `manifest`. | The planned `object`, which includes values read from the cluster. Terraform then also owns fields it did not configure. |
-| `wait` | `rollout`, `fields` and `condition` can be combined. | Only one of them. |
+| `wait` | `ready`, `rollout`, `fields` and `condition` can be combined. | Only one of `rollout`, `fields` and `condition`. |
 | A namespaced object without `metadata.namespace` | Goes to `default`. | Is an error. |
 | `wait_for` | Not available. Use `wait { fields = { ... } }`. | Deprecated. |
 
@@ -77,13 +77,13 @@ Kubernetes records which client set each field of an object. Terraform owns the 
 
 Applying over a field that another client changed fails with a field ownership conflict that names the client. Terraform also warns about the conflict on every plan until the field is restored. See [Field ownership conflicts](#field-ownership-conflicts) for the ways to resolve it.
 
-The field manager name, `Terraform` by default, identifies this resource to the API server. Two resources that apply to the same object under the same name replace each other's fields: two configurations that manage one object, or this resource and `kubernetes_config_map_v1_data`, `kubernetes_labels` and `kubernetes_annotations`, which also default to `Terraform`. Give each of them its own name. Changing `field_manager.name` moves the fields this resource applied to the new name; the fields of other resources stay with the old one.
+The field manager name, `Terraform` by default, identifies this resource to the API server. Two resources that apply to the same object under the same name replace each other's fields: two configurations that manage one object, or this resource and one of `kubernetes_annotations`, `kubernetes_config_map_v1_data`, `kubernetes_env`, `kubernetes_labels`, `kubernetes_node_taint` and `kubernetes_secret_v1_data`, which also default to `Terraform`. Give each of them its own name. Changing `field_manager.name` moves the fields this resource applied to the new name; the fields of other resources stay with the old one.
 
 `status` and the metadata fields that only the API server sets, such as `uid`, `resourceVersion` and `creationTimestamp`, are ignored when they appear in `manifest`. A `Secret` written with `stringData` is compared with the `data` the cluster stores.
 
 ## Field ownership conflicts
 
-A conflict means that another client changed a field the manifest sets and now owns it, for example a `kubectl edit` or a controller. Terraform does not take such a field back unless the configuration says so. The apply fails with "Field ownership conflict" and names the other client's field manager and the fields, for example `conflict with "kubectl-edit": .spec.replicas`.
+A conflict means that another client changed a field the manifest sets and now owns it, for example a `kubectl edit` or a controller. Terraform does not take such a field back unless the configuration says so. The apply fails with "Field ownership conflict" and names the other client's field manager and the fields, for example `conflict with "kubectl-edit" using apps/v1: .spec.replicas`.
 
 To resolve a conflict, choose one of these:
 
@@ -146,7 +146,7 @@ An update does not change `object`: Terraform cannot know what the cluster will 
 - For a value the cluster sets and never changes, such as a Service's `spec.clusterIP`, or for `name`, `namespace` and `uid`, `object` and the attributes of the same name are always right.
 - A value the cluster changes because of an update, such as `status`, reaches other resources with the plan after that update.
 
-A field that is not set is absent from `object`, not null: wrap a reference to an optional field in `try()`. `object` is not sensitive. It holds everything the cluster returns, including the `data` of a Secret, and Terraform prints it when the resource is created, replaced or destroyed.
+A field that is not set is absent from `object`, not null: wrap a reference to an optional field in `try()`. `object` is not sensitive. It holds everything the cluster returns, including the `data` of a Secret, and Terraform shows it, for example in a plan that replaces or destroys the resource and in `terraform show`.
 
 ## Objects that depend on each other
 
@@ -182,7 +182,7 @@ When the cluster stops serving the API version an object was applied in, the obj
 
 Creating an object that already exists in the cluster is an error, as with `kubernetes_manifest`. Import it instead, so that taking over an object, and later deleting it with `terraform destroy`, is always explicit. An object that was deleted and created again outside Terraform under the same name gets another UID. The refresh warns about it, and the resource manages the new object from then on. Between a plan and its apply, the UID keeps an update or a delete from acting on an object that replaced the planned one.
 
-Creating needs the `create` and `patch` permissions for the kind, reading needs `get`, and deleting `delete` and `get`. `wait` also uses `watch` when the credentials allow it.
+Creating needs the `create` and `patch` permissions for the kind, reading needs `get`, updating `get` and `patch`, and deleting `delete` and `get`. `wait` also uses `watch` when the credentials allow it.
 
 ## Limitations
 
@@ -218,7 +218,7 @@ import {
 
 The imported manifest describes the whole object, without the data of a Secret that another client wrote, so the first plan lists the fields that are in the cluster but not in the configuration as removed from `manifest`. Applying it does not remove them from the object: Terraform only takes ownership of the fields the configuration sets. Of the fields that `kubectl apply` without `--server-side` or another resource of this provider wrote, those the configuration sets move to Terraform's field manager, so their values can change without a conflict. A value the configuration spells differently from the cluster, such as `cpu = 1` for a stored `"1"`, also shows as a change in that plan. An object that this resource applied before is imported with only the fields it owns, and plans no change when the configuration is the same.
 
-An object that `kubectl apply --server-side`, Helm or another client applied with server-side apply keeps its fields with that field manager. Changing one of them then fails with a field ownership conflict: see [Field ownership conflicts](#field-ownership-conflicts).
+An object that `kubectl apply --server-side` or another client applied with server-side apply keeps its fields with that field manager. Changing one of them then fails with a field ownership conflict: see [Field ownership conflicts](#field-ownership-conflicts).
 
 ## Moving from `kubernetes_manifest`
 
@@ -230,7 +230,7 @@ Review references to `object` and to the blocks, and replace `wait_for` with a `
 
 ## Moving from `kubectl_manifest`
 
-With Terraform 1.8 or later, a `moved` block also moves a `kubectl_manifest` resource of another provider. `yaml_body` is taken over as it is: change the resource type and remove the arguments this resource does not have, and the plan shows no change to the manifest. A `kubectl_manifest` waits for the rollout of a Deployment, StatefulSet or DaemonSet by default; add `wait { ready = true }` to keep that. The object keeps its fields until the first apply, which moves the fields `yaml_body` sets to this resource's field manager, `Terraform` by default: from the field manager the `kubectl_manifest` applied as with server-side apply (its `field_manager`, or `kubectl`), and from client-side apply. If the `kubectl_manifest` put the object in another namespace than `yaml_body` names, for example with `override_namespace`, set that namespace in `yaml_body`: otherwise the plan replaces the object.
+With Terraform 1.8 or later, a `moved` block also moves a `kubectl_manifest` resource of another provider. `yaml_body` is taken over as it is: change the resource type and remove the arguments this resource does not have, and the plan shows no change to the manifest. By default, a `kubectl_manifest` waits for some kinds, such as the rollout of a Deployment; add a `wait` block to keep that, for example `wait { ready = true }`. The object keeps its fields until the first apply, which moves the fields `yaml_body` sets to this resource's field manager, `Terraform` by default: from the field manager the `kubectl_manifest` applied as with server-side apply (its `field_manager`, or `kubectl`), and from client-side apply. If the `kubectl_manifest` put the object in another namespace than `yaml_body` names, for example with `override_namespace`, set that namespace in `yaml_body`: otherwise the plan replaces the object.
 
 ```terraform
 moved {

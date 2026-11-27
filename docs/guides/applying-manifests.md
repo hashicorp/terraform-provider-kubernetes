@@ -7,6 +7,8 @@ description: |-
 
 # Applying manifests with `kubernetes_manifest_v2`
 
+~> **Beta:** `kubernetes_manifest_v2` is new in the 4.0 beta releases. Its arguments and behavior may still change before version 4.0.0 is released.
+
 The [`kubernetes_manifest_v2`](../resources/manifest_v2.md) resource applies a Kubernetes manifest the way `kubectl apply --server-side` does. It is the successor of `kubernetes_manifest`. This guide shows how to go from YAML files to Terraform resources, and how to move existing resources from `kubernetes_manifest` without recreating any object.
 
 Provider functions and moving resources between resource types require Terraform 1.8 or later.
@@ -128,5 +130,5 @@ Review these points:
 | `wait_for` | Write it as `wait { fields = { ... } }`. |
 | Validation | A manifest with a field the kind does not have is rejected when it is applied, not while planning. |
 | Values | A number or bool where the kind has a string, such as `data = { PORT = 8080 }`, is still applied as a string, now when it is applied rather than while planning. |
-| Field manager | A `kubernetes_config_map_v1_data`, `kubernetes_labels` or `kubernetes_annotations` resource on the same object also defaults to the field manager `Terraform`. Give it, or this resource, another `field_manager` name. |
+| Field manager | A `kubernetes_annotations`, `kubernetes_config_map_v1_data`, `kubernetes_env`, `kubernetes_labels`, `kubernetes_node_taint` or `kubernetes_secret_v1_data` resource on the same object also defaults to the field manager `Terraform`. Give it, or this resource, another `field_manager` name. |
 | Namespace | A namespaced object without `metadata.namespace` goes to `default` instead of being an error. |

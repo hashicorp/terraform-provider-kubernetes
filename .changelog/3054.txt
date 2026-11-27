@@ -1,5 +1,5 @@
 ```release-note:feature
-New resource: `kubernetes_manifest_v2`, the successor of `kubernetes_manifest`. It takes the same arguments except `wait_for`, and the manifest as inline YAML in `yaml_body`, and applies the manifest with server-side apply, but does not read the kind's schema from the cluster. Planning a new object makes no request to the cluster, so a CustomResourceDefinition and its custom resources, or a cluster and the objects in it, can be created in one apply, and the apply does not fail with "Provider produced inconsistent result after apply". A `moved` block moves a resource from `kubernetes_manifest`, or from `kubectl_manifest` of another provider.
+New resource: `kubernetes_manifest_v2`, the successor of `kubernetes_manifest`. It applies a manifest written in HCL or YAML with server-side apply, without reading the kind's schema from the cluster, so a CustomResourceDefinition and its custom resources can be created in one apply. A `moved` block moves a resource from `kubernetes_manifest`, or from `kubectl_manifest` of another provider.
 ```
 
 ```release-note:feature

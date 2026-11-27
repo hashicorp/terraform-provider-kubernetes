@@ -39,6 +39,7 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
 | Resource | `kubernetes_role_binding_v1` | v3.5.0 | [RoleBinding resource](#resource-kubernetes_role_binding_v1) |
 | Resource | `kubernetes_cluster_role_binding_v1` | v3.5.0 | [ClusterRoleBinding resource](#resource-kubernetes_cluster_role_binding_v1) |
+| Resource | `kubernetes_cluster_role_v1` | v3.6.0 | [ClusterRole resource](#resource-kubernetes_cluster_role_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -174,6 +175,29 @@ moved {
 ```
 
 Moved state shows the same one-time updates for empty metadata maps and `api_group = ""`. Verify that the plan does not replace the binding. See the [ClusterRoleBinding resource reference](../resources/cluster_role_binding_v1.md#metadata-and-upgrades) for further details.
+
+## Resource: kubernetes_cluster_role_v1
+
+- **Aggregated roles:** For a ClusterRole with an `aggregation_rule`, the Kubernetes controller manager owns `.rules`. SDKv2 read them into `rule` and planned their removal if they were also configured. The Framework resource keeps `rule` empty for an aggregated role and describes it by `aggregation_rule`. Upgrading does not plan a change for it. `rule` blocks configured next to an `aggregation_rule` are still sent to the API but are never read back, so Terraform plans an in-place update for them on every run. SDKv2 planned the same update when the selectors matched a ClusterRole, because the controller overwrites the rules, but not when they matched none. Remove the `rule` blocks and grant permissions through a ClusterRole that the `aggregation_rule` selects instead.
+- **Rule sets:** `api_groups`, `non_resource_urls`, `resource_names`, `resources` and `verbs` are now sets rather than lists. Element order no longer matters, and duplicate elements collapse. They must not contain `null` elements. `api_groups` must contain at least one element when it is set; omit it for a `non_resource_urls` rule. Omitted rule attributes are empty sets.
+- **Empty metadata maps:** Explicit `labels = {}` or `annotations = {}` can require a one-time in-place update from SDKv2's `null`. Conversely, a ClusterRole imported with an earlier provider version may have stored empty maps that now change to `null` when omitted from configuration. Neither replaces the ClusterRole.
+- **Computed metadata:** During updates, `metadata[0].generation` and `metadata[0].resource_version` can be `(known after apply)` until read from the API. This does not itself indicate replacement.
+- **Unset generated-name prefix:** Omitted `metadata.generate_name` changes from SDKv2's `""` to `null`. This state-only change needs no ClusterRole update or replacement, even with `-refresh=false`.
+- **Null map entries:** `metadata.labels` and `metadata.annotations` entries must contain non-null strings. Remove entries such as `owner = null` or provide string values. Omitting the whole map or setting it to `null` remains supported.
+- **Import:** Import IDs are the ClusterRole name. Identity imports require Terraform 1.12 or later. For a ClusterRole created with `generateName`, configure `generate_name` with the original prefix and omit `name` to avoid a replacement plan after import.
+
+### Moving from kubernetes_cluster_role
+
+Terraform 1.8 or later supports moving from the deprecated `kubernetes_cluster_role` resource to `kubernetes_cluster_role_v1`. Change the resource type, update references, and add a `moved` block:
+
+```terraform
+moved {
+  from = kubernetes_cluster_role.example
+  to   = kubernetes_cluster_role_v1.example
+}
+```
+
+Moved state shows the same one-time update for explicitly empty metadata maps. Verify that the plan does not replace the ClusterRole. See the [ClusterRole resource reference](../resources/cluster_role_v1.md#migrating-from-kubernetes_cluster_role) for further details.
 
 ## Data source: kubernetes_namespace_v1
 

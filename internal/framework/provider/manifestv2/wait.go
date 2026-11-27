@@ -40,10 +40,11 @@ type conditionModel struct {
 }
 
 // expectation is one thing the applied object must show before the apply
-// counts as done.
+// counts as done. met also says where the object stands, for the message of a
+// wait that ends first.
 type expectation struct {
 	description string
-	met         func(*unstructured.Unstructured) (bool, error)
+	met         func(*unstructured.Unstructured) (bool, string, error)
 }
 
 // expectations reads the wait argument. id may be incomplete while the
@@ -62,36 +63,39 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 		if err != nil && id.Kind != "" {
 			return nil, fmt.Errorf("rollout supports Deployment, StatefulSet and DaemonSet, not %s", id.Kind)
 		}
-		expected = append(expected, expectation{"the rollout to complete", func(obj *unstructured.Unstructured) (bool, error) {
-			_, done, err := viewer.Status(obj, 0)
+		expected = append(expected, expectation{"the rollout to complete", func(obj *unstructured.Unstructured) (bool, string, error) {
+			message, done, err := viewer.Status(obj, 0)
 			if err != nil && done {
 				// kubectl has no rollout status for the OnDelete strategy,
 				// which updates pods only as they are deleted.
-				return podsReady(obj), nil
+				return podsReady(obj), "", nil
 			}
-			return done, err
+			return done, strings.TrimSpace(message), err
 		}})
 	}
 	if w.Ready.ValueBool() {
-		// The readiness rules of Helm and of tools built on kstatus: per kind
-		// for built-in kinds, from the status conditions for any other.
+		// The readiness rules of kstatus: per kind for built-in kinds, from
+		// the status conditions for any other.
 		var first time.Time
-		expected = append(expected, expectation{"the object to be ready", func(obj *unstructured.Unstructured) (bool, error) {
+		expected = append(expected, expectation{"the object to be ready", func(obj *unstructured.Unstructured) (bool, string, error) {
 			if first.IsZero() {
 				first = time.Now()
 			}
 			result, err := status.Compute(obj)
 			switch {
 			case err != nil:
-				return false, nil
+				return false, "", nil
 			case result.Status == status.FailedStatus:
-				return false, fmt.Errorf("the object failed: %s", result.Message)
+				return false, result.Message, fmt.Errorf("the object failed: %s", result.Message)
 			case result.Status != status.CurrentStatus:
-				return false, nil
-			case status.GetLegacyConditionsFn(obj) != nil:
-				return true, nil
+				return false, result.Message, nil
+			case status.GetLegacyConditionsFn(obj) != nil, currentStatus(obj, time.Since(first)):
+				return true, result.Message, nil
 			}
-			return currentStatus(obj, time.Since(first)), nil
+			if ready := findCondition(obj, "Ready"); ready != nil {
+				return false, conditionText("Ready", ready), nil
+			}
+			return false, fmt.Sprintf("the status does not describe generation %d yet", obj.GetGeneration()), nil
 		}})
 	}
 	for _, condition := range w.Conditions {
@@ -99,14 +103,9 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 		if status == "" {
 			status = string(metav1.ConditionTrue)
 		}
-		expected = append(expected, expectation{fmt.Sprintf("condition %s to be %s", kind, status), func(obj *unstructured.Unstructured) (bool, error) {
-			conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
-			for _, condition := range conditions {
-				if c, ok := condition.(map[string]any); ok && c["type"] == kind && fmt.Sprint(c["status"]) == status {
-					return true, nil
-				}
-			}
-			return false, nil
+		expected = append(expected, expectation{fmt.Sprintf("condition %s to be %s", kind, status), func(obj *unstructured.Unstructured) (bool, string, error) {
+			c := findCondition(obj, kind)
+			return c != nil && fmt.Sprint(c["status"]) == status, conditionText(kind, c), nil
 		}})
 	}
 	for _, field := range sortedKeys(w.Fields) {
@@ -130,22 +129,54 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 				return nil, fmt.Errorf("pattern for field %q: %w", field, err)
 			}
 		}
-		expected = append(expected, expectation{fmt.Sprintf("field %s to match %q", field, pattern), func(obj *unstructured.Unstructured) (bool, error) {
+		expected = append(expected, expectation{fmt.Sprintf("field %s to match %q", field, pattern), func(obj *unstructured.Unstructured) (bool, string, error) {
 			results, err := path.FindResults(obj.Object)
 			if err != nil || len(results) == 0 || len(results[0]) == 0 || results[0][0].Interface() == nil {
-				return false, nil
+				return false, field + " is not set", nil
 			}
 			text := fmt.Sprint(results[0][0].Interface())
-			if matcher == nil {
-				return text != "", nil
+			seen := fmt.Sprintf("%s is %q", field, text)
+			if isSecret(obj) {
+				seen = field + " does not match"
 			}
-			return matcher.MatchString(text), nil
+			if matcher == nil {
+				return text != "", seen, nil
+			}
+			return matcher.MatchString(text), seen, nil
 		}})
 	}
 	return expected, nil
 }
 
 var mapKeys = regexp.MustCompile(`\["([^"]*)"\]`)
+
+// findCondition returns the status condition of the type, or nil.
+func findCondition(obj *unstructured.Unstructured, kind string) map[string]any {
+	conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	for _, item := range conditions {
+		if c, ok := item.(map[string]any); ok && c["type"] == kind {
+			return c
+		}
+	}
+	return nil
+}
+
+// conditionText tells a condition's status, with its reason and message.
+func conditionText(kind string, c map[string]any) string {
+	if c == nil {
+		return fmt.Sprintf("no %s condition", kind)
+	}
+	text := fmt.Sprintf("%s is %v", kind, c["status"])
+	reason, _ := c["reason"].(string)
+	message, _ := c["message"].(string)
+	switch {
+	case reason != "" && message != "":
+		text += fmt.Sprintf(" (%s: %s)", reason, message)
+	case reason != "" || message != "":
+		text += fmt.Sprintf(" (%s)", reason+message)
+	}
+	return text
+}
 
 // settle is how long a status that does not tell which generation it describes
 // is given to change, so that the controller can act on the apply first.
@@ -223,11 +254,12 @@ func await(ctx context.Context, client dynamic.ResourceInterface, name string, e
 		return nil, nil
 	}
 	var ready *unstructured.Unstructured
-	pending := expected[0].description
+	pending, seen := expected[0].description, ""
 	met := func(obj *unstructured.Unstructured) (bool, error) {
 		for _, e := range expected {
-			if ok, err := e.met(obj); err != nil || !ok {
-				pending = e.description
+			ok, progress, err := e.met(obj)
+			if err != nil || !ok {
+				pending, seen = e.description, progress
 				if err != nil {
 					return false, unmet{err}
 				}
@@ -265,7 +297,7 @@ func await(ctx context.Context, client dynamic.ResourceInterface, name string, e
 		case done:
 			return ready, nil
 		case ctx.Err() != nil:
-			return nil, stopped(ctx, pending, last)
+			return nil, stopped(ctx, pending, seen, last)
 		case errors.As(err, &failed):
 			return nil, failed.error
 		case errors.Is(err, errDeleted) || apierrors.IsNotFound(err):
@@ -279,7 +311,7 @@ func await(ctx context.Context, client dynamic.ResourceInterface, name string, e
 		}
 		select {
 		case <-ctx.Done():
-			return nil, stopped(ctx, pending, last)
+			return nil, stopped(ctx, pending, seen, last)
 		case <-time.After(2 * time.Second):
 		}
 	}
@@ -344,14 +376,19 @@ func watchUntil(ctx context.Context, client dynamic.ResourceInterface, name, res
 	}
 }
 
-// stopped explains why a wait ended before its condition held.
-func stopped(ctx context.Context, pending string, last error) error {
+// stopped explains why a wait ended before its condition held, and where the
+// object stood.
+func stopped(ctx context.Context, pending, seen string, last error) error {
 	reason := "timed out"
 	if errors.Is(ctx.Err(), context.Canceled) {
 		reason = "interrupted"
 	}
-	if last != nil {
-		return fmt.Errorf("%s waiting for %s; the last error was: %w", reason, pending, last)
+	message := fmt.Sprintf("%s waiting for %s", reason, pending)
+	if seen != "" {
+		message += "; last status: " + seen
 	}
-	return fmt.Errorf("%s waiting for %s", reason, pending)
+	if last != nil {
+		return fmt.Errorf("%s; the last error was: %w", message, last)
+	}
+	return errors.New(message)
 }

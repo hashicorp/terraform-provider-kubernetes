@@ -140,6 +140,7 @@ func serviceMarkClearOutputsUnknown(ctx context.Context, configured map[string]m
 			"ip_family_policy":        types.StringUnknown(),
 			"health_check_node_port":  types.Int64Unknown(),
 			"session_affinity_config": types.ObjectUnknown(serviceSessionAffinityConfigType.AttrTypes),
+			"traffic_distribution":    types.StringUnknown(),
 		},
 	}
 	for _, parent := range []string{"metadata", "spec"} {
@@ -303,7 +304,7 @@ func servicePreserveTypeOutputs(ctx context.Context, req resource.ModifyPlanRequ
 			}
 		}
 	}
-	keep("cluster_ip", "internal_traffic_policy")
+	keep("cluster_ip", "internal_traffic_policy", "traffic_distribution")
 	if same("ip_family_policy", "ip_families", "cluster_ips") {
 		keep("ip_family_policy", "ip_families", "cluster_ips")
 	}

@@ -204,6 +204,12 @@ func serviceSpecSchema() schema.ListNestedBlock {
 						},
 					},
 				},
+				"traffic_distribution": schema.StringAttribute{
+					Description: "Offers a way to express preferences for how traffic is distributed to Service endpoints. Supports `PreferSameZone`, `PreferSameNode` and the deprecated `PreferClose`. Implementations can use this field as a hint, but are not required to guarantee strict adherence. Omit or set to null to retain the value stored in the cluster, or use an empty string to clear it. More info: https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution",
+					Optional:    true,
+					Computed:    true,
+					Validators:  []validator.String{stringvalidator.OneOf("", "PreferClose", "PreferSameZone", "PreferSameNode")},
+				},
 				"type": schema.StringAttribute{
 					Description: "Determines how the service is exposed. Defaults to `ClusterIP`. Valid options are `ExternalName`, `ClusterIP`, `NodePort`, and `LoadBalancer`. `ExternalName` maps to the specified `external_name`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types",
 					Optional:    true,

@@ -105,6 +105,15 @@ func serviceSpecPatchOps(ctx context.Context, state, plan ServiceV1SpecModel, li
 	computedStringChange("externalTrafficPolicy", state.ExternalTrafficPolicy, plan.ExternalTrafficPolicy)
 	computedStringChange("internalTrafficPolicy", state.InternalTrafficPolicy, plan.InternalTrafficPolicy)
 	computedStringChange("ipFamilyPolicy", state.IPFamilyPolicy, plan.IPFamilyPolicy)
+	if distribution := plan.TrafficDistribution; !distribution.IsNull() && !distribution.IsUnknown() && distribution.ValueString() != state.TrafficDistribution.ValueString() {
+		// The API has no default for this field: an empty string asks for the
+		// field to be cleared, while an omitted argument leaves it untouched.
+		if distribution.ValueString() != "" {
+			add("trafficDistribution", distribution.ValueString())
+		} else if live.TrafficDistribution != nil {
+			remove("trafficDistribution")
+		}
+	}
 	if !plan.IPFamilies.IsUnknown() && !plan.IPFamilies.IsNull() && !slices.Equal(prior.IPFamilies, desired.IPFamilies) {
 		add("ipFamilies", desired.IPFamilies)
 	}

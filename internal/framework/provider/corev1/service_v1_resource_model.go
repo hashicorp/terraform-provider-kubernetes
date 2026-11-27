@@ -37,6 +37,7 @@ type ServiceV1SpecModel struct {
 	Selector                      types.Map            `tfsdk:"selector"`
 	SessionAffinity               types.String         `tfsdk:"session_affinity"`
 	SessionAffinityConfig         types.Object         `tfsdk:"session_affinity_config"`
+	TrafficDistribution           types.String         `tfsdk:"traffic_distribution"`
 	Type                          types.String         `tfsdk:"type"`
 	HealthCheckNodePort           types.Int64          `tfsdk:"health_check_node_port"`
 }

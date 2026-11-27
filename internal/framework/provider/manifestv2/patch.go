@@ -181,7 +181,7 @@ func (r *ManifestPatch) Schema(ctx context.Context, req resource.SchemaRequest, 
 		"Every patch of one object needs a name of its own, and so does a `kubernetes_manifest_v2` or `kubernetes_labels` resource of the same object."
 	fieldManager.Attributes["name"] = name
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Applies fields of a Kubernetes object that something else creates and manages, such as a cloud add-on, a Helm chart or an operator, " +
+		MarkdownDescription: "Applies fields of a Kubernetes object that something else creates and manages, such as a cluster add-on or an operator, " +
 			"and keeps them set. The fields are sent with [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) " +
 			"under their own field manager, as `kubectl apply --server-side` sends a partial manifest, so the object keeps its other fields and their owners. " +
 			"The object must exist: this resource never creates or deletes it. It takes the arguments of `kubernetes_manifest_v2`, which manages whole objects.",
@@ -205,16 +205,16 @@ func (r *ManifestPatch) ValidateConfig(ctx context.Context, req resource.Validat
 		return
 	}
 	// null means "not set" in a manifest, but in a patch it is easily taken
-	// to remove a field.
+	// to remove a field that another client set.
 	argument, nulls := path.Root("manifest"), nullValues(config.Manifest, location{})
 	if !config.YAMLBody.IsNull() {
 		argument, nulls = path.Root("yaml_body"), yamlNulls(config.YAMLBody)
 	}
 	if len(nulls) > 0 {
 		sort.Strings(nulls)
-		resp.Diagnostics.AddAttributeWarning(argument, "Null value not applied", fmt.Sprintf("%s: a null value leaves the field as it is, "+
-			"as in kubernetes_manifest_v2. It does not remove the field: server-side apply cannot remove a field that another field manager set.",
-			strings.Join(nulls, ", ")))
+		resp.Diagnostics.AddAttributeWarning(argument, "Null value not applied", fmt.Sprintf("%s: a null value is left out of the apply, "+
+			"as in kubernetes_manifest_v2. A field that only this resource applied before is removed. A field that another field manager set "+
+			"stays as it is: server-side apply cannot remove it.", strings.Join(nulls, ", ")))
 	}
 }
 
@@ -316,7 +316,7 @@ func (r *ManifestPatch) ModifyPlan(ctx context.Context, req resource.ModifyPlanR
 
 // ImportState accepts the import ID of kubernetes_manifest_v2, with the field
 // manager as an optional part, as in
-// "apiVersion=apps/v1,kind=DaemonSet,namespace=kube-system,name=aws-node,fieldManager=terraform-patch",
+// "apiVersion=apps/v1,kind=DaemonSet,namespace=kube-system,name=node-agent,fieldManager=terraform-patch",
 // or a resource identity. Read fills in the fields the field manager applied.
 func (r *ManifestPatch) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	const expected = `Expected "apiVersion=<version>,kind=<kind>,[namespace=<namespace>,]name=<name>[,fieldManager=<field manager>]".`

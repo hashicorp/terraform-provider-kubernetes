@@ -1,20 +1,20 @@
-# Turn on prefix delegation in the VPC CNI of Amazon EKS.
-resource "kubernetes_manifest_patch" "aws_node" {
+# Set environment variables of a DaemonSet that a cluster add-on manages.
+resource "kubernetes_manifest_patch" "node_agent" {
   manifest = {
     apiVersion = "apps/v1"
     kind       = "DaemonSet"
     metadata = {
-      name      = "aws-node"
+      name      = "node-agent"
       namespace = "kube-system"
     }
     spec = {
       template = {
         spec = {
           containers = [{
-            name = "aws-node"
+            name = "agent"
             env = [
-              { name = "ENABLE_PREFIX_DELEGATION", value = "true" },
-              { name = "WARM_PREFIX_TARGET", value = "1" },
+              { name = "LOG_LEVEL", value = "debug" },
+              { name = "HTTPS_PROXY", value = "http://proxy.example.com:3128" },
             ]
           }]
         }

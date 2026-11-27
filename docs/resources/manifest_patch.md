@@ -2,14 +2,14 @@
 subcategory: "manifest"
 page_title: "Kubernetes: kubernetes_manifest_patch"
 description: |-
-  Applies fields of a Kubernetes object that something else creates and manages, such as a cloud add-on, a Helm chart or an operator, with server-side apply. It never creates or deletes the object.
+  Applies fields of a Kubernetes object that something else creates and manages, such as a cluster add-on or an operator, with server-side apply. It never creates or deletes the object.
 ---
 
 # kubernetes_manifest_patch
 
 ~> **Beta:** This resource is new in the 4.0 beta releases. Its arguments and behavior may still change before version 4.0.0 is released.
 
-Applies fields of an existing Kubernetes object of any kind, built-in or custom, and keeps them set, while the rest of the object stays with whatever created it: a cloud provider's add-on, a Helm chart, an operator or the cluster itself. For example, an environment variable of the `aws-node` DaemonSet of Amazon EKS, the tolerations of `coredns`, a key of a ConfigMap that a Helm chart created, a label of the `default` namespace, or a field of a custom resource.
+Applies fields of an existing Kubernetes object of any kind, built-in or custom, and keeps them set, while the rest of the object stays with whatever created it: a cluster add-on, an operator, another tool or the cluster itself. For example, an environment variable of a DaemonSet that an add-on manages, the tolerations of the cluster's DNS Deployment, a key of a ConfigMap that another tool created, a label of the `default` namespace, or a field of a custom resource.
 
 The manifest names the object and holds only the fields to set. It is sent with [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) under the resource's own field manager, as `kubectl apply --server-side --field-manager=<name>` sends a partial manifest, so the cluster records which fields this resource owns. The resource takes the arguments of [`kubernetes_manifest_v2`](manifest_v2.md) and plans the same way, without a request to the cluster. The differences:
 
@@ -23,26 +23,26 @@ The manifest names the object and holds only the fields to set. It is sent with 
 
 ## Example Usage
 
-### An environment variable of the EKS aws-node DaemonSet
+### Environment variables of an add-on's DaemonSet
 
 ```terraform
-# Turn on prefix delegation in the VPC CNI of Amazon EKS.
-resource "kubernetes_manifest_patch" "aws_node" {
+# Set environment variables of a DaemonSet that a cluster add-on manages.
+resource "kubernetes_manifest_patch" "node_agent" {
   manifest = {
     apiVersion = "apps/v1"
     kind       = "DaemonSet"
     metadata = {
-      name      = "aws-node"
+      name      = "node-agent"
       namespace = "kube-system"
     }
     spec = {
       template = {
         spec = {
           containers = [{
-            name = "aws-node"
+            name = "agent"
             env = [
-              { name = "ENABLE_PREFIX_DELEGATION", value = "true" },
-              { name = "WARM_PREFIX_TARGET", value = "1" },
+              { name = "LOG_LEVEL", value = "debug" },
+              { name = "HTTPS_PROXY", value = "http://proxy.example.com:3128" },
             ]
           }]
         }
@@ -64,15 +64,15 @@ resource "kubernetes_manifest_patch" "aws_node" {
 
 Kubernetes merges containers by name and their environment variables by name, so the patch names the container and holds only the variables it sets. The other variables, and the add-on's later changes to them, stay as they are.
 
-### The tolerations of CoreDNS, from YAML
+### The tolerations of a Deployment, from YAML
 
 ```terraform
-resource "kubernetes_manifest_patch" "coredns" {
+resource "kubernetes_manifest_patch" "cluster_dns" {
   yaml_body = <<-EOT
     apiVersion: apps/v1
     kind: Deployment
     metadata:
-      name: coredns
+      name: cluster-dns
       namespace: kube-system
     spec:
       template:
@@ -99,21 +99,19 @@ Some fields are replaced as a whole, such as the `tolerations` and the `nodeSele
 ### A key of a ConfigMap and a label of a namespace
 
 ```terraform
-# A setting in a ConfigMap that a Helm chart created.
-resource "kubernetes_manifest_patch" "argocd_cm" {
+# A setting in a ConfigMap that another tool created.
+resource "kubernetes_manifest_patch" "app_settings" {
   manifest = {
     apiVersion = "v1"
     kind       = "ConfigMap"
     metadata = {
-      name      = "argocd-cm"
-      namespace = "argocd"
+      name      = "app-settings"
+      namespace = "apps"
     }
     data = {
-      "timeout.reconciliation" = "300s"
+      "log.level" = "debug"
     }
   }
-
-  depends_on = [helm_release.argocd]
 }
 
 # A label of a namespace that the cluster created.
@@ -123,7 +121,7 @@ resource "kubernetes_manifest_patch" "default_namespace" {
     kind       = "Namespace"
     metadata = {
       name   = "default"
-      labels = { "istio-injection" = "enabled" }
+      labels = { "pod-security.kubernetes.io/enforce" = "baseline" }
     }
   }
 }
@@ -206,14 +204,14 @@ Kubernetes records which client set each field of an object. This resource owns 
 - A field that another field manager owns with a different value fails the apply with a field ownership conflict that names that manager. `force_conflicts = true` in the `field_manager` block takes the field over. See [Field ownership conflicts](manifest_v2.md#field-ownership-conflicts).
 - When another client changes a field of the patch, the next plan restores it, as for `kubernetes_manifest_v2`: with `manifest`, the plan shows the live value changing back; with `yaml_body`, the field is listed in `drift`. Taking a field back from the client that changed it needs `force_conflicts`.
 - A field removed from the manifest is removed from the object, unless another field manager also applies it. That includes a field taken over with `force_conflicts`: Kubernetes keeps no earlier value to go back to.
-- A null value leaves the field as it is, as in `kubernetes_manifest_v2`, and validation warns about it. Server-side apply cannot remove a field that another field manager set, such as an annotation an add-on added.
+- A null value is left out of the apply, as in `kubernetes_manifest_v2`, and validation warns about it. A field that only this resource applied before is then removed, like any field taken out of the manifest. A field that another field manager set stays as it is: server-side apply cannot remove it, for example an annotation an add-on added.
 - `status` and the metadata fields that only the API server sets are ignored. `computed_fields` hands fields over to another controller, as for `kubernetes_manifest_v2`.
 
-A controller that reconciles the object may set a patched field back, for example a managed add-on that applies its configuration again on an update. The next plan shows the change, and applying takes the field back if `force_conflicts` is set. Where an add-on offers a setting in its own configuration, such as `configuration_values` of the `aws_eks_addon` resource for an EKS add-on, prefer that.
+A controller that reconciles the object may set a patched field back, for example a managed add-on that applies its configuration again on an update. The next plan shows the change, and applying takes the field back if `force_conflicts` is set. Where an add-on offers a setting in its own configuration, prefer that.
 
 ## Field manager names
 
-Each resource that applies fields to one object needs a field manager name of its own: two patches of the object, or a patch and a `kubernetes_manifest_v2`, `kubernetes_labels`, `kubernetes_annotations`, `kubernetes_env` or similar resource of the same object. Server-side apply under one name replaces all the fields applied under that name before, so the resources would remove each other's fields. An apply that would remove fields that this resource's manifest never set fails with "Field manager in use" and names them.
+Each resource that applies fields to one object needs a field manager name of its own: two patches of the object, or a patch and a `kubernetes_manifest_v2`, `kubernetes_labels`, `kubernetes_annotations`, `kubernetes_env` or similar resource of the same object. Server-side apply under one name replaces all the fields applied under that name before, so the resources would remove each other's fields. An apply that would remove fields that this resource's manifest never set fails with "Field manager in use" and names them, and a destroy then leaves all the fields of that name in place, with a warning.
 
 Changing `field_manager.name` moves the fields this resource applied to the new name.
 
@@ -242,7 +240,7 @@ resource "kubernetes_manifest_patch" "example" {
 
 ## Destroying a patch
 
-`terraform destroy` never deletes the object. By default, with `destroy_behavior = "relinquish"`, the fields keep their values and lose their owner: the entry of the resource's field manager is removed from the object's field ownership, so that any client, such as the add-on or Helm, can set them again without a conflict. If that entry is the only one the object has, it stays, because Kubernetes treats an object without entries as owned in full by a manager named `before-first-apply`.
+`terraform destroy` never deletes the object. By default, with `destroy_behavior = "relinquish"`, the fields keep their values and lose their owner: the entry of the resource's field manager is removed from the object's field ownership, so that any client, such as the add-on, can set them again without a conflict. If that entry is the only one the object has, it stays, because Kubernetes treats an object without entries as owned in full by a manager named `before-first-apply`.
 
 With `destroy_behavior = "remove_fields"`, the fields that only this resource applies are removed from the object, as removing them from the manifest does. Fields that another field manager also applies stay. A field taken over with `force_conflicts` is removed too, and a list that is replaced as a whole, such as `tolerations`, disappears completely, so use this setting for fields that the patch added. The destroy fails when the object is not valid without a field, such as the image of a container.
 
@@ -268,19 +266,19 @@ Applying and destroying need the `get` and `patch` permissions for the kind. `wa
 Import a patch with an ID of the form `apiVersion=<version>,kind=<kind>,[namespace=<namespace>,]name=<name>[,fieldManager=<name>]`. The field manager defaults to `terraform-patch`:
 
 ```shell
-terraform import kubernetes_manifest_patch.aws_node "apiVersion=apps/v1,kind=DaemonSet,namespace=kube-system,name=aws-node"
+terraform import kubernetes_manifest_patch.node_agent "apiVersion=apps/v1,kind=DaemonSet,namespace=kube-system,name=node-agent"
 ```
 
 With Terraform 1.12 or later, an `import` block can use the resource identity instead:
 
 ```terraform
 import {
-  to = kubernetes_manifest_patch.aws_node
+  to = kubernetes_manifest_patch.node_agent
   identity = {
     api_version   = "apps/v1"
     kind          = "DaemonSet"
     namespace     = "kube-system"
-    name          = "aws-node"
+    name          = "node-agent"
     field_manager = "terraform-patch"
   }
 }

@@ -1,18 +1,16 @@
-# A setting in a ConfigMap that a Helm chart created.
-resource "kubernetes_manifest_patch" "argocd_cm" {
+# A setting in a ConfigMap that another tool created.
+resource "kubernetes_manifest_patch" "app_settings" {
   manifest = {
     apiVersion = "v1"
     kind       = "ConfigMap"
     metadata = {
-      name      = "argocd-cm"
-      namespace = "argocd"
+      name      = "app-settings"
+      namespace = "apps"
     }
     data = {
-      "timeout.reconciliation" = "300s"
+      "log.level" = "debug"
     }
   }
-
-  depends_on = [helm_release.argocd]
 }
 
 # A label of a namespace that the cluster created.
@@ -22,7 +20,7 @@ resource "kubernetes_manifest_patch" "default_namespace" {
     kind       = "Namespace"
     metadata = {
       name   = "default"
-      labels = { "istio-injection" = "enabled" }
+      labels = { "pod-security.kubernetes.io/enforce" = "baseline" }
     }
   }
 }

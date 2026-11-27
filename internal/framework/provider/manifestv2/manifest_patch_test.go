@@ -149,18 +149,19 @@ func TestAccKubernetesManifestPatch_removeFields(t *testing.T) {
 
 func TestAccKubernetesManifestPatch_errors(t *testing.T) {
 	name := randomName()
-	// A second patch of the object, under the default field manager name or its own.
+	// A second patch of the object, under the default field manager name or
+	// its own. Nothing orders the two: they are applied in parallel.
 	other := func(manager string) string {
 		return testAccPatchConfigMap(name, "", `a = "1"`, "") + fmt.Sprintf(`
 resource "kubernetes_manifest_patch" "other" {
   manifest = {
     apiVersion = "v1"
     kind       = "ConfigMap"
-    metadata   = { name = kubernetes_manifest_patch.test.name }
+    metadata   = { name = %q }
     data       = { b = "1" }
   }
 %s}
-`, manager)
+`, name, manager)
 	}
 	own := "  field_manager {\n    name = \"second\"\n  }\n"
 	both := map[string]string{"owner": "1", "a": "1", "b": "1"}
@@ -173,10 +174,10 @@ resource "kubernetes_manifest_patch" "other" {
 				ExpectError: regexp.MustCompile(`Object not found`),
 			},
 			// Two patches of one object under one field manager name would
-			// remove each other's fields.
+			// remove each other's fields: whichever applies second is refused.
 			{
 				Config:      other(""),
-				ExpectError: regexp.MustCompile(`Field manager in use(.|\n)*\.data\.a`),
+				ExpectError: regexp.MustCompile(`Field manager in use(.|\n)*\.data\.[ab]`),
 			},
 			{
 				Config: other(own),
@@ -226,7 +227,7 @@ func TestAccKubernetesManifestPatch_waitsForObject(t *testing.T) {
 }
 
 // The environment of another client's container gains a variable, as a
-// patch of the aws-node DaemonSet of EKS adds one.
+// patch of an add-on's DaemonSet adds one.
 func TestAccKubernetesManifestPatch_containerEnv(t *testing.T) {
 	name := randomName()
 	expectEnv := func(want ...string) resource.TestCheckFunc {

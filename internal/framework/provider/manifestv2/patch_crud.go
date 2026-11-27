@@ -5,11 +5,14 @@ package manifestv2
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -28,6 +31,20 @@ import (
 
 // arrival is how long a new patch waits for its object.
 const arrival = time.Minute
+
+// holderKey stores, in private state, the token of the resource instance.
+const holderKey = "holder"
+
+// holders records which resource instance last applied to an object under a
+// field manager name, by UID and name, for the life of the provider process.
+// A replacement that is created before its predecessor is destroyed applies
+// to the same object under the same name, and the predecessor then has
+// nothing of its own left to release.
+var holders sync.Map
+
+func holder(uid k8stypes.UID, manager string) string {
+	return string(uid) + "/" + manager
+}
 
 func notFound(id identity, waited bool) diag.Diagnostic {
 	missing := "does not exist"
@@ -114,6 +131,9 @@ func (r *ManifestPatch) Create(ctx context.Context, req resource.CreateRequest, 
 	}
 	state := plan.manifest()
 	resp.Diagnostics.Append(recordAppliedState(ctx, &state, id, manifest, manager, skipped, applied, resp.Private)...)
+	token := rand.Text()
+	holders.Store(holder(applied.GetUID(), manager), token)
+	resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, holderKey, token)...)
 	plan.update(state)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, plan.resourceIdentity())...)
@@ -244,6 +264,14 @@ func (r *ManifestPatch) Update(ctx context.Context, req resource.UpdateRequest, 
 			resp.Diagnostics.AddError("Cannot move the fields to the new field manager", fmt.Sprintf("%s: %s", id, err))
 			return
 		}
+		// The fields have moved whatever the apply below does, and the state
+		// says so: after a failed apply, Terraform knows where they are.
+		moved := state
+		moved.FieldManager = plan.FieldManager
+		resp.Diagnostics.Append(resp.State.Set(ctx, &moved)...)
+		resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, managerKey, manager)...)
+		resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, moved.resourceIdentity())...)
+		holders.Delete(holder(live.GetUID(), previous))
 	}
 	skipped := r.engine.skippedFields(plan.manifest(), manifest)
 	if keepsNote(ctx, plan.manifest(), req.Private) {
@@ -258,6 +286,12 @@ func (r *ManifestPatch) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 	next := plan.manifest()
 	resp.Diagnostics.Append(recordAppliedState(ctx, &next, id, manifest, manager, skipped, applied, resp.Private)...)
+	token := privateString(ctx, req.Private, holderKey)
+	if token == "" {
+		token = rand.Text()
+	}
+	holders.Store(holder(applied.GetUID(), manager), token)
+	resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, holderKey, token)...)
 	plan.update(next)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, plan.resourceIdentity())...)
@@ -302,16 +336,37 @@ func (r *ManifestPatch) Delete(ctx context.Context, req resource.DeleteRequest, 
 		resp.Diagnostics.AddError("Cannot read object", fmt.Sprintf("%s: %s", id, err))
 		return
 	}
-	if state.DestroyBehavior.ValueString() == removeFields {
+	// A replacement created before this instance is destroyed holds the fields now.
+	key, token := holder(live.GetUID(), manager), privateString(ctx, req.Private, holderKey)
+	if held, found := holders.Load(key); found && held != token {
+		return
+	}
+	prior, _, _, _ := state.manifest().declared()
+	var foreign []string
+	_, err = guarded(ctx, client, live, func(live *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		// Under a name that something else applies with too, nothing tells
+		// its fields from those of this resource: all of them stay.
+		if foreign = fieldList(foreignFields(live, manager, prior), ""); prior != nil && len(foreign) > 0 {
+			return live, nil
+		}
+		if state.DestroyBehavior.ValueString() != removeFields {
+			return relinquish(ctx, client, live, manager)
+		}
 		// An apply that sets no fields removes those that only this manager
 		// applied. The UID keeps it from creating the object again.
 		empty := applicable(map[string]any{"apiVersion": live.GetAPIVersion(), "kind": live.GetKind(), "metadata": map[string]any{"name": id.Name}}, id)
 		empty.SetUID(live.GetUID())
-		_, err = applyObject(ctx, client, empty, manager, false)
-	} else {
-		_, err = guarded(ctx, client, live, func(live *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-			return relinquish(ctx, client, live, manager)
-		})
+		empty.SetResourceVersion(live.GetResourceVersion())
+		return applyObject(ctx, client, empty, manager, false)
+	})
+	if prior != nil && len(foreign) > 0 {
+		if len(foreign) > 5 {
+			foreign = append(foreign[:5], fmt.Sprintf("%d more", len(foreign)-5))
+		}
+		resp.Diagnostics.AddWarning("Fields not released", fmt.Sprintf("%s: the field manager %q has applied fields that this resource did not set: %s. "+
+			"Another resource or client applies to this object under the same name, so the fields of this resource stay with that name and keep their values.",
+			id, manager, strings.Join(foreign, ", ")))
+		return
 	}
 	// An object deleted or replaced in the meantime has nothing to release.
 	if err != nil && !apierrors.IsNotFound(err) && !strings.Contains(err.Error(), "uid mismatch") && !strings.Contains(err.Error(), "metadata.uid") {
@@ -321,7 +376,9 @@ func (r *ManifestPatch) Delete(ctx context.Context, req resource.DeleteRequest, 
 				"apply destroy_behavior = \"" + relinquishFields + "\" and destroy again."
 		}
 		resp.Diagnostics.AddError("Cannot release the fields", detail)
+		return
 	}
+	holders.CompareAndDelete(key, token)
 }
 
 // applyFields applies the manifest to the live object. The apply names the
@@ -329,19 +386,31 @@ func (r *ManifestPatch) Delete(ctx context.Context, req resource.DeleteRequest, 
 // after a deletion. prior is the manifest of the last apply.
 func (r *ManifestPatch) applyFields(ctx context.Context, client dynamic.ResourceInterface, live *unstructured.Unstructured, id identity,
 	manifest, prior map[string]any, skipped [][]string, manager string, force bool) (*unstructured.Unstructured, diag.Diagnostic) {
-	if problem := inUse(live, id, manager, prior, manifest); problem != nil {
-		return nil, problem
-	}
-	desired := applicable(leavingComputed(manifest, live, manager, skipped), id)
-	desired.SetUID(live.GetUID())
-	applied, err := r.engine.apply(ctx, client, desired, manager, force)
+	var problem diag.Diagnostic
+	applied, err := guarded(ctx, client, live, func(live *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		if problem = inUse(live, id, manager, prior, manifest); problem != nil {
+			return nil, nil
+		}
+		// The apply holds for the object as it was checked: its UID, and its
+		// resource version, so that an apply under the same field manager
+		// name in between is not overwritten unseen.
+		desired := applicable(leavingComputed(manifest, live, manager, skipped), id)
+		desired.SetUID(live.GetUID())
+		desired.SetResourceVersion(live.GetResourceVersion())
+		return r.engine.apply(ctx, client, desired, manager, force)
+	})
 	switch {
+	case problem != nil:
+		return nil, problem
 	case err == nil:
 		return applied, nil
-	case strings.Contains(err.Error(), "no existing object was found"):
+	case apierrors.IsNotFound(err) || strings.Contains(err.Error(), "no existing object was found"):
 		return nil, notFound(id, false)
-	case strings.Contains(err.Error(), "metadata.uid"):
+	case strings.Contains(err.Error(), "metadata.uid") || strings.Contains(err.Error(), "uid mismatch"):
 		return nil, replaced(id, err.Error())
+	case stale(err):
+		return nil, diag.NewErrorDiagnostic("Cannot apply manifest", fmt.Sprintf("%s: other clients changed the object on every attempt to apply to it, "+
+			"for a minute: %s", id, err))
 	}
 	return nil, applyError(id, err)
 }
@@ -406,17 +475,18 @@ func fieldList(fields map[string]any, prefix string) []string {
 
 // guarded runs a write that names the resource version of the object, and
 // runs it again on the object read again while other clients change it in
-// between. The object must stay the one with the UID live has.
+// between: the status of a DaemonSet in a rollout changes often, and so does
+// an object that several patches apply to at once. The object must stay the
+// one with the UID live has.
 func guarded(ctx context.Context, client dynamic.ResourceInterface, live *unstructured.Unstructured,
 	write func(*unstructured.Unstructured) (*unstructured.Unstructured, error)) (*unstructured.Unstructured, error) {
-	uid := live.GetUID()
+	uid, start := live.GetUID(), time.Now()
 	result, err := write(live)
-	for attempt := 0; apierrors.IsConflict(err) && attempt < 5; attempt++ {
-		// The status of a busy object, such as a DaemonSet in a rollout, changes often.
+	for attempt := 1; stale(err) && time.Since(start) < time.Minute; attempt++ {
 		select {
 		case <-ctx.Done():
 			return nil, err
-		case <-time.After(time.Duration(attempt) * 200 * time.Millisecond):
+		case <-time.After(time.Duration(min(attempt, 10)) * 20 * time.Millisecond):
 		}
 		if live, err = client.Get(ctx, live.GetName(), metav1.GetOptions{}); err != nil {
 			return nil, err
@@ -427,6 +497,23 @@ func guarded(ctx context.Context, client dynamic.ResourceInterface, live *unstru
 		result, err = write(live)
 	}
 	return result, err
+}
+
+// stale reports a write the API server refused because the object changed
+// since it was read. A field ownership conflict has the same status.
+func stale(err error) bool {
+	var status apierrors.APIStatus
+	if !apierrors.IsConflict(err) || !errors.As(err, &status) || strings.Contains(err.Error(), "uid mismatch") {
+		return false
+	}
+	if details := status.Status().Details; details != nil {
+		for _, cause := range details.Causes {
+			if cause.Type == metav1.CauseTypeFieldManagerConflict {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // relinquish gives up the fields the manager applied and keeps their values:

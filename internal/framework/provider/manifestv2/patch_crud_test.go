@@ -4,12 +4,36 @@
 package manifestv2
 
 import (
+	"errors"
 	"slices"
 	"testing"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// Only a write refused for the object's revision is tried again.
+func TestStale(t *testing.T) {
+	configMaps := schema.GroupResource{Resource: "configmaps"}
+	owned := apierrors.NewConflict(configMaps, "a", nil)
+	owned.ErrStatus.Details.Causes = []metav1.StatusCause{{Type: metav1.CauseTypeFieldManagerConflict, Field: ".data.a"}}
+	for name, tc := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"changed since it was read": {apierrors.NewConflict(configMaps, "a", errors.New("the object has been modified")), true},
+		"field ownership conflict":  {owned, false},
+		"object gone":               {apierrors.NewConflict(configMaps, "a", errors.New("uid mismatch: no existing object was found")), false},
+		"not found":                 {apierrors.NewNotFound(configMaps, "a"), false},
+		"no error":                  {nil, false},
+	} {
+		if got := stale(tc.err); got != tc.want {
+			t.Errorf("%s: got %t, want %t", name, got, tc.want)
+		}
+	}
+}
 
 // Fields applied under the manager that no manifest of this resource set are
 // another resource's.

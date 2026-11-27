@@ -1,9 +1,9 @@
-resource "kubernetes_manifest_patch" "coredns" {
+resource "kubernetes_manifest_patch" "cluster_dns" {
   yaml_body = <<-EOT
     apiVersion: apps/v1
     kind: Deployment
     metadata:
-      name: coredns
+      name: cluster-dns
       namespace: kube-system
     spec:
       template:

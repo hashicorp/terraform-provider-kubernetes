@@ -93,6 +93,12 @@ func (r *ManifestV2) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequ
 		}
 	}
 	resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("drift"), drift)...)
+	planIdentity(ctx, plan, state, resp)
+}
+
+// planIdentity plans the attributes that name the object, and a replacement
+// when the manifest names another object than the one in state.
+func planIdentity(ctx context.Context, plan model, state *model, resp *resource.ModifyPlanResponse) {
 	if state != nil && pendingIdentity(plan.Manifest) {
 		// It may name another object, and replacing it is what Terraform
 		// cannot decide once the apply has started.

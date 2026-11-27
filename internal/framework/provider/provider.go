@@ -213,6 +213,7 @@ func (p *KubernetesProvider) Resources(ctx context.Context) []func() resource.Re
 		corev1.NewNamespaceV1,
 		corev1.NewPodV1,
 		corev1.NewServiceV1,
+		manifestv2.NewManifestPatch,
 		manifestv2.NewManifestV2,
 		networkingv1.NewIngressV1,
 		networkingv1.NewIngressClassV1,

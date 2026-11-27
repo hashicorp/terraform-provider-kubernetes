@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // Package manifestv2 implements kubernetes_manifest_v2, which manages one object of
-// any kind with server-side apply and without the kind's schema.
+// any kind with server-side apply and without the kind's schema, and
+// kubernetes_manifest_patch, which applies fields of an object that something
+// else manages.
 package manifestv2
 
 import (
@@ -15,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -427,9 +430,15 @@ func (r *ManifestV2) ValidateConfig(ctx context.Context, req resource.ValidateCo
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	resp.Diagnostics.Append(config.validate(ctx)...)
+}
+
+// validate checks the arguments that give and qualify the manifest.
+func (config model) validate(ctx context.Context) diag.Diagnostics {
+	var diags diag.Diagnostics
 	if config.Manifest.IsNull() == config.YAMLBody.IsNull() {
-		resp.Diagnostics.AddError("Invalid manifest", "Set exactly one of manifest and yaml_body.")
-		return
+		diags.AddError("Invalid manifest", "Set exactly one of manifest and yaml_body.")
+		return diags
 	}
 	argument := path.Root("manifest")
 	if config.Manifest.IsNull() {
@@ -437,21 +446,22 @@ func (r *ManifestV2) ValidateConfig(ctx context.Context, req resource.ValidateCo
 	}
 	manifest, declared, _, err := config.declared()
 	if err != nil {
-		resp.Diagnostics.AddAttributeError(argument, "Invalid manifest", err.Error())
+		diags.AddAttributeError(argument, "Invalid manifest", err.Error())
 	}
 	for _, field := range config.computedFields() {
 		names, err := fieldNames(field)
 		switch {
 		case err != nil:
-			resp.Diagnostics.AddAttributeError(path.Root("computed_fields"), "Invalid field path", err.Error()+".")
+			diags.AddAttributeError(path.Root("computed_fields"), "Invalid field path", err.Error()+".")
 		case manifest != nil && !hasField(manifest, names):
-			resp.Diagnostics.AddAttributeWarning(path.Root("computed_fields"), "Field not in the manifest",
+			diags.AddAttributeWarning(path.Root("computed_fields"), "Field not in the manifest",
 				fmt.Sprintf("%s is not set in the manifest, so listing it in computed_fields has no effect.", field))
 		}
 	}
 	if _, err := expectations(ctx, config.Wait, declared); err != nil {
-		resp.Diagnostics.AddAttributeError(path.Root("wait"), "Invalid wait condition", err.Error())
+		diags.AddAttributeError(path.Root("wait"), "Invalid wait condition", err.Error())
 	}
+	return diags
 }
 
 // ImportState accepts the import ID of kubernetes_manifest,

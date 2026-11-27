@@ -6,6 +6,7 @@ package manifestv2
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -120,11 +121,10 @@ func (r *ManifestV2) skippedFields(m model, manifest map[string]any) [][]string 
 // recordAppliedState completes the state after an apply. The object attribute
 // is read here only when the plan left it open, which it does for a new
 // object: ModifyPlan explains why an update keeps it.
-func recordAppliedState(ctx context.Context, plan *model, id identity, manifest map[string]any, skipped [][]string, applied *unstructured.Unstructured, private privateState) diag.Diagnostics {
+func recordAppliedState(ctx context.Context, plan *model, id identity, manifest map[string]any, manager string, skipped [][]string, applied *unstructured.Unstructured, private privateState) diag.Diagnostics {
 	plan.setIdentity(id)
 	plan.UID = types.StringValue(string(applied.GetUID()))
 	plan.Drift = types.ListValueMust(types.StringType, nil)
-	manager, _ := plan.manager()
 	_, accepted, _ := liveChanges(manifest, applied, manager, skipped, nil)
 	encoded, _ := json.Marshal(accepted)
 	diags := private.SetKey(ctx, acceptedKey, encoded)
@@ -178,10 +178,26 @@ func waitForReadiness(ctx context.Context, client dynamic.ResourceInterface, id 
 	return diags
 }
 
+// uidInvalid reports an apply the API server refused because the object has
+// another UID than the one it named.
+func uidInvalid(err error) bool {
+	var status apierrors.APIStatus
+	if !apierrors.IsInvalid(err) || !errors.As(err, &status) || status.Status().Details == nil {
+		return false
+	}
+	for _, cause := range status.Status().Details.Causes {
+		if cause.Field == "metadata.uid" {
+			return true
+		}
+	}
+	return false
+}
+
 func applyError(id identity, err error) diag.Diagnostic {
 	detail := err.Error()
 	switch {
-	case strings.Contains(detail, "uid mismatch") || strings.Contains(detail, "metadata.uid"):
+	// No object name holds a space, so only the API server writes "uid mismatch".
+	case strings.Contains(detail, "uid mismatch") || uidInvalid(err):
 		return diag.NewErrorDiagnostic("Object deleted or replaced outside Terraform", fmt.Sprintf("%s is no longer the object this resource "+
 			"manages: %s\n\nRun terraform plan again. Terraform will plan to create the object, or to update the one that replaced it.", id, detail))
 	case apierrors.IsConflict(err):
@@ -274,7 +290,7 @@ func (r *ManifestV2) Create(ctx context.Context, req resource.CreateRequest, res
 		return
 	}
 	open := plan.Object.IsUnknown()
-	resp.Diagnostics.Append(recordAppliedState(ctx, &plan, id, manifest, r.skippedFields(plan, manifest), applied, resp.Private)...)
+	resp.Diagnostics.Append(recordAppliedState(ctx, &plan, id, manifest, manager, r.skippedFields(plan, manifest), applied, resp.Private)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, plan.resourceIdentity())...)
 	// The state is written: a wait that fails leaves the object tainted.
@@ -373,9 +389,25 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 	state.UID = types.StringValue(string(live.GetUID()))
 	resp.Diagnostics.Append(observe(ctx, &state, live)...)
 	manager, force := state.manager()
+	diags := r.refresh(ctx, &state, id, live, manager, force, req.Private, resp.Private, exported)
+	resp.Diagnostics.Append(diags...)
+	if diags.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, state.resourceIdentity())...)
+}
+
+// refresh brings the manifest arguments in line with the live object: after
+// an import export describes the object, and otherwise the arguments show
+// what other clients changed since the last apply. private is the private
+// state Terraform sent and updated the one returned.
+func (r *ManifestV2) refresh(ctx context.Context, state *model, id identity, live *unstructured.Unstructured, manager string, force bool,
+	private, updated privateState, export func(*unstructured.Unstructured, string) map[string]any) diag.Diagnostics {
+	var diags diag.Diagnostics
 	// Until this resource applies under its own name, as after a move, the
 	// fields are the previous manager's.
-	if previous := appliedManager(ctx, req.Private); previous != "" && len(managedFields(live, appliedBy(manager))) == 0 {
+	if previous := appliedManager(ctx, private); previous != "" && len(managedFields(live, appliedBy(manager))) == 0 {
 		manager = previous
 	}
 	// described is set when the manifest in state no longer describes the
@@ -383,23 +415,23 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 	var described map[string]any
 	var paths []string
 	if state.Manifest.IsNull() && state.YAMLBody.IsNull() {
-		described = exported(live, manager)
+		described = export(live, manager)
 	} else {
 		// The drift comment is this resource's own text, not part of the manifest.
-		declaration := state
+		declaration := *state
 		if !state.YAMLBody.IsNull() {
-			declaration.YAMLBody = types.StringValue(strings.TrimSuffix(state.YAMLBody.ValueString(), privateString(ctx, req.Private, noteKey)))
+			declaration.YAMLBody = types.StringValue(strings.TrimSuffix(state.YAMLBody.ValueString(), privateString(ctx, private, noteKey)))
 		}
 		manifest, _, _, err := declaration.declared()
 		if err != nil || manifest == nil {
-			resp.Diagnostics.AddError("Invalid manifest in state", fmt.Sprint(err))
-			return
+			diags.AddError("Invalid manifest in state", fmt.Sprint(err))
+			return diags
 		}
 		accepted := map[string]string{}
-		if encoded, _ := req.Private.GetKey(ctx, acceptedKey); encoded != nil {
+		if encoded, _ := private.GetKey(ctx, acceptedKey); encoded != nil {
 			_ = json.Unmarshal(encoded, &accepted)
 		}
-		changed, drifted, values := liveChanges(manifest, live, manager, r.skippedFields(state, manifest), accepted)
+		changed, drifted, values := liveChanges(manifest, live, manager, r.skippedFields(*state, manifest), accepted)
 		var conflicts []string
 		for path, found := range drifted {
 			paths = append(paths, path)
@@ -410,7 +442,7 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 		sort.Strings(paths)
 		sort.Strings(conflicts)
 		if len(conflicts) > 0 && !force {
-			resp.Diagnostics.AddWarning("Object changed by another field manager", fmt.Sprintf("%s: another client changed %s. "+
+			diags.AddWarning("Object changed by another field manager", fmt.Sprintf("%s: another client changed %s. "+
 				"Applying the manifest will fail with a field ownership conflict unless these fields are removed from it "+
 				"or field_manager.force_conflicts is true.", id, strings.Join(conflicts, ", ")))
 		}
@@ -429,22 +461,21 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 			body := declaration.YAMLBody.ValueString()
 			note := driftNote(body, paths, values)
 			state.YAMLBody = types.StringValue(body + note)
-			resp.Diagnostics.Append(setPrivateString(ctx, resp.Private, noteKey, note)...)
+			diags.Append(setPrivateString(ctx, updated, noteKey, note)...)
 		}
 	}
-	drift, diags := types.ListValueFrom(ctx, types.StringType, append([]string{}, paths...))
-	resp.Diagnostics.Append(diags...)
+	drift, listDiags := types.ListValueFrom(ctx, types.StringType, append([]string{}, paths...))
+	diags.Append(listDiags...)
 	state.Drift = drift
 	if described != nil {
 		value, err := fromJSON(ctx, described)
 		if err != nil {
-			resp.Diagnostics.AddError("Cannot read object", fmt.Sprintf("%s: %s", id, err))
-			return
+			diags.AddError("Cannot read object", fmt.Sprintf("%s: %s", id, err))
+			return diags
 		}
 		state.Manifest = types.DynamicValue(value)
 	}
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
-	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, state.resourceIdentity())...)
+	return diags
 }
 
 func (r *ManifestV2) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -547,7 +578,7 @@ func (r *ManifestV2) Update(ctx context.Context, req resource.UpdateRequest, res
 	open := plan.Object.IsUnknown()
 	// Fields handed over are not compared, so their differences are reported
 	// again rather than taken as the result of this apply.
-	resp.Diagnostics.Append(recordAppliedState(ctx, &plan, id, manifest, handOver, applied, resp.Private)...)
+	resp.Diagnostics.Append(recordAppliedState(ctx, &plan, id, manifest, manager, handOver, applied, resp.Private)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.Identity, plan.resourceIdentity())...)
 	if diags := waitForReadiness(ctx, client, id, expected, &plan, open, &resp.State); diags.HasError() {

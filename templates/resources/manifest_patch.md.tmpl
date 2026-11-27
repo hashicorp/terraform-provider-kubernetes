@@ -1,0 +1,133 @@
+---
+subcategory: "manifest"
+page_title: "Kubernetes: kubernetes_manifest_patch"
+description: |-
+  Applies fields of a Kubernetes object that something else creates and manages, such as a cluster add-on or an operator, with server-side apply. It never creates or deletes the object.
+---
+
+# {{ .Name }}
+
+Applies fields of an existing Kubernetes object of any kind, built-in or custom, and keeps them set, while the rest of the object stays with whatever created it: a cluster add-on, an operator, another tool or the cluster itself. For example, an environment variable of a DaemonSet that an add-on manages, the tolerations of the cluster's DNS Deployment, a key of a ConfigMap that another tool created, a label of the `default` namespace, or a field of a custom resource.
+
+The manifest names the object and holds only the fields to set. It is sent with [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) under the resource's own field manager, as `kubectl apply --server-side --field-manager=<name>` sends a partial manifest, so the cluster records which fields this resource owns. The resource takes the arguments of [`kubernetes_manifest_v2`](manifest_v2.md) and plans the same way, without a request to the cluster. The differences:
+
+| | `kubernetes_manifest_patch` | `kubernetes_manifest_v2` |
+|---|---|---|
+| The object | Must exist. The patch never creates it. | Is created, and must not exist yet. |
+| `terraform destroy` | Gives up the fields, or removes them with `destroy_behavior = "remove_fields"`. The object stays. | Deletes the object. |
+| Default field manager | `terraform-patch` | `Terraform` |
+| `object` | Not available. The [`kubernetes_resource`](../data-sources/resource.md) data source reads the object. | The object as the cluster returns it. |
+| Import | Describes the fields the field manager applied. | Describes the whole object. |
+
+## Example Usage
+
+### Environment variables of an add-on's DaemonSet
+
+{{tffile "examples/resources/manifest_patch/example_1.tf"}}
+
+Kubernetes merges containers by name and their environment variables by name, so the patch names the container and holds only the variables it sets. The other variables, and the add-on's later changes to them, stay as they are.
+
+### The tolerations of a Deployment, from YAML
+
+{{tffile "examples/resources/manifest_patch/example_2.tf"}}
+
+Some fields are replaced as a whole, such as the `tolerations` and the `nodeSelector` of a pod. The patch then sets the complete list, including the entries the add-on set, and takes it over with `force_conflicts`.
+
+### A key of a ConfigMap and a label of a namespace
+
+{{tffile "examples/resources/manifest_patch/example_3.tf"}}
+
+{{ .SchemaMarkdown }}
+
+Each operation has 10 minutes by default. Field paths in `wait.fields` and `computed_fields` are written as for [`kubernetes_manifest_v2`](manifest_v2.md), for example `spec.replicas` or `metadata.annotations["example.com/owner"]`.
+
+## What a patch owns
+
+Kubernetes records which client set each field of an object. This resource owns the fields of its manifest, under its field manager name, and nothing else:
+
+- The fields that other clients set are never changed or removed by this resource, also where they share a map or a list with the patched ones, such as the other environment variables of a container. Lists merge as the kind defines: containers, environment variables and ports by their keys, many other lists as a whole.
+- A field that another field manager owns with a different value fails the apply with a field ownership conflict that names that manager. `force_conflicts = true` in the `field_manager` block takes the field over. See [Field ownership conflicts](manifest_v2.md#field-ownership-conflicts).
+- When another client changes a field of the patch, the next plan restores it, as for `kubernetes_manifest_v2`: with `manifest`, the plan shows the live value changing back; with `yaml_body`, the field is listed in `drift`. Taking a field back from the client that changed it needs `force_conflicts`.
+- A field removed from the manifest is removed from the object, unless another field manager also applies it. That includes a field taken over with `force_conflicts`: Kubernetes keeps no earlier value to go back to.
+- A null value is left out of the apply, as in `kubernetes_manifest_v2`, and validation warns about it. A field that only this resource applied before is then removed, like any field taken out of the manifest. A field that another field manager set stays as it is: server-side apply cannot remove it, for example an annotation an add-on added.
+- `status` and the metadata fields that only the API server sets are ignored. `computed_fields` hands fields over to another controller, as for `kubernetes_manifest_v2`.
+
+A controller that reconciles the object may set a patched field back, for example a managed add-on that applies its configuration again on an update. The next plan shows the change, and applying takes the field back if `force_conflicts` is set. Where an add-on offers a setting in its own configuration, prefer that.
+
+## Field manager names
+
+Each resource that applies fields to one object needs a field manager name of its own: two patches of the object, or a patch and a `kubernetes_manifest_v2`, `kubernetes_labels`, `kubernetes_annotations`, `kubernetes_env` or similar resource of the same object. Server-side apply under one name replaces all the fields applied under that name before, so the resources would overwrite and remove each other's fields. A new patch is therefore refused with "Field manager in use" when its field manager already applies fields to the object: give it another name, or import it if it is a patch that is no longer in the state. An apply of an existing patch fails the same way when the name holds fields its manifest never set, and a destroy then leaves all the fields of that name in place, with a warning.
+
+Changing `field_manager.name` moves the fields this resource applied to the new name.
+
+## Objects another Terraform resource manages
+
+A patch is for an object that Terraform does not manage otherwise. When a resource manages the object, set the field there if you can. Where a patch and another resource apply to one object:
+
+- **`kubernetes_manifest_v2`** and a patch apply under their own field manager names and leave each other's fields alone, in whichever order they are applied. A field that both set is a conflict, and after a patch takes it with `force_conflicts`, `kubernetes_manifest_v2` reports it as changed and fails to set it back. Leave the field out of the manifest of `kubernetes_manifest_v2`, or list it in its `computed_fields`: it then sets the field when it creates the object and leaves it to the patch.
+- **A resource for the kind**, such as `kubernetes_config_map_v1`, manages each of its arguments in full: its next apply removes a key that a patch added to `data`, and the patch then plans to add it again. Set such values in that resource.
+- **A replaced object** does not have the patched fields until the next apply, which the refresh plans. To apply them in the same run as the replacement, replace the patch with the object:
+
+```terraform
+resource "kubernetes_manifest_patch" "example" {
+  manifest = {
+    apiVersion = "v1"
+    kind       = "ConfigMap"
+    metadata   = { name = kubernetes_manifest_v2.example.name }
+    data       = { patched = "1" }
+  }
+
+  lifecycle {
+    replace_triggered_by = [kubernetes_manifest_v2.example.uid]
+  }
+}
+```
+
+## Destroying a patch
+
+`terraform destroy` never deletes the object. By default, with `destroy_behavior = "relinquish"`, the fields keep their values and lose their owner: the entry of the resource's field manager is removed from the object's field ownership, so that any client, such as the add-on, can set them again without a conflict. If that entry is the only one the object has, it stays, because Kubernetes treats an object without entries as owned in full by a manager named `before-first-apply`.
+
+With `destroy_behavior = "remove_fields"`, the fields that only this resource applies are removed from the object, as removing them from the manifest does. Fields that another field manager also applies stay. A field taken over with `force_conflicts` is removed too, and a list that is replaced as a whole, such as `tolerations`, disappears completely, so use this setting for fields that the patch added. The destroy fails when the object is not valid without a field, such as the image of a container.
+
+A change of `destroy_behavior` takes effect once it is applied. A destroy of an object that no longer exists succeeds.
+
+## The object
+
+The object must exist when the resource is created: make the resource depend on the one that creates the object, through a reference or `depends_on`. A new patch waits up to a minute for an object that a controller creates a moment later, such as the `default` ServiceAccount of a new namespace, and then fails with "Object not found". Every apply sends the UID of the object, so a patch never creates the object again, also if it is deleted during the apply.
+
+When the object is deleted, the refresh removes the resource from the state, and the plan shows it created again: that apply fails until the object exists. When the object is deleted and created again under the same name, the fields this resource applied went with the old object: the refresh warns about it and removes the resource from the state, and the plan shows it created again, for the new object.
+
+Applying and destroying need the `get` and `patch` permissions for the kind. `wait` also uses `watch` when the credentials allow it.
+
+## Limitations
+
+- A patch cannot remove a field that another field manager set, and cannot change `status` or another subresource.
+- `metadata.generateName` is not supported.
+- With `create_before_destroy`, replacing a patch of the same object fails with "Field manager in use", because the instance that is still to be destroyed applies the fields. Without it, Terraform destroys that instance first.
+- The API group, `kind`, `metadata.name` and `metadata.namespace` name the object. Changing one of them replaces the resource: the fields are given up on the old object, or removed with `destroy_behavior = "remove_fields"`, and applied to the new one.
+- The values of the manifest appear in plans and in the state, as for `kubernetes_manifest_v2`.
+
+## Import
+
+Import a patch with an ID of the form `apiVersion=<version>,kind=<kind>,[namespace=<namespace>,]name=<name>[,fieldManager=<name>]`. The field manager defaults to `terraform-patch`:
+
+```shell
+terraform import kubernetes_manifest_patch.node_agent "apiVersion=apps/v1,kind=DaemonSet,namespace=kube-system,name=node-agent"
+```
+
+With Terraform 1.12 or later, an `import` block can use the resource identity instead:
+
+```terraform
+import {
+  to = kubernetes_manifest_patch.node_agent
+  identity = {
+    api_version   = "apps/v1"
+    kind          = "DaemonSet"
+    namespace     = "kube-system"
+    name          = "node-agent"
+    field_manager = "terraform-patch"
+  }
+}
+```
+
+The imported manifest holds the fields that the field manager applied to the object, so a configuration that sets the same fields plans no change. A field manager that applied nothing yet imports a manifest without fields, and the first apply applies the configured ones.

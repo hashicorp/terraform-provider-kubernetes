@@ -15,10 +15,53 @@ description: |-
 
 {{tffile "examples/resources/priority_class_v1/example_1.tf"}}
 
+## Value limits
+
+`value` must fit in a 32-bit signed integer. A priority class whose name, or
+`generate_name` prefix, does not start with `system-` is limited to `1000000000`, the
+highest value the Kubernetes API accepts for user-defined classes. Both limits are
+checked during planning. When the name is not known until apply, the API server
+checks it instead.
+
+## Metadata and upgrades
+
+Set either `name` or `generate_name` in `metadata`, not both. Label and annotation
+values must be non-null strings; omit an entry to remove it.
+
+Upgrading SDKv2 state preserves the priority class. If configuration explicitly sets
+`labels = {}` or `annotations = {}`, the first plan may show a one-time in-place update
+because SDKv2 stored empty maps as null. The priority class is not replaced.
+
+With Terraform 1.8 or later, migrate the deprecated resource name without recreating
+the priority class:
+
+```terraform
+moved {
+  from = kubernetes_priority_class.example
+  to   = kubernetes_priority_class_v1.example
+}
+```
+
+Change the corresponding resource declaration to `kubernetes_priority_class_v1` and
+retain its configuration.
+
 ## Import
 
 Priority Class can be imported using its name, e.g.
 
 ```
 $ terraform import kubernetes_priority_class_v1.example terraform-example
+```
+
+With Terraform 1.12 or later, it can also be imported by resource identity:
+
+```terraform
+import {
+  to = kubernetes_priority_class_v1.example
+  identity = {
+    api_version = "scheduling.k8s.io/v1"
+    kind        = "PriorityClass"
+    name        = "terraform-example"
+  }
+}
 ```

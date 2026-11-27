@@ -39,6 +39,7 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
 | Resource | `kubernetes_role_binding_v1` | v3.5.0 | [RoleBinding resource](#resource-kubernetes_role_binding_v1) |
 | Resource | `kubernetes_cluster_role_binding_v1` | v3.5.0 | [ClusterRoleBinding resource](#resource-kubernetes_cluster_role_binding_v1) |
+| Resource | `kubernetes_priority_class_v1` | v3.6.0 | [PriorityClass resource](#resource-kubernetes_priority_class_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -174,6 +175,28 @@ moved {
 ```
 
 Moved state shows the same one-time updates for empty metadata maps and `api_group = ""`. Verify that the plan does not replace the binding. See the [ClusterRoleBinding resource reference](../resources/cluster_role_binding_v1.md#metadata-and-upgrades) for further details.
+
+## Resource: kubernetes_priority_class_v1
+
+- **Value validation:** `value` is now validated during planning. Values outside the 32-bit signed integer range are rejected, and so are values above `1000000000` for a priority class whose `name` or `generate_name` does not start with `system-`. Previously, a value outside the 32-bit range silently wrapped to a different value and planned a replacement on every run, and a value above `1000000000` failed only when the Kubernetes API rejected it during apply. When the name is not known until apply, the API server performs the check instead.
+- **Empty metadata maps:** Explicit `labels = {}` or `annotations = {}` can require a one-time in-place update from SDKv2's `null`. It changes only Terraform state and does not replace the priority class.
+- **Computed metadata:** During updates, `metadata[0].generation` and `metadata[0].resource_version` can be `(known after apply)` until read from the API. This does not itself indicate replacement.
+- **Plans without refresh:** Immediately after upgrading, `terraform plan -refresh=false` shows a one-time in-place update for a priority class configured with `name`, because SDKv2 stored the unset `generate_name` as `""` and it is now `null`. A normal, refresh-enabled plan shows no change for it. Neither replaces the priority class, and applying it does not modify the Kubernetes object.
+- **Null map entries:** `metadata.labels` and `metadata.annotations` entries must contain non-null strings. Remove entries such as `owner = null` or provide string values. Omitting the whole map or setting it to `null` remains supported.
+- **Import:** Import IDs are the priority class name. Identity imports are new and require Terraform 1.12 or later. For a priority class created with `generate_name`, configure `generate_name` with the original prefix and omit `name` to avoid a replacement plan after import.
+
+### Moving from kubernetes_priority_class
+
+Terraform 1.8 or later supports moving from the deprecated `kubernetes_priority_class` resource to `kubernetes_priority_class_v1`. Change the resource type, update references, and add a `moved` block:
+
+```terraform
+moved {
+  from = kubernetes_priority_class.example
+  to   = kubernetes_priority_class_v1.example
+}
+```
+
+Moved state shows the same one-time update for empty metadata maps. Verify that the plan does not replace the priority class. See the [PriorityClass resource reference](../resources/priority_class_v1.md#metadata-and-upgrades) for further details.
 
 ## Data source: kubernetes_namespace_v1
 

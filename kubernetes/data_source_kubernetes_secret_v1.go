@@ -13,6 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TODO: This function exists only to serve the deprecated "kubernetes_secret" alias
+// registered in kubernetes/provider.go. Safe to delete once that alias is removed.
+// "kubernetes_secret_v1" is now implemented by the Plugin Framework data source in
+// internal/framework/provider/corev1/.
 func dataSourceKubernetesSecretV1(deprecationMessage string) *schema.Resource {
 	return &schema.Resource{
 		Description:        "The resource provides mechanisms to inject containers with sensitive information, such as passwords, while keeping containers agnostic of Kubernetes. Secrets can be used to store sensitive information either as individual properties or coarse-grained entries like entire files or JSON blobs. The resource will by default create a secret which is available to any pod in the specified (or default) namespace.",

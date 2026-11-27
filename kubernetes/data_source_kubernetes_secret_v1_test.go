@@ -3,6 +3,9 @@
 
 package kubernetes
 
+// This file keeps its historical _v1 name, but tests the deprecated,
+// unversioned SDKv2 aliases kubernetes_secret and data.kubernetes_secret.
+
 import (
 	"fmt"
 	"testing"
@@ -11,10 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccKubernetesDataSourceSecretV1_basic(t *testing.T) {
+func TestAccKubernetesDataSourceSecret_basic(t *testing.T) {
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	resourceName := "kubernetes_secret_v1.test"
-	datasourceName := "data.kubernetes_secret_v1.test"
+	resourceName := "kubernetes_secret.test"
+	datasourceName := "data.kubernetes_secret.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -49,20 +52,20 @@ func TestAccKubernetesDataSourceSecretV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDataSourceSecretV1_generateName(t *testing.T) {
-	generate_name := "testing-name"
-	resourceName := "kubernetes_secret_v1.test"
-	datasourceName := "data.kubernetes_secret_v1.test"
+func TestAccKubernetesDataSourceSecret_generateName(t *testing.T) {
+	generateName := "testing-name"
+	resourceName := "kubernetes_secret.test"
+	datasourceName := "data.kubernetes_secret.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccKubernetesDataSourceSecretV1_generateName(generate_name),
+				Config: testAccKubernetesDataSourceSecretV1_generateName(generateName),
 			},
 			{
-				Config: testAccKubernetesDataSourceSecretV1_generateName(generate_name) +
+				Config: testAccKubernetesDataSourceSecretV1_generateName(generateName) +
 					testAccKubernetesDataSourceSecretV1_readGenerateName(),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrPair(datasourceName, "metadata.0.name", resourceName, "metadata.0.name"),
@@ -81,9 +84,9 @@ func TestAccKubernetesDataSourceSecretV1_generateName(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesDataSourceSecretV1_not_found(t *testing.T) {
+func TestAccKubernetesDataSourceSecret_not_found(t *testing.T) {
 	name := fmt.Sprintf("ceci-n.est-pas-une-secret-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	datasourceName := "data.kubernetes_secret_v1.test"
+	datasourceName := "data.kubernetes_secret.test"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
@@ -100,8 +103,8 @@ func TestAccKubernetesDataSourceSecretV1_not_found(t *testing.T) {
 	})
 }
 
-func testAccKubernetesDataSourceSecretV1_generateName(generate_name string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+func testAccKubernetesDataSourceSecretV1_generateName(generateName string) string {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     generate_name = %q
   }
@@ -115,11 +118,11 @@ func testAccKubernetesDataSourceSecretV1_generateName(generate_name string) stri
     raw = "${base64encode("Raw data should come back as is in the pod")}"
   }
 }
-`, generate_name)
+`, generateName)
 }
 
 func testAccKubernetesDataSourceSecretV1_basic(name string) string {
-	return fmt.Sprintf(`resource "kubernetes_secret_v1" "test" {
+	return fmt.Sprintf(`resource "kubernetes_secret" "test" {
   metadata {
     annotations = {
       TestAnnotationOne = "one"
@@ -144,9 +147,9 @@ func testAccKubernetesDataSourceSecretV1_basic(name string) string {
 }
 
 func testAccKubernetesDataSourceSecretV1_readGenerateName() string {
-	return `data "kubernetes_secret_v1" "test" {
+	return `data "kubernetes_secret" "test" {
   metadata {
-    name = kubernetes_secret_v1.test.metadata.0.name
+    name = kubernetes_secret.test.metadata.0.name
   }
   binary_data = {
     raw = ""
@@ -156,9 +159,9 @@ func testAccKubernetesDataSourceSecretV1_readGenerateName() string {
 }
 
 func testAccKubernetesDataSourceSecretV1_read() string {
-	return `data "kubernetes_secret_v1" "test" {
+	return `data "kubernetes_secret" "test" {
   metadata {
-    name = kubernetes_secret_v1.test.metadata.0.name
+    name = kubernetes_secret.test.metadata.0.name
   }
   binary_data = {
     raw = ""
@@ -168,7 +171,7 @@ func testAccKubernetesDataSourceSecretV1_read() string {
 }
 
 func testAccKubernetesDataSourceSecretV1_nonexistent(name string) string {
-	return fmt.Sprintf(`data "kubernetes_secret_v1" "test" {
+	return fmt.Sprintf(`data "kubernetes_secret" "test" {
   metadata {
     name = "%s"
   }

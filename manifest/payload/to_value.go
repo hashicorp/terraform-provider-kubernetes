@@ -225,24 +225,44 @@ func sliceToTFSetValue(in []interface{}, st tftypes.Type, th map[string]string, 
 }
 
 func mapToTFMapValue(in map[string]interface{}, st tftypes.Type, th map[string]string, at *tftypes.AttributePath) (tftypes.Value, error) {
+	elementType := st.(tftypes.Map).ElementType
 	im := make(map[string]tftypes.Value)
+	oTypes := make(map[string]tftypes.Type, len(in))
 	var oType tftypes.Type
+	var conflict *tftypes.AttributePath
+	var conflictType tftypes.Type
 	for k, v := range in {
 		eap := at.WithElementKeyString(k)
-		mv, err := ToTFValue(v, st.(tftypes.Map).ElementType, th, eap)
+		mv, err := ToTFValue(v, elementType, th, eap)
 		if err != nil {
-			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element '%s' to '%s': err", eap, st.(tftypes.Map).ElementType.String(), err)
+			return tftypes.Value{}, eap.NewErrorf("[%s] cannot convert map element '%s' to '%s': err", eap, elementType.String(), err)
 		}
 		im[k] = mv
-		if oType == tftypes.Type(nil) {
+		oTypes[k] = mv.Type()
+		switch {
+		case oType == tftypes.Type(nil):
 			oType = mv.Type()
-		}
-		if !oType.Is(im[k].Type()) {
-			return tftypes.Value{}, eap.NewErrorf("[%s] conflicting map element type: %s", eap.String(), mv.Type())
+		case !oType.Equal(mv.Type()) && conflict == nil:
+			conflict = eap
+			conflictType = mv.Type()
 		}
 	}
 	if oType == tftypes.Type(nil) {
-		oType = st.(tftypes.Map).ElementType
+		oType = elementType
+	}
+	if conflict != nil {
+		// When the declared element type carries no structural information
+		// (e.g. an "open" map field such as Karpenter's EC2NodeClass
+		// spec.kubelet), the values for different keys may legitimately
+		// have different shapes. A tftypes.Map requires a single element
+		// type, so fall back to a tftypes.Object, which allows
+		// heterogeneous elements. Any other declared element type is
+		// expected to produce homogeneous elements, so a mismatch there is
+		// a real conversion bug and is reported as before.
+		if !elementType.Is(tftypes.DynamicPseudoType) {
+			return tftypes.Value{}, conflict.NewErrorf("[%s] conflicting map element type: %s", conflict.String(), conflictType)
+		}
+		return tftypes.NewValue(tftypes.Object{AttributeTypes: oTypes}, im), nil
 	}
 	return tftypes.NewValue(tftypes.Map{ElementType: oType}, im), nil
 }

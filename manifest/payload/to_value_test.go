@@ -634,6 +634,69 @@ func TestMapToTFObjectValue(t *testing.T) {
 	}
 }
 
+// TestToTFValueOpenMapWithHeterogeneousNestedObjects reproduces
+// https://github.com/hashicorp/terraform-provider-kubernetes/issues/3026
+//
+// Since Karpenter 1.15, the EC2NodeClass CRD declares spec.kubelet as an
+// open/arbitrary map (no properties, no additionalProperties schema), which
+// the provider's OpenAPI translation represents as
+// tftypes.Map{ElementType: tftypes.DynamicPseudoType}. Each sub-key of that
+// map (systemReserved, kubeReserved, evictionHard, etc.) legitimately has a
+// different shape, but ToTFValue currently requires every element of a Map
+// to share exactly the same concrete type.
+func TestToTFValueOpenMapWithHeterogeneousNestedObjects(t *testing.T) {
+	kubelet := map[string]interface{}{
+		"systemReserved": map[string]interface{}{
+			"cpu":               "400m",
+			"memory":            "0.5Gi",
+			"ephemeral-storage": "1Gi",
+		},
+		"evictionHard": map[string]interface{}{
+			"memory.available": "0.5Gi",
+			"nodefs.available": "10%",
+		},
+	}
+
+	want := tftypes.NewValue(
+		tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+			"systemReserved": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"cpu":               tftypes.String,
+				"memory":            tftypes.String,
+				"ephemeral-storage": tftypes.String,
+			}},
+			"evictionHard": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"memory.available": tftypes.String,
+				"nodefs.available": tftypes.String,
+			}},
+		}},
+		map[string]tftypes.Value{
+			"systemReserved": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"cpu":               tftypes.String,
+				"memory":            tftypes.String,
+				"ephemeral-storage": tftypes.String,
+			}}, map[string]tftypes.Value{
+				"cpu":               tftypes.NewValue(tftypes.String, "400m"),
+				"memory":            tftypes.NewValue(tftypes.String, "0.5Gi"),
+				"ephemeral-storage": tftypes.NewValue(tftypes.String, "1Gi"),
+			}),
+			"evictionHard": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"memory.available": tftypes.String,
+				"nodefs.available": tftypes.String,
+			}}, map[string]tftypes.Value{
+				"memory.available": tftypes.NewValue(tftypes.String, "0.5Gi"),
+				"nodefs.available": tftypes.NewValue(tftypes.String, "10%"),
+			}),
+		})
+
+	got, err := ToTFValue(kubelet, tftypes.Map{ElementType: tftypes.DynamicPseudoType}, map[string]string{}, tftypes.NewAttributePath())
+	if err != nil {
+		t.Fatalf("expected no error converting an open map with differently-shaped nested objects (Karpenter-style kubelet config), got: %s", err)
+	}
+	if !cmp.Equal(want, got, cmpCompareAllOption) {
+		t.Fatalf("result doesn't match expectation\n\tExpected:\t%#v\n\tReceived:\t%#v", want, got)
+	}
+}
+
 func TestMapToTFDynamicValue(t *testing.T) {
 	samples := map[string]struct {
 		In    sampleInType

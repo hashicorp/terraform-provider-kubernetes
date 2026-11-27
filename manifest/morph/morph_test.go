@@ -509,6 +509,74 @@ func TestMorphValueToType(t *testing.T) {
 					}),
 			}),
 		},
+		// Reproduces https://github.com/hashicorp/terraform-provider-kubernetes/issues/3026
+		// Karpenter 1.15's EC2NodeClass declares spec.kubelet as an open map
+		// (tftypes.Map{ElementType: tftypes.DynamicPseudoType}), whose
+		// sub-keys (systemReserved, evictionHard, ...) legitimately have
+		// different shapes. Morphing such a config value against the Map
+		// type used to fail with "maps must only contain one type of
+		// element" because a Map requires a single element type.
+		"object(heterogeneous)->map(dynamic)": {
+			In: sampleInType{
+				V: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"systemReserved": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"cpu":               tftypes.String,
+						"memory":            tftypes.String,
+						"ephemeral-storage": tftypes.String,
+					}},
+					"evictionHard": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"memory.available": tftypes.String,
+						"nodefs.available": tftypes.String,
+					}},
+				}}, map[string]tftypes.Value{
+					"systemReserved": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"cpu":               tftypes.String,
+						"memory":            tftypes.String,
+						"ephemeral-storage": tftypes.String,
+					}}, map[string]tftypes.Value{
+						"cpu":               tftypes.NewValue(tftypes.String, "400m"),
+						"memory":            tftypes.NewValue(tftypes.String, "0.5Gi"),
+						"ephemeral-storage": tftypes.NewValue(tftypes.String, "1Gi"),
+					}),
+					"evictionHard": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+						"memory.available": tftypes.String,
+						"nodefs.available": tftypes.String,
+					}}, map[string]tftypes.Value{
+						"memory.available": tftypes.NewValue(tftypes.String, "0.5Gi"),
+						"nodefs.available": tftypes.NewValue(tftypes.String, "10%"),
+					}),
+				}),
+				T: tftypes.Map{ElementType: tftypes.DynamicPseudoType},
+			},
+			Out: tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+				"systemReserved": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"cpu":               tftypes.String,
+					"memory":            tftypes.String,
+					"ephemeral-storage": tftypes.String,
+				}},
+				"evictionHard": tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"memory.available": tftypes.String,
+					"nodefs.available": tftypes.String,
+				}},
+			}}, map[string]tftypes.Value{
+				"systemReserved": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"cpu":               tftypes.String,
+					"memory":            tftypes.String,
+					"ephemeral-storage": tftypes.String,
+				}}, map[string]tftypes.Value{
+					"cpu":               tftypes.NewValue(tftypes.String, "400m"),
+					"memory":            tftypes.NewValue(tftypes.String, "0.5Gi"),
+					"ephemeral-storage": tftypes.NewValue(tftypes.String, "1Gi"),
+				}),
+				"evictionHard": tftypes.NewValue(tftypes.Object{AttributeTypes: map[string]tftypes.Type{
+					"memory.available": tftypes.String,
+					"nodefs.available": tftypes.String,
+				}}, map[string]tftypes.Value{
+					"memory.available": tftypes.NewValue(tftypes.String, "0.5Gi"),
+					"nodefs.available": tftypes.NewValue(tftypes.String, "10%"),
+				}),
+			}),
+		},
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {

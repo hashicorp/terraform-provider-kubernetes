@@ -55,7 +55,7 @@ func DeepUnknown(t tftypes.Type, v tftypes.Value, p *tftypes.AttributePath) (tft
 			}
 			vals[name] = nv
 		}
-		return tftypes.NewValue(t, vals), nil
+		return tftypes.NewValue(mapOrObjectType(vals, t.(tftypes.Map).ElementType), vals), nil
 	case t.Is(tftypes.Tuple{}):
 		if v.IsNull() {
 			return tftypes.NewValue(t, tftypes.UnknownValue), nil

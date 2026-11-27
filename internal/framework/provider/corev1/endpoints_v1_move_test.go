@@ -101,6 +101,16 @@ func TestAccEndpoints_MoveStateFromUnversioned_explicitEmptyStrings(t *testing.T
 		plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate))
 }
 
+// SDKv2 did not store empty metadata maps, so `labels = {}` and `annotations = {}` are
+// written to state once after the move, as after an upgrade.
+func TestAccEndpoints_MoveStateFromUnversioned_emptyMaps(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccEndpointsMoveState(t,
+		testAccKubernetesEndpointsV1_emptyMaps(name, 80),
+		testAccKubernetesEndpointsV1_emptyMaps(name, 81),
+		plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionUpdate))
+}
+
 func TestEndpointsMoveState(t *testing.T) {
 	ctx := context.Background()
 	endpoints := &corev1.EndpointsV1{}

@@ -312,6 +312,172 @@ func TestEndpointsReadMissingAndErrors(t *testing.T) {
 	}
 }
 
+// TestEndpointsCreateNamespace checks that Create sends the planned namespace unchanged,
+// as SDKv2 did. An explicit namespace = "" must reach the API's non-namespaced path and
+// fail there, not be redirected to "default", which created an object the plan did not
+// describe and failed with "Provider produced inconsistent result after apply".
+func TestEndpointsCreateNamespace(t *testing.T) {
+	ctx := context.Background()
+	for _, testCase := range []struct {
+		name      string
+		namespace string
+		wantPath  string
+		wantError bool
+	}{
+		{name: "explicit empty namespace", namespace: "", wantPath: "/api/v1/endpoints", wantError: true},
+		{name: "configured namespace", namespace: "custom", wantPath: "/api/v1/namespaces/custom/endpoints", wantError: false},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			requests := make(chan string, 2)
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				requests <- request.Method + " " + request.URL.Path
+				if request.URL.Path == "/api/v1/endpoints" {
+					http.Error(writer, "the server does not allow this method on the requested resource", http.StatusMethodNotAllowed)
+					return
+				}
+				writer.Header().Set("Content-Type", "application/json")
+				if err := json.NewEncoder(writer).Encode(&api.Endpoints{
+					TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Endpoints"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test", Namespace: testCase.namespace, UID: "uid-1", ResourceVersion: "1",
+					},
+				}); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer server.Close()
+
+			client, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+			if err != nil {
+				t.Fatal(err)
+			}
+			endpoints := &corev1.EndpointsV1{SDKv2Meta: func() any {
+				return endpointsUpdateClientsets{client: client}
+			}}
+
+			var schemaResponse fwresource.SchemaResponse
+			endpoints.Schema(ctx, fwresource.SchemaRequest{}, &schemaResponse)
+			if schemaResponse.Diagnostics.HasError() {
+				t.Fatal(schemaResponse.Diagnostics)
+			}
+
+			raw := tfprotov6.RawState{JSON: []byte(fmt.Sprintf(`{
+				"id":null,
+				"metadata":[{"annotations":null,"labels":null,"generate_name":null,
+				"name":"test","namespace":%q,"generation":null,"resource_version":null,"uid":null}],
+				"subset":null
+			}`, testCase.namespace))}
+			planValue, err := raw.Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response := fwresource.CreateResponse{
+				State:    tfsdk.State{Schema: schemaResponse.Schema, Raw: tftypes.NewValue(schemaResponse.Schema.Type().TerraformType(ctx), nil)},
+				Identity: &tfsdk.ResourceIdentity{Schema: common.NamespacedIdentitySchema()},
+			}
+			endpoints.Create(ctx, fwresource.CreateRequest{
+				Plan: tfsdk.Plan{Schema: schemaResponse.Schema, Raw: planValue},
+			}, &response)
+
+			if len(requests) != 1 {
+				t.Fatalf("made %d requests, want 1", len(requests))
+			}
+			if request := <-requests; request != http.MethodPost+" "+testCase.wantPath {
+				t.Errorf("request = %q, want %q", request, http.MethodPost+" "+testCase.wantPath)
+			}
+
+			if testCase.wantError {
+				if !response.Diagnostics.HasError() {
+					t.Fatal("expected Create to fail for an explicit empty namespace")
+				}
+				if !response.State.Raw.IsNull() {
+					t.Errorf("failed Create must not write state, got %s", response.State.Raw)
+				}
+				return
+			}
+			if response.Diagnostics.HasError() {
+				t.Fatal(response.Diagnostics)
+			}
+			var got corev1.EndpointsV1Model
+			if diags := response.State.Get(ctx, &got); diags.HasError() {
+				t.Fatal(diags)
+			}
+			if got.ID.ValueString() != testCase.namespace+"/test" || got.Metadata[0].Namespace.ValueString() != testCase.namespace {
+				t.Errorf("state id = %q, namespace = %q, want %q and %q",
+					got.ID.ValueString(), got.Metadata[0].Namespace.ValueString(), testCase.namespace+"/test", testCase.namespace)
+			}
+		})
+	}
+}
+
+// TestEndpointsDelete covers the initial Delete call: success and an already-deleted
+// Endpoints (404) both succeed, as in SDKv2, while other API errors are reported.
+func TestEndpointsDelete(t *testing.T) {
+	ctx := context.Background()
+	for _, testCase := range []struct {
+		status    int
+		wantError bool
+	}{
+		{status: http.StatusOK, wantError: false},
+		{status: http.StatusNotFound, wantError: false},
+		{status: http.StatusForbidden, wantError: true},
+		{status: http.StatusInternalServerError, wantError: true},
+	} {
+		t.Run(fmt.Sprintf("%d", testCase.status), func(t *testing.T) {
+			requests := make(chan string, 2)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				requests <- req.Method + " " + req.URL.Path
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(testCase.status)
+				result := metav1.StatusSuccess
+				if testCase.status != http.StatusOK {
+					result = metav1.StatusFailure
+				}
+				if err := json.NewEncoder(w).Encode(metav1.Status{
+					TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Status"},
+					Status:   result, Code: int32(testCase.status), Message: http.StatusText(testCase.status),
+				}); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer server.Close()
+
+			conn, err := k8sclient.NewForConfig(&rest.Config{Host: server.URL})
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := &corev1.EndpointsV1{SDKv2Meta: func() any { return endpointsUpdateClientsets{client: conn} }}
+			var schemaResponse fwresource.SchemaResponse
+			r.Schema(ctx, fwresource.SchemaRequest{}, &schemaResponse)
+			raw := tfprotov6.RawState{JSON: []byte(`{
+				"id":"team/web",
+				"metadata":[{"name":"web","namespace":"team","uid":"uid-1","resource_version":"10",
+				"generation":1,"labels":null,"annotations":null,"generate_name":null}],
+				"subset":null
+			}`)}
+			value, err := raw.Unmarshal(schemaResponse.Schema.Type().TerraformType(ctx))
+			if err != nil {
+				t.Fatal(err)
+			}
+			state := tfsdk.State{Schema: schemaResponse.Schema, Raw: value}
+
+			response := fwresource.DeleteResponse{State: state}
+			r.Delete(ctx, fwresource.DeleteRequest{State: state}, &response)
+
+			if len(requests) != 1 {
+				t.Fatalf("made %d requests, want 1", len(requests))
+			}
+			if request := <-requests; request != http.MethodDelete+" /api/v1/namespaces/team/endpoints/web" {
+				t.Errorf("request = %q, want DELETE /api/v1/namespaces/team/endpoints/web", request)
+			}
+			if got := response.Diagnostics.HasError(); got != testCase.wantError {
+				t.Fatalf("Delete error = %t, want %t: %v", got, testCase.wantError, response.Diagnostics)
+			}
+		})
+	}
+}
+
 func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 	var conf api.Endpoints
 	resourceName := "kubernetes_endpoints_v1.test"
@@ -781,7 +947,7 @@ func TestAccKubernetesEndpointsV1_disappears(t *testing.T) {
 }
 
 // TestAccKubernetesEndpointsV1_validation covers plan-time validation inherited from the
-// SDKv2 schema and the two documented tightenings.
+// SDKv2 schema and the documented tightenings.
 func TestAccKubernetesEndpointsV1_validation(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-acc-test")
 	subset := `
@@ -845,57 +1011,174 @@ func TestAccKubernetesEndpointsV1_validation(t *testing.T) {
 `, name),
 				ExpectError: regexp.MustCompile(`(?s)Missing required argument.*"port"`),
 			},
-			{
-				// SDKv2 silently dropped an empty subset, leaving an update in every plan.
-				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+		},
+	})
+}
+
+// TestAccKubernetesEndpointsV1_emptySubset matches SDKv2: an empty subset {} block is
+// not sent to Kubernetes and does not cause a diff, and a subset with only ports is
+// rejected by Kubernetes during apply.
+func TestAccKubernetesEndpointsV1_emptySubset(t *testing.T) {
+	var conf api.Endpoints
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	resourceName := "kubernetes_endpoints_v1.test"
+	config := func(subsets string) string {
+		return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
   metadata {
     name = %q
   }
-  subset {}
+%s
 }
-`, name),
-				ExpectError: regexp.MustCompile(`(?s)Invalid subset.*at least one address or not_ready_address`),
+`, name, subsets)
+	}
+	populated := `
+  subset {
+    address {
+      ip = "10.0.0.4"
+    }
+    port {
+      port = 80
+    }
+  }`
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config(populated + "\n  subset {}"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesEndpointV1Exists(resourceName, &conf),
+					func(*terraform.State) error {
+						if len(conf.Subsets) != 1 {
+							return fmt.Errorf("expected 1 subset in Kubernetes, got %d", len(conf.Subsets))
+						}
+						return nil
+					},
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
 			},
 			{
-				// Kubernetes rejected this at apply in SDKv2 too; it now fails at plan.
-				Config: fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
-  metadata {
-    name = %q
-  }
+				Config: config("  subset {}"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesEndpointV1Exists(resourceName, &conf),
+					func(*terraform.State) error {
+						if len(conf.Subsets) != 0 {
+							return fmt.Errorf("expected no subsets in Kubernetes, got %d", len(conf.Subsets))
+						}
+						return nil
+					},
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			{
+				Config: config(`
   subset {
     port {
       port = 80
     }
-  }
+  }`),
+				ExpectError: regexp.MustCompile("must specify `addresses` or `notReadyAddresses`"),
+			},
+		},
+	})
 }
-`, name),
-				ExpectError: regexp.MustCompile(`(?s)Invalid subset.*at least one address or not_ready_address`),
+
+// TestAccKubernetesEndpointsV1_namespace covers Endpoints outside the default namespace:
+// import by namespace/name, and replacement when metadata.namespace changes.
+func TestAccKubernetesEndpointsV1_namespace(t *testing.T) {
+	var conf api.Endpoints
+	name := acctest.RandomWithPrefix("tf-acc-test")
+	nsA, nsB := name+"-a", name+"-b"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesEndpointsV1_inNamespace(name, nsA, nsB, "a"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesEndpointV1Exists(endpointsResourceName, &conf),
+					resource.TestCheckResourceAttr(endpointsResourceName, "id", nsA+"/"+name),
+					resource.TestCheckResourceAttr(endpointsResourceName, "metadata.0.namespace", nsA),
+				),
+			},
+			{
+				ResourceName:            endpointsResourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+			{
+				Config: testAccKubernetesEndpointsV1_inNamespace(name, nsA, nsB, "b"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionDestroyBeforeCreate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesEndpointV1Exists(endpointsResourceName, &conf),
+					resource.TestCheckResourceAttr(endpointsResourceName, "id", nsB+"/"+name),
+					resource.TestCheckResourceAttr(endpointsResourceName, "metadata.0.namespace", nsB),
+					func(*terraform.State) error {
+						client, err := mainClientset()
+						if err != nil {
+							return err
+						}
+						_, err = client.CoreV1().Endpoints(nsA).Get(context.Background(), name, metav1.GetOptions{})
+						if !apierrors.IsNotFound(err) {
+							return fmt.Errorf("expected Endpoints %s/%s to be deleted after replacement, got: %v", nsA, name, err)
+						}
+						return nil
+					},
+				),
 			},
 		},
 	})
 }
 
 func TestAccKubernetesEndpointsV1_identity(t *testing.T) {
-	name := acctest.RandomWithPrefix("tf-acc-test")
+	for _, tc := range []struct {
+		name      string
+		namespace func(name string) (config, namespace string)
+	}{
+		{name: "default namespace", namespace: func(name string) (string, string) {
+			return testAccKubernetesEndpointsV1_basic(name), metav1.NamespaceDefault
+		}},
+		{name: "other namespace", namespace: func(name string) (string, string) {
+			ns := name + "-ns"
+			return testAccKubernetesEndpointsV1_inNamespace(name, ns, ns+"-b", "a"), ns
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := acctest.RandomWithPrefix("tf-acc-test")
+			config, namespace := tc.namespace(name)
 
-	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
-		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
-		Steps: []resource.TestStep{
-			{
-				Config:            testAccKubernetesEndpointsV1_basic(name),
-				ConfigStateChecks: []statecheck.StateCheck{testAccEndpointsExpectIdentity(name)},
-			},
-			{
-				// Import blocks already assert a no-op plan and unchanged identity.
-				ResourceName:    endpointsResourceName,
-				ImportState:     true,
-				ImportStateKind: resource.ImportBlockWithResourceIdentity,
-			},
-		},
-	})
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				CheckDestroy:             testAccCheckKubernetesEndpointV1Destroy,
+				TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+				Steps: []resource.TestStep{
+					{
+						Config:            config,
+						ConfigStateChecks: []statecheck.StateCheck{testAccEndpointsExpectIdentity(namespace, name)},
+					},
+					{
+						// Import blocks already assert a no-op plan and unchanged identity.
+						ResourceName:    endpointsResourceName,
+						ImportState:     true,
+						ImportStateKind: resource.ImportBlockWithResourceIdentity,
+					},
+				},
+			})
+		})
+	}
 }
 
 // TestAccKubernetesEndpointsV1_identityImportDefaultNamespace verifies that an identity
@@ -920,7 +1203,7 @@ func TestAccKubernetesEndpointsV1_identityImportDefaultNamespace(t *testing.T) {
 			{
 				Config:            testAccKubernetesEndpointsV1_basic(name),
 				ConfigPlanChecks:  resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
-				ConfigStateChecks: []statecheck.StateCheck{testAccEndpointsExpectIdentity(name)},
+				ConfigStateChecks: []statecheck.StateCheck{testAccEndpointsExpectIdentity(metav1.NamespaceDefault, name)},
 			},
 		},
 	})
@@ -952,12 +1235,12 @@ func TestAccKubernetesEndpointsV1_importInvalidIdentity(t *testing.T) {
 	})
 }
 
-func testAccEndpointsExpectIdentity(name string) statecheck.StateCheck {
+func testAccEndpointsExpectIdentity(namespace, name string) statecheck.StateCheck {
 	return statecheck.ExpectIdentity(endpointsResourceName, map[string]knownvalue.Check{
 		"api_version": knownvalue.StringExact("v1"),
 		"kind":        knownvalue.StringExact("Endpoints"),
 		"name":        knownvalue.StringExact(name),
-		"namespace":   knownvalue.StringExact("default"),
+		"namespace":   knownvalue.StringExact(namespace),
 	})
 }
 
@@ -1041,6 +1324,57 @@ func testAccKubernetesEndpointsV1_explicitEmptyStrings(name string, port int) st
   }
 }
 `, name, port, port+1000)
+}
+
+func testAccKubernetesEndpointsV1_inNamespace(name, nsA, nsB, use string) string {
+	return fmt.Sprintf(`resource "kubernetes_namespace_v1" "a" {
+  metadata {
+    name = %q
+  }
+}
+
+resource "kubernetes_namespace_v1" "b" {
+  metadata {
+    name = %q
+  }
+}
+
+resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name      = %q
+    namespace = kubernetes_namespace_v1.%s.metadata[0].name
+  }
+  subset {
+    address {
+      ip = "10.0.0.4"
+    }
+    port {
+      port     = 80
+      protocol = "TCP"
+    }
+  }
+}
+`, nsA, nsB, name, use)
+}
+
+func testAccKubernetesEndpointsV1_emptyMaps(name string, port int) string {
+	return fmt.Sprintf(`resource "kubernetes_endpoints_v1" "test" {
+  metadata {
+    name        = %q
+    labels      = {}
+    annotations = {}
+  }
+  subset {
+    address {
+      ip = "10.0.0.4"
+    }
+    port {
+      port     = %d
+      protocol = "TCP"
+    }
+  }
+}
+`, name, port)
 }
 
 func testAccKubernetesEndpointsV1_protocol(name, protocol string) string {

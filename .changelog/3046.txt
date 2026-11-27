@@ -1,15 +1,11 @@
 ```release-note:note
-`resource/kubernetes_endpoints_v1`: Migrated from SDKv2 to the Plugin Framework, preserving configuration syntax and supporting existing state without re-import. The resource now supports resource identity, including identity-based import with Terraform 1.12 or later; once the upgraded provider has written the state, earlier provider versions refuse it, so back up state before upgrading if you might need to roll back. Moving from the deprecated `kubernetes_endpoints` type with a `moved` block is supported with Terraform 1.8 or later. Some Endpoints show a one-time in-place update after upgrading, never a replacement: explicitly empty `hostname`, `node_name` or port `name` values, Endpoints imported with an earlier provider version whose empty `labels` or `annotations` maps are omitted from configuration, and, with `terraform plan -refresh=false`, unset `hostname`, `node_name`, port `name` and `generate_name` values that SDKv2 stored as `""`. See the Plugin Framework upgrade guide for details.
+`resource/kubernetes_endpoints_v1`: Migrated from terraform-plugin-sdk/v2 to terraform-plugin-framework, retaining the existing resource name and configuration block syntax. Existing state is supported without re-import, and the resource now supports resource identity (identity-based import requires Terraform 1.12 or later). Earlier provider versions cannot read state written after upgrading, so back up state if you may need to roll back. `moved` blocks from the deprecated `kubernetes_endpoints` resource are supported with Terraform 1.8 or later. Explicitly empty strings, metadata maps or `subset {}` blocks may produce a one-time in-place update after upgrading, never a replacement. See the Plugin Framework upgrade guide for details.
 ```
 
 ```release-note:breaking-change
-`resource/kubernetes_endpoints_v1`: Annotation and label map values must now be non-null strings. A `null` value (e.g. `annotations = { key = null }`) previously silently dropped the key; it now produces a plan-time error. Provide a string value or remove the key entirely. Omitting the whole map or setting it to null remains supported.
+`resource/kubernetes_endpoints_v1`: `null` is no longer accepted as a value in `metadata.labels` or `metadata.annotations`. Earlier versions accepted it and silently dropped the entry. Remove those entries or provide string values.
 ```
 
 ```release-note:breaking-change
-`resource/kubernetes_endpoints_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected at plan time, including `generate_name = ""`. Previously the Kubernetes API silently ignored `generate_name` when `name` was set. To keep the existing Endpoints, remove `generate_name` if it is empty; otherwise remove `name` and retain the original `generate_name`.
-```
-
-```release-note:breaking-change
-`resource/kubernetes_endpoints_v1`: Each `subset` must now contain at least one `address` or `not_ready_address`; otherwise validation fails, blocking plan, apply and destroy until the configuration is fixed. SDKv2 silently dropped an empty `subset {}` block, leaving the Endpoints without subsets and an update in every plan. Remove the empty block or add an `address` or `not_ready_address` to it.
+`resource/kubernetes_endpoints_v1`: Setting both `metadata.name` and `metadata.generate_name` is now rejected at plan time, including `generate_name = ""`. To keep the existing Endpoints, remove `generate_name` if it is empty; otherwise remove `name` and keep `generate_name`.
 ```

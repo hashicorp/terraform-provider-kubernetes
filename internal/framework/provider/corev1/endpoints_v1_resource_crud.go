@@ -11,9 +11,11 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -56,25 +58,21 @@ func (e *EndpointsV1) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	metadata, diags := common.ExpandMetadata(ctx, []common.MetadataModel{plan.Metadata[0].MetadataModel})
+	// Like SDKv2, the planned namespace is sent as-is: the schema default covers an omitted
+	// namespace, and an explicit "" is left for the API to reject rather than redirected.
+	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	namespace := plan.Metadata[0].Namespace.ValueString()
-	if namespace == "" {
-		namespace = metav1.NamespaceDefault
-	}
-	metadata.Namespace = namespace
 
 	ep := api.Endpoints{
 		ObjectMeta: metadata,
 		Subsets:    expandEndpointsSubsets(plan.Subset),
 	}
 
-	tflog.Info(ctx, "Creating endpoints", map[string]any{"name": metadata.Name, "namespace": namespace})
-	out, err := conn.CoreV1().Endpoints(namespace).Create(ctx, &ep, metav1.CreateOptions{})
+	tflog.Info(ctx, "Creating endpoints", map[string]any{"name": metadata.Name, "namespace": metadata.Namespace})
+	out, err := conn.CoreV1().Endpoints(metadata.Namespace).Create(ctx, &ep, metav1.CreateOptions{})
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to create endpoints", err.Error())
 		return
@@ -160,6 +158,7 @@ func (e *EndpointsV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		Namespace:     types.StringValue(ep.Namespace),
 	}}
 
+	hadEmptySubset := slices.ContainsFunc(state.Subset, isEmptyEndpointsSubset)
 	if len(ep.Subsets) > 0 {
 		flattened := flattenEndpointsSubsets(ep.Subsets)
 		frameworkState, markerDiags := hasEndpointsFrameworkStateMarker(ctx, req.Private)
@@ -175,6 +174,10 @@ func (e *EndpointsV1) Read(ctx context.Context, req resource.ReadRequest, resp *
 		state.Subset = []EndpointsSubsetModel{}
 	} else {
 		state.Subset = nil
+	}
+	// An empty subset {} is never sent to Kubernetes, so keep it from prior state.
+	if hadEmptySubset {
+		state.Subset = append(state.Subset, EndpointsSubsetModel{})
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -227,15 +230,15 @@ func (e *EndpointsV1) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	// Compare as sets, mirroring SDKv2 d.HasChange("subset"): element order is not
-	// significant, and a null and an empty set both mean no subsets.
+	// significant, a null and an empty set both mean no subsets, and empty subset {}
+	// blocks are ignored because they are never sent to Kubernetes.
 	var planSubset, stateSubset types.Set
 	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("subset"), &planSubset)...)
 	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("subset"), &stateSubset)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	subsetsUnchanged := planSubset.Equal(stateSubset) ||
-		(len(planSubset.Elements()) == 0 && len(stateSubset.Elements()) == 0)
+	subsetsUnchanged := nonEmptyEndpointsSubsets(ctx, planSubset).Equal(nonEmptyEndpointsSubsets(ctx, stateSubset))
 
 	ops := common.MetadataPatchOps("/metadata/", state.Metadata[0].MetadataModel, plan.Metadata[0].MetadataModel)
 	if !subsetsUnchanged {
@@ -374,12 +377,37 @@ func expandEndpointsPorts(in []EndpointsPortModel) []api.EndpointPort {
 	return ports
 }
 
-func expandEndpointsSubsets(in []EndpointsSubsetModel) []api.EndpointSubset {
-	if len(in) == 0 {
-		return []api.EndpointSubset{}
+// isEmptyEndpointsSubset reports whether a subset {} block has no addresses and no ports.
+// Like SDKv2, such a block is not sent to Kubernetes, which would reject it.
+func isEmptyEndpointsSubset(s EndpointsSubsetModel) bool {
+	return len(s.Address) == 0 && len(s.NotReadyAddress) == 0 && len(s.Port) == 0
+}
+
+// nonEmptyEndpointsSubsets returns the subset set without empty subset {} elements.
+func nonEmptyEndpointsSubsets(ctx context.Context, in types.Set) types.Set {
+	kept := []attr.Value{}
+	for _, element := range in.Elements() {
+		object, ok := element.(types.Object)
+		if !ok {
+			kept = append(kept, element)
+			continue
+		}
+		for _, name := range []string{"address", "not_ready_address", "port"} {
+			if blocks, ok := object.Attributes()[name].(types.Set); ok && (blocks.IsUnknown() || len(blocks.Elements()) > 0) {
+				kept = append(kept, element)
+				break
+			}
+		}
 	}
-	subsets := make([]api.EndpointSubset, len(in))
-	for i, subset := range in {
+	return types.SetValueMust(in.ElementType(ctx), kept)
+}
+
+func expandEndpointsSubsets(in []EndpointsSubsetModel) []api.EndpointSubset {
+	subsets := make([]api.EndpointSubset, 0, len(in))
+	for _, subset := range in {
+		if isEmptyEndpointsSubset(subset) {
+			continue
+		}
 		r := api.EndpointSubset{}
 		if len(subset.Address) > 0 {
 			r.Addresses = expandEndpointsAddresses(subset.Address)
@@ -390,7 +418,7 @@ func expandEndpointsSubsets(in []EndpointsSubsetModel) []api.EndpointSubset {
 		if len(subset.Port) > 0 {
 			r.Ports = expandEndpointsPorts(subset.Port)
 		}
-		subsets[i] = r
+		subsets = append(subsets, r)
 	}
 	return subsets
 }
@@ -460,7 +488,8 @@ func flattenEndpointsSubsets(in []api.EndpointSubset) []EndpointsSubsetModel {
 // endpointsFrameworkStateKey marks state written by this implementation. SDKv2 stored
 // "" for both unset and explicitly empty strings, so its state cannot tell them apart.
 // Without the marker Read normalizes "" to null; with it, a "" in prior state came
-// from configuration and is preserved so explicit empty strings converge.
+// from configuration and is preserved so explicit empty strings converge. Always
+// preserving a prior "" would instead show an update on most upgraded Endpoints.
 const endpointsFrameworkStateKey = "endpoints_framework_state"
 
 type privateStateReader interface {

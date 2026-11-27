@@ -91,19 +91,16 @@ func TestAccEndpoints_UpgradeFromSDKV2_identity(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Config:                   config,
 				ConfigPlanChecks:         resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
-				ConfigStateChecks:        []statecheck.StateCheck{testAccEndpointsExpectIdentity(name)},
+				ConfigStateChecks:        []statecheck.StateCheck{testAccEndpointsExpectIdentity("default", name)},
 			},
 		},
 	})
 }
 
-// TestAccEndpoints_UpgradeFromSDKV2_explicitEmptyStrings documents the one-time update
-// for explicitly empty hostname, node_name and port name values. SDKv2 stored "" for
-// unset values too, so the first refresh normalizes them to null and the configured
-// "" is written back once. The object is updated in place and then converges.
-func TestAccEndpoints_UpgradeFromSDKV2_explicitEmptyStrings(t *testing.T) {
-	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
-	config := testAccKubernetesEndpointsV1_explicitEmptyStrings(name, 80)
+// testAccEndpointsMigrationExpectingUpdate upgrades from SDKv2 and expects a one-time
+// in-place update, after which the Endpoints is unchanged and plans are empty.
+func testAccEndpointsMigrationExpectingUpdate(t *testing.T, config string) {
+	t.Helper()
 	checkUID := testAccCheckEndpointsSameUID()
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -123,6 +120,23 @@ func TestAccEndpoints_UpgradeFromSDKV2_explicitEmptyStrings(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccEndpoints_UpgradeFromSDKV2_explicitEmptyStrings documents the one-time update
+// for explicitly empty hostname, node_name and port name values. SDKv2 stored "" for
+// unset values too, so the first refresh normalizes them to null and the configured
+// "" is written back once. The object is updated in place and then converges.
+func TestAccEndpoints_UpgradeFromSDKV2_explicitEmptyStrings(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccEndpointsMigrationExpectingUpdate(t, testAccKubernetesEndpointsV1_explicitEmptyStrings(name, 80))
+}
+
+// TestAccEndpoints_UpgradeFromSDKV2_emptyMaps documents the one-time update for
+// `labels = {}` and `annotations = {}` in configuration: SDKv2 did not store empty maps,
+// so the configured {} is written to state once. Kubernetes is not changed.
+func TestAccEndpoints_UpgradeFromSDKV2_emptyMaps(t *testing.T) {
+	name := fmt.Sprintf("tf-migration-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
+	testAccEndpointsMigrationExpectingUpdate(t, testAccKubernetesEndpointsV1_emptyMaps(name, 80))
 }
 
 // TestAccEndpoints_UpgradeFromSDKV2_noRefresh documents the one-time in-place update
@@ -203,6 +217,77 @@ func TestAccEndpoints_UpgradeFromSDKV2_ignoredMetadataSurvivesUpdate(t *testing.
 							checkUID,
 							resource.TestCheckResourceAttr(endpointsResourceName, "metadata.0."+tc.managed+".managed", "after"),
 							testAccCheckIgnoredEndpointsMetadata(name, tc.ignored, ignoredMetadataKey),
+						),
+					},
+				},
+			})
+		})
+	}
+}
+
+// TestAccEndpoints_UpgradeFromSDKV2_thenForceReplace checks that replacement triggers
+// still work on state written by SDKv2: after the empty upgrade plan, renaming the
+// Endpoints or changing its generate_name prefix plans a replacement and creates a new
+// object. The generate_name plan modifier exempts only SDKv2's "" becoming null.
+func TestAccEndpoints_UpgradeFromSDKV2_thenForceReplace(t *testing.T) {
+	suffix := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	for _, tc := range []struct {
+		name, before, after, wantNamePrefix string
+	}{
+		{
+			name:           "name",
+			before:         testAccKubernetesEndpointsV1_basic("tf-migration-test-" + suffix),
+			after:          testAccKubernetesEndpointsV1_basic("tf-migration-test-" + suffix + "-renamed"),
+			wantNamePrefix: "tf-migration-test-" + suffix + "-renamed",
+		},
+		{
+			name:           "generate_name",
+			before:         testAccKubernetesEndpointsV1_generatedName("tf-migration-test-" + suffix + "-a-"),
+			after:          testAccKubernetesEndpointsV1_generatedName("tf-migration-test-" + suffix + "-b-"),
+			wantNamePrefix: "tf-migration-test-" + suffix + "-b-",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var originalUID string
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck:     func() { testAccPreCheck(t) },
+				CheckDestroy: testAccCheckKubernetesEndpointV1Destroy,
+				Steps: []resource.TestStep{
+					{
+						ExternalProviders: endpointsSDKv2Provider(),
+						Config:            tc.before,
+						Check: resource.TestCheckResourceAttrWith(endpointsResourceName, "metadata.0.uid", func(uid string) error {
+							originalUID = uid
+							return nil
+						}),
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   tc.before,
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+					},
+					{
+						ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+						Config:                   tc.after,
+						ConfigPlanChecks: resource.ConfigPlanChecks{
+							PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(endpointsResourceName, plancheck.ResourceActionDestroyBeforeCreate)},
+							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+						},
+						Check: resource.ComposeAggregateTestCheckFunc(
+							resource.TestCheckResourceAttrWith(endpointsResourceName, "metadata.0.name", func(name string) error {
+								if len(name) < len(tc.wantNamePrefix) || name[:len(tc.wantNamePrefix)] != tc.wantNamePrefix {
+									return fmt.Errorf("name %q does not start with %q", name, tc.wantNamePrefix)
+								}
+								return nil
+							}),
+							resource.TestCheckResourceAttrWith(endpointsResourceName, "metadata.0.uid", func(uid string) error {
+								if uid == originalUID {
+									return fmt.Errorf("Endpoints was not replaced: uid %q is unchanged", uid)
+								}
+								return nil
+							}),
 						),
 					},
 				},

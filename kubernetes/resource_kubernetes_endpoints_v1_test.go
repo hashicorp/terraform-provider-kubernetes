@@ -1,8 +1,9 @@
 // Copyright IBM Corp. 2017, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-// kubernetes_endpoints_v1 is now implemented by the framework provider. These
-// tests remain here to cover the deprecated, unversioned kubernetes_endpoints resource.
+// This file retains its historical _v1 name, but kubernetes_endpoints_v1 has migrated
+// to the Plugin Framework. It contains acceptance tests for the deprecated,
+// unversioned SDKv2 resource kubernetes_endpoints.
 //
 //nolint:all
 package kubernetes
@@ -21,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
+func TestAccKubernetesEndpoints_basic(t *testing.T) {
 	var conf api.Endpoints
 	resourceName := "kubernetes_endpoints.test"
 	name := fmt.Sprintf("tf-acc-test-%s", acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum))
@@ -112,7 +113,7 @@ func TestAccKubernetesEndpointsV1_basic(t *testing.T) {
 	})
 }
 
-func TestAccKubernetesEndpointsV1_generatedName(t *testing.T) {
+func TestAccKubernetesEndpoints_generatedName(t *testing.T) {
 	var conf api.Endpoints
 	prefix := "tf-acc-test-gen-"
 	resourceName := "kubernetes_endpoints.test"

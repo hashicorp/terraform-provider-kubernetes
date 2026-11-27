@@ -19,7 +19,7 @@ For existing SDKv2-managed Endpoints, see the [Plugin Framework upgrade guide](.
 ### Optional
 
 - `metadata` (Block List) Standard endpoints's metadata. Exactly one metadata block is required. More info: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#metadata (see [below for nested schema](#nestedblock--metadata))
-- `subset` (Block Set) Set of addresses and ports that comprise a service. Each subset must contain at least one `address` or `not_ready_address`. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors (see [below for nested schema](#nestedblock--subset))
+- `subset` (Block Set) Set of addresses and ports that comprise a service. More info: https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors (see [below for nested schema](#nestedblock--subset))
 
 ### Read-Only
 
@@ -186,6 +186,8 @@ moved {
 - **Both name and generate_name:** Configurations specifying both `metadata.name` and `metadata.generate_name` are rejected during planning, including `generate_name = ""`. If `generate_name` is empty, remove it and keep `name`. Otherwise, remove `name` and keep `generate_name`; the Endpoints keeps its current name.
 - **Null map entries:** An individual label or annotation value of `null` is rejected during planning. SDKv2 accepted these entries but silently dropped them from the Kubernetes object. Remove them or provide string values.
 - **Explicitly empty strings:** After upgrading, an explicit `hostname = ""`, `node_name = ""` or port `name = ""` shows a one-time in-place update, because SDKv2 could not distinguish it from an unset value. The Endpoints is not replaced, and the next plan is empty.
+- **Empty maps and subsets:** `labels = {}`, `annotations = {}` or an empty `subset {}` alongside other subsets shows a one-time in-place update after upgrading. An empty `subset {}` is accepted and not sent to Kubernetes, as with SDKv2.
+- **Unset values:** Omitted `hostname`, `node_name`, port `name` and `generate_name` are stored as `null` instead of SDKv2's `""` after the first refresh. This is a state-only change, but outputs or expressions that reference these attributes now see `null`.
 - **Resource identity:** The resource now records a resource identity. Earlier provider versions refuse state written after the upgrade, so back up state before upgrading if you might need to roll back.
 
 ## Import

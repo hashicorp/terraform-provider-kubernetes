@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -92,7 +90,7 @@ func TestPreserveExplicitEmptyStrings(t *testing.T) {
 	}
 }
 
-func TestEndpointsSubsetAddressesValidator(t *testing.T) {
+func TestNonEmptyEndpointsSubsets(t *testing.T) {
 	addressType := types.ObjectType{AttrTypes: map[string]attr.Type{
 		"hostname": types.StringType, "ip": types.StringType, "node_name": types.StringType,
 	}}
@@ -118,27 +116,45 @@ func TestEndpointsSubsetAddressesValidator(t *testing.T) {
 		})
 	}
 	noPorts := types.SetValueMust(portType, []attr.Value{})
+	subsetType := types.ObjectType{AttrTypes: subsetTypes}
 	somePorts := types.SetValueMust(portType, []attr.Value{port})
 
 	for name, tc := range map[string]struct {
-		value   types.Object
-		wantErr bool
+		value types.Object
+		kept  bool
 	}{
-		"empty subset":            {value: subset(emptyAddresses, emptyAddresses, noPorts), wantErr: true},
-		"ports only":              {value: subset(emptyAddresses, emptyAddresses, somePorts), wantErr: true},
-		"null address sets":       {value: subset(types.SetNull(addressType), types.SetNull(addressType), somePorts), wantErr: true},
-		"address":                 {value: subset(someAddresses, emptyAddresses, somePorts)},
-		"not_ready_address only":  {value: subset(emptyAddresses, someAddresses, noPorts)},
-		"unknown dynamic address": {value: subset(types.SetUnknown(addressType), emptyAddresses, somePorts)},
-		"unknown subset":          {value: types.ObjectUnknown(subsetTypes)},
-		"null subset":             {value: types.ObjectNull(subsetTypes)},
+		"empty subset":            {value: subset(emptyAddresses, emptyAddresses, noPorts)},
+		"null nested blocks":      {value: subset(types.SetNull(addressType), types.SetNull(addressType), types.SetNull(portType))},
+		"ports only":              {value: subset(emptyAddresses, emptyAddresses, somePorts), kept: true},
+		"address":                 {value: subset(someAddresses, emptyAddresses, somePorts), kept: true},
+		"not_ready_address only":  {value: subset(emptyAddresses, someAddresses, noPorts), kept: true},
+		"unknown dynamic address": {value: subset(types.SetUnknown(addressType), emptyAddresses, noPorts), kept: true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			resp := &validator.ObjectResponse{}
-			endpointsSubsetAddressesValidator{}.ValidateObject(context.Background(),
-				validator.ObjectRequest{Path: path.Root("subset"), ConfigValue: tc.value}, resp)
-			if got := resp.Diagnostics.HasError(); got != tc.wantErr {
-				t.Errorf("HasError = %t, want %t: %v", got, tc.wantErr, resp.Diagnostics)
+			got := nonEmptyEndpointsSubsets(context.Background(), types.SetValueMust(subsetType, []attr.Value{tc.value}))
+			if kept := len(got.Elements()) == 1; kept != tc.kept {
+				t.Errorf("kept = %t, want %t", kept, tc.kept)
+			}
+		})
+	}
+}
+
+func TestExpandEndpointsSubsetsDropsEmptySubset(t *testing.T) {
+	address := []EndpointsAddressModel{{IP: types.StringValue("10.0.0.4"), Hostname: types.StringNull(), NodeName: types.StringNull()}}
+	ports := []EndpointsPortModel{{Port: types.Int64Value(80), Name: types.StringNull(), Protocol: types.StringValue("TCP")}}
+
+	for name, tc := range map[string]struct {
+		in   []EndpointsSubsetModel
+		want int
+	}{
+		"only empty subset":          {in: []EndpointsSubsetModel{{}}, want: 0},
+		"empty and populated subset": {in: []EndpointsSubsetModel{{}, {Address: address, Port: ports}}, want: 1},
+		"ports only is sent":         {in: []EndpointsSubsetModel{{Port: ports}}, want: 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := expandEndpointsSubsets(tc.in)
+			if got == nil || len(got) != tc.want {
+				t.Errorf("got %#v, want %d non-nil subsets", got, tc.want)
 			}
 		})
 	}

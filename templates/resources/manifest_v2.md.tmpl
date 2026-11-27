@@ -11,7 +11,7 @@ description: |-
 
 Manages one Kubernetes object of any kind, built-in or custom, from its manifest. The manifest is sent to the cluster with [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/), as `kubectl apply --server-side` does.
 
-`kubernetes_manifest_v2` is the successor of [`kubernetes_manifest`](manifest.md). It takes the same arguments, and a `moved` block moves existing resources to it. Unlike `kubernetes_manifest`, it does not read the kind's schema from the cluster:
+`kubernetes_manifest_v2` is the successor of [`kubernetes_manifest`](manifest.md). It takes the same arguments except `wait_for`, and a `moved` block moves existing resources to it. Unlike `kubernetes_manifest`, it does not read the kind's schema from the cluster:
 
 - Planning a new object makes no request to the cluster. A CustomResourceDefinition and its custom resources, or a cluster and the objects in it, can be created in one apply.
 - It does not predict what the cluster returns, which is what makes `kubernetes_manifest` fail with "Provider produced inconsistent result after apply".
@@ -22,8 +22,8 @@ Manages one Kubernetes object of any kind, built-in or custom, from its manifest
 | | `kubernetes_manifest_v2` | `kubernetes_manifest` |
 |---|---|---|
 | Planning a new object | Makes no request to the cluster. The kind does not have to exist yet. | Reads the kind's OpenAPI schema from the cluster. The cluster must be reachable and the CustomResourceDefinition installed. |
-| Validation of the manifest | By the API server when the manifest is applied. Unknown and duplicate fields are rejected. | At plan time, against the schema. |
-| `object` | The object as the cluster returns it, including `status`. Read at creation and on every refresh; an update keeps the last value. Fields that are not set are absent. | The object typed by the schema, without `status`. Planned from the manifest on every change. Fields that are not set are null. |
+| Validation of the manifest | By the API server when the manifest is applied. Unknown fields are rejected. A number or bool where the kind has a string, such as `data = { PORT = 8080 }` in a ConfigMap, is applied as a string. | At plan time, against the schema. |
+| `object` | The object as the cluster returns it, including `status`. Read at creation and on every refresh; an update keeps the last value. Unknown in the plan that creates the object. Fields that are not set are absent. | The object typed by the schema, without `status`. Planned from the manifest on every change. Fields that are not set are null. |
 | Changes made outside Terraform | Reported for the fields set in `manifest`, decided by the field ownership the cluster records. | Reported by comparing values, except for `computed_fields`. |
 | `computed_fields` | Fields that another controller changes: the change is not reported and an apply leaves it in place. Not needed for server defaults. Empty by default. | Fields the API server may alter. Defaults to `metadata.annotations` and `metadata.labels`. |
 | What an apply sends | The fields of `manifest`. | The planned `object`, which includes values read from the cluster. Terraform then also owns fields it did not configure. |
@@ -41,7 +41,7 @@ Manages one Kubernetes object of any kind, built-in or custom, from its manifest
 
 {{tffile "examples/resources/manifest_v2/example_5.tf"}}
 
-`yaml_body` takes the text of one object, as YAML or JSON. A key that appears twice in one mapping is an error. A plan shows a change to the text line by line. When another client changes a field, the plan lists the field in `drift` and does not show its value, because the text may hold sensitive values. Set `manifest` instead to see the changed values in the plan, to mark single values as sensitive, or to use values that are not known until apply without making the whole manifest unknown.
+`yaml_body` takes the text of one object, as YAML or JSON. A key that appears twice in one mapping is an error, and so is a key that overrides one merged with `<<`. A plan shows a change to the text line by line. When another client changes a field, the refresh lists the field in `drift` and adds a comment that names it at the end of `yaml_body`. The plan shows the comment removed, which restores the field, and does not show the value the other client set. Like every change of `yaml_body`, it shows the configured text, unless that is marked with `sensitive()`. `lifecycle { ignore_changes = [yaml_body] }` leaves such changes in place. Set `manifest` instead to see the changed values in the plan, to mark single values as sensitive, or to use values that are not known until apply without making the whole manifest unknown.
 
 ### YAML files
 
@@ -55,7 +55,13 @@ Manages one Kubernetes object of any kind, built-in or custom, from its manifest
 
 {{ .SchemaMarkdown }}
 
-Each operation has 10 minutes by default. Field paths in `wait.fields` and `computed_fields` are written as in `kubernetes_manifest`, for example `status.containerStatuses[0].ready` or `metadata.annotations["example.com/owner"]`. `computed_fields` does not tell the elements of a list apart: an entry for one element applies to all of them.
+Each operation has 10 minutes by default. Field paths in `wait.fields` and `computed_fields` are written as in `kubernetes_manifest`, for example `status.containerStatuses[0].ready` or `metadata.annotations["example.com/owner"]`. A map key that is not a plain name, such as `app.kubernetes.io/name`, needs the quoted form. `computed_fields` does not tell the elements of a list apart: an entry for one element applies to all of them.
+
+## Waiting
+
+Terraform watches the object until every condition of `wait` holds, and polls it where the credentials do not allow a watch. Errors that waiting may resolve, such as a restarting API server, do not end the wait. An object that deletes itself, such as a Job with `ttlSecondsAfterFinished`, is checked in the state it had when it was deleted. `rollout` on a StatefulSet or DaemonSet with the `OnDelete` update strategy waits for its pods to be ready, since such a rollout only continues as pods are deleted.
+
+A wait that fails after the object was created marks the resource tainted, so the next apply replaces it. After a wait that fails on an update, the next plan shows that `object` will be read again: applying it applies the manifest again and waits again, also when the configuration went back to an earlier version.
 
 ## Field ownership and drift
 
@@ -64,15 +70,18 @@ Kubernetes records which client set each field of an object. Terraform owns the 
 - Fields the cluster defaults, and fields other controllers or admission webhooks add, are not shown as changes of `manifest` and are never removed.
 - A field removed from `manifest` is removed from the object.
 - When another client changes or removes a field that the manifest sets, the next plan restores it. With `manifest`, the plan shows the live value changing back to the configured one. With `yaml_body`, the field is listed in `drift`. An empty list or map that another client leaves out of the object is not a change.
-- To leave a field that the manifest must set at creation to another controller, list it in `computed_fields`. Terraform sets it when it creates the object and does not report later changes by the other controller. Once that controller has changed the field, Terraform no longer sends it, so the controller stays its only owner. A field that is not needed at creation is better left out of the manifest.
+- To leave a field that the manifest must set at creation to another controller, list it in `computed_fields`. Terraform sets it when it creates the object and does not report later changes by the other controller. Once another field manager owns the field, Terraform no longer sends it, so that manager stays its only owner. A field that no other manager owns, such as a key added to a map in `computed_fields`, is still applied. A field that is not needed at creation is better left out of the manifest. When a field is added to `computed_fields` after the other controller has changed it, the next plan still shows the change back to the configured value once; the apply leaves the field to the controller.
+- The labels and annotations of the manifest that match the provider's `ignore_labels` and `ignore_annotations` are treated as `computed_fields`.
 
-Applying over a field that another client changed fails with a field ownership conflict that names the client. Set `force_conflicts = true` in the `field_manager` block to take the field back, or remove it from the manifest. Terraform also warns about the conflict when it first detects the change.
+Applying over a field that another client changed fails with a field ownership conflict that names the client. Set `force_conflicts = true` in the `field_manager` block to take the field back, or remove it from the manifest. Terraform also warns about the conflict on every plan until the field is restored.
+
+The field manager name, `Terraform` by default, identifies this resource to the API server. Two resources that apply to the same object under the same name replace each other's fields: two configurations that manage one object, or this resource and `kubernetes_config_map_v1_data`, `kubernetes_labels` and `kubernetes_annotations`, which also default to `Terraform`. Give each of them its own name. Changing `field_manager.name` moves the fields this resource applied to the new name; the fields of other resources stay with the old one.
 
 `status` and the metadata fields that only the API server sets, such as `uid`, `resourceVersion` and `creationTimestamp`, are ignored when they appear in `manifest`. A `Secret` written with `stringData` is compared with the `data` the cluster stores.
 
 ## What `object` holds
 
-`object` is the object as the cluster returned it when it was created, or at the last refresh. References to it stay known in every plan, so it can feed `for_each`, `count` and arguments of other resources.
+`object` is the object as the cluster returned it when it was created, or at the last refresh. In the plan that creates the object, `object` is not known yet, so `for_each` and `count` cannot use it in that plan. In every later plan, references to it are known, so it can feed `for_each`, `count` and arguments of other resources.
 
 An update does not change `object`: Terraform cannot know what the cluster will return, and a guess is what makes `kubernetes_manifest` fail with "inconsistent result". The next plan refreshes it. So:
 
@@ -84,7 +93,7 @@ A field that is not set is absent from `object`, not null: wrap a reference to a
 
 ## Objects that depend on each other
 
-Terraform applies independent resources in parallel, in no particular order. When an object is created before the namespace it belongs to, or before its CustomResourceDefinition is established, the provider retries for up to one minute. That usually lets a multi-document file apply in one run.
+Terraform applies independent resources in parallel, in no particular order. When an object is created before the namespace it belongs to, or before its CustomResourceDefinition is established, the provider retries for up to one minute. That usually lets a multi-document file apply in one run. An object that starts after its namespace or kind has been missing for a minute fails at once instead of waiting, so that the operation that creates them can start. A kind that an API group without a dot in its name does not have, such as `Deploymnet` in `apps/v1`, is an error at once: only groups such as `example.com` can get kinds from a CustomResourceDefinition.
 
 The retry is not an ordering guarantee. Terraform runs a limited number of operations at a time, 10 by default (`-parallelism`). If all of them are waiting for an object whose creation has not started, the retries expire and the apply fails; a second apply completes it. When the order matters, create the namespaces and CustomResourceDefinitions in their own resource and make the rest depend on it:
 
@@ -106,23 +115,27 @@ resource "kubernetes_manifest_v2" "rest" {
 }
 ```
 
-On destroy, an object whose namespace or CustomResourceDefinition is already gone counts as deleted.
+On destroy, an object whose namespace or CustomResourceDefinition is already gone counts as deleted. Deleting an object also deletes its dependents, such as the pods of a Job, as `kubectl delete` does.
 
 ## API versions that are no longer served
 
-When the cluster stops serving the API version an object was applied in, the object still exists in the versions of its kind that remain. Terraform then reads and deletes it through one of those, and warns that `apiVersion` in the manifest needs to change. Applying the manifest with the old version fails until it does.
+When the cluster stops serving the API version an object was applied in, the object still exists in the other versions of its API group. Terraform then reads and deletes it through one of those, and warns that `apiVersion` in the manifest needs to change. Applying the manifest with the old version fails until it does. A kind that moved to another API group, such as `Ingress` from `extensions` to `networking.k8s.io`, is not found this way.
 
 ## Objects that already exist
 
-Creating an object that already exists in the cluster is an error, as with `kubernetes_manifest`. Import it instead, so that taking over an object, and later deleting it with `terraform destroy`, is always explicit.
+Creating an object that already exists in the cluster is an error, as with `kubernetes_manifest`. Import it instead, so that taking over an object, and later deleting it with `terraform destroy`, is always explicit. An object that was deleted and created again outside Terraform under the same name gets another UID. The refresh warns about it, and the resource manages the new object from then on. Between a plan and its apply, the UID keeps an update or a delete from acting on an object that replaced the planned one.
+
+Creating needs the `create` and `patch` permissions for the kind, reading needs `get`, and deleting `delete` and `get`. `wait` also uses `watch` when the credentials allow it.
 
 ## Limitations
 
 - `metadata.generateName` is not supported: server-side apply needs `metadata.name`.
-- The API group, `kind`, `metadata.name` and `metadata.namespace` identify the object, and changing one of them replaces it. A manifest without `metadata.namespace` means the object in `default`, so removing the namespace of an object in another namespace replaces it too. If the new value is not known while planning, for example because it comes from a resource created in the same apply, Terraform cannot plan the replacement: that apply fails without changing the object and the next one replaces it. Changing only the version in `apiVersion` updates the object in place.
+- The API group, `kind`, `metadata.name` and `metadata.namespace` identify the object, and changing one of them replaces it. A manifest without `metadata.namespace` means the object in `default`, so removing the namespace of an object in another namespace replaces it too. Changing only the version in `apiVersion` updates the object in place.
+- If a part of the identity in `manifest` is not known while planning, for example a name that comes from a resource replaced in the same apply, Terraform replaces the object, also when the value turns out to be the same. When `yaml_body`, or the whole `manifest`, is not known while planning, Terraform assumes the same object: if it names another one, that apply fails with "Provider produced inconsistent final plan" without changing the object, and the next one replaces it.
 - An object that deletes itself, such as a Job with `ttlSecondsAfterFinished`, is planned for creation again after it is gone.
-- A change to a field that Kubernetes treats as immutable is rejected when applied. Replace the object with `terraform apply -replace=ADDRESS`.
+- A change to a field that Kubernetes treats as immutable is rejected when applied. Replace the object with `terraform apply -replace=ADDRESS`. With `create_before_destroy`, the replacement fails with "Object already exists", since the new object has the same name. Replacing a CustomResourceDefinition deletes all its custom resources.
 - Terraform cannot mark single fields of `manifest` as sensitive by itself. A value from a sensitive variable or marked with `sensitive()` stays hidden where it appears in `manifest`, a `Secret` written with literal values is shown, and `object` shows what the cluster stores in either case. The state always holds the whole manifest and the object.
+- State and plan time grow with the size of the object, because `manifest` and `object` both hold it. For a large object, such as a CustomResourceDefinition of several hundred kilobytes, `yaml_body` is several times faster.
 
 ## Import
 
@@ -146,7 +159,9 @@ import {
 }
 ```
 
-The imported manifest describes the whole object, so the first plan lists the fields that are in the cluster but not in the configuration as removed from `manifest`. Applying it does not remove them from the object: Terraform only takes ownership of the fields the configuration sets. A value the configuration spells differently from the cluster, such as `cpu = 1` for a stored `"1"`, also shows as a change in that plan. An object that this resource applied before is imported with only the fields it owns, and plans no change when the configuration is the same.
+The imported manifest describes the whole object, without the data of a Secret that another client wrote, so the first plan lists the fields that are in the cluster but not in the configuration as removed from `manifest`. Applying it does not remove them from the object: Terraform only takes ownership of the fields the configuration sets. Of the fields that `kubectl apply` without `--server-side` or another resource of this provider wrote, those the configuration sets move to Terraform's field manager, so their values can change without a conflict. A value the configuration spells differently from the cluster, such as `cpu = 1` for a stored `"1"`, also shows as a change in that plan. An object that this resource applied before is imported with only the fields it owns, and plans no change when the configuration is the same.
+
+An object that `kubectl apply --server-side`, Helm or another client applied with server-side apply keeps its fields with that field manager. Changing one of them then fails with a field ownership conflict. Set `field_manager { name = "kubectl" }`, or the name of that manager, to continue as that manager, or `force_conflicts = true` for the first apply.
 
 ## Moving from `kubernetes_manifest`
 

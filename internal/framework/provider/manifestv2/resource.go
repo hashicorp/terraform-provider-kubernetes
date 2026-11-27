@@ -33,13 +33,14 @@ import (
 )
 
 var (
-	_ resource.Resource                   = (*ManifestV2)(nil)
-	_ resource.ResourceWithConfigure      = (*ManifestV2)(nil)
-	_ resource.ResourceWithValidateConfig = (*ManifestV2)(nil)
-	_ resource.ResourceWithModifyPlan     = (*ManifestV2)(nil)
-	_ resource.ResourceWithImportState    = (*ManifestV2)(nil)
-	_ resource.ResourceWithIdentity       = (*ManifestV2)(nil)
-	_ resource.ResourceWithMoveState      = (*ManifestV2)(nil)
+	_ resource.Resource                    = (*ManifestV2)(nil)
+	_ resource.ResourceWithConfigure       = (*ManifestV2)(nil)
+	_ resource.ResourceWithValidateConfig  = (*ManifestV2)(nil)
+	_ resource.ResourceWithModifyPlan      = (*ManifestV2)(nil)
+	_ resource.ResourceWithImportState     = (*ManifestV2)(nil)
+	_ resource.ResourceWithIdentity        = (*ManifestV2)(nil)
+	_ resource.ResourceWithUpgradeIdentity = (*ManifestV2)(nil)
+	_ resource.ResourceWithMoveState       = (*ManifestV2)(nil)
 )
 
 const defaultFieldManager = "Terraform"
@@ -135,6 +136,12 @@ func (r *ManifestV2) IdentitySchema(_ context.Context, _ resource.IdentitySchema
 	resp.IdentitySchema = common.NamespacedIdentitySchema()
 }
 
+// UpgradeIdentity accepts state without an identity, which Terraform before
+// 1.12 writes. Read fills it in.
+func (r *ManifestV2) UpgradeIdentity(context.Context) map[int64]resource.IdentityUpgrader {
+	return common.UpgradeNamespacedIdentity("", "")
+}
+
 func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	computed := func(description string) schema.StringAttribute {
 		return schema.StringAttribute{
@@ -145,7 +152,7 @@ func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp 
 	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages one Kubernetes object of any kind, built-in or custom, from its manifest. " +
-			"It is the successor of `kubernetes_manifest` and takes the same arguments. " +
+			"It is the successor of `kubernetes_manifest`, and a `moved` block moves existing resources to it. " +
 			"The manifest is sent with [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/), as `kubectl apply --server-side` does. " +
 			"The provider does not need the kind's schema, so planning a new object makes no request to the cluster: " +
 			"a CustomResourceDefinition and its custom resources, or a cluster and the objects in it, can be created in one apply.",
@@ -179,7 +186,7 @@ func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp 
 				Optional:    true,
 				ElementType: types.StringType,
 				MarkdownDescription: "Fields of `manifest` that another controller may change after Terraform sets them, for example `spec.replicas` under an autoscaler. " +
-					"Such a change is not reported, and Terraform stops sending a field once another controller has changed it. " +
+					"Such a change is not reported, and Terraform stops sending a field once another controller owns it. " +
 					"Values the API server defaults or rewrites need no entry here.",
 			},
 			"api_version": computed("The API version of the object."),
@@ -196,7 +203,7 @@ func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp 
 						Optional: true,
 						MarkdownDescription: "The name of the field manager. Defaults to `" + defaultFieldManager + "`. " +
 							"A resource that applies single fields to the same object, such as `kubernetes_labels`, must use another name.",
-						Validators: []validator.String{stringvalidator.LengthAtLeast(1)},
+						Validators: []validator.String{stringvalidator.LengthBetween(1, 128)},
 					},
 					"force_conflicts": schema.BoolAttribute{
 						Optional: true,
@@ -224,8 +231,8 @@ func (r *ManifestV2) Schema(ctx context.Context, _ resource.SchemaRequest, resp 
 						MarkdownDescription: "An entry of `status.conditions` to wait for.",
 						NestedObject: schema.NestedBlockObject{
 							Attributes: map[string]schema.Attribute{
-								"type":   schema.StringAttribute{Optional: true, MarkdownDescription: "The type of the condition."},
-								"status": schema.StringAttribute{Optional: true, MarkdownDescription: "The status of the condition."},
+								"type":   schema.StringAttribute{Required: true, MarkdownDescription: "The type of the condition."},
+								"status": schema.StringAttribute{Optional: true, MarkdownDescription: "The status of the condition. Defaults to `True`."},
 							},
 						},
 					},
@@ -260,13 +267,27 @@ func (m model) declared() (map[string]any, identity, bool, error) {
 	if err != nil {
 		return nil, identity{}, false, err
 	}
-	obj := unstructured.Unstructured{Object: manifest}
-	id := identity{APIVersion: obj.GetAPIVersion(), Kind: obj.GetKind(), Namespace: obj.GetNamespace(), Name: obj.GetName()}
-	switch {
-	case id.APIVersion == "" || id.Kind == "" || id.Name == "":
-		return nil, id, false, fmt.Errorf("yaml_body needs apiVersion, kind and metadata.name")
-	case obj.GetGenerateName() != "":
-		return nil, id, false, fmt.Errorf("metadata.generateName is not supported: server-side apply needs metadata.name")
+	if metadata, _ := manifest["metadata"].(map[string]any); metadata["generateName"] != nil {
+		return nil, identity{}, false, fmt.Errorf("metadata.generateName is not supported: server-side apply needs metadata.name")
+	}
+	var id identity
+	for _, part := range []struct {
+		target   *string
+		names    []string
+		required bool
+	}{
+		{&id.APIVersion, []string{"apiVersion"}, true}, {&id.Kind, []string{"kind"}, true},
+		{&id.Name, []string{"metadata", "name"}, true}, {&id.Namespace, []string{"metadata", "namespace"}, false},
+	} {
+		value, found, err := unstructured.NestedFieldNoCopy(manifest, part.names...)
+		text, isString := value.(string)
+		switch {
+		case err != nil || found && !isString:
+			return nil, id, false, fmt.Errorf("%s in yaml_body must be a string", strings.Join(part.names, "."))
+		case text == "" && part.required:
+			return nil, id, false, fmt.Errorf("yaml_body has no %s", strings.Join(part.names, "."))
+		}
+		*part.target = text
 	}
 	return manifest, id, true, nil
 }
@@ -382,14 +403,22 @@ func (r *ManifestV2) ValidateConfig(ctx context.Context, req resource.ValidateCo
 		resp.Diagnostics.AddError("Invalid manifest", "Set exactly one of manifest and yaml_body.")
 		return
 	}
-	_, declared, _, err := config.declared()
+	argument := path.Root("manifest")
+	if config.Manifest.IsNull() {
+		argument = path.Root("yaml_body")
+	}
+	manifest, declared, _, err := config.declared()
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid manifest", err.Error())
+		resp.Diagnostics.AddAttributeError(argument, "Invalid manifest", err.Error())
 	}
 	for _, field := range config.computedFields() {
-		if plain := plainPath(mapKeys.ReplaceAllString(field, ".$1")); strings.ContainsAny(plain, `[]"`) || strings.Trim(plain, ".") == "" {
-			resp.Diagnostics.AddAttributeError(path.Root("computed_fields"), "Invalid field path",
-				fmt.Sprintf("%q is not a field path. Write it like spec.replicas, spec.template.spec.containers[0].image or metadata.annotations[\"example.com/owner\"].", field))
+		names, err := fieldNames(field)
+		switch {
+		case err != nil:
+			resp.Diagnostics.AddAttributeError(path.Root("computed_fields"), "Invalid field path", err.Error()+".")
+		case manifest != nil && !hasField(manifest, names):
+			resp.Diagnostics.AddAttributeWarning(path.Root("computed_fields"), "Field not in the manifest",
+				fmt.Sprintf("%s is not set in the manifest, so listing it in computed_fields has no effect.", field))
 		}
 	}
 	if _, err := expectations(ctx, config.Wait, declared); err != nil {
@@ -402,6 +431,10 @@ func (r *ManifestV2) ValidateConfig(ctx context.Context, req resource.ValidateCo
 // resource identity. Read fills in the manifest from the live object.
 func (r *ManifestV2) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	var id identity
+	if req.ID == "" && (req.Identity == nil || req.Identity.Raw.IsNull()) {
+		resp.Diagnostics.AddError("Invalid import ID", `The import ID is empty. Expected "apiVersion=<version>,kind=<kind>,[namespace=<namespace>,]name=<name>".`)
+		return
+	}
 	if req.ID != "" {
 		gvk, name, namespace, err := util.ParseResourceID(req.ID)
 		if err != nil {

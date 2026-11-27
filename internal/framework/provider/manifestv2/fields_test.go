@@ -78,7 +78,7 @@ func TestLiveChanges(t *testing.T) {
 		_ = unstructured.SetNestedSlice(obj.Object, containers, "spec", "template", "spec", "containers")
 	}
 	changed := []string{
-		`metadata.finalizers["keep"]`, "metadata.labels.tier", "spec.replicas",
+		"metadata.finalizers[0]", "metadata.labels.tier", "spec.replicas",
 		"spec.template.spec.containers[name=web].args", "spec.template.spec.containers[name=web].image",
 	}
 	for name, tc := range map[string]struct {
@@ -123,7 +123,7 @@ func TestLiveChanges(t *testing.T) {
 			if tc.accepted {
 				_, accepted = liveChanges(manifest, tc.live, "Terraform", nil, nil)
 			}
-			result, found := liveChanges(manifest, tc.live, "Terraform", tc.computed, accepted)
+			result, found := liveChanges(manifest, tc.live, "Terraform", skippedNames(t, tc.computed...), accepted)
 			var paths []string
 			for path := range found {
 				paths = append(paths, path)
@@ -161,7 +161,7 @@ func TestLeavingComputed(t *testing.T) {
 		unstructured.RemoveNestedField(obj.Object, "metadata", "labels", "tier")
 	}, entry("Terraform", "Apply", testFieldsAfterChanges), entry("other", "Update", testOtherFields))
 	manifest := decodeJSON(t, testManifest)
-	sent := leavingComputed(manifest, live, "Terraform", []string{"spec.replicas", "spec.selector"})
+	sent := leavingComputed(manifest, live, "Terraform", skippedNames(t, "spec.replicas", "spec.selector", "metadata.labels"))
 	if _, present := sent["spec"].(map[string]any)["replicas"]; present {
 		t.Error("replicas, which the other client owns, must not be sent")
 	}
@@ -169,6 +169,9 @@ func TestLeavingComputed(t *testing.T) {
 		t.Error("a computed field this manager still owns must be sent")
 	}
 	if got := sent["metadata"].(map[string]any)["labels"].(map[string]any)["tier"]; got != "front" {
+		t.Errorf("a key of a computed map that no manager owns must be sent, got %v", got)
+	}
+	if got := sent["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"]; !reflect.DeepEqual(got, manifest["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"]) {
 		t.Errorf("a field that is not computed must be sent as configured, got %v", got)
 	}
 	if !reflect.DeepEqual(leavingComputed(manifest, live, "Terraform", nil), manifest) {
@@ -181,7 +184,6 @@ func TestLeavingComputed(t *testing.T) {
 func TestExportedOwnedFields(t *testing.T) {
 	live := liveObject(t, nil, entry("Terraform", "Apply", testFields), entry("other", "Update", testOtherFields))
 	want := decodeJSON(t, testManifest)
-	want["metadata"].(map[string]any)["namespace"] = "default"
 	podSpec := want["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)
 	delete(podSpec, "tolerations")
 	delete(podSpec, "nodeSelector")
@@ -191,6 +193,96 @@ func TestExportedOwnedFields(t *testing.T) {
 	}
 	if got := exported(live, "someone-else"); got["spec"].(map[string]any)["revisionHistoryLimit"] != int64(10) || got["status"] != nil {
 		t.Fatalf("an object applied by others must be exported in full, without status: %v", got)
+	}
+	secret := &unstructured.Unstructured{Object: decodeJSON(t, `{"apiVersion":"v1","kind":"Secret","metadata":{"name":"s","namespace":"prod"},"data":{"k":"dg=="}}`)}
+	if got := exported(secret, "Terraform"); got["data"] != nil || got["metadata"].(map[string]any)["namespace"] != "prod" {
+		t.Fatalf("a Secret must be exported without its data: %v", got)
+	}
+}
+
+func skippedNames(t *testing.T, paths ...string) [][]string {
+	t.Helper()
+	var skipped [][]string
+	for _, path := range paths {
+		names, err := fieldNames(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		skipped = append(skipped, names)
+	}
+	return skipped
+}
+
+// Ownership without the kind's schema: a field every manager lists without
+// members is atomic, and an emptied entry of a map owns nothing below it.
+func TestLiveChangesOwnership(t *testing.T) {
+	manifest := map[string]any{"spec": map[string]any{
+		"pinned": map[string]any{"a": "1"},
+		"config": map[string]any{"a": "1"},
+	}, "metadata": map[string]any{"labels": map[string]any{"app": "web", "app.kubernetes.io/name": "web"}}}
+	live := func(fields ...metav1.ManagedFieldsEntry) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{Object: map[string]any{"spec": map[string]any{
+			"pinned": map[string]any{"a": "1", "b": "2"},
+			"config": map[string]any{},
+		}, "metadata": map[string]any{"labels": map[string]any{"app": "web", "app.kubernetes.io/name": "other"}}}}
+		obj.SetManagedFields(fields)
+		return obj
+	}
+	for name, tc := range map[string]struct {
+		live     *unstructured.Unstructured
+		computed []string
+		want     []string
+	}{
+		"key added to an atomic map, key removed from a map": {
+			live: live(entry("Terraform", "Apply", `{"f:spec":{"f:config":{}},"f:metadata":{"f:labels":{"f:app":{}}}}`),
+				entry("other", "Update", `{"f:spec":{"f:pinned":{}},"f:metadata":{"f:labels":{"f:app.kubernetes.io/name":{}}}}`)),
+			want: []string{`metadata.labels["app.kubernetes.io/name"]`, "spec.config.a", "spec.pinned"},
+		},
+		"a computed key is not a prefix of a dotted one": {
+			live: live(entry("Terraform", "Apply", `{"f:spec":{"f:pinned":{},"f:config":{}},"f:metadata":{"f:labels":{"f:app":{}}}}`),
+				entry("other", "Update", `{"f:metadata":{"f:labels":{"f:app.kubernetes.io/name":{}}}}`)),
+			computed: []string{"metadata.labels.app"},
+			want:     []string{`metadata.labels["app.kubernetes.io/name"]`, "spec.config.a"},
+		},
+	} {
+		_, found := liveChanges(manifest, tc.live, "Terraform", skippedNames(t, tc.computed...), nil)
+		var paths []string
+		for path := range found {
+			paths = append(paths, path)
+		}
+		sort.Strings(paths)
+		if !reflect.DeepEqual(paths, tc.want) {
+			t.Errorf("%s:\n got %q\nwant %q", name, paths, tc.want)
+		}
+	}
+}
+
+func TestFieldNames(t *testing.T) {
+	for path, want := range map[string][]string{
+		"spec.replicas":                             {"spec", "replicas"},
+		"spec.template.spec.containers[0].image":    {"spec", "template", "spec", "containers", "image"},
+		`metadata.annotations["example.com/owner"]`: {"metadata", "annotations", "example.com/owner"},
+		`spec.tags[*]`:                              {"spec", "tags"},
+		"data[":                                     nil, "metadata.labels[app]": nil, "metadata.labels['app']": nil, "spec.": nil, ".spec": nil, `[""]`: nil,
+	} {
+		got, err := fieldNames(path)
+		if !reflect.DeepEqual(got, want) || (err == nil) != (want != nil) {
+			t.Errorf("%s: got %q, error %v", path, got, err)
+		}
+	}
+}
+
+// Only the fields a manifest sets move to another manager.
+func TestSplit(t *testing.T) {
+	fields := decodeJSON(t, `{"f:data":{"f:a":{},"f:b":{}},"f:metadata":{"f:labels":{".":{},"f:team":{}}},
+		"f:spec":{"f:containers":{"k:{\"name\":\"web\"}":{".":{},"f:name":{},"f:image":{},"f:env":{}},"k:{\"name\":\"sidecar\"}":{".":{},"f:name":{}}}}}`)
+	manifest := decodeJSON(t, `{"data":{"a":"1"},"spec":{"containers":[{"name":"web","image":"nginx"}]}}`)
+	in, out := split(fields, manifest)
+	wantIn := decodeJSON(t, `{"f:data":{"f:a":{}},"f:spec":{"f:containers":{"k:{\"name\":\"web\"}":{".":{},"f:name":{},"f:image":{}}}}}`)
+	wantOut := decodeJSON(t, `{"f:data":{"f:b":{}},"f:metadata":{"f:labels":{".":{},"f:team":{}}},
+		"f:spec":{"f:containers":{"k:{\"name\":\"web\"}":{"f:env":{}},"k:{\"name\":\"sidecar\"}":{".":{},"f:name":{}}}}}`)
+	if !reflect.DeepEqual(in, wantIn) || !reflect.DeepEqual(out, wantOut) {
+		t.Fatalf("\n in %v\nout %v", in, out)
 	}
 }
 

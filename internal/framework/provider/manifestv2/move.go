@@ -170,4 +170,14 @@ func finishMove(ctx context.Context, resp *resource.MoveStateResponse, summary s
 		resp.Diagnostics.Append(resp.TargetState.SetAttribute(ctx, path.Root(attribute), value)...)
 	}
 	resp.Diagnostics.Append(common.SetIdentity(ctx, resp.TargetIdentity, state.resourceIdentity())...)
+	// kubernetes_manifest applied the object with server-side apply too, so its
+	// fields move with a later change of the manager name.
+	manager := defaultFieldManager
+	if target.fieldManager != nil && target.fieldManager.Name.ValueString() != "" {
+		manager = target.fieldManager.Name.ValueString()
+	}
+	if resp.TargetPrivate != nil {
+		encoded, _ := json.Marshal(manager)
+		resp.Diagnostics.Append(resp.TargetPrivate.SetKey(ctx, managerKey, encoded)...)
+	}
 }

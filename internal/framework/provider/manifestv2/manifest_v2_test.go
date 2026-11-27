@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/kubetest"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -85,8 +86,6 @@ func TestAccKubernetesManifestV2_basic(t *testing.T) {
 				ImportStateId:                        fmt.Sprintf("apiVersion=v1,kind=ConfigMap,namespace=default,name=%s", name),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "uid",
-				// The imported manifest names the namespace the object is in.
-				ImportStateVerifyIgnore: []string{"manifest"},
 			},
 			// A removed key leaves the object: the field manager owned it.
 			// References to object stay known while the update is planned.
@@ -133,6 +132,174 @@ func TestAccKubernetesManifestV2_alreadyExists(t *testing.T) {
 `,
 			ExpectError: regexp.MustCompile(`already exists in the cluster(.|\n)*apiVersion=v1,kind=Namespace,name=kube-system`),
 		}},
+	})
+}
+
+// An object that kubectl applied client-side is imported. The first apply
+// takes over the fields the configuration sets, changes them without a
+// conflict, and leaves the other fields in place.
+func TestAccKubernetesManifestV2_importClientSide(t *testing.T) {
+	name := randomName()
+	ctx := context.Background()
+	config := func(value string) string {
+		return fmt.Sprintf(`import {
+  to = kubernetes_manifest_v2.test
+  id = "apiVersion=v1,kind=ConfigMap,namespace=default,name=%s"
+}
+%s`, name, testAccConfigMap(name, fmt.Sprintf("one = %q", value)))
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_5_0)},
+		CheckDestroy:             checkConfigMapDestroyed(name),
+		Steps: []resource.TestStep{{
+			PreConfig: func() {
+				conn, _ := kubetest.Clientset()
+				cm := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default", Labels: map[string]string{"team": "a"}},
+					Data:       map[string]string{"one": "1", "two": "2"},
+				}
+				if _, err := conn.CoreV1().ConfigMaps("default").Create(ctx, cm, metav1.CreateOptions{FieldManager: "kubectl-client-side-apply"}); err != nil {
+					t.Fatal(err)
+				}
+			},
+			Config: config("changed"),
+			Check: func(*terraform.State) error {
+				conn, _ := kubetest.Clientset()
+				cm, err := conn.CoreV1().ConfigMaps("default").Get(ctx, name, metav1.GetOptions{})
+				if err != nil || cm.Data["one"] != "changed" || cm.Data["two"] != "2" || cm.Labels["team"] != "a" {
+					return fmt.Errorf("unexpected ConfigMap: data %v, labels %v (error: %v)", cm.Data, cm.Labels, err)
+				}
+				return nil
+			},
+		}},
+	})
+}
+
+// Renaming the field manager moves the fields to the new name, also when a
+// value changes in the same apply, and leaves another manager's fields alone.
+func TestAccKubernetesManifestV2_renameFieldManager(t *testing.T) {
+	name := randomName()
+	ctx := context.Background()
+	config := func(manager, value string) string {
+		return strings.Replace(testAccConfigMap(name, fmt.Sprintf("one = %q", value)), "manifest = {",
+			fmt.Sprintf("field_manager {\n    name = %q\n  }\n  manifest = {", manager), 1)
+	}
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             checkConfigMapDestroyed(name),
+		Steps: []resource.TestStep{
+			{Config: testAccConfigMap(name, `one = "1"`)},
+			{
+				PreConfig: func() {
+					conn, _ := kubetest.Clientset()
+					patch := []byte(fmt.Sprintf(`{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":%q},"data":{"other":"x"}}`, name))
+					if _, err := conn.CoreV1().ConfigMaps("default").Patch(ctx, name, types.ApplyPatchType, patch, metav1.PatchOptions{FieldManager: "tf-acc-other"}); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: config("tf-acc-renamed", "2"),
+				Check: func(*terraform.State) error {
+					conn, _ := kubetest.Clientset()
+					cm, err := conn.CoreV1().ConfigMaps("default").Get(ctx, name, metav1.GetOptions{})
+					if err != nil || cm.Data["one"] != "2" || cm.Data["other"] != "x" {
+						return fmt.Errorf("unexpected data %v (error: %v)", cm.Data, err)
+					}
+					for _, entry := range cm.ManagedFields {
+						if entry.Manager == "Terraform" {
+							return fmt.Errorf("the previous field manager still owns fields: %s", entry.FieldsV1.GetRawString())
+						}
+					}
+					return nil
+				},
+			},
+			{Config: testAccConfigMap(name, `one = "2"`), ConfigPlanChecks: expectAction(plancheck.ResourceActionUpdate)},
+		},
+	})
+}
+
+// HCL numbers and bools are applied as strings where the kind has strings.
+func TestAccKubernetesManifestV2_stringValues(t *testing.T) {
+	name := randomName()
+	config := strings.Replace(testAccConfigMap(name, `PORT = 8080, DEBUG = true`), "}\n    data", ", labels = { version = 2 } }\n    data", 1)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		CheckDestroy:             checkConfigMapDestroyed(name),
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("object").AtMapKey("data").AtMapKey("PORT"), knownvalue.StringExact("8080")),
+					statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("object").AtMapKey("metadata").AtMapKey("labels").AtMapKey("version"), knownvalue.StringExact("2")),
+				},
+			},
+			{Config: config, ConfigPlanChecks: expectAction(plancheck.ResourceActionNoop)},
+		},
+	})
+}
+
+// A Job that deletes itself when it completes still satisfies the wait: the
+// watch sees its last state. Its next plan creates it again.
+func TestAccKubernetesManifestV2_selfDeletingJob(t *testing.T) {
+	name := randomName()
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		Steps: []resource.TestStep{{
+			Config: fmt.Sprintf(`resource "kubernetes_manifest_v2" "test" {
+  manifest = {
+    apiVersion = "batch/v1"
+    kind       = "Job"
+    metadata   = { name = %q }
+    spec = {
+      ttlSecondsAfterFinished = 0
+      template = { spec = {
+        restartPolicy = "Never"
+        containers    = [{ name = "main", image = %q, command = ["true"] }]
+      } }
+    }
+  }
+  wait {
+    condition { type = "Complete" }
+  }
+}
+`, name, kubetest.BusyboxImage),
+			ExpectNonEmptyPlan: true,
+		}},
+	})
+}
+
+// An update whose rollout never completes fails. The next plan applies again,
+// also when the configuration goes back to the image that worked.
+func TestAccKubernetesManifestV2_failedUpdateWait(t *testing.T) {
+	name := randomName()
+	ctx := context.Background()
+	const wait = "  wait {\n    rollout = true\n  }\n  timeouts {\n    update = \"20s\"\n  }"
+	broken := strings.Replace(testAccDeployment(name, wait), kubetest.BusyboxImage, "registry.invalid/busybox:none", 1)
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { kubetest.PreCheck(t) },
+		ProtoV6ProviderFactories: kubetest.ProviderFactories,
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_8_0)},
+		Steps: []resource.TestStep{
+			{Config: testAccDeployment(name, wait)},
+			{Config: broken, ExpectError: regexp.MustCompile(`Object applied but not ready(.|\n)*timed out waiting for(.|\n)*rollout`)},
+			{
+				Config:           testAccDeployment(name, wait),
+				ConfigPlanChecks: expectAction(plancheck.ResourceActionUpdate),
+				Check: func(*terraform.State) error {
+					conn, _ := kubetest.Clientset()
+					d, err := conn.AppsV1().Deployments("default").Get(ctx, name, metav1.GetOptions{})
+					if err != nil || d.Spec.Template.Spec.Containers[0].Image != kubetest.BusyboxImage {
+						return fmt.Errorf("the image was not rolled back: %v (error: %v)", d.Spec.Template.Spec.Containers, err)
+					}
+					return nil
+				},
+			},
+			{Config: testAccDeployment(name, wait), ConfigPlanChecks: expectAction(plancheck.ResourceActionNoop)},
+		},
 	})
 }
 
@@ -346,7 +513,7 @@ func TestAccKubernetesManifestV2_movedFromManifest(t *testing.T) {
 func TestAccKubernetesManifestV2_yamlBody(t *testing.T) {
 	name := randomName()
 	ctx := context.Background()
-	config := func(name string, port int) string {
+	config := func(name string, port int, extra ...string) string {
 		return fmt.Sprintf(`resource "kubernetes_manifest_v2" "test" {
   yaml_body = <<-YAML
     apiVersion: v1
@@ -369,8 +536,9 @@ func TestAccKubernetesManifestV2_yamlBody(t *testing.T) {
   field_manager {
     force_conflicts = true
   }
+%[3]s
 }
-`, name, port)
+`, name, port, strings.Join(extra, "\n"))
 	}
 	drift := func(paths ...knownvalue.Check) statecheck.StateCheck {
 		return statecheck.ExpectKnownValue(resourceName, tfjsonpath.New("drift"), knownvalue.ListExact(paths))
@@ -397,8 +565,13 @@ func TestAccKubernetesManifestV2_yamlBody(t *testing.T) {
 					}
 				},
 				RefreshState:       true,
-				Check:              resource.TestCheckResourceAttr(resourceName, "drift.0", "metadata.labels.app.kubernetes.io/name"),
+				Check:              resource.TestCheckResourceAttr(resourceName, "drift.0", `metadata.labels["app.kubernetes.io/name"]`),
 				ExpectNonEmptyPlan: true,
+			},
+			// lifecycle.ignore_changes leaves the change in place.
+			{
+				Config:           config(name, 80, "  lifecycle {\n    ignore_changes = [yaml_body]\n  }"),
+				ConfigPlanChecks: expectAction(plancheck.ResourceActionNoop),
 			},
 			{
 				Config:            config(name, 80),

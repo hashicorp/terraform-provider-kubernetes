@@ -11,16 +11,23 @@ terraform {
   required_version = ">= 1.8.0"
 }
 
-# One resource instance per object of a multi-document file.
+# Decode in a local value: in for_each, Terraform calls the function again
+# for every resource instance.
+locals {
+  # One resource instance per object of a multi-document file.
+  app = provider::kubernetes::manifest_decode_map(file("${path.module}/app.yaml"))
+  # Every YAML file of a directory.
+  all = provider::kubernetes::manifest_decode_map([
+    for name in fileset("${path.module}/manifests", "**/*.yaml") : file("${path.module}/manifests/${name}")
+  ]...)
+}
+
 resource "kubernetes_manifest_v2" "app" {
-  for_each = provider::kubernetes::manifest_decode_map(file("${path.module}/app.yaml"))
+  for_each = local.app
   manifest = each.value
 }
 
-# Every YAML file of a directory.
 resource "kubernetes_manifest_v2" "all" {
-  for_each = provider::kubernetes::manifest_decode_map([
-    for name in fileset("${path.module}/manifests", "**/*.yaml") : file("${path.module}/manifests/${name}")
-  ]...)
+  for_each = local.all
   manifest = each.value
 }

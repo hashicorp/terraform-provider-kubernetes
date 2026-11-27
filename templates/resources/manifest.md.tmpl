@@ -13,7 +13,7 @@ Once applied, the `object` attribute contains the state of the resource as retur
 
 ~> A minimum Terraform version of 0.14.8 is required to use this resource.
 
--> For new configurations, consider [`kubernetes_manifest_v2`](manifest_v2.md). It takes the same arguments and does not read the kind's schema from the cluster while planning, so a CustomResourceDefinition and its custom resources, or a cluster and the objects in it, can be created in one apply. A `moved` block moves an existing `kubernetes_manifest` resource to it. See [Applying manifests with `kubernetes_manifest_v2`](../guides/applying-manifests.md).
+-> For new configurations, consider [`kubernetes_manifest_v2`](manifest_v2.md). It takes the same arguments, except `wait_for`, and does not read the kind's schema from the cluster while planning, so a CustomResourceDefinition and its custom resources, or a cluster and the objects in it, can be created in one apply. A `moved` block moves an existing `kubernetes_manifest` resource to it. See [Applying manifests with `kubernetes_manifest_v2`](../guides/applying-manifests.md).
 
 {{ .SchemaMarkdown }}
 

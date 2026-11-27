@@ -5,6 +5,7 @@ package manifestv2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -14,10 +15,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/util/jsonpath"
 	"k8s.io/kubectl/pkg/polymorphichelpers"
@@ -59,11 +62,19 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 		}
 		expected = append(expected, expectation{"the rollout to complete", func(obj *unstructured.Unstructured) (bool, error) {
 			_, done, err := viewer.Status(obj, 0)
+			if err != nil && done {
+				// kubectl has no rollout status for the OnDelete strategy,
+				// which updates pods only as they are deleted.
+				return podsReady(obj), nil
+			}
 			return done, err
 		}})
 	}
 	for _, condition := range w.Conditions {
 		kind, status := condition.Type.ValueString(), condition.Status.ValueString()
+		if status == "" {
+			status = string(metav1.ConditionTrue)
+		}
 		expected = append(expected, expectation{fmt.Sprintf("condition %s to be %s", kind, status), func(obj *unstructured.Unstructured) (bool, error) {
 			conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
 			for _, condition := range conditions {
@@ -97,7 +108,7 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 		}
 		expected = append(expected, expectation{fmt.Sprintf("field %s to match %q", field, pattern), func(obj *unstructured.Unstructured) (bool, error) {
 			results, err := path.FindResults(obj.Object)
-			if err != nil || len(results) == 0 || len(results[0]) == 0 {
+			if err != nil || len(results) == 0 || len(results[0]) == 0 || results[0][0].Interface() == nil {
 				return false, nil
 			}
 			text := fmt.Sprint(results[0][0].Interface())
@@ -108,6 +119,28 @@ func expectations(ctx context.Context, config types.Object, id identity) ([]expe
 		}})
 	}
 	return expected, nil
+}
+
+var mapKeys = regexp.MustCompile(`\["([^"]*)"\]`)
+
+// podsReady reports whether a StatefulSet or DaemonSet has seen its current
+// spec and all its pods are ready.
+func podsReady(obj *unstructured.Unstructured) bool {
+	observed, _, _ := unstructured.NestedInt64(obj.Object, "status", "observedGeneration")
+	if observed < obj.GetGeneration() {
+		return false
+	}
+	if obj.GetKind() == "DaemonSet" {
+		desired, _, _ := unstructured.NestedInt64(obj.Object, "status", "desiredNumberScheduled")
+		ready, _, _ := unstructured.NestedInt64(obj.Object, "status", "numberReady")
+		return ready >= desired
+	}
+	replicas, found, _ := unstructured.NestedInt64(obj.Object, "spec", "replicas")
+	if !found {
+		replicas = 1
+	}
+	ready, _, _ := unstructured.NestedInt64(obj.Object, "status", "readyReplicas")
+	return ready >= replicas
 }
 
 func sortedKeys(m types.Map) []string {
@@ -121,28 +154,135 @@ func sortedKeys(m types.Map) []string {
 	return keys
 }
 
-// await polls the object until every expectation is met or ctx ends.
-func await(ctx context.Context, client dynamic.ResourceInterface, name string, expected []expectation) error {
+// unmet is an expectation that failed, such as a rollout past its progress
+// deadline: waiting longer does not help.
+type unmet struct{ error }
+
+var errDeleted = errors.New("deleted")
+
+const watchSeconds = 30
+
+// await waits until the object meets every expectation or ctx ends, and
+// returns the object as it was then. It
+// watches the object, so it sees every change, including the last state of an
+// object that is deleted, such as a Job that removes itself when it finishes.
+// Where the credentials do not allow a watch, it polls. Errors that waiting
+// may resolve, such as an API server restart, do not end the wait.
+func await(ctx context.Context, client dynamic.ResourceInterface, name string, expected []expectation) (*unstructured.Unstructured, error) {
 	if len(expected) == 0 {
-		return nil
+		return nil, nil
 	}
-	pending := ""
-	err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
-		obj, err := client.Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
+	var ready *unstructured.Unstructured
+	pending := expected[0].description
+	met := func(obj *unstructured.Unstructured) (bool, error) {
 		for _, e := range expected {
-			met, err := e.met(obj)
-			if err != nil || !met {
+			if ok, err := e.met(obj); err != nil || !ok {
 				pending = e.description
-				return false, err
+				if err != nil {
+					return false, unmet{err}
+				}
+				return false, nil
 			}
 		}
+		ready = obj
 		return true, nil
-	})
-	if err != nil && ctx.Err() != nil {
-		return fmt.Errorf("timed out waiting for %s", pending)
 	}
-	return err
+	watching := true
+	var last error
+	// resourceVersion is where the next watch starts. A watch that ends
+	// continues from there, so no change falls between two of them; after an
+	// error the object is read again.
+	resourceVersion := ""
+	for {
+		var done bool
+		var err error
+		if resourceVersion == "" || !watching {
+			var obj *unstructured.Unstructured
+			if obj, err = client.Get(ctx, name, metav1.GetOptions{}); err == nil {
+				resourceVersion = obj.GetResourceVersion()
+				done, err = met(obj)
+			}
+		}
+		began := time.Now()
+		if err == nil && !done && watching {
+			done, resourceVersion, err = watchUntil(ctx, client, name, resourceVersion, met)
+			if apierrors.IsForbidden(err) || apierrors.IsMethodNotSupported(err) {
+				watching, err = false, nil
+			}
+		}
+		var failed unmet
+		switch {
+		case done:
+			return ready, nil
+		case ctx.Err() != nil:
+			return nil, stopped(ctx, pending, last)
+		case errors.As(err, &failed):
+			return nil, failed.error
+		case errors.Is(err, errDeleted) || apierrors.IsNotFound(err):
+			return nil, fmt.Errorf("the object was deleted while waiting for %s", pending)
+		case err != nil && !transient(err):
+			return nil, err
+		case err != nil:
+			last, resourceVersion = err, ""
+		case watching && time.Since(began) > time.Second:
+			continue
+		}
+		select {
+		case <-ctx.Done():
+			return nil, stopped(ctx, pending, last)
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
+// watchUntil follows the object's changes after resourceVersion until it meets
+// the expectations, is deleted, or the watch ends, and returns the resource
+// version it got to. A watch lasts half a minute, so that a proxy that holds
+// back the events until a response ends delays the wait by no more than that.
+func watchUntil(ctx context.Context, client dynamic.ResourceInterface, name, resourceVersion string, met func(*unstructured.Unstructured) (bool, error)) (bool, string, error) {
+	ctx, cancel := context.WithTimeout(ctx, watchSeconds*time.Second+15*time.Second)
+	defer cancel()
+	seconds := int64(watchSeconds)
+	w, err := client.Watch(ctx, metav1.ListOptions{
+		FieldSelector:       fields.OneTermEqualSelector("metadata.name", name).String(),
+		ResourceVersion:     resourceVersion,
+		TimeoutSeconds:      &seconds,
+		AllowWatchBookmarks: true,
+	})
+	if err != nil {
+		return false, resourceVersion, err
+	}
+	defer w.Stop()
+	for event := range w.ResultChan() {
+		if event.Type == watch.Error {
+			return false, resourceVersion, apierrors.FromObject(event.Object)
+		}
+		obj, ok := event.Object.(*unstructured.Unstructured)
+		if !ok {
+			continue
+		}
+		resourceVersion = obj.GetResourceVersion()
+		if event.Type == watch.Bookmark {
+			continue
+		}
+		if done, err := met(obj); done || err != nil {
+			return done, resourceVersion, err
+		}
+		if event.Type == watch.Deleted {
+			return false, resourceVersion, errDeleted
+		}
+	}
+	return false, resourceVersion, nil
+}
+
+// stopped explains why a wait ended before its condition held.
+func stopped(ctx context.Context, pending string, last error) error {
+	reason := "timed out"
+	if errors.Is(ctx.Err(), context.Canceled) {
+		reason = "interrupted"
+	}
+	if last != nil {
+		return fmt.Errorf("%s waiting for %s; the last error was: %w", reason, pending, last)
+	}
+	return fmt.Errorf("%s waiting for %s", reason, pending)
 }

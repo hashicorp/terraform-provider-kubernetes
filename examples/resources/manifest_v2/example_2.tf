@@ -16,9 +16,14 @@ resource "kubernetes_manifest_v2" "issuer" {
 # Every object of a multi-document YAML file, one resource instance each.
 # The file can hold a Namespace, CustomResourceDefinitions and custom
 # resources together. Split them when the order matters: see "Objects that
-# depend on each other".
+# depend on each other". A local value decodes the file once; in for_each,
+# Terraform calls the function again for every object.
+locals {
+  operator = provider::kubernetes::manifest_decode_map(file("${path.module}/operator.yaml"))
+}
+
 resource "kubernetes_manifest_v2" "operator" {
-  for_each = provider::kubernetes::manifest_decode_map(file("${path.module}/operator.yaml"))
+  for_each = local.operator
   manifest = each.value
 }
 

@@ -720,6 +720,51 @@ func TestAccKubernetesServiceAccountV1_lifecycle(t *testing.T) {
 	}
 }
 
+// Identity import accepts only kind ServiceAccount and api_version v1, like the released
+// rbacv1 resources. 3.5.0 read only namespace and name, so the rejection is new behaviour.
+func TestAccKubernetesServiceAccountV1_identityImportRejectsWrongType(t *testing.T) {
+	for _, kind := range serviceAccountTypes {
+		t.Run(kind.name, func(t *testing.T) {
+			namespace := "tf-acc-sa-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+			name := "account"
+			if kind.adopt {
+				name = "default"
+			}
+			address := kind.name + ".test"
+			config := serviceAccountLiveFixture(namespace) +
+				serviceAccountConfig(kind.name, "test", "kubernetes_namespace.test.metadata[0].name", name, serviceAccountScenarios()[0], true)
+			rejected := func(identityKind, apiVersion string) resource.TestStep {
+				return resource.TestStep{
+					ResourceName: address, ImportState: true, ImportStateKind: resource.ImportBlockWithResourceIdentity,
+					ImportStateConfigExact: true,
+					Config: config + fmt.Sprintf(`
+import {
+  to = %s
+  identity = {
+    namespace   = %q
+    name        = %q
+    kind        = %q
+    api_version = %q
+  }
+}
+`, address, namespace, name, identityKind, apiVersion),
+					ExpectError: regexp.MustCompile(`Invalid service account identity`),
+				}
+			}
+			resource.ParallelTest(t, resource.TestCase{
+				PreCheck: func() { testAccPreCheck(t) }, ProtoV6ProviderFactories: serviceAccountMuxFactories,
+				TerraformVersionChecks: []tfversion.TerraformVersionCheck{tfversion.SkipBelow(tfversion.Version1_12_0)},
+				CheckDestroy:           serviceAccountLiveDestroy,
+				Steps: []resource.TestStep{
+					{Config: config},
+					rejected("Pod", "v1"),
+					rejected("ServiceAccount", "v2"),
+				},
+			})
+		})
+	}
+}
+
 func serviceAccountLiveDestroy(state *terraform.State) error {
 	client, err := mainClientset()
 	if err != nil {
@@ -1494,7 +1539,7 @@ func TestServiceAccountCLIMigration(t *testing.T) {
 		t.Skip("set TF_KUBERNETES_SERVICE_ACCOUNT_CLI_TESTS=1 for loopback Terraform migrations")
 	}
 	for _, kind := range serviceAccountTypes {
-		for _, version := range []string{"3.4.0", "3.3.0", "3.2.1", "2.37.1"} {
+		for _, version := range serviceAccountReleasedVersions {
 			for _, scenario := range serviceAccountScenarios() {
 				for _, migration := range []string{"same-type", "alias-move", "address-move"} {
 					t.Run(kind.name+"/"+version+"/"+scenario.name+"/"+migration, func(t *testing.T) {
@@ -1827,7 +1872,7 @@ func TestServiceAccountCLIDefaultAdoptionReferences(t *testing.T) {
 	if os.Getenv("TF_KUBERNETES_SERVICE_ACCOUNT_CLI_TESTS") != "1" {
 		t.Skip("set TF_KUBERNETES_SERVICE_ACCOUNT_CLI_TESTS=1 for loopback adoption probes")
 	}
-	for _, version := range []string{"3.4.0", "3.3.0", "3.2.1", "2.37.1", "local"} {
+	for _, version := range append(slices.Clone(serviceAccountReleasedVersions), "local") {
 		t.Run(version, func(t *testing.T) {
 			dir := serviceAccountCLIEnvironment(t)
 			api := newServiceAccountAPI(t, true)

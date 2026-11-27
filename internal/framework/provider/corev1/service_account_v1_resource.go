@@ -6,7 +6,6 @@ package corev1
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -54,24 +53,8 @@ func serviceAccountConfigure(req resource.ConfigureRequest, resp *resource.Confi
 }
 
 func serviceAccountClient(callback func() any) (*clientset.Clientset, kubernetes.MetadataFilters, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	if callback == nil {
-		diags.AddError("Provider not configured", "The SDKv2 provider metadata is unavailable.")
-		return nil, nil, diags
-	}
-	meta := callback()
-	if meta == nil || (reflect.ValueOf(meta).Kind() == reflect.Ptr && reflect.ValueOf(meta).IsNil()) {
-		diags.AddError("Provider not configured", "The SDKv2 provider metadata is unavailable.")
-		return nil, nil, diags
-	}
-	clients, ok := meta.(kubernetes.KubeClientsets)
-	if !ok {
-		diags.AddError("Unexpected provider data", fmt.Sprintf("Expected kubernetes.KubeClientsets, got %T.", meta))
-		return nil, nil, diags
-	}
-	filters, ok := meta.(kubernetes.MetadataFilters)
-	if !ok {
-		diags.AddError("Unexpected provider data", fmt.Sprintf("Expected kubernetes.MetadataFilters, got %T.", meta))
+	clients, filters, diags := common.ResolveSDKv2Meta(callback)
+	if diags.HasError() {
 		return nil, nil, diags
 	}
 	conn, err := clients.MainClientset()

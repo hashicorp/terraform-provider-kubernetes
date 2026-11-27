@@ -11,7 +11,9 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -29,6 +31,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/hashicorp/terraform-provider-kubernetes/internal/framework/provider/common"
+	"github.com/hashicorp/terraform-provider-kubernetes/kubernetes"
 	jsonpatch "gopkg.in/evanphx/json-patch.v4"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,7 +99,7 @@ func TestServiceAccountInternalDefaultAdoptionPreservesReferences(t *testing.T) 
 			if diags.HasError() {
 				t.Fatal(diags)
 			}
-			if len(ops) != 2 || ops[0].GetPath() != "/metadata/resourceVersion" || ops[1].GetPath() != "/automountServiceAccountToken" {
+			if len(ops) != 1 || ops[0].GetPath() != "/automountServiceAccountToken" {
 				t.Fatalf("omitted collections generated adoption patches: %#v", ops)
 			}
 			if !reflect.DeepEqual(current, before) {
@@ -130,6 +133,68 @@ func TestServiceAccountInternalMetadataOwnership(t *testing.T) {
 	}
 	if len(decoded) != 1 || decoded[0]["path"] != "/metadata/labels/managed~1key" || decoded[0]["op"] != "remove" {
 		t.Fatalf("removal changed controller map: %s", payload)
+	}
+}
+
+// Another client may edit a managed key between plan and apply. Update must write
+// only the keys the plan changed, as SDKv2 did, so that edit survives.
+func TestServiceAccountInternalMetadataPatchOnlyChangedKeys(t *testing.T) {
+	labels := func(values map[string]string) types.Map {
+		if values == nil {
+			return types.MapNull(types.StringType)
+		}
+		elements := map[string]attr.Value{}
+		for key, value := range values {
+			elements[key] = types.StringValue(value)
+		}
+		return types.MapValueMust(types.StringType, elements)
+	}
+	for _, tc := range []struct {
+		name                    string
+		state, plan, live, want map[string]string
+	}{{
+		name:  "changed key next to concurrently edited key",
+		state: map[string]string{"a": "1", "b": "1"}, plan: map[string]string{"a": "1", "b": "2"},
+		live: map[string]string{"a": "3", "b": "1"}, want: map[string]string{"a": "3", "b": "2"},
+	}, {
+		name:  "removed key next to concurrently edited key",
+		state: map[string]string{"a": "1", "b": "1"}, plan: map[string]string{"a": "1"},
+		live: map[string]string{"a": "3", "b": "1"}, want: map[string]string{"a": "3"},
+	}, {
+		name:  "added key keeps foreign and concurrently edited keys",
+		state: map[string]string{"a": "1"}, plan: map[string]string{"a": "1", "c": "1"},
+		live: map[string]string{"a": "3", "foreign": "x"}, want: map[string]string{"a": "3", "c": "1", "foreign": "x"},
+	}, {
+		name: "first managed key keeps foreign keys",
+		plan: map[string]string{"a": "1"},
+		live: map[string]string{"foreign": "x"}, want: map[string]string{"a": "1", "foreign": "x"},
+	}} {
+		t.Run(tc.name, func(t *testing.T) {
+			ops := serviceAccountMetadataPatch("labels", labels(tc.state), labels(tc.plan), tc.live)
+			payload, err := ops.MarshalJSON()
+			if err != nil {
+				t.Fatal(err)
+			}
+			patch, err := jsonpatch.DecodePatch(payload)
+			if err != nil {
+				t.Fatal(err)
+			}
+			document, err := json.Marshal(corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Labels: tc.live}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			patched, err := patch.Apply(document)
+			if err != nil {
+				t.Fatalf("patch %s does not apply: %v", payload, err)
+			}
+			var got corev1.ServiceAccount
+			if err := json.Unmarshal(patched, &got); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got.Labels, tc.want) {
+				t.Fatalf("labels %v, want %v (patch %s)", got.Labels, tc.want, payload)
+			}
+		})
 	}
 }
 
@@ -436,6 +501,75 @@ func TestServiceAccountInternalConcreteModelRoundtrip(t *testing.T) {
 	}
 }
 
+type serviceAccountTestClientsets struct {
+	kubernetes.KubeClientsets
+	serviceAccountTestFilters
+	client *clientset.Clientset
+}
+
+func (c serviceAccountTestClientsets) MainClientset() (*clientset.Clientset, error) {
+	return c.client, nil
+}
+
+// timeouts.create bounds every API call in Create, as in SDKv2, not only the waits.
+func TestServiceAccountInternalCreateTimeoutBoundsAPICalls(t *testing.T) {
+	ctx := context.Background()
+	release := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-time.After(3 * time.Second):
+		}
+		http.Error(w, "too late", http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	defer close(release)
+	conn, err := clientset.NewForConfig(&rest.Config{Host: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := serviceAccountSchema(ctx, false)
+	timeoutTypes := timeoutsAttributeTypes(s)
+	plan := tfsdk.Plan{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}
+	model := ServiceAccountV1Model{
+		ID: types.StringUnknown(),
+		Metadata: []common.NamespacedMetadataModel{{
+			MetadataModel: common.MetadataModel{
+				MetadataBase: common.MetadataBase{
+					Name: types.StringValue("account"), UID: types.StringUnknown(),
+					ResourceVersion: types.StringUnknown(), Generation: types.Int64Unknown(),
+					Labels: types.MapNull(types.StringType), Annotations: types.MapNull(types.StringType),
+				},
+				GenerateName: types.StringNull(),
+			},
+			Namespace: types.StringValue("ns"),
+		}},
+		Secret:                       types.SetNull(serviceAccountReferenceType),
+		ImagePullSecret:              types.SetNull(serviceAccountReferenceType),
+		AutomountServiceAccountToken: types.BoolValue(true),
+		DefaultSecretName:            types.StringUnknown(),
+		Timeouts: timeouts.Value{Object: types.ObjectValueMust(timeoutTypes, map[string]attr.Value{
+			"create": types.StringValue("200ms"),
+		})},
+	}
+	if diags := serviceAccountWriteModel(ctx, &plan, model, false); diags.HasError() {
+		t.Fatal(diags)
+	}
+	resp := resource.CreateResponse{State: tfsdk.State{Schema: s, Raw: tftypes.NewValue(s.Type().TerraformType(ctx), nil)}}
+	callback := func() any { return serviceAccountTestClientsets{client: conn} }
+	start := time.Now()
+	serviceAccountCreate(ctx, resource.CreateRequest{Plan: plan}, &resp, callback, false)
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Fatalf("create took %s; timeouts.create did not bound the API call", elapsed)
+	}
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("create succeeded past its timeout")
+	}
+	if detail := resp.Diagnostics.Errors()[0].Detail(); !strings.Contains(detail, "context deadline exceeded") {
+		t.Fatalf("unexpected error: %s", detail)
+	}
+}
+
 func TestServiceAccountInternalConfigureErrors(t *testing.T) {
 	var callback func() any
 	resp := resource.ConfigureResponse{}
@@ -641,7 +775,10 @@ func TestServiceAccountInternalLateMetadataRemovalPlan(t *testing.T) {
 	}
 }
 
-func TestServiceAccountInternalPatchRejectsConcurrentChanges(t *testing.T) {
+// As in SDKv2, Update has no resourceVersion precondition: another client's write
+// between Update's GET and PATCH must not fail the apply, and keys the plan did not
+// touch must survive.
+func TestServiceAccountInternalPatchAppliesOverConcurrentChanges(t *testing.T) {
 	ctx := context.Background()
 	current := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -688,16 +825,30 @@ func TestServiceAccountInternalPatchRejectsConcurrentChanges(t *testing.T) {
 	if _, err := patch.Apply(original); err != nil {
 		t.Fatalf("patch rejected the version it was built against: %s: %v", payload, err)
 	}
+	for _, op := range ops {
+		if op.GetPath() == "/metadata/resourceVersion" {
+			t.Fatalf("patch carries a resourceVersion precondition: %s", payload)
+		}
+	}
 	concurrent := current.DeepCopy()
 	concurrent.ResourceVersion = "101"
-	concurrent.Labels["managed"] = "changed-concurrently"
+	concurrent.Labels["concurrent"] = "added"
 	concurrent.Secrets = append(concurrent.Secrets, corev1.ObjectReference{Name: "added-concurrently"})
 	changed, err := json.Marshal(concurrent)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := patch.Apply(changed); err == nil {
-		t.Fatalf("patch overwrote concurrent metadata/reference edits: %s", payload)
+	patched, err := patch.Apply(changed)
+	if err != nil {
+		t.Fatalf("concurrent write failed the patch: %s: %v", payload, err)
+	}
+	var got corev1.ServiceAccount
+	if err := json.Unmarshal(patched, &got); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"controller": "keep", "concurrent": "added"}
+	if !reflect.DeepEqual(got.Labels, want) {
+		t.Fatalf("labels %v, want %v (patch %s)", got.Labels, want, payload)
 	}
 }
 

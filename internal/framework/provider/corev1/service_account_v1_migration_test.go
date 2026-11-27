@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 
 	tfjson "github.com/hashicorp/terraform-json"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -44,14 +46,14 @@ import (
 
 // serviceAccountSDKv2Version is the last release that served both ServiceAccount resources
 // from SDKv2. The per-shape tests start from it.
-const serviceAccountSDKv2Version = "3.4.0"
+const serviceAccountSDKv2Version = "3.5.0"
 
 // serviceAccountSDKv2PreIdentityVersion predates resource identity, which shipped in 2.38.0.
 // Its state has no identity, so the upgrade builds one rather than carrying it across.
 const serviceAccountSDKv2PreIdentityVersion = "2.37.1"
 
 // serviceAccountReleasedVersions are the releases the fully populated matrix starts from.
-var serviceAccountReleasedVersions = []string{serviceAccountSDKv2Version, "3.3.0", "3.2.1", serviceAccountSDKv2PreIdentityVersion}
+var serviceAccountReleasedVersions = []string{serviceAccountSDKv2Version, "3.4.0", "3.3.0", serviceAccountSDKv2PreIdentityVersion}
 
 // serviceAccountDeclaredInternalLabel matches the internal-key filter, so Read keeps it only
 // because the configuration declares it.
@@ -190,39 +192,86 @@ func serviceAccountCheckUID(address string, uid *k8stypes.UID) resource.TestChec
 // testAccServiceAccountUpgrade applies one shape under an exact released SDKv2 provider, then
 // plans it under the local build and asserts expect. The post-apply plan proves an expected
 // one-off update settles, and the UID check rules out replacement.
-func testAccServiceAccountUpgrade(t *testing.T, kind serviceAccountKind, version string, move bool, scenario serviceAccountScenario, expect plancheck.PlanCheck) {
+func testAccServiceAccountUpgrade(t *testing.T, kind serviceAccountKind, version string, move bool, scenario serviceAccountScenario, expect serviceAccountUpgradeExpectation) {
 	t.Helper()
 	dir := serviceAccountLiveMigrationEnvironment(t)
 	namespace := "tf-acc-sa-upgrade-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	before, after, source, target := serviceAccountUpgradeConfigs(kind, move, namespace, serviceAccountUpgradeName(kind, scenario), scenario)
+	name := serviceAccountUpgradeName(kind, scenario)
+	before, after, source, target := serviceAccountUpgradeConfigs(kind, move, namespace, name, scenario)
 	var uid k8stypes.UID
+	generatedName := statecheck.CompareValue(compare.ValuesSame())
+	namePath := tfjsonpath.New("metadata").AtSliceIndex(0).AtMapKey("name")
+	steps := []resource.TestStep{
+		{
+			ExternalProviders: serviceAccountReleased(version),
+			Config:            before,
+			Check:             resource.ComposeAggregateTestCheckFunc(serviceAccountReleasedVersion(dir, version), serviceAccountCaptureUID(source, &uid)),
+		},
+		serviceAccountUpgradePlanOnlyStep(after, expect.changes, expect.check(target)),
+		{
+			ProtoV6ProviderFactories: serviceAccountMuxFactories,
+			Config:                   after,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply:             []plancheck.PlanCheck{expect.check(target)},
+				PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+			},
+			Check: serviceAccountCheckUID(target, &uid),
+		},
+	}
+	if scenario.generate {
+		// name is server-assigned and forces replacement. The first real update on upgraded
+		// state must keep it known in the plan, or the ServiceAccount would be recreated.
+		steps[0].ConfigStateChecks = []statecheck.StateCheck{generatedName.AddStateValue(source, namePath)}
+		changed := scenario
+		changed.labels = maps.Clone(scenario.labels)
+		if changed.labels == nil {
+			changed.labels = map[string]string{}
+		}
+		changed.labels["tf-acc-updated"] = "true"
+		_, updated, _, _ := serviceAccountUpgradeConfigs(kind, move, namespace, name, changed)
+		steps = append(steps, resource.TestStep{
+			ProtoV6ProviderFactories: serviceAccountMuxFactories,
+			Config:                   updated,
+			ConfigPlanChecks: resource.ConfigPlanChecks{
+				PreApply:             []plancheck.PlanCheck{serviceAccountExpectUpdate.check(target)},
+				PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+			},
+			Check: resource.ComposeAggregateTestCheckFunc(
+				serviceAccountCheckUID(target, &uid),
+				resource.TestCheckResourceAttr(target, "metadata.0.labels.tf-acc-updated", "true"),
+			),
+			ConfigStateChecks: []statecheck.StateCheck{generatedName.AddStateValue(target, namePath)},
+		})
+	}
 	resource.Test(t, resource.TestCase{
 		PreCheck:               func() { testAccPreCheck(t) },
 		TerraformVersionChecks: serviceAccountUpgradeVersionChecks(move),
 		CheckDestroy:           serviceAccountLiveDestroyNamespace(namespace),
-		Steps: []resource.TestStep{
-			{
-				ExternalProviders: serviceAccountReleased(version),
-				Config:            before,
-				Check:             resource.ComposeAggregateTestCheckFunc(serviceAccountReleasedVersion(dir, version), serviceAccountCaptureUID(source, &uid)),
-			},
-			{
-				ProtoV6ProviderFactories: serviceAccountMuxFactories,
-				Config:                   after,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply:             []plancheck.PlanCheck{expect},
-					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
-				},
-				Check: serviceAccountCheckUID(target, &uid),
-			},
-		},
+		Steps:                  steps,
 	})
+}
+
+// serviceAccountUpgradePlanOnlyStep plans SDKv2-written state under the local build before
+// anything refreshes it. An apply step refreshes first, so it would hide a diff that appears
+// only in `terraform plan -refresh=false`. The checks run on the refresh-free plan and again
+// on the refreshing plan that follows.
+func serviceAccountUpgradePlanOnlyStep(config string, changes bool, checks ...plancheck.PlanCheck) resource.TestStep {
+	return resource.TestStep{
+		ProtoV6ProviderFactories: serviceAccountMuxFactories,
+		Config:                   config,
+		PlanOnly:                 true,
+		ExpectNonEmptyPlan:       changes,
+		ConfigPlanChecks: resource.ConfigPlanChecks{
+			PostApplyPreRefresh:  checks,
+			PostApplyPostRefresh: checks,
+		},
+	}
 }
 
 // testAccServiceAccountUpgradeShape runs one shape for each resource type that supports it.
 // The default ServiceAccount has a fixed name, so generate_name shapes apply only to the
 // regular resource.
-func testAccServiceAccountUpgradeShape(t *testing.T, version string, move bool, shape string, expect func(address string) plancheck.PlanCheck) {
+func testAccServiceAccountUpgradeShape(t *testing.T, version string, move bool, shape string, expect serviceAccountUpgradeExpectation) {
 	t.Helper()
 	for _, kind := range serviceAccountTypes {
 		scenario := serviceAccountShape(t, shape)
@@ -230,19 +279,29 @@ func testAccServiceAccountUpgradeShape(t *testing.T, version string, move bool, 
 			continue
 		}
 		t.Run(kind.name, func(t *testing.T) {
-			testAccServiceAccountUpgrade(t, kind, version, move, scenario, expect(kind.name+".test"))
+			testAccServiceAccountUpgrade(t, kind, version, move, scenario, expect)
 		})
 	}
 }
 
-func serviceAccountExpectEmpty(string) plancheck.PlanCheck {
-	return plancheck.ExpectEmptyPlan()
+// serviceAccountUpgradeExpectation is the first plan the local build must produce for
+// SDKv2-written state. changes tells the PlanOnly step whether that plan is non-empty.
+type serviceAccountUpgradeExpectation struct {
+	check   func(address string) plancheck.PlanCheck
+	changes bool
+}
+
+var serviceAccountExpectEmpty = serviceAccountUpgradeExpectation{
+	check: func(string) plancheck.PlanCheck { return plancheck.ExpectEmptyPlan() },
 }
 
 // serviceAccountExpectUpdate asserts the action rather than tolerating any non-empty plan,
 // since a replacement would recreate the ServiceAccount.
-func serviceAccountExpectUpdate(address string) plancheck.PlanCheck {
-	return plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)
+var serviceAccountExpectUpdate = serviceAccountUpgradeExpectation{
+	check: func(address string) plancheck.PlanCheck {
+		return plancheck.ExpectResourceAction(address, plancheck.ResourceActionUpdate)
+	},
+	changes: true,
 }
 
 func serviceAccountInjectMetadata(t *testing.T, namespace, name, field, key string) {
@@ -282,17 +341,28 @@ func serviceAccountCheckMetadataKey(namespace, name, field, key string) resource
 // another controller writes it before the upgrade, and the first update afterwards must patch
 // around it rather than replace the live map. ignoredMetadataKey is filtered like a key
 // matching ignore_labels, without provider configuration. Both maps are covered, plus the
-// case where the managed and ignored keys share a map.
+// case where the managed and ignored keys share a map. With firstKey the map starts
+// unmanaged and the update adds its first managed key, the case where 3.5.0 replaced the
+// whole live map and dropped the ignored key.
 func testAccServiceAccountIgnoredMetadataSurvivesUpdate(t *testing.T, move bool) {
 	t.Helper()
 	kind := serviceAccountTypes[0]
 	const name = "account"
-	for _, tc := range []struct{ ignored, managed string }{
+	for _, tc := range []struct {
+		ignored, managed string
+		firstKey         bool
+	}{
 		{ignored: "annotations", managed: "labels"},
 		{ignored: "labels", managed: "annotations"},
 		{ignored: "labels", managed: "labels"},
+		{ignored: "labels", managed: "labels", firstKey: true},
+		{ignored: "annotations", managed: "annotations", firstKey: true},
 	} {
-		t.Run(tc.ignored+"-ignored-"+tc.managed+"-managed", func(t *testing.T) {
+		testName := tc.ignored + "-ignored-" + tc.managed + "-managed"
+		if tc.firstKey {
+			testName += "-first-key"
+		}
+		t.Run(testName, func(t *testing.T) {
 			dir := serviceAccountLiveMigrationEnvironment(t)
 			namespace := "tf-acc-sa-ignored-" + acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
 			managed := func(value string) serviceAccountScenario {
@@ -304,7 +374,11 @@ func testAccServiceAccountIgnoredMetadataSurvivesUpdate(t *testing.T, move bool)
 				}
 				return scenario
 			}
-			before, upgraded, source, target := serviceAccountUpgradeConfigs(kind, move, namespace, name, managed("before"))
+			initial := managed("before")
+			if tc.firstKey {
+				initial = serviceAccountScenario{name: "unmanaged"}
+			}
+			before, upgraded, source, target := serviceAccountUpgradeConfigs(kind, move, namespace, name, initial)
 			_, updated, _, _ := serviceAccountUpgradeConfigs(kind, move, namespace, name, managed("after"))
 			ignoredKept := serviceAccountCheckMetadataKey(namespace, name, tc.ignored, ignoredMetadataKey)
 			var uid k8stypes.UID
@@ -333,7 +407,7 @@ func testAccServiceAccountIgnoredMetadataSurvivesUpdate(t *testing.T, move bool)
 						ProtoV6ProviderFactories: serviceAccountMuxFactories,
 						Config:                   updated,
 						ConfigPlanChecks: resource.ConfigPlanChecks{
-							PreApply:             []plancheck.PlanCheck{serviceAccountExpectUpdate(target)},
+							PreApply:             []plancheck.PlanCheck{serviceAccountExpectUpdate.check(target)},
 							PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 						},
 						Check: resource.ComposeAggregateTestCheckFunc(
@@ -649,6 +723,7 @@ func testAccServiceAccountReleaseMatrix(t *testing.T, moves ...string) {
 								ConfigPlanChecks:  resource.ConfigPlanChecks{PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()}},
 								ConfigStateChecks: []statecheck.StateCheck{snapshot.check(source, true)},
 							},
+							serviceAccountUpgradePlanOnlyStep(after, false, guards.PreApply...),
 							{
 								ProtoV6ProviderFactories: serviceAccountMuxFactories, Config: after, Check: check(target),
 								ConfigPlanChecks:  guards,
@@ -722,6 +797,7 @@ func TestAccKubernetesServiceAccountV1_UpgradeFromSDKV2_emptyValues(t *testing.T
 						Config:            config,
 						Check:             resource.ComposeAggregateTestCheckFunc(serviceAccountReleasedVersion(dir, version), capture),
 					},
+					serviceAccountUpgradePlanOnlyStep(config, true, serviceAccountExpectUpdate.check(address)),
 					{
 						ProtoV6ProviderFactories: serviceAccountMuxFactories, Config: config, Check: unchanged,
 						ConfigPlanChecks: resource.ConfigPlanChecks{

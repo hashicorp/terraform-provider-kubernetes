@@ -39,8 +39,8 @@ The version below is the first release containing each migration.
 | Resource | `kubernetes_role_v1` | v3.4.0 | [Role resource](#resource-kubernetes_role_v1) |
 | Resource | `kubernetes_role_binding_v1` | v3.5.0 | [RoleBinding resource](#resource-kubernetes_role_binding_v1) |
 | Resource | `kubernetes_cluster_role_binding_v1` | v3.5.0 | [ClusterRoleBinding resource](#resource-kubernetes_cluster_role_binding_v1) |
-| Resource | `kubernetes_service_account_v1` | v3.5.0 | [ServiceAccount resources](#resource-kubernetes_service_account_v1-and-kubernetes_default_service_account_v1) |
-| Resource | `kubernetes_default_service_account_v1` | v3.5.0 | [ServiceAccount resources](#resource-kubernetes_service_account_v1-and-kubernetes_default_service_account_v1) |
+| Resource | `kubernetes_service_account_v1` | v3.6.0 | [ServiceAccount resources](#resource-kubernetes_service_account_v1-and-kubernetes_default_service_account_v1) |
+| Resource | `kubernetes_default_service_account_v1` | v3.6.0 | [ServiceAccount resources](#resource-kubernetes_service_account_v1-and-kubernetes_default_service_account_v1) |
 | Data source | `kubernetes_namespace_v1` | v3.3.0 | [Namespace data source](#data-source-kubernetes_namespace_v1) |
 | Data source | `kubernetes_all_namespaces` | v3.3.0 | [All namespaces data source](#data-source-kubernetes_all_namespaces) |
 
@@ -186,6 +186,7 @@ Both resources retain block syntax and existing resource addresses. No `moved` b
 - **Null map entries:** Annotation and label values must be non-null strings. Previously accepted entries such as `annotations = { owner = null }` are now rejected during validation. Remove these entries or provide string values before planning, applying, or destroying. Omitting the whole map or setting it to `null` remains supported.
 - **Ignored metadata:** Adding the first managed label or annotation no longer removes keys excluded by the provider's `ignore_labels` or `ignore_annotations`. SDKv2 replaced the whole map.
 - **Default ServiceAccount adoption:** When `kubernetes_default_service_account_v1` adopts the existing account with `labels` or `annotations` configured, keys in that map that are not configured are still removed, except keys excluded by `ignore_labels` or `ignore_annotations` and Kubernetes-reserved `*.kubernetes.io` keys other than `app.kubernetes.io`. Omitted or empty maps leave existing keys unchanged, as before.
+- **Metadata after apply:** Right after create or update, `labels` and `annotations` that are not set in configuration are stored as `null` rather than the live values, for example when `kubernetes_default_service_account_v1` adopts an account that already has annotations. The next refresh records the live values, and plans are the same as before.
 - **Default ServiceAccount import:** Importing `kubernetes_default_service_account_v1`, or moving `kubernetes_default_service_account` to it, now fails unless the identifier names the `default` account, for example `my-namespace/default`. Previously, importing another account succeeded and the next plan replaced that account. Existing state that refers to another account still refreshes and plans as before.
 - **Name and generate_name:** Setting both `metadata.name` and `metadata.generate_name` on `kubernetes_service_account_v1` now produces a warning, because Kubernetes ignores `generate_name` when `name` is set. The configuration is still accepted, as before.
 - **Identity import without namespace:** Importing either resource by resource identity without `namespace` now uses the `default` namespace. Previously such an import failed.

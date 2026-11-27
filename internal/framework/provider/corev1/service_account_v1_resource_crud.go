@@ -5,7 +5,6 @@ package corev1
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -41,8 +40,10 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// As in SDKv2, the timeout bounds each wait separately rather than the whole
-	// Create, so adoption can wait for the account and then for its token.
+	// As in SDKv2, the timeout bounds the whole Create: every API call and wait
+	// shares one deadline.
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	conn, filters, diags := serviceAccountClient(callback)
 	resp.Diagnostics.Append(diags...)
 	metadata, diags := common.ExpandNamespacedMetadata(ctx, plan.Metadata)
@@ -89,8 +90,8 @@ func serviceAccountCreate(ctx context.Context, req resource.CreateRequest, resp 
 			return
 		}
 		plan.DefaultSecretName = types.StringValue(secret)
-		// Token discovery can wait for a controller write. Read its latest
-		// version before constructing the guarded adoption patch.
+		// Token discovery can wait for a controller write. Read the latest object
+		// so the adoption patch is computed against current references and metadata.
 		out, err = conn.CoreV1().ServiceAccounts(metadata.Namespace).Get(ctx, metadata.Name, metav1.GetOptions{})
 		if err != nil {
 			serviceAccountAPIError(&resp.Diagnostics, "Error reading default service account before adoption", "read", serviceAccountRef(metadata), err)
@@ -369,26 +370,7 @@ func serviceAccountPatch(ctx context.Context, state, plan ServiceAccountV1Model,
 	if !state.AutomountServiceAccountToken.Equal(plan.AutomountServiceAccountToken) {
 		ops = append(ops, &kubernetes.AddOperation{Path: "/automountServiceAccountToken", Value: plan.AutomountServiceAccountToken.ValueBool()})
 	}
-	if len(ops) > 0 && current.ResourceVersion != "" {
-		ops = append(kubernetes.PatchOperations{serviceAccountResourceVersionTest(current.ResourceVersion)}, ops...)
-	}
 	return ops, diags
-}
-
-// Kubernetes applies this precondition atomically with the following mutations,
-// rejecting a patch built before a concurrent metadata or reference edit.
-type serviceAccountResourceVersionTest string
-
-func (serviceAccountResourceVersionTest) GetPath() string {
-	return "/metadata/resourceVersion"
-}
-
-func (version serviceAccountResourceVersionTest) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Op    string `json:"op"`
-		Path  string `json:"path"`
-		Value string `json:"value"`
-	}{Op: "test", Path: version.GetPath(), Value: string(version)})
 }
 
 func serviceAccountMetadataPatch(field string, old, desired types.Map, current map[string]string) kubernetes.PatchOperations {
@@ -406,7 +388,13 @@ func serviceAccountMetadataPatch(field string, old, desired types.Map, current m
 			delete(merged, key)
 		}
 	}
-	maps.Copy(merged, after)
+	// As in SDKv2, write only keys the plan changed, so a concurrent edit to an
+	// unchanged managed key is not reverted.
+	for key, value := range after {
+		if prior, ok := before[key]; !ok || prior != value {
+			merged[key] = value
+		}
+	}
 	if maps.Equal(remote, merged) {
 		return nil
 	}

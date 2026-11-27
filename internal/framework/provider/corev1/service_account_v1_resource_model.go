@@ -117,11 +117,7 @@ func serviceAccountIdentity(meta metav1.ObjectMeta) common.NamespacedResourceIde
 
 func serviceAccountSetComputed(model *ServiceAccountV1Model, account *corev1.ServiceAccount) {
 	model.ID = types.StringValue(kubernetes.BuildId(account.ObjectMeta))
-	model.Metadata[0].Name = types.StringValue(account.Name)
-	model.Metadata[0].Namespace = types.StringValue(account.Namespace)
-	model.Metadata[0].UID = types.StringValue(string(account.UID))
-	model.Metadata[0].Generation = types.Int64Value(account.Generation)
-	model.Metadata[0].ResourceVersion = types.StringValue(account.ResourceVersion)
+	common.PopulateNamespacedMetadataFromResponse(&model.Metadata[0], account.ObjectMeta)
 }
 
 var serviceAccountReferenceType = types.ObjectType{AttrTypes: map[string]attr.Type{"name": types.StringType}}

@@ -244,11 +244,66 @@ Kubernetes records which client set each field of an object. Terraform owns the 
 - To leave a field that the manifest must set at creation to another controller, list it in `computed_fields`. Terraform sets it when it creates the object and does not report later changes by the other controller. Once another field manager owns the field, Terraform no longer sends it, so that manager stays its only owner. A field that no other manager owns, such as a key added to a map in `computed_fields`, is still applied. A field that is not needed at creation is better left out of the manifest. When a field is added to `computed_fields` after the other controller has changed it, the next plan still shows the change back to the configured value once; the apply leaves the field to the controller.
 - The labels and annotations of the manifest that match the provider's `ignore_labels` and `ignore_annotations` are treated as `computed_fields`.
 
-Applying over a field that another client changed fails with a field ownership conflict that names the client. Set `force_conflicts = true` in the `field_manager` block to take the field back, or remove it from the manifest. Terraform also warns about the conflict on every plan until the field is restored.
+Applying over a field that another client changed fails with a field ownership conflict that names the client. Terraform also warns about the conflict on every plan until the field is restored. See [Field ownership conflicts](#field-ownership-conflicts) for the ways to resolve it.
 
 The field manager name, `Terraform` by default, identifies this resource to the API server. Two resources that apply to the same object under the same name replace each other's fields: two configurations that manage one object, or this resource and `kubernetes_config_map_v1_data`, `kubernetes_labels` and `kubernetes_annotations`, which also default to `Terraform`. Give each of them its own name. Changing `field_manager.name` moves the fields this resource applied to the new name; the fields of other resources stay with the old one.
 
 `status` and the metadata fields that only the API server sets, such as `uid`, `resourceVersion` and `creationTimestamp`, are ignored when they appear in `manifest`. A `Secret` written with `stringData` is compared with the `data` the cluster stores.
+
+## Field ownership conflicts
+
+A conflict means that another client changed a field the manifest sets and now owns it, for example a `kubectl edit` or a controller. Terraform does not take such a field back unless the configuration says so. The apply fails with "Field ownership conflict" and names the other client's field manager and the fields, for example `conflict with "kubectl-edit": .spec.replicas`.
+
+To resolve a conflict, choose one of these:
+
+**Terraform is the source of truth** for the fields the manifest sets, and every apply takes them back:
+
+```terraform
+resource "kubernetes_manifest_v2" "web" {
+  manifest = provider::kubernetes::manifest_decode(file("${path.module}/web.yaml"))
+  field_manager {
+    force_conflicts = true
+  }
+}
+```
+
+**Take a field back once**, with `terraform apply -var force_conflicts=true`, and keep the default afterwards:
+
+```terraform
+variable "force_conflicts" {
+  type    = bool
+  default = false
+}
+
+resource "kubernetes_manifest_v2" "web" {
+  manifest = provider::kubernetes::manifest_decode(file("${path.module}/web.yaml"))
+  field_manager {
+    force_conflicts = var.force_conflicts
+  }
+}
+```
+
+**Hand the field over** to the controller that changes it, such as an autoscaler. Terraform sets it when it creates the object, then no longer reports or sends it:
+
+```terraform
+resource "kubernetes_manifest_v2" "web" {
+  manifest        = provider::kubernetes::manifest_decode(file("${path.module}/web.yaml"))
+  computed_fields = ["spec.replicas"]
+}
+```
+
+**Carry on as the other field manager**, for an object that `kubectl apply --server-side` or another tool applied before Terraform managed it. Terraform then writes the fields as that tool did, and the tool and Terraform no longer conflict with each other:
+
+```terraform
+resource "kubernetes_manifest_v2" "web" {
+  manifest = provider::kubernetes::manifest_decode(file("${path.module}/web.yaml"))
+  field_manager {
+    name = "kubectl"
+  }
+}
+```
+
+Changing `force_conflicts` plans an update, so setting it to `true` takes the fields back in that apply.
 
 ## What `object` holds
 
@@ -332,7 +387,7 @@ import {
 
 The imported manifest describes the whole object, without the data of a Secret that another client wrote, so the first plan lists the fields that are in the cluster but not in the configuration as removed from `manifest`. Applying it does not remove them from the object: Terraform only takes ownership of the fields the configuration sets. Of the fields that `kubectl apply` without `--server-side` or another resource of this provider wrote, those the configuration sets move to Terraform's field manager, so their values can change without a conflict. A value the configuration spells differently from the cluster, such as `cpu = 1` for a stored `"1"`, also shows as a change in that plan. An object that this resource applied before is imported with only the fields it owns, and plans no change when the configuration is the same.
 
-An object that `kubectl apply --server-side`, Helm or another client applied with server-side apply keeps its fields with that field manager. Changing one of them then fails with a field ownership conflict. Set `field_manager { name = "kubectl" }`, or the name of that manager, to continue as that manager, or `force_conflicts = true` for the first apply.
+An object that `kubectl apply --server-side`, Helm or another client applied with server-side apply keeps its fields with that field manager. Changing one of them then fails with a field ownership conflict: see [Field ownership conflicts](#field-ownership-conflicts).
 
 ## Moving from `kubernetes_manifest`
 

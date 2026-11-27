@@ -10,7 +10,7 @@ You will need the standard AWS environment variables to be set, e.g.
 See [AWS Provider docs](https://www.terraform.io/docs/providers/aws/index.html#configuration-reference) for more details about these variables
 and alternatives, like `AWS_PROFILE`.
 
-Additionally, a publicly accesible DNS domain registered as a Route53 managed zone is required.
+Additionally, a publicly accessible DNS domain registered as a Route53 managed zone is required.
 The name of the domain should be passed to terraform via the `base_domain` input variable.
 
 Example:

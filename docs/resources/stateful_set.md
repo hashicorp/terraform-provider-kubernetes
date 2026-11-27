@@ -517,7 +517,7 @@ Optional:
 Optional:
 
 - `config_map_ref` (Block List, Max: 1) The ConfigMap to select from (see [below for nested schema](#nestedblock--spec--template--spec--container--env_from--config_map_ref))
-- `prefix` (String) An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.
+- `prefix` (String) An optional identifier to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.
 - `secret_ref` (Block List, Max: 1) The Secret to select from (see [below for nested schema](#nestedblock--spec--template--spec--container--env_from--secret_ref))
 
 <a id="nestedblock--spec--template--spec--container--env_from--config_map_ref"></a>
@@ -1078,7 +1078,7 @@ Optional:
 Optional:
 
 - `config_map_ref` (Block List, Max: 1) The ConfigMap to select from (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env_from--config_map_ref))
-- `prefix` (String) An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.
+- `prefix` (String) An optional identifier to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.
 - `secret_ref` (Block List, Max: 1) The Secret to select from (see [below for nested schema](#nestedblock--spec--template--spec--init_container--env_from--secret_ref))
 
 <a id="nestedblock--spec--template--spec--init_container--env_from--config_map_ref"></a>

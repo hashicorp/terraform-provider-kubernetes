@@ -370,8 +370,11 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 		if kind == "CronJob" {
 			spec, _, err = unstructured.NestedMap(u.Object, "f:spec", "f:jobTemplate", "f:spec", "f:template", "f:spec")
 		}
-		if err == nil {
+		if err != nil {
 			return nil, err
+		}
+		if spec == nil {
+			continue
 		}
 
 		fieldManagerKey := "f:containers"
@@ -380,9 +383,15 @@ func getManagedEnvs(managedFields []v1.ManagedFieldsEntry, manager string, d *sc
 			containerName = v
 			fieldManagerKey = "f:initContainers"
 		}
-		containers := spec[fieldManagerKey].(map[string]interface{})
+		containers, ok := spec[fieldManagerKey].(map[string]interface{})
+		if !ok {
+			continue
+		}
 		containerKey := fmt.Sprintf(`k:{"name":%q}`, containerName)
-		k := containers[containerKey].(map[string]interface{})
+		k, ok := containers[containerKey].(map[string]interface{})
+		if !ok {
+			continue
+		}
 		if e, ok := k["f:env"].(map[string]interface{}); ok {
 			envs = e
 		}

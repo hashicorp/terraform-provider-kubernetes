@@ -50,10 +50,17 @@ func TestMoveState(t *testing.T) {
 			raw:  `{"yaml_body":"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: c\n","namespace":"prod","uid":"u-4","server_side_apply":false,"field_manager":"kubectl"}`,
 			want: identity{"v1", "ConfigMap", "prod", "c"}, manager: "Terraform", uid: "u-4",
 		},
+		// This resource applies as Terraform; the source's manager is kept
+		// privately (see TestManifestV2MoveFromKubectlManifest).
 		"kubectl_manifest with server-side apply": {
 			sourceType: "kubectl_manifest", provider: "registry.example.com/acme/kubectl",
 			raw:  `{"yaml_body":"apiVersion: v1\nkind: Namespace\nmetadata:\n  name: prod\n","namespace":"","uid":"u-3","server_side_apply":true,"field_manager":"kubectl"}`,
-			want: identity{"v1", "Namespace", "", "prod"}, manager: "kubectl", uid: "u-3",
+			want: identity{"v1", "Namespace", "", "prod"}, manager: "Terraform", uid: "u-3",
+		},
+		"kubectl_manifest with server-side apply and no field_manager": {
+			sourceType: "kubectl_manifest", provider: "registry.example.com/acme/kubectl",
+			raw:  `{"yaml_body":"apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: web\n  namespace: prod\n","uid":"u-5","server_side_apply":true,"force_conflicts":false}`,
+			want: identity{"apps/v1", "Deployment", "prod", "web"}, manager: "Terraform", uid: "u-5",
 		},
 		"another resource type":               {sourceType: "kubernetes_config_map", provider: "registry.terraform.io/hashicorp/kubernetes", raw: `{}`, skipped: true},
 		"kubernetes_manifest of a look-alike": {sourceType: "kubernetes_manifest", provider: "registry.terraform.io/example/kubernetes", raw: `{}`, skipped: true},

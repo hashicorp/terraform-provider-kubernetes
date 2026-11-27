@@ -5,11 +5,13 @@ package manifestv2_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
@@ -627,4 +629,34 @@ func TestAccKubernetesManifestV2_yamlBody(t *testing.T) {
 			{Config: config(name+"-renamed", 81), ConfigPlanChecks: expectAction(plancheck.ResourceActionDestroyBeforeCreate)},
 		},
 	})
+}
+
+// A move from kubectl_manifest keeps, in private state, the field manager the
+// object was applied with, so that the first update takes over its fields
+// without a conflict. Providers without a field_manager argument apply as
+// kubectl.
+func TestManifestV2MoveFromKubectlManifest(t *testing.T) {
+	ctx := context.Background()
+	server, err := kubetest.ProviderFactories["kubernetes"]()
+	if err != nil {
+		t.Fatal(err)
+	}
+	const body = `"yaml_body":"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: c\n  namespace: prod\n","namespace":"prod","uid":"u-1"`
+	for name, tc := range map[string]struct{ state, manager string }{
+		"server-side apply without field_manager": {`{` + body + `,"server_side_apply":true,"force_conflicts":false}`, "kubectl"},
+		"server-side apply with field_manager":    {`{` + body + `,"server_side_apply":true,"field_manager":"tf-kubectl"}`, "tf-kubectl"},
+	} {
+		resp, err := server.MoveResourceState(ctx, &tfprotov6.MoveResourceStateRequest{
+			SourceProviderAddress: "registry.example.com/acme/kubectl", SourceTypeName: "kubectl_manifest", SourceSchemaVersion: 1,
+			SourceState: &tfprotov6.RawState{JSON: []byte(tc.state)}, TargetTypeName: "kubernetes_manifest_v2",
+		})
+		if err != nil || len(resp.Diagnostics) > 0 {
+			t.Fatalf("%s: %v %v", name, err, resp.Diagnostics)
+		}
+		var private map[string][]byte
+		var manager string
+		if err := json.Unmarshal(resp.TargetPrivate, &private); err != nil || json.Unmarshal(private["manager"], &manager) != nil || manager != tc.manager {
+			t.Errorf("%s: previous field manager %q (private state %s), want %q", name, manager, resp.TargetPrivate, tc.manager)
+		}
+	}
 }

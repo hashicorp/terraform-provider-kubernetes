@@ -165,13 +165,16 @@ func moveFromKubectl(ctx context.Context, req resource.MoveStateRequest, resp *r
 		resp.Diagnostics.AddError(summary, "The source state could not be decoded.")
 		return
 	}
-	target := moved{manifest: types.DynamicNull(), object: types.DynamicNull(), yamlBody: source.YAMLBody,
-		namespace: source.Namespace, uid: source.UID, manager: source.FieldManager}
-	// Fields applied server-side under another name are read as that
-	// manager's until the next apply moves them to this resource's.
-	if source.ServerSideApply && source.FieldManager != "" && source.FieldManager != defaultFieldManager {
-		target.fieldManager = &fieldManagerModel{Name: types.StringValue(source.FieldManager), ForceConflicts: types.BoolNull()}
+	// This resource applies as Terraform. The manager the source applied as
+	// is kept privately, so that the first update moves its fields: the
+	// source's field_manager, or kubectl, which providers without that
+	// argument use for server-side apply.
+	manager := source.FieldManager
+	if manager == "" && source.ServerSideApply {
+		manager = "kubectl"
 	}
+	target := moved{manifest: types.DynamicNull(), object: types.DynamicNull(), yamlBody: source.YAMLBody,
+		namespace: source.Namespace, uid: source.UID, manager: manager}
 	finishMove(ctx, resp, summary, target)
 }
 

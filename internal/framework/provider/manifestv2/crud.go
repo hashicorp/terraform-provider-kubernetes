@@ -373,6 +373,11 @@ func (r *ManifestV2) Read(ctx context.Context, req resource.ReadRequest, resp *r
 	state.UID = types.StringValue(string(live.GetUID()))
 	resp.Diagnostics.Append(observe(ctx, &state, live)...)
 	manager, force := state.manager()
+	// Until this resource applies under its own name, as after a move, the
+	// fields are the previous manager's.
+	if previous := appliedManager(ctx, req.Private); previous != "" && len(managedFields(live, appliedBy(manager))) == 0 {
+		manager = previous
+	}
 	// described is set when the manifest in state no longer describes the
 	// object: after an import, or when another client changed it.
 	var described map[string]any

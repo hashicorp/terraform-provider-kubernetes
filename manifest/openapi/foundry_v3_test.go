@@ -6,6 +6,8 @@ package openapi
 import (
 	"encoding/json"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestNewFoundryFromSpecV3(t *testing.T) {
@@ -20,8 +22,8 @@ func TestNewFoundryFromSpecV3(t *testing.T) {
 		},
 		"type": "object",
 	}
-
-	spec := SchemaToSpec("com.hashicorp.v1.TestCrd", sampleSchema)
+	gvk := schema.FromAPIVersionAndKind("hashicorp.com/v1", "TestCrd")
+	spec := CRDSchemaToSpec(gvk, sampleSchema)
 	j, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("Error: %+v", err)
@@ -29,40 +31,49 @@ func TestNewFoundryFromSpecV3(t *testing.T) {
 
 	f, err := NewFoundryFromSpecV3(j)
 	if err != nil {
-		t.Fatalf("Error: %+v", err)
+		t.Fatalf("Error creating foundry: %v", err)
 	}
 
-	if f.(*foapiv3).doc == nil {
-		t.Fail()
-	}
-	if f.(*foapiv3).doc.Components.Schemas == nil {
-		t.Fail()
-	}
-	crd, ok := f.(*foapiv3).doc.Components.Schemas["com.hashicorp.v1.TestCrd"]
+	f3, ok := f.(*foapiv3)
 	if !ok {
-		t.Fail()
+		t.Fatal("foundry not of expected type")
+	}
+
+	if f3.doc == nil {
+		t.Fatal("no doc")
+	}
+	if f3.doc.Components.Schemas == nil {
+		t.Fatal("no schemas")
+	}
+	id, ok := f3.gkvIndex.Load(gvk)
+	if !ok {
+		t.Fatal("could not lookup schema id")
+	}
+	crd, ok := f3.doc.Components.Schemas[id.(string)]
+	if !ok {
+		t.Fatal("CRD schema not found")
 	}
 	if crd == nil || crd.Value == nil {
-		t.Fail()
+		t.Fatal("CRD schema empty")
 	}
 	if crd.Value.Type != "object" {
-		t.Fail()
+		t.Fatal("CRD type not object")
 	}
 	if crd.Value.Properties == nil {
-		t.Fail()
+		t.Fatal("CRD missing properties")
 	}
 	foo, ok := crd.Value.Properties["foo"]
 	if !ok {
-		t.Fail()
+		t.Fatal("CRD missing property foo")
 	}
 	if foo.Value.Type != "string" {
-		t.Fail()
+		t.Fatal("CRD property foo not a string")
 	}
 	bar, ok := crd.Value.Properties["bar"]
 	if !ok {
-		t.Fail()
+		t.Fatal("CRD missing property bar")
 	}
 	if bar.Value.Type != "number" {
-		t.Fail()
+		t.Fatal("CRD property bar not a number")
 	}
 }

@@ -1,0 +1,3 @@
+```release-note:enhancement
+Add the probe-level `termination_grace_period_seconds` attribute to `liveness_probe` and `startup_probe` in the container and init container blocks of all resources and data sources that take a pod spec (for example `kubernetes_pod_v1` and `kubernetes_deployment_v1`). It requires Kubernetes 1.25 or later.
+```

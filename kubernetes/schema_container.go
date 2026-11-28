@@ -533,7 +533,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Description: "Periodic probe of container liveness. Container will be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes",
-			Elem:        probeSchema(),
+			Elem:        probeSchemaWithTerminationGracePeriod(),
 		},
 		"name": {
 			Type:        schema.TypeString,
@@ -631,7 +631,7 @@ func containerFields(isUpdatable bool) map[string]*schema.Schema {
 			MaxItems:    1,
 			ForceNew:    !isUpdatable,
 			Description: "StartupProbe indicates that the Pod has successfully initialized. If specified, no other probes are executed until this completes successfully. If this probe fails, the Pod will be restarted, just as if the livenessProbe failed. This can be used to provide different probe parameters at the beginning of a Pod's lifecycle, when it might take a long time to load data or warm a cache, than during steady-state operation. This cannot be updated. This is an alpha feature enabled by the StartupProbe feature flag. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes",
-			Elem:        probeSchema(),
+			Elem:        probeSchemaWithTerminationGracePeriod(),
 		},
 		"stdin": {
 			Type:        schema.TypeBool,
@@ -759,6 +759,20 @@ func probeSchema() *schema.Resource {
 	return &schema.Resource{
 		Schema: h,
 	}
+}
+
+// probeSchemaWithTerminationGracePeriod extends probeSchema with the probe-level
+// termination grace period. The Kubernetes API only accepts this field on
+// liveness and startup probes, so readiness probes keep using probeSchema.
+func probeSchemaWithTerminationGracePeriod() *schema.Resource {
+	r := probeSchema()
+	r.Schema["termination_grace_period_seconds"] = &schema.Schema{
+		Type:         schema.TypeInt,
+		Optional:     true,
+		ValidateFunc: validatePositiveInteger,
+		Description:  "Optional duration in seconds the pod needs to terminate gracefully upon probe failure. The grace period is the duration in seconds after the processes running in the pod are sent a termination signal and the time when the processes are forcibly halted with a kill signal. Overrides the pod-level `termination_grace_period_seconds` when the container is restarted because of this probe. Must be greater than 0. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#probe-level-terminationgraceperiodseconds",
+	}
+	return r
 }
 
 func securityContextSchema(isUpdatable bool) *schema.Resource {

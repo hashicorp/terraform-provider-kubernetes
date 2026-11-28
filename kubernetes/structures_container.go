@@ -164,6 +164,9 @@ func flattenProbe(in *v1.Probe) []interface{} {
 	att["success_threshold"] = in.SuccessThreshold
 	att["timeout_seconds"] = in.TimeoutSeconds
 
+	if in.TerminationGracePeriodSeconds != nil {
+		att["termination_grace_period_seconds"] = int(*in.TerminationGracePeriodSeconds)
+	}
 	if in.Exec != nil {
 		att["exec"] = flattenExec(in.Exec)
 	}
@@ -771,6 +774,9 @@ func expandProbe(l []interface{}) *v1.Probe {
 	}
 	if v, ok := in["timeout_seconds"].(int); ok {
 		obj.TimeoutSeconds = int32(v)
+	}
+	if v, ok := in["termination_grace_period_seconds"].(int); ok && v > 0 {
+		obj.TerminationGracePeriodSeconds = ptr.To(int64(v))
 	}
 
 	return &obj

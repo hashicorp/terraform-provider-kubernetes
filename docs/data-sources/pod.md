@@ -553,6 +553,7 @@ Read-Only:
 - `period_seconds` (Number)
 - `success_threshold` (Number)
 - `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--liveness_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number)
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--container--liveness_probe--exec"></a>
@@ -743,6 +744,7 @@ Read-Only:
 - `period_seconds` (Number)
 - `success_threshold` (Number)
 - `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--container--startup_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number)
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--container--startup_probe--exec"></a>
@@ -1073,6 +1075,7 @@ Read-Only:
 - `period_seconds` (Number)
 - `success_threshold` (Number)
 - `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--liveness_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number)
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--init_container--liveness_probe--exec"></a>
@@ -1263,6 +1266,7 @@ Read-Only:
 - `period_seconds` (Number)
 - `success_threshold` (Number)
 - `tcp_socket` (List of Object) (see [below for nested schema](#nestedobjatt--spec--init_container--startup_probe--tcp_socket))
+- `termination_grace_period_seconds` (Number)
 - `timeout_seconds` (Number)
 
 <a id="nestedobjatt--spec--init_container--startup_probe--exec"></a>

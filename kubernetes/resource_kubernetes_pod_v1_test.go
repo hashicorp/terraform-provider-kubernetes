@@ -610,6 +610,39 @@ func TestAccKubernetesPodV1_with_container_liveness_probe_using_http_get(t *test
 	})
 }
 
+func TestAccKubernetesPodV1_with_container_liveness_probe_using_termination_grace_period_seconds(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := agnhostImage
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigWithLivenessProbeTerminationGracePeriod(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.liveness_probe.0.termination_grace_period_seconds", "2"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPodV1_with_container_liveness_probe_using_tcp(t *testing.T) {
 	var conf api.Pod
 
@@ -1227,6 +1260,39 @@ func TestAccKubernetesPodV1_config_container_startup_probe(t *testing.T) {
 	})
 }
 
+func TestAccKubernetesPodV1_config_container_startup_probe_termination_grace_period_seconds(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			testAccPreCheck(t)
+			skipIfClusterVersionLessThan(t, "1.25.0")
+		},
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ContainerStartupProbeTerminationGracePeriod(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.startup_probe.0.termination_grace_period_seconds", "2"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPodV1_termination_message_policy_default(t *testing.T) {
 	var confPod api.Pod
 
@@ -1478,7 +1544,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraint(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
+			skipIfClusterVersionLessThan(t, "1.25.0")
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -1516,7 +1582,7 @@ func TestAccKubernetesPodV1_topologySpreadConstraintMinDomains(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			skipIfClusterVersionLessThan(t, "1.27.0")
+			skipIfClusterVersionLessThan(t, "1.25.0")
 		},
 		ProviderFactories: testAccProviderFactories,
 		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
@@ -2184,6 +2250,38 @@ func testAccKubernetesPodV1ConfigWithLivenessProbeUsingHTTPGet(podName, imageNam
         }
         initial_delay_seconds = 3
         period_seconds        = 1
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1ConfigWithLivenessProbeTerminationGracePeriod(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+      args  = ["liveness"]
+
+      liveness_probe {
+        http_get {
+          path = "/healthz"
+          port = 8080
+        }
+
+        initial_delay_seconds            = 3
+        period_seconds                   = 1
+        termination_grace_period_seconds = 2
       }
     }
   }
@@ -3013,6 +3111,33 @@ func testAccKubernetesPodV1ContainerStartupProbe(podName, imageName string) stri
 
         initial_delay_seconds = 1
         timeout_seconds       = 2
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1ContainerStartupProbeTerminationGracePeriod(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    name = "%s"
+  }
+
+  spec {
+    container {
+      image = "%s"
+      name  = "containername"
+
+      startup_probe {
+        http_get {
+          path = "/index.html"
+          port = 80
+        }
+
+        initial_delay_seconds            = 1
+        timeout_seconds                  = 2
+        termination_grace_period_seconds = 2
       }
     }
   }

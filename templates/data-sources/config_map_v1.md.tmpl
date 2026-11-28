@@ -17,3 +17,13 @@ description: |-
 ## Example Usage
 
 {{tffile "examples/data-sources/config_map_v1/example_1.tf"}}
+
+## Migration to Plugin Framework
+
+`kubernetes_config_map_v1` is implemented using the Terraform Plugin Framework. Existing state written by the SDKv2 implementation is supported without re-importing or manually editing state, and references such as `data.kubernetes_config_map_v1.example.data` remain valid.
+
+This data source has one behavior change, described below. Run `terraform plan` with your current provider version before upgrading.
+
+## Behavior notes
+
+- **`metadata.name` is required.** Earlier versions accepted a configuration that omitted it and then failed during the read, since there is nothing to look up without a name. The error now appears during plan.

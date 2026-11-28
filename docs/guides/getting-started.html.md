@@ -487,12 +487,21 @@ Terraform will perform the following actions:
                         }
 
                       + iscsi {
-                          + fs_type         = (known after apply)
-                          + iqn             = (known after apply)
-                          + iscsi_interface = (known after apply)
-                          + lun             = (known after apply)
-                          + read_only       = (known after apply)
-                          + target_portal   = (known after apply)
+                          + chap_auth_discovery = (known after apply)
+                          + chap_auth_session   = (known after apply)
+                          + fs_type             = (known after apply)
+                          + initiator_name      = (known after apply)
+                          + iqn                 = (known after apply)
+                          + iscsi_interface     = (known after apply)
+                          + lun                 = (known after apply)
+                          + portals             = (known after apply)
+                          + read_only           = (known after apply)
+
+                          + secret_ref {
+                              + name =      (known after apply)
+                            }
+
+                          + target_portal = (known after apply)
                         }
 
                       + local {

@@ -299,6 +299,61 @@ func TestDeepUnknown(t *testing.T) {
 				},
 			),
 		},
+		"tuple-with-dynamic": {
+			In: deepUnknownTestSampleInput{
+				T: tftypes.Tuple{
+					ElementTypes: []tftypes.Type{
+						tftypes.DynamicPseudoType,
+					},
+				},
+				V: tftypes.NewValue(
+					tftypes.Tuple{
+						ElementTypes: []tftypes.Type{
+							tftypes.Object{
+								AttributeTypes: map[string]tftypes.Type{
+									"name": tftypes.String,
+								},
+							},
+						},
+					},
+					[]tftypes.Value{
+						tftypes.NewValue(
+							tftypes.Object{
+								AttributeTypes: map[string]tftypes.Type{
+									"name": tftypes.String,
+								},
+							},
+							map[string]tftypes.Value{
+								"name": tftypes.NewValue(tftypes.String, "test"),
+							},
+						),
+					},
+				),
+			},
+			Out: tftypes.NewValue(
+				tftypes.Tuple{
+					ElementTypes: []tftypes.Type{
+						tftypes.Object{
+							AttributeTypes: map[string]tftypes.Type{
+								"name": tftypes.String,
+							},
+						},
+					},
+				},
+				[]tftypes.Value{
+					tftypes.NewValue(
+						tftypes.Object{
+							AttributeTypes: map[string]tftypes.Type{
+								"name": tftypes.String,
+							},
+						},
+						map[string]tftypes.Value{
+							"name": tftypes.NewValue(tftypes.String, "test"),
+						},
+					),
+				},
+			),
+		},
 	}
 	for n, s := range samples {
 		t.Run(n, func(t *testing.T) {

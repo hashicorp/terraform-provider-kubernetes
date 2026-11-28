@@ -28,6 +28,9 @@ func flattenContainerSecurityContext(in *v1.SecurityContext) []interface{} {
 	if in.AllowPrivilegeEscalation != nil {
 		att["allow_privilege_escalation"] = *in.AllowPrivilegeEscalation
 	}
+	if in.AppArmorProfile != nil {
+		att["app_armor_profile"] = flattenAppArmorProfile(in.AppArmorProfile)
+	}
 	if in.Capabilities != nil {
 		att["capabilities"] = flattenSecurityCapabilities(in.Capabilities)
 	}
@@ -626,6 +629,9 @@ func expandContainerSecurityContext(l []interface{}) (*v1.SecurityContext, error
 	obj := v1.SecurityContext{}
 	if v, ok := in["allow_privilege_escalation"]; ok {
 		obj.AllowPrivilegeEscalation = ptr.To(v.(bool))
+	}
+	if v, ok := in["app_armor_profile"].([]interface{}); ok && len(v) > 0 {
+		obj.AppArmorProfile = expandAppArmorProfile(v)
 	}
 	if v, ok := in["capabilities"].([]interface{}); ok && len(v) > 0 {
 		obj.Capabilities = expandSecurityCapabilities(v)

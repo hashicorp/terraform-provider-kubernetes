@@ -537,6 +537,76 @@ func TestAccKubernetesPodV1_with_pod_security_context_seccomp_localhost_profile(
 	})
 }
 
+func TestAccKubernetesPodV1_with_pod_security_context_app_armor_profile(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigWithSecurityContextAppArmorProfile(podName, imageName, "Unconfined"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.app_armor_profile.0.type", "Unconfined"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.app_armor_profile.0.type", "Unconfined"),
+				),
+			},
+			{
+				Config: testAccKubernetesPodV1ConfigWithSecurityContextAppArmorProfile(podName, imageName, "RuntimeDefault"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.app_armor_profile.0.type", "RuntimeDefault"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.app_armor_profile.0.type", "RuntimeDefault"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
+func TestAccKubernetesPodV1_with_pod_security_context_app_armor_localhost_profile(t *testing.T) {
+	var conf api.Pod
+
+	podName := acctest.RandomWithPrefix("tf-acc-test")
+	imageName := busyboxImage
+	resourceName := "kubernetes_pod_v1.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t); skipIfNotRunningInKind(t); skipIfClusterVersionLessThan(t, "1.19.0") },
+		ProviderFactories: testAccProviderFactories,
+		CheckDestroy:      testAccCheckKubernetesPodV1Destroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccKubernetesPodV1ConfigWithSecurityContextAppArmorProfileLocalhost(podName, imageName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					testAccCheckKubernetesPodV1Exists(resourceName, &conf),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.app_armor_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.security_context.0.app_armor_profile.0.localhost_profile", "profiles/audit.json"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.app_armor_profile.0.type", "Localhost"),
+					resource.TestCheckResourceAttr(resourceName, "spec.0.container.0.security_context.0.app_armor_profile.0.localhost_profile", "profiles/audit.json"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"metadata.0.resource_version"},
+			},
+		},
+	})
+}
+
 func TestAccKubernetesPodV1_with_container_liveness_probe_using_exec(t *testing.T) {
 	var conf api.Pod
 
@@ -2116,6 +2186,72 @@ func testAccKubernetesPodV1ConfigWithSecurityContextSeccompProfileLocalhost(podN
       name  = "containername"
       security_context {
         seccomp_profile {
+          type              = "Localhost"
+          localhost_profile = "profiles/audit.json"
+        }
+      }
+    }
+  }
+}
+`, podName, imageName)
+}
+
+func testAccKubernetesPodV1ConfigWithSecurityContextAppArmorProfile(podName, imageName, appArmorProfileType string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    automount_service_account_token = false
+    security_context {
+      app_armor_profile {
+        type = "%s"
+      }
+    }
+
+    container {
+      image = "%s"
+      name  = "containername"
+      security_context {
+        app_armor_profile {
+          type = "%s"
+        }
+      }
+    }
+  }
+}
+`, podName, appArmorProfileType, imageName, appArmorProfileType)
+}
+
+func testAccKubernetesPodV1ConfigWithSecurityContextAppArmorProfileLocalhost(podName, imageName string) string {
+	return fmt.Sprintf(`resource "kubernetes_pod_v1" "test" {
+  metadata {
+    labels = {
+      app = "pod_label"
+    }
+
+    name = "%s"
+  }
+
+  spec {
+    automount_service_account_token = false
+    security_context {
+      app_armor_profile {
+        type              = "Localhost"
+        localhost_profile = "profiles/audit.json"
+      }
+    }
+
+    container {
+      image = "%s"
+      name  = "containername"
+      security_context {
+        app_armor_profile {
           type              = "Localhost"
           localhost_profile = "profiles/audit.json"
         }

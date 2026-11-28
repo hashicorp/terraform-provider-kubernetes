@@ -284,6 +284,15 @@ func podSpecFields(isUpdatable, isComputed bool) map[string]*schema.Schema {
 			Description: "SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty",
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
+					"app_armor_profile": {
+						Type:        schema.TypeList,
+						Description: "The app_armor options to use by the containers in this pod.",
+						Optional:    true,
+						MaxItems:    1,
+						Elem: &schema.Resource{
+							Schema: appArmorProfileField(isUpdatable),
+						},
+					},
 					"fs_group": {
 						Type:         schema.TypeString,
 						Description:  "A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- If unset, the Kubelet will not modify the ownership and permissions of any volume.",

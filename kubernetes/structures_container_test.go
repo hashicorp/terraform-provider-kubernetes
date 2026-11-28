@@ -7,7 +7,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
 
@@ -309,6 +311,109 @@ func TestFlattenContainerVolumeMounts_mountPropogation(t *testing.T) {
 		if !reflect.DeepEqual(output, tc.Expected) {
 			t.Fatalf("Unexpected output from expander.\nExpected: %#v\nGiven:    %#v",
 				tc.Expected, output)
+		}
+	}
+}
+
+func TestFlattenProbe_terminationGracePeriodSeconds(t *testing.T) {
+	cases := []struct {
+		Name     string
+		Input    *v1.Probe
+		Expected []interface{}
+	}{
+		{
+			"unset",
+			&v1.Probe{
+				ProbeHandler:     v1.ProbeHandler{TCPSocket: &v1.TCPSocketAction{Port: intstr.FromInt32(8080)}},
+				FailureThreshold: 3,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				TimeoutSeconds:   1,
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"failure_threshold":     int32(3),
+					"initial_delay_seconds": int32(0),
+					"period_seconds":        int32(10),
+					"success_threshold":     int32(1),
+					"timeout_seconds":       int32(1),
+					"tcp_socket": []interface{}{
+						map[string]interface{}{"port": "8080"},
+					},
+				},
+			},
+		},
+		{
+			"set",
+			&v1.Probe{
+				ProbeHandler:                  v1.ProbeHandler{TCPSocket: &v1.TCPSocketAction{Port: intstr.FromInt32(8080)}},
+				FailureThreshold:              3,
+				PeriodSeconds:                 10,
+				SuccessThreshold:              1,
+				TimeoutSeconds:                1,
+				TerminationGracePeriodSeconds: ptr.To(int64(2)),
+			},
+			[]interface{}{
+				map[string]interface{}{
+					"failure_threshold":                int32(3),
+					"initial_delay_seconds":            int32(0),
+					"period_seconds":                   int32(10),
+					"success_threshold":                int32(1),
+					"timeout_seconds":                  int32(1),
+					"termination_grace_period_seconds": 2,
+					"tcp_socket": []interface{}{
+						map[string]interface{}{"port": "8080"},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			output := flattenProbe(tc.Input)
+			if !reflect.DeepEqual(output, tc.Expected) {
+				t.Fatalf("Unexpected output from flattener.\nExpected: %#v\nGiven:    %#v", tc.Expected, output)
+			}
+		})
+	}
+}
+
+func TestExpandProbe_terminationGracePeriodSeconds(t *testing.T) {
+	cases := []struct {
+		Name     string
+		Input    map[string]interface{}
+		Expected *int64
+	}{
+		{"unset", map[string]interface{}{"period_seconds": 10}, nil},
+		{"zero value from an unset attribute", map[string]interface{}{"termination_grace_period_seconds": 0}, nil},
+		{"set", map[string]interface{}{"termination_grace_period_seconds": 2}, ptr.To(int64(2))},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			output := expandProbe([]interface{}{tc.Input})
+			if !reflect.DeepEqual(output.TerminationGracePeriodSeconds, tc.Expected) {
+				t.Fatalf("Unexpected TerminationGracePeriodSeconds.\nExpected: %v\nGiven:    %v", tc.Expected, output.TerminationGracePeriodSeconds)
+			}
+		})
+	}
+}
+
+// The API server rejects a probe-level termination grace period on readiness
+// probes, so the attribute must only be exposed on liveness and startup probes.
+func TestContainerFields_probeTerminationGracePeriodSeconds(t *testing.T) {
+	fields := containerFields(true)
+
+	for probe, want := range map[string]bool{
+		"liveness_probe":  true,
+		"startup_probe":   true,
+		"readiness_probe": false,
+	} {
+		elem := fields[probe].Elem.(*schema.Resource)
+		_, got := elem.Schema["termination_grace_period_seconds"]
+		if got != want {
+			t.Errorf("%s: termination_grace_period_seconds present = %t, want %t", probe, got, want)
 		}
 	}
 }
